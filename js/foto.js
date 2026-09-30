@@ -8,7 +8,7 @@
    los mismos scripts. */
 
 var _fotoCropper = null;
-var _fotoContexto = ''; // 'inscripcion' | 'ajustes'
+var _fotoContexto = ''; // 'inscripcion' | 'equipo' (perfil propio de Equipo)
 var _fotoInputEl = null;
 
 function _fotoToast(msg) {
@@ -52,7 +52,7 @@ function abrirSheetFotoPerfil(contexto) {
   var optGoogle = document.getElementById('sfp-opt-google');
   var optQuitar = document.getElementById('sfp-opt-quitar');
   if (optGoogle) optGoogle.style.display = fotoGoogle ? 'flex' : 'none';
-  if (optQuitar) optQuitar.style.display = contexto === 'ajustes' ? 'flex' : 'none';
+  if (optQuitar) optQuitar.style.display = contexto !== 'inscripcion' ? 'flex' : 'none';
   var overlay = document.getElementById('sheet-foto-perfil-overlay');
   var sheet = document.getElementById('sheet-foto-perfil');
   if (!overlay || !sheet) return;
@@ -79,7 +79,7 @@ function sfpUsarGoogle() {
     _fotoAplicarResultado(G.fotoGoogle || '', 'google');
     return;
   }
-  // Ajustes: persiste en el backend con la misma acción que ya usa
+  // App (perfil propio de Equipo): persiste en el backend con la misma acción que ya usa
   // guardarPermisos() (actualizarPerfilGoogle) — solo `foto`, el resto de
   // los parámetros se dejan sin mandar para que el backend no toque fecha
   // de nacimiento ni permisos.
@@ -261,7 +261,7 @@ function confirmarCrop() {
    este repo, no se toca desde acá) — ambas POST (el base64 es muy largo
    para una URL de GET) y devuelven { exito:true, url } o { exito:false,
    error }:
-   - ajustes: `subirFotoPerfil`, params `token` (sesión real, `_token`,
+   - app (perfil propio de Equipo): `subirFotoPerfil`, params `token` (sesión real, `_token`,
      js/api.js) + `base64Data` (data URL o '' para quitar foto).
    - inscripción: `subirFotoInscripcion`, params `idToken` (JWT de Google,
      `G.idToken`) + `email` (`G.email`) + `base64Data` — todavía no existe
@@ -300,13 +300,13 @@ function _subirFotoRecortada(base64) {
       // archivo), nativa de Supabase (no GAS, ver
       // supabase/functions/api/index.ts) y ya confirmada funcionando -- para
       // que `equipo.foto_perfil` quede escrito de verdad sin depender de
-      // GAS. Solo en contexto "ajustes" (inscripción no tiene sesión/token
+      // GAS. Solo fuera de inscripción (inscripción no tiene sesión/token
       // todavía, ver comentario de esta función) y solo con `url` no vacía
       // (esa acción ignora un `foto` vacío -- "quitar foto" sigue
       // dependiendo de GAS como antes, fuera del bug reportado). Silenciosa
       // a propósito (sin loader/toast propio) -- la subida en sí YA mostró
       // su resultado arriba, esto es solo un refuerzo de persistencia.
-      if (_fotoContexto === 'ajustes' && url && typeof api === 'function') {
+      if (_fotoContexto !== 'inscripcion' && url && typeof api === 'function') {
         api({ action: 'actualizarPerfilGoogle', foto: url }, function() {}, function(e) {
           console.warn('No se pudo reforzar la persistencia de foto_perfil:', e);
         });
@@ -328,8 +328,10 @@ function _fotoAplicarResultado(url, origen) {
     var origenEl = document.getElementById('insc-foto-origen');
     if (origenEl) origenEl.textContent = url ? (origen === 'google' ? 'Foto de Google' : 'Foto personalizada') : 'Sin foto de perfil';
   } else {
+    // Perfil propio de Equipo: modelo + persona del roster + detalle abierto
+    // (`_eqFotoPropiaActualizada()`, js/equipo.js). Antes (contexto
+    // 'ajustes') llamaba a irEditarDatos(), que además navegaba a Ajustes.
     if (typeof E !== 'undefined' && E.datos) E.datos.fotoPerfil = url;
-    if (typeof irEditarDatos === 'function') irEditarDatos();
-    if (typeof _ajCargarSub === 'function' && document.getElementById('aj-avatar-hero')) _ajCargarSub('aj-sub-perfil');
+    if (typeof _eqFotoPropiaActualizada === 'function') _eqFotoPropiaActualizada(url);
   }
 }

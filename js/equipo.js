@@ -2499,14 +2499,23 @@ function _eqAbrirPerfil(id) {
   _eqRenderPerfil(p);
   ir('s-equipo-perfil');
 }
-// Lápiz del detalle propio -> Ajustes, con flecha atrás de vuelta a este
-// detalle (`_ajVolverA`, js/perfil.js; ver TOP_BAR_CONFIG['s-datos']).
-function _eqIrAjustes() {
-  if (typeof _ajVolverA !== 'undefined') _ajVolverA = 's-equipo-perfil';
-  irEditarDatos();
+// Perfil propio de Equipo desde cualquier lado (entradas "Editar tu perfil"
+// de Home, etc. -- ver MANIFEST.md): ahí se editan los datos visibles para
+// el equipo. Carga el roster si hace falta; la lista en sí se inicializa al
+// volver (`_eqVolverLista()`), no acá -- con `#s-equipo` oculto sus
+// acordeones medirían 0 (ver el comentario de `irEquipo()`).
+function _eqAbrirMiPerfil() {
+  _eqAsegurarCargado(function() {
+    var yo = _eqUsuariaActual();
+    if (!yo) { mostrarToast('No se pudo abrir tu perfil. Intenta de nuevo.', 'error'); return; }
+    _eqAbrirPerfil(yo.id);
+  });
 }
 function _eqVolverLista() {
   volver('s-equipo');
+  // Llegada al detalle sin pasar antes por la lista (`_eqAbrirMiPerfil()`):
+  // se inicializa recién ahora, con `#s-equipo` ya visible.
+  if (!_eqYaInicializado) { _eqInit(); return; }
   // Re-render local (sin fetch) del roster -- refleja cambios hechos desde
   // el detalle (estado/tier por admin, lesión propia) en badges y orden.
   // `_eqBuscar()` con el query ya normalizado respeta el modo actual
@@ -2589,11 +2598,8 @@ function _eqNavHtml(p) {
   if (waUrl && !esYo) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
   }
-  // Lápiz -> Ajustes (datos privados/cuenta, js/perfil.js). Al volver con
-  // atrás, `volver()` regresa a este mismo detalle.
-  if (esYo) {
-    acciones += '<button type="button" class="app-nav-icon-btn" onclick="_eqIrAjustes()" title="Ajustes"><span class="material-symbols-outlined">edit</span></button>';
-  }
+  // Sin lápiz en el detalle propio: los datos visibles se editan ahí mismo
+  // ("Mis datos", `_eqMisDatosHtml()`) y la foto desde su badge.
   return '<div class="eq-perfil-nav-row">' +
       '<button class="app-nav-back" onclick="_eqVolverLista()" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
       '<div class="app-nav-actions">' + acciones + '</div>' +
@@ -3665,6 +3671,80 @@ function _eqFormatearFechaIngreso(iso) {
   return partes[2].replace(/^0/, '') + ' de ' + meses[+partes[1] - 1] + ' de ' + partes[0];
 }
 
+// ── "Mis datos" (solo detalle propio) ───────────────────────────────────
+// Los datos que ve el resto del equipo se editan acá, donde se ven (antes en
+// el sub "Mi perfil"/"Contacto" de Ajustes, eliminados). Mismo estilo de
+// grupo que Estadísticas/Estado y Administración (`_eqAjFilaHtml()`).
+// Reusa los sheets y el guardado de js/perfil.js tal cual; sus callbacks
+// escriben el valor nuevo en los ids `eq-mis-*` de acá (reflejo inmediato)
+// y, al confirmar el backend, `_eqSincronizarDatosPropios()` re-renderiza
+// el detalle (header incluido). Fuente: `E.datos` (trae prefijo/fecha de
+// ingreso aunque la privacidad los oculte a otras personas), con la persona
+// del roster de respaldo.
+function _eqMisDatosHtml(p) {
+  var d = (typeof E !== 'undefined' && E.datos) || {};
+  var val = function(v, vacio) { return (v !== null && v !== undefined && v !== '') ? _eqEsc(v) : vacio; };
+  var nombreDerby = d.nombreDerby !== undefined ? d.nombreDerby : p.nombreDerby;
+  var numeroDerby = d.numeroDerby !== undefined ? d.numeroDerby : p.numeroDerby;
+  var pronombres = d.pronombres !== undefined ? d.pronombres : p.pronombres;
+  var ingreso = d.fechaIngreso || p.fechaIngreso;
+  var telefono = typeof _ajTelefonoConPrefijoTexto === 'function'
+    ? _ajTelefonoConPrefijoTexto(d.prefijo || p.prefijo, d.telefono || p.telefono) : (d.telefono || p.telefono);
+  return _eqAjFilaHtml({ icono: 'person', color: 'aj-icon-muted', titulo: 'Nombre de usuario',
+      valor: val(E.nombre || p.username, '—'), onclick: '_ajUsernameActivarEdicion()' }) +
+    _eqAjFilaHtml({ icono: 'star', color: 'aj-icon-orange', titulo: 'Nombre derby', valorId: 'eq-mis-nombreDerby-val',
+      valor: val(nombreDerby, '—'),
+      onclick: "ajAbrirSheetTextoGenerico('Nombre derby','¿Cómo te conocen en la pista?','eq-mis-nombreDerby-val','nombreDerby','Ej: Roller Reina', null, 25)" }) +
+    _eqAjFilaHtml({ icono: 'tag', color: 'aj-icon-amber', titulo: 'Número derby', valorId: 'eq-mis-numeroDerby-val',
+      valor: val(numeroDerby, 'Sin número asignado'),
+      onclick: "ajAbrirSheetTextoGenerico('Número derby','Tu número de camiseta en el equipo.','eq-mis-numeroDerby-val','numeroDerby','Ej: 47')" }) +
+    _eqAjFilaHtml({ icono: 'face', color: 'aj-icon-purple', titulo: 'Pronombres', valorId: 'eq-mis-pron-val',
+      valor: val(pronombres, '—'), onclick: 'ajAbrirSheetPronombres()' }) +
+    _eqAjFilaHtml({ icono: 'badge', color: 'aj-icon-blue', titulo: 'Rol en el equipo', valorId: 'eq-mis-rol-val',
+      valor: val(_eqRolesTexto(p.username), 'No definido'), onclick: 'ajAbrirSheetRol()' }) +
+    _eqAjFilaHtml({ icono: 'calendar_month', color: 'aj-icon-red', titulo: 'Entraste al equipo', valorId: 'eq-mis-ingreso-val',
+      valor: val(ingreso ? _eqFormatearFechaIngreso(ingreso) : '', '—'), onclick: 'ajAbrirSheetIngreso()' }) +
+    _eqAjFilaHtml({ icono: 'call', color: 'aj-icon-green', titulo: 'Teléfono', valorId: 'eq-mis-tel-val',
+      valor: val(telefono, '—'), onclick: "ajAbrirSheetTelefono('Teléfono','eq-mis-tel-val','telefono','prefijo',true)" }) +
+    _eqAjFilaHtml({ icono: 'mail', color: 'aj-icon-muted', titulo: 'Email',
+      valor: val(d.email || p.email, '—'),
+      onclick: "mostrarToast('El email no es editable. Contacta a un administrador si necesitas cambiarlo.','ok',true)",
+      derecha: '<span class="material-symbols-outlined aj-chevron">lock</span>' });
+}
+
+// Campos de `actualizarDatosPersona` que también viven en la persona del
+// roster (mismo nombre en `E.datos` y en `_eqPersonas`, ver getEquipo()).
+var _EQ_CAMPOS_PUBLICOS_PROPIOS = ['nombreDerby', 'numeroDerby', 'pronombres', 'fechaIngreso', 'prefijo', 'telefono', 'email'];
+// Llamada por `_ajGuardar()` (js/perfil.js) tras cada guardado confirmado:
+// copia a la persona propia del roster los campos públicos del payload y
+// refresca el detalle propio. Payloads sin campos públicos (salud, legal...)
+// no hacen nada.
+function _eqSincronizarDatosPropios(payload) {
+  var yo = _eqUsuariaActual();
+  if (!yo || !payload) return;
+  var cambio = false;
+  Object.keys(payload).forEach(function(k) {
+    if (_EQ_CAMPOS_PUBLICOS_PROPIOS.indexOf(k) !== -1) { yo[k] = payload[k]; cambio = true; }
+  });
+  if (cambio) _eqRefrescarPerfilPropio();
+}
+// Re-render del detalle propio si está abierto (header + "Mis datos"). El
+// roster no se re-renderiza acá (con `#s-equipo` oculto sus acordeones
+// medirían 0): `_eqVolverLista()` ya lo hace al volver, y el roster toma
+// los datos de la misma persona ya actualizada.
+function _eqRefrescarPerfilPropio() {
+  var yo = _eqUsuariaActual();
+  if (yo && _eqPersonaActual && _eqPersonaActual.id === yo.id) _eqRenderPerfil(yo);
+}
+// Foto propia cambiada (`_fotoAplicarResultado()`, js/foto.js, contexto
+// 'equipo'): persona del roster + detalle abierto.
+function _eqFotoPropiaActualizada(url) {
+  var yo = _eqUsuariaActual();
+  if (!yo) return;
+  yo.fotoPerfil = url || '';
+  _eqRefrescarPerfilPropio();
+}
+
 function _eqPerfilContenidoHtml(p) {
   // `pronombres` se sacó de acá (pedido explícito, re-ajuste, ver
   // MANIFEST.md) -- se muestra en `categoriaPronombresHtml`, más abajo,
@@ -3687,6 +3767,7 @@ function _eqPerfilContenidoHtml(p) {
   // "De viaje" (con fechas) ahora vive en el valor de la fila Estado del
   // grupo público (`_eqValorEstadoTexto()`); "Cancelar viaje" en su
   // subsección (admin).
+  var esYo = _eqEsUsuarioActual(p);
   var filas = '';
   // Fila del teléfono: tocarla llama (tel:). Pill "Abrir en WhatsApp" a la
   // derecha, HERMANA del <a> de llamada (no anidada: un <a> dentro de otro
@@ -3738,19 +3819,28 @@ function _eqPerfilContenidoHtml(p) {
     '<span class="eq-mis-stats-rol-pill">' + _eqEsc(p.rol) + '</span>' +
     (p.pronombres ? '<span class="aj-pill">' + _eqEsc(p.pronombres) + '</span>' : '') +
   '</div>';
+  // Perfil propio: foto editable (tocar la foto o el badge de lápiz de la
+  // esquina superior derecha; la inferior es del badge de estado/tendencia).
+  var avatarWrapAttrs = esYo
+    ? ' eq-avatar-editable" role="button" tabindex="0" aria-label="Cambiar foto de perfil" onclick="abrirSheetFotoPerfil(\'equipo\')"'
+    : '"';
   return '<div class="eq-perfil-header">' +
-      '<div class="eq-avatar-wrap">' +
+      '<div class="eq-avatar-wrap' + avatarWrapAttrs + '>' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
         _eqBadgeAvatarHtml(p, 'eq-tendencia-badge--detalle', 'badge-estado--detalle') + // viaje/lesión reemplaza a tendencia, ver _eqBadgeAvatarHtml()
+        (esYo ? '<span class="badge-editar-foto" aria-hidden="true"><span class="material-symbols-rounded">edit</span></span>' : '') +
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
       categoriaPronombresHtml +
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
-    // Orden (ver MANIFEST.md): header -> filas de info (teléfono/email/
-    // fecha de ingreso/roles) -> grupo público -> grupo Administración.
-    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
+    // Orden (ver MANIFEST.md): header -> filas de info (ajeno: teléfono/
+    // email/fecha de ingreso/roles, solo lectura) o "Mis datos" (propio,
+    // editables) -> grupo público -> grupo Administración.
+    (esYo
+      ? '<div class="aj-group eq-perfil-grupo" id="eq-perfil-grupo-datos">' + _eqMisDatosHtml(p) + '</div>'
+      : (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '')) +
     // Grupo público: Estadísticas, Estado y (propio) lesión.
     '<div class="aj-group eq-perfil-grupo" id="eq-perfil-grupo-publico">' + _eqPerfilGrupoPublicoHtml(p) + '</div>' +
     _eqAdminBloqueHtml(p);

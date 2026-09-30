@@ -79,12 +79,6 @@
 @media (max-width: 600px) {
   #s-datos-card > .aj-group:first-child { margin-top:10px; }
 }
-/* "Foto de perfil" (#s-datos y aj-sub-perfil "Mi perfil"): fila más de la
-   lista, ver MANIFEST "Cambios recientes" — antes un hero grande aparte con
-   el avatar en tamaño lg/md, revertido por decisión de diseño. El avatar
-   circular (.avatar-pill, css/global.css) se achica a 46×46 para igualar a
-   .aj-icon/.aj-dato-icon (mismo tamaño que el resto de íconos de fila). */
-.aj-avatar-row { width:46px; height:46px; }
 
 .aj-group { margin-bottom: 10px; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
 .aj-row { display:flex; align-items:center; gap:12px; padding:14px; min-height:72px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border-softest,var(--border-light)); }
@@ -267,23 +261,11 @@
   font-size: 16px;
   color: var(--text-faint);
 }
-/* ── Nombre de usuario editable (Batch 4) ─────────────────────────────── */
-.aj-username-input {
-  width: 100%; border: none; border-bottom: 1.5px solid var(--brand);
-  background: transparent; color: var(--text); font-size: 0.85rem;
-  font-weight: 500; font-family: inherit; padding: 2px 0; outline: none;
-}
-.aj-username-estado { font-size: 0.72rem; font-weight: 700; margin-top: 4px; }
+/* ── Nombre de usuario editable (sheet #aj-sheet-username, perfil propio de
+   Equipo) ── */
+.aj-username-estado { font-size: 0.75rem; font-weight: 700; margin-top: 8px; }
 .aj-username-estado-ok { color: var(--success); }
 .aj-username-estado-error { color: var(--danger); }
-.aj-dato-lapiz {
-  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: none; border: none; color: var(--brand); cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.aj-dato-lapiz .material-symbols-outlined { font-size: 1.1rem; }
-@media (hover: hover) { .aj-dato-lapiz:hover { background: var(--brand-lightest); } }
 .aj-sec-titulo {
   font-size: 0.72rem;
   font-weight: 700;
@@ -349,3 +331,26 @@
   filter: drop-shadow(0 3px 4px var(--black-35));
 }
 .aj-mapa-pin .material-symbols-outlined { font-size: 2.4rem; font-variation-settings: 'FILL' 1; }
+
+/* ── Piezas de bottom sheets de datos (sheet de nombre de usuario y selector
+   de prefijo del sheet de texto) -- mismos valores que los estilos inline
+   de #aj-sheet-texto (index.html). */
+.aj-sheet-subtitulo { font-size: 0.78rem; color: var(--muted); text-align: center; line-height: 1.4; padding: 12px 16px 0; }
+.aj-sheet-input {
+  width: 100%; padding: 13px 16px; background: var(--surface-2); color: var(--text);
+  border: 1.5px solid var(--brand); border-radius: 12px; font-size: 0.88rem; font-family: inherit;
+}
+.aj-sheet-cancelar {
+  width: 100%; padding: 12px; background: transparent; color: var(--muted); border: none;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 4px;
+}
+.aj-sheet-prefijo-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 10px;
+  padding: 13px 16px; background: var(--surface-2); color: var(--text);
+  border: 1.5px solid var(--border-light); border-radius: 12px;
+  font-size: 0.88rem; font-weight: 600; font-family: inherit; text-align: left; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.aj-sheet-prefijo-btn .material-symbols-outlined { font-size: 1.15rem; color: var(--muted); flex-shrink: 0; }
+.aj-sheet-prefijo-btn-val { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aj-sheet-prefijo-btn:active { background: var(--surface-light); }

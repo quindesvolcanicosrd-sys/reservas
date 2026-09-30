@@ -43,8 +43,8 @@
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
 <link rel="stylesheet" href="css/eventos.css?v=329d711a">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=6cc39c28">
-<link rel="stylesheet" href="css/perfil.css">
+<link rel="stylesheet" href="css/equipo.css?v=225bab25">
+<link rel="stylesheet" href="css/perfil.css?v=5775c4ef">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
 <!-- Chrome default de Cropper.js apagado por completo — a propósito acá,
@@ -71,7 +71,7 @@
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<script src="js/foto.js"></script>
+<script src="js/foto.js?v=751c8df1"></script>
 </head>
 <body>
 
@@ -2902,17 +2902,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s-datos">
   <div class="card" id="s-datos-card">
 
-    <!-- Foto de perfil -->
-    <div class="aj-group">
-      <div class="aj-row" data-aj-key="perfil" onclick="irEditarPerfil()">
-        <div class="avatar-pill aj-avatar-row" id="aj-avatar"></div>
-        <div class="aj-content">
-          <div class="aj-title" id="aj-derby-nombre">—</div>
-          <div class="aj-value" id="aj-derby-sub">—</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
-    </div>
+    <!-- Foto, nombre derby, teléfono y el resto de los datos visibles para el
+         equipo se editan en el perfil propio de Equipo (`_eqMisDatosHtml()`,
+         js/equipo.js). Ajustes queda solo para lo privado y la cuenta. -->
 
     <!-- Equipamiento -->
     <div class="aj-group">
@@ -2926,16 +2918,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Contacto y privacidad -->
+    <!-- Privacidad -->
     <div class="aj-group">
-      <div class="aj-row" data-aj-key="contacto" onclick="irAjSub('aj-sub-contacto')">
-        <div class="aj-icon aj-icon-blue"><span class="material-symbols-outlined">phone</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Teléfono</div>
-          <div class="aj-value" id="aj-tel-val">—</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
       <div class="aj-row" data-aj-key="privacidad" onclick="irAjSub('aj-sub-privacidad')">
         <div class="aj-icon aj-icon-purple"><span class="material-symbols-outlined">lock</span></div>
         <div class="aj-content">
@@ -2996,6 +2980,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
+    </div>
+
+    <!-- Zona cuenta (al final de la home de Ajustes, antes vivía dentro del
+         sub "Mi perfil", eliminado). Oculta para cuentas admin "puras" sin
+         E.datos (ver irEditarDatos(), js/perfil.js): "Cerrar sesión"/
+         "Eliminar cuenta" acá son de usuarix, sin sentido sin una cuenta de
+         usuarix real; esas cuentas ya tienen su propio "Cerrar sesión" en
+         Mi Liga (adminCerrarSesionLocal()). -->
+    <div id="aj-zona-cuenta" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+      <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
+      <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
     </div>
 
     <!-- s-datos no tiene ningún .cta-footer-fixed propio -- a diferencia de
@@ -3559,14 +3554,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
-<script src="js/ui.js?v=7d6b9a77"></script>
+<script src="js/ui.js?v=d4d187b1"></script>
 <script src="js/eventos.js?v=8594bf18"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=77dfe17a"></script>
-<script src="js/home.js?v=e715822d"></script>
+<script src="js/equipo.js?v=fc4a8f98"></script>
+<script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
-<script src="js/perfil.js?v=dbeb1284"></script>
+<script src="js/perfil.js?v=06ae9798"></script>
 <script src="js/admin.js?v=6d98bcbe"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
@@ -4020,165 +4015,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-texts">
           <div class="aj-dato-label">Protecciones</div>
           <div class="aj-dato-val" id="aj-equip-protec-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SUB: Perfil (derby) -->
-<div class="aj-sub" id="aj-sub-perfil">
-  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-perfil')">
-      <span class="material-symbols-outlined">arrow_back</span>
-    </button>
-    <span class="app-nav-title">Mi perfil</span>
-    <div style="width:40px;flex-shrink:0;"></div>
-  </div>
-  <div class="aj-sub-inner">
-    <!-- Foto de perfil -->
-    <div class="aj-group">
-      <div class="aj-row" onclick="abrirSheetFotoPerfil('ajustes')">
-        <div class="avatar-pill aj-avatar-row" id="aj-avatar-hero"></div>
-        <div class="aj-content">
-          <div class="aj-title">Foto de perfil</div>
-          <div class="aj-value">Toca para cambiarla</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
-    </div>
-
-    <div class="aj-group">
-      <!-- Nombre de usuario editable (Batch 4) -- antes bloqueado con
-           candado ("no editable... contactá a un admin"), a propósito: el
-           `username` es la clave natural real de TODO el backend (reservas/
-           asistencias/log_asistencias/puntos_mensuales/admins -- ninguna
-           tabla usa un id numérico aparte, ver auditoría del Cambio 55 en
-           MANIFEST.md). Cambiarlo de verdad significa renombrar esa clave
-           en TODAS esas tablas a la vez -- no existe ese endpoint hoy
-           (`_ajUsernameGuardar()`/js/perfil.js llama a una acción real que
-           el router de supabase/functions/api/index.ts no tiene, devuelve
-           "Acción no válida" tal como ya hacen otras acciones documentadas
-           como pendientes en este mismo repo, ver getVenues()/js/eventos.js).
-           El resto del flujo (input/lápiz/disponibilidad/validación) SÍ
-           queda 100% funcional, ver MANIFEST.md para el detalle completo. -->
-      <div class="aj-dato-row no-tap" id="aj-username-row">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">person</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Nombre de usuario</div>
-          <div class="aj-dato-val" id="aj-nombre-display">—</div>
-          <input type="text" id="aj-username-input" class="aj-username-input" style="display:none;" oninput="_ajUsernameInput(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <div class="aj-username-estado" id="aj-username-estado" style="display:none;"></div>
-        </div>
-        <button type="button" class="aj-dato-lapiz" id="aj-username-lapiz-btn" onclick="_ajUsernameActivarEdicion()" title="Editar">
-          <span class="material-symbols-outlined">edit</span>
-        </button>
-      </div>
-      <button type="button" class="btn btn-primary" id="aj-username-guardar-btn" style="display:none;width:calc(100% - 28px);margin:0 14px 14px;" disabled onclick="_ajUsernameGuardar()">Guardar nombre de usuario</button>
-
-      <!-- Rol en el equipo (rediseño, ver MANIFEST.md/CHANGELOG.md) -- fila
-           .aj-dato-row igual que el resto de esta pantalla, abre el
-           bottom sheet genérico de pills (`_ajAbrirSheetTextoPills()`,
-           mismo componente que "Pronombres"/"Tipo de documento" más abajo
-           en este archivo) en vez de mostrar los chips inline. Sin columna
-           real en `equipo` (ver comentario largo de `_ajRenderRol()`,
-           js/perfil.js) -- persistido por localStorage. -->
-      <div class="aj-dato-row" onclick="ajAbrirSheetRol()">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">badge</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Rol en el equipo</div>
-          <div class="aj-dato-val" id="aj-rol-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre Derby','¿Cómo te conocen en la pista?','aj-nombreDerby-val','nombreDerby','Ej: Roller Reina', null, 25)">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">star</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Nombre Derby</div>
-          <div class="aj-dato-val" id="aj-nombreDerby-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número Derby','Tu número de camiseta en el equipo.','aj-numeroDerby-val','numeroDerby','Ej: 47')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">tag</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Número Derby</div>
-          <div class="aj-dato-val vacio" id="aj-numeroDerby-val">Sin número asignado</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetPronombres()">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">face</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Pronombres</div>
-          <div class="aj-dato-val" id="aj-pron-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetIngreso()">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">calendar_month</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Entraste al equipo</div>
-          <div class="aj-dato-val" id="aj-ingreso-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-    </div>
-
-    <!-- Zona cuenta (ver "Cambios recientes" -- movida acá desde el fondo de
-         la pantalla principal de Ajustes, debajo de la card de pronombres).
-         Oculta para cuentas admin "puras" sin E.datos (ver irEditarDatos(),
-         js/perfil.js): "Cerrar sesión"/"Eliminar cuenta" acá son de usuarix,
-         sin sentido sin una cuenta de usuarix real; esas cuentas ya tienen su
-         propio "Cerrar sesión" en el dashboard (adminCerrarSesionLocal(),
-         Tanda 1). -->
-    <div id="aj-zona-cuenta" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
-      <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
-      <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
-    </div>
-
-  </div>
-</div>
-
-<!-- SUB: Contacto -->
-<div class="aj-sub" id="aj-sub-contacto">
-  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-contacto')">
-      <span class="material-symbols-outlined">arrow_back</span>
-    </button>
-    <span class="app-nav-title">Contacto</span>
-    <div style="width:40px;flex-shrink:0;"></div>
-  </div>
-  <div class="aj-sub-inner">
-    <div class="aj-group">
-      <div class="aj-dato-row no-tap" onclick="mostrarToast('El email no es editable. Contacta a un administrador si necesitas cambiarlo.','ok')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">mail</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Email</div>
-          <div class="aj-dato-val" id="aj-email-display" style="opacity:.5">—</div>
-        </div>
-        <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetPrefijo()">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">language</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Prefijo</div>
-          <div class="aj-dato-val" id="aj-prefijo-display">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTelefono('Número de teléfono','aj-telefono-val','telefono','prefijo')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">phone</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Número</div>
-          <div class="aj-dato-val" id="aj-telefono-val">—</div>
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
@@ -4781,12 +4617,37 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="aj-sheet-texto-titulo" class="bsheet-title"></div>
   <div id="aj-sheet-texto-subtitulo" style="display:none;font-size:0.78rem;color:var(--muted);text-align:center;line-height:1.4;padding:12px 16px 0;"></div>
   <div class="bsheet-body">
+    <!-- Selector de código de país (solo teléfono con prefijo, ver
+         ajAbrirSheetTelefono(..., conPrefijo) en js/perfil.js): abre el sheet
+         de prefijo encima y guarda prefijo + número juntos al confirmar. -->
+    <button type="button" class="aj-sheet-prefijo-btn" id="aj-sheet-texto-prefijo" style="display:none;">
+      <span class="material-symbols-outlined">language</span>
+      <span class="aj-sheet-prefijo-btn-val" id="aj-sheet-texto-prefijo-val">Selecciona</span>
+      <span class="material-symbols-outlined">expand_more</span>
+    </button>
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
     <div class="form-char-counter" id="aj-sheet-texto-contador" style="display:none;"></div>
     <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
     <div class="error-msg" id="aj-sheet-texto-error" style="margin-top:10px;"></div>
     <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
     <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: Nombre de usuario (perfil propio de Equipo, fila "Nombre
+     de usuario"). Validación en vivo de formato y disponibilidad contra el
+     roster (`_ajUsernameInput()`, js/perfil.js). -->
+<div id="aj-sheet-username-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetUsername()"></div>
+<div id="aj-sheet-username" class="bsheet" style="z-index:9601;">
+  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Nombre de usuario</div>
+  <div class="aj-sheet-subtitulo">Sin espacios, mínimo 3 caracteres.</div>
+  <div class="bsheet-body">
+    <input type="text" id="aj-username-input" class="aj-sheet-input" oninput="_ajUsernameInput(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Tu nombre de usuario">
+    <div class="aj-username-estado" id="aj-username-estado" style="display:none;"></div>
+    <button type="button" class="btn btn-outline" id="aj-username-guardar-btn" style="margin-top:10px;" disabled onclick="_ajUsernameGuardar()">Guardar</button>
+    <button type="button" class="aj-sheet-cancelar" onclick="ajCerrarSheetUsername()">Cancelar</button>
   </div>
 </div>
 

@@ -13,10 +13,6 @@
 var _ajYaInicializadoEnSesion = false;
 var _ajHomeScrollY = 0;
 var _ajRestaurarScroll = false;
-// Pantalla a la que vuelve la flecha atrás del top bar de Ajustes (ver
-// TOP_BAR_CONFIG['s-datos'], js/ui.js) -- la fija `_eqIrAjustes()`
-// (js/equipo.js, lápiz del detalle propio); la nav inferior la limpia.
-var _ajVolverA = null;
 function _ajGuardarScrollHome() { _ajHomeScrollY = window.scrollY; }
 function irEditarDatos(sinNavegar) {
   // Cuenta admin "pura" (dashboardAdmin:true, sin fila en Equipo, nunca pisa
@@ -28,25 +24,12 @@ function irEditarDatos(sinNavegar) {
   // Sin _adminToken NI E.datos, sigue bailando como antes.
   if (!E.datos && !_adminToken) return;
   var d = E.datos || {};
-  // Foto de perfil
-  _avatarSetFotoOInicial(document.getElementById('aj-avatar'), d.fotoPerfil || '', E.nombre);
-  // Nombre derby / número / pronombres — mismo formato que el hero viejo
-  // (eliminado, ver MANIFEST "Cambios recientes"); título/subtítulo de la
-  // propia fila "Foto de perfil" en vez de texto fijo.
-  var derbyNombre = document.getElementById('aj-derby-nombre');
-  var derbySub = document.getElementById('aj-derby-sub');
-  if (derbyNombre) derbyNombre.textContent = d.nombreDerby || E.nombre || '—';
-  if (derbySub) {
-    var partes = [];
-    if (d.numeroDerby) partes.push('#' + d.numeroDerby);
-    if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
-    derbySub.textContent = partes.join(' · ') || '—';
-  }
-  // Stats, lesión y controles de admin propios ya no viven acá: Ajustes es
-  // solo datos privados/cuenta; la cara pública (stats, tier, lesión,
-  // admin) está en el detalle propio de Equipo (ver MANIFEST.md). Se
-  // precarga igual el roster (`_eqAsegurarCargado()`, js/equipo.js) -- lo
-  // usa el chequeo de disponibilidad de username (`_ajUsername*`, más abajo).
+  // Ajustes es solo datos privados + cuenta: foto, nombre derby, teléfono y
+  // el resto de los datos visibles para el equipo se editan en el perfil
+  // propio de Equipo ("Mis datos", `_eqMisDatosHtml()`/js/equipo.js), igual
+  // que stats, tier, lesión y admin (ver MANIFEST.md). Se precarga igual el
+  // roster (`_eqAsegurarCargado()`) -- lo usa el chequeo de disponibilidad
+  // de username (`_ajUsername*`, más abajo).
   if (typeof _eqAsegurarCargado === 'function') _eqAsegurarCargado(function() {});
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
@@ -62,9 +45,6 @@ function irEditarDatos(sinNavegar) {
       eqVal.textContent = eqPartes.join(' · ') || '—';
     }
   }
-  // Teléfono
-  var telVal = document.getElementById('aj-tel-val');
-  if (telVal) telVal.textContent = (d.prefijo ? d.prefijo.match(/\+\d+/)?.[0] || '' : '') + ' ' + (d.telefono || '') || '—';
   // Privacidad
   var privVal = document.getElementById('aj-priv-val');
   if (privVal) {
@@ -133,7 +113,6 @@ function irEditarDatos(sinNavegar) {
 // ver #s-datos, nada que resaltar todavía. */
 var _AJ_TOUR_PASOS = [
   { selector: '#aj-search-wrap', titulo: 'Busca rápido', texto: 'Busca lo que necesites, fácil y rápido.' },
-  { selector: '.aj-row[data-aj-key="perfil"]', titulo: 'Tus datos visibles', texto: 'Edita o agrega tus datos más visibles: foto de perfil, nombre derby y más.' },
   { selector: '.aj-row[data-aj-key="equip"]', titulo: 'Tu equipamiento', texto: 'Cambia tu equipamiento fácilmente: tallas y protecciones.' },
   { selector: '.aj-row[data-aj-key="emerg"]', titulo: 'Más ajustes', texto: 'Explora más ajustes de tu perfil: datos de emergencia, información adicional y más.' }
 ];
@@ -146,8 +125,6 @@ function _ajTourIniciarSiCorresponde() {
     _evTourIniciarConPasos(_AJ_TOUR_PASOS, 'aj_tour_visto', 'FINALIZAR TOUR');
   }, 650);
 }
-
-function irEditarPerfil() { irAjSub('aj-sub-perfil'); }
 
 function limpiarTelefono(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
 
@@ -512,9 +489,7 @@ function _ddpRenderMeses() {
    -- no adivinado), para que buscar "cédula" encuentre "Identidad legal"
    aunque esa palabra no esté en su título. */
 var AJ_SEARCH_KEYWORDS = {
-  perfil: ['nombre de usuario', 'username', 'apodo', 'nombre derby', 'número derby', 'numero derby', 'pronombres', 'foto de perfil', 'entraste al equipo', 'fecha ingreso', 'ingreso'],
   equip: ['patines', 'protecciones', 'talla', 'casco', 'rodilleras', 'coderas', 'muñequeras', 'munequeras'],
-  contacto: ['teléfono', 'telefono', 'número', 'numero', 'email', 'correo', 'prefijo'],
   privacidad: ['fecha de nacimiento', 'cumpleaños', 'cumpleanos', 'edad', 'compartir'],
   legal: ['cédula', 'cedula', 'dni', 'pasaporte', 'documento', 'nombre legal', 'tipo de documento'],
   direccion: ['calle', 'calle principal', 'calle secundaria', 'numeración', 'numeracion', 'sector', 'cantón', 'canton', 'mapa', 'ubicación', 'ubicacion'],
@@ -741,26 +716,7 @@ function _ajCargarSub(id) {
     document.getElementById('aj-equip-protec-val').textContent = d.necesitaProtecciones || '—';
     return;
   }
-  if (id === 'aj-sub-perfil') {
-    _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
-    _ajUsernameCancelarEdicion();
-    _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
-    _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
-    _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
-    _ajSetDatoVal('aj-ingreso-val', d.fechaIngreso ? _ajFormatearFechaIngreso(d.fechaIngreso) : null, '—', false);
-    // #aj-avatar-hero: mismo criterio de foto/inicial que #aj-avatar
-    // (irEditarDatos(), más arriba en este archivo). Ahora es la fila
-    // "Foto de perfil" completa la que abre el sheet de recorte (onclick en
-    // el .aj-row en index.html), no un botón de cámara separado.
-    _avatarSetFotoOInicial(document.getElementById('aj-avatar-hero'), d.fotoPerfil || '', E.nombre);
-    // Rol en el equipo + Estadísticas (Batch 4) -- ver esas 2 funciones más
-    // abajo en este archivo.
-    _ajRenderRol();
-  } else if (id === 'aj-sub-contacto') {
-    _ajSetDatoVal('aj-email-display', d.email, '—', false);
-    _ajSetPrefijo('aj-prefijo-display', null, d.prefijo || '');
-    _ajSetDatoVal('aj-telefono-val', d.telefono, '—', false);
-  } else if (id === 'aj-sub-privacidad') {
+  if (id === 'aj-sub-privacidad') {
     var fnRaw = (d.fechaNacimiento || '').toString().trim();
     _ajSetDatoVal('aj-fecha-display', fnRaw ? _ajFormatearFecha(fnRaw) : '', '—', false);
     var btnF = document.getElementById('aj-fechaPublica');
@@ -836,39 +792,44 @@ function _ajCargarSub(id) {
   }
 }
 
-// ── Nombre de usuario editable (Batch 4) ────────────────────────────────
-// Ver el comentario largo en index.html, junto a `#aj-username-row`, para
-// el porqué completo -- resumen: `username` es la clave natural real de
-// TODO el backend (reservas/asistencias/log_asistencias/puntos_mensuales/
-// admins, ver auditoría del Cambio 55 en MANIFEST.md, ninguna tabla tiene
-// un id numérico aparte) -- renombrarla de verdad implica una migración
-// real a través de todas esas tablas a la vez, no un `UPDATE` simple.
-// `_ajUsernameGuardar()` llama a una acción (`cambiarNombreUsuario`) que NO
-// existe en el router real (supabase/functions/api/index.ts) -- el resto
-// del flujo (activar edición, chequeo de disponibilidad en vivo,
-// validación, habilitar/deshabilitar el botón) queda 100% funcional.
+// ── Nombre de usuario editable (sheet #aj-sheet-username) ───────────────
+// Se abre desde la fila "Nombre de usuario" del perfil propio de Equipo
+// (`_eqMisDatosHtml()`, js/equipo.js); antes era edición inline en el sub
+// "Mi perfil" de Ajustes (eliminado). `username` es la clave natural real
+// de TODO el backend (reservas/asistencias/log_asistencias/
+// puntos_mensuales/admins, ver auditoría del Cambio 55 en MANIFEST.md) --
+// renombrarla de verdad implica una migración real a través de todas esas
+// tablas a la vez, no un `UPDATE` simple. `_ajUsernameGuardar()` llama a
+// una acción (`cambiarNombreUsuario`) que NO existe en el router real
+// (supabase/functions/api/index.ts) -- el resto del flujo (chequeo de
+// disponibilidad en vivo, validación, habilitar/deshabilitar el botón)
+// queda 100% funcional.
 function _ajUsernameActivarEdicion() {
-  var display = document.getElementById('aj-nombre-display');
   var input = document.getElementById('aj-username-input');
-  var lapiz = document.getElementById('aj-username-lapiz-btn');
-  if (!display || !input) return;
+  var ov = document.getElementById('aj-sheet-username-overlay');
+  var sh = document.getElementById('aj-sheet-username');
+  if (!input || !ov || !sh) return;
+  _ajUsernameCancelarEdicion();
   input.value = E.nombre || '';
-  display.style.display = 'none';
-  input.style.display = '';
-  if (lapiz) lapiz.style.display = 'none';
-  input.focus();
+  ov.style.display = 'block';
+  sh.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  setTimeout(function() { input.focus(); }, 400);
+  _registrarOverlayAbierto(ajCerrarSheetUsername);
 }
+function ajCerrarSheetUsername(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('aj-sheet-username');
+  var ov = document.getElementById('aj-sheet-username-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Deja el sheet en su estado inicial (sin mensaje, botón deshabilitado).
 function _ajUsernameCancelarEdicion() {
-  var display = document.getElementById('aj-nombre-display');
-  var input = document.getElementById('aj-username-input');
-  var lapiz = document.getElementById('aj-username-lapiz-btn');
   var estado = document.getElementById('aj-username-estado');
   var btnGuardar = document.getElementById('aj-username-guardar-btn');
-  if (display) display.style.display = '';
-  if (input) { input.style.display = 'none'; input.value = ''; }
-  if (lapiz) lapiz.style.display = '';
   if (estado) { estado.style.display = 'none'; estado.textContent = ''; }
-  if (btnGuardar) { btnGuardar.style.display = 'none'; btnGuardar.disabled = true; }
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardar'; }
 }
 function _ajUsernameInput(valor) {
   var estado = document.getElementById('aj-username-estado');
@@ -876,7 +837,6 @@ function _ajUsernameInput(valor) {
   if (!estado || !btnGuardar) return;
   var limpio = valor.trim();
   var actual = E.nombre || '';
-  btnGuardar.style.display = limpio ? '' : 'none';
   if (!limpio || limpio.toLowerCase() === actual.toLowerCase()) {
     estado.style.display = 'none';
     btnGuardar.disabled = true;
@@ -897,8 +857,8 @@ function _ajUsernameInput(valor) {
     return;
   }
   // Disponibilidad -- contra el roster real ya en memoria (`_eqPersonas`,
-  // js/equipo.js, cargado por `_eqAsegurarCargado()` -- disparado desde
-  // `irEditarDatos()` al entrar a Ajustes). No existe
+  // js/equipo.js -- ya cargado: el sheet se abre desde el perfil propio de
+  // Equipo). No existe
   // ningún endpoint real de verificación de disponibilidad -- si el roster
   // todavía no cargó (cuenta que nunca visitó Equipo ni vio sus stats en
   // esta sesión), se asume disponible de forma optimista, mismo criterio
@@ -927,10 +887,14 @@ function _ajUsernameGuardar() {
       mostrarToast((res && res.error) || 'No se pudo cambiar el nombre de usuario. Esta función todavía no está disponible.', 'error');
       return;
     }
+    // La persona en `_eqPersonas` se busca ANTES de cambiar E.nombre
+    // (`_eqEsUsuarioActual()` compara contra E.nombre).
+    var yo = typeof _eqUsuariaActual === 'function' ? _eqUsuariaActual() : null;
     E.nombre = nuevo;
     if (E.datos) E.datos.nombre = nuevo;
-    _ajUsernameCancelarEdicion();
-    _ajSetDatoVal('aj-nombre-display', nuevo, '—', false);
+    if (yo) { yo.nombre = nuevo; yo.username = nuevo; }
+    ajCerrarSheetUsername();
+    if (typeof _eqRefrescarPerfilPropio === 'function') _eqRefrescarPerfilPropio();
     mostrarToast('Nombre de usuario actualizado.', 'ok', true);
   }, function(e) {
     btnGuardar.disabled = false;
@@ -957,7 +921,7 @@ function _ajUsernameGuardar() {
 // campo; cualquier combinación (incluida "No definido" + otro rol a la
 // vez) queda permitida ahora, mismo criterio que "Pronombres".
 function _ajRenderRol() {
-  var disp = document.getElementById('aj-rol-val');
+  var disp = document.getElementById('eq-mis-rol-val');
   if (!disp) return;
   var actuales = _eqRolesDe(E.nombre);
   disp.textContent = (!actuales.length || (actuales.length === 1 && actuales[0] === 'No definido')) ? 'No definido' : actuales.join(', ');
@@ -972,6 +936,7 @@ function ajAbrirSheetRol() {
   _ajAbrirSheetTextoPills('Rol en el equipo', 'Selecciona todos los que apliquen.', 'pills-multi', html, function(valorJoin) {
     _eqSetRolesDe(E.nombre, valorJoin.split(', '));
     _ajRenderRol();
+    if (typeof _eqRefrescarPerfilPropio === 'function') _eqRefrescarPerfilPropio();
     mostrarToast('Rol actualizado.', 'ok', true);
   });
 }
@@ -1013,6 +978,7 @@ function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
   if (errEl) errEl.style.display = 'none';
   if (contador) contador.style.display = 'none';
   if (btnConfirmar) btnConfirmar.style.display = '';
+  _ajSheetTextoOcultarPrefijo();
   if (tit) tit.textContent = titulo;
   if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; inp.oninput = null; inp.removeAttribute('maxlength'); }
   var ov = document.getElementById('aj-sheet-texto-overlay');
@@ -1021,6 +987,13 @@ function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
   setTimeout(function(){ var i = document.getElementById('aj-sheet-texto-input'); if (i && _ajSheetTextoModo === 'texto') i.focus(); }, 400);
   _registrarOverlayAbierto(ajCerrarSheetTexto);
+}
+
+// Selector de código de país del sheet de texto (solo lo muestra
+// ajAbrirSheetTelefono(..., conPrefijo)); cualquier otra apertura lo oculta.
+function _ajSheetTextoOcultarPrefijo() {
+  var bp = document.getElementById('aj-sheet-texto-prefijo');
+  if (bp) { bp.style.display = 'none'; bp.onclick = null; }
 }
 
 /* ── Bottom sheet de texto en modo pills (pronombres/relación/tipo de doc) ── */
@@ -1036,6 +1009,7 @@ function _ajAbrirSheetTextoPills(titulo, subtitulo, modo, pillsHtml, callback) {
   if (tit) tit.textContent = titulo;
   if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
   if (inp) inp.style.display = 'none';
+  _ajSheetTextoOcultarPrefijo();
   if (pills) { pills.innerHTML = pillsHtml; pills.style.display = 'flex'; }
   if (btnConfirmar) btnConfirmar.style.display = (modo === 'pills-single') ? 'none' : '';
   var ov = document.getElementById('aj-sheet-texto-overlay');
@@ -1103,7 +1077,9 @@ var _AJ_PREFIJOS = [
   {pais:'Paraguay', bandera:'🇵🇾', cod:'+595', min:9, max:9},
   {pais:'Bolivia', bandera:'🇧🇴', cod:'+591', min:8, max:8},
 ];
-var _ajPrefijoTarget = { displayId: 'aj-prefijo-display', campo: 'prefijo' };
+// `onSel` (opcional): en vez de guardar al elegir, entrega el valor a quien
+// abrió el sheet (teléfono con prefijo, que guarda prefijo + número juntos).
+var _ajPrefijoTarget = { displayId: null, campo: 'prefijo', onSel: null };
 
 function _ajSetPrefijo(displayId, hiddenId, valorGuardado) {
   var el = document.getElementById(displayId);
@@ -1116,11 +1092,15 @@ function _ajSetPrefijo(displayId, hiddenId, valorGuardado) {
   if (hiddenId) { var h = document.getElementById(hiddenId); if (h) h.value = valorGuardado; }
 }
 
-function ajAbrirSheetPrefijo(displayId, campo) {
-  _ajPrefijoTarget = { displayId: displayId || 'aj-prefijo-display', campo: campo || 'prefijo' };
+function ajAbrirSheetPrefijo(displayId, campo, onSel) {
+  _ajPrefijoTarget = { displayId: displayId || null, campo: campo || 'prefijo', onSel: onSel || null };
   _ajRenderPrefijos(_AJ_PREFIJOS);
   var ov = document.getElementById('aj-sheet-prefijo-overlay');
   var sh = document.getElementById('aj-sheet-prefijo');
+  // Abierto encima del sheet de texto (mismo z-index base, y este va antes
+  // en el DOM): se sube por encima mientras dure.
+  if (ov) ov.style.zIndex = onSel ? '9700' : '';
+  if (sh) sh.style.zIndex = onSel ? '9701' : '';
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
   var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
@@ -1164,7 +1144,8 @@ function ajSelPrefijo(pais) {
   var p = _AJ_PREFIJOS.find(function(x) { return x.pais === pais; });
   if (!p) return;
   var val = p.bandera + ' ' + p.cod + ' (' + p.pais + ')';
-  var disp = document.getElementById(_ajPrefijoTarget.displayId);
+  if (_ajPrefijoTarget.onSel) { _ajPrefijoTarget.onSel(val); ajCerrarSheetPrefijo(); return; }
+  var disp = _ajPrefijoTarget.displayId && document.getElementById(_ajPrefijoTarget.displayId);
   if (disp) disp.textContent = p.bandera + ' ' + p.cod + ' ' + p.pais;
   var payload = {};
   payload[_ajPrefijoTarget.campo] = val;
@@ -1266,30 +1247,57 @@ function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placehol
 
 /* Envuelve el sheet genérico con validación de teléfono: solo dígitos
    (filtrados en tiempo real) y longitud mínima/máxima según el país del
-   prefijo ya seleccionado (campo prefijoCampo, ver _AJ_PREFIJOS) — mismo
-   criterio que ya usa inscripción. */
-function ajAbrirSheetTelefono(titulo, displayId, campo, prefijoCampo) {
+   prefijo (campo prefijoCampo, ver _AJ_PREFIJOS) — mismo criterio que ya
+   usa inscripción. `conPrefijo` (fila "Teléfono" del perfil propio de
+   Equipo): muestra arriba del input el selector de código de país, que abre
+   el sheet de prefijo encima; el prefijo elegido recalcula la validación y
+   se guarda JUNTO con el número al confirmar (un solo _ajGuardar). Sin
+   `conPrefijo` (contactos de emergencia) el prefijo se edita en su propia
+   fila, como siempre. */
+function _ajTelefonoConPrefijoTexto(prefijo, telefono) {
+  var cod = (String(prefijo || '').match(/\+\d+/) || [''])[0];
+  return [cod, telefono || ''].filter(Boolean).join(' ');
+}
+function ajAbrirSheetTelefono(titulo, displayId, campo, prefijoCampo, conPrefijo) {
   var valorActual = (E.datos && E.datos[campo]) || '';
-  var prefVal = (E.datos && E.datos[prefijoCampo]) || '';
-  var pais = _AJ_PREFIJOS.find(function(p) {
-    return prefVal.indexOf(p.pais) !== -1 || prefVal.indexOf(p.cod) !== -1;
-  });
-  var min = pais ? pais.min : 7, max = pais ? pais.max : 15;
+  var prefSel = (E.datos && E.datos[prefijoCampo]) || '';
+  var rango = function() {
+    var pais = _AJ_PREFIJOS.find(function(p) { return prefSel.indexOf(p.pais) !== -1 || prefSel.indexOf(p.cod) !== -1; });
+    return { pais: pais, min: pais ? pais.min : 7, max: pais ? pais.max : 15 };
+  };
+  var pintarSubtitulo = function() {
+    var sub = document.getElementById('aj-sheet-texto-subtitulo');
+    if (!sub) return;
+    var r = rango();
+    sub.textContent = 'Entre ' + r.min + ' y ' + r.max + ' dígitos' + (r.pais ? ' para ' + r.pais.pais : '') + '. Sin espacios ni caracteres especiales.';
+    sub.style.display = 'block';
+  };
 
   ajAbrirSheetTexto('aj-sheet-texto', titulo, 'Ej: 0962773052', function(v) {
     var payload = {}; payload[campo] = v;
+    if (conPrefijo && prefSel) payload[prefijoCampo] = prefSel;
     _ajGuardar(payload);
     var disp = document.getElementById(displayId);
-    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+    if (disp) { disp.textContent = conPrefijo ? _ajTelefonoConPrefijoTexto(prefSel, v) : v; disp.classList.remove('vacio'); }
   });
 
-  var sub = document.getElementById('aj-sheet-texto-subtitulo');
-  if (sub) {
-    sub.textContent = 'Entre ' + min + ' y ' + max + ' dígitos' + (pais ? ' para ' + pais.pais : '') + '. Sin espacios ni caracteres especiales.';
-    sub.style.display = 'block';
-  }
+  pintarSubtitulo();
   var errEl = document.getElementById('aj-sheet-texto-error');
   if (errEl) errEl.style.display = 'none';
+
+  var btnPref = document.getElementById('aj-sheet-texto-prefijo');
+  if (btnPref && conPrefijo) {
+    _ajSetPrefijo('aj-sheet-texto-prefijo-val', null, prefSel);
+    btnPref.style.display = '';
+    btnPref.onclick = function() {
+      ajAbrirSheetPrefijo(null, prefijoCampo, function(val) {
+        prefSel = val;
+        _ajSetPrefijo('aj-sheet-texto-prefijo-val', null, prefSel);
+        pintarSubtitulo();
+        if (errEl) errEl.style.display = 'none';
+      });
+    };
+  }
 
   var inp = document.getElementById('aj-sheet-texto-input');
   if (inp) {
@@ -1298,8 +1306,10 @@ function ajAbrirSheetTelefono(titulo, displayId, campo, prefijoCampo) {
   }
 
   _ajSheetTextoValidador = function(v) {
-    if (v.length < min || v.length > max) {
-      return 'Debe tener entre ' + min + ' y ' + max + ' dígitos' + (pais ? ' para ' + pais.pais : '') + '.';
+    var r = rango();
+    if (conPrefijo && !prefSel) return 'Selecciona el código de país.';
+    if (v.length < r.min || v.length > r.max) {
+      return 'Debe tener entre ' + r.min + ' y ' + r.max + ' dígitos' + (r.pais ? ' para ' + r.pais.pais : '') + '.';
     }
     return null;
   };
@@ -1319,7 +1329,7 @@ function ajAbrirSheetPronombres() {
       nombreDerby: (E.datos && E.datos.nombreDerby) || '',
       numeroDerby: (E.datos && E.datos.numeroDerby) || ''
     });
-    var disp = document.getElementById('aj-pron-val');
+    var disp = document.getElementById('eq-mis-pron-val');
     if (disp) disp.textContent = valorJoin;
   });
 }
@@ -1344,7 +1354,7 @@ function ajAbrirSheetIngreso() {
     anioDefault: new Date().getFullYear(),
     callback: function(iso) {
       _ajGuardar({ fechaIngreso: iso });
-      var disp = document.getElementById('aj-ingreso-val');
+      var disp = document.getElementById('eq-mis-ingreso-val');
       if (disp) disp.textContent = _ajFormatearFechaIngreso(iso);
     }
   });
@@ -2138,13 +2148,20 @@ function ajEliminarEmerg2() {
   _ajGuardar({ emerg2Nombre: '', emerg2Relacion: '', emerg2Prefijo: '', emerg2Telefono: '' });
 }
 
+// Guardado compartido por Ajustes y por "Mis datos" del perfil propio de
+// Equipo. Tras el éxito sincroniza la persona en `_eqPersonas` y el detalle
+// propio abierto (`_eqSincronizarDatosPropios()`, js/equipo.js) y repuebla
+// la home de Ajustes SIN navegar (`irEditarDatos(true)`; antes, sin sub
+// abierto, navegaba a Ajustes). `subId` ya no tiene uso (ningún caller lo
+// pasaba); se deja en la firma por compatibilidad.
 function _ajGuardar(payload, btn, subId, onExito) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. Los cambios se guardarán cuando vuelvas a conectarte.', 'error'); return; }
   if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
   api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function() {
     Object.assign(E.datos, payload);
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
-    if (onExito) { onExito(); } else { irEditarDatos(!!_ajSubAbierto && !subId); cerrarAjSub(subId, true); }
+    if (typeof _eqSincronizarDatosPropios === 'function') _eqSincronizarDatosPropios(payload);
+    if (onExito) { onExito(); } else { irEditarDatos(true); }
     mostrarToast('Datos guardados', 'ok');
   }, function(e) {
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }

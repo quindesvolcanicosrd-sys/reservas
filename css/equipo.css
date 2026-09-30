@@ -717,6 +717,23 @@
    `.eq-tendencia-badge--detalle`, el badge base se perdía ahí. */
 .badge-estado--detalle { width: 28px; height: 28px; border-width: 2px; }
 .badge-estado--detalle .material-symbols-rounded { font-size: 17px; }
+/* Foto editable del detalle propio: tocar la foto o el badge de lápiz abre
+   `abrirSheetFotoPerfil('equipo')` (js/foto.js). El badge va en la esquina
+   SUPERIOR derecha (la inferior es del badge de estado/tendencia), mismo
+   tamaño que `.badge-estado--detalle`; sin eventos propios, el toque lo
+   recibe el wrap. */
+.eq-avatar-editable { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 50%; }
+.eq-avatar-editable .eq-avatar-grande { transition: opacity 0.15s; }
+.eq-avatar-editable:active .eq-avatar-grande { opacity: 0.8; }
+.eq-avatar-editable:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.badge-editar-foto {
+  position: absolute; top: 0; right: 0; z-index: 2;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--bg); background: var(--brand); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.badge-editar-foto .material-symbols-rounded { font-size: 15px; }
 
 .badge-viaje { background: var(--badge-viaje-bg); }
 .badge-viaje .material-symbols-rounded { color: var(--badge-viaje-icon); }
@@ -895,6 +912,11 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
    espacio entre grupos que Ajustes: solo el `margin-bottom:10px` de
    `.aj-group`, sin título de grupo. */
 #eq-perfil-grupo-publico { margin-top: 16px; }
+/* "Mis datos" (solo detalle propio, `_eqMisDatosHtml()`): primer grupo tras
+   el header, mismo espacio arriba; el grupo público que le sigue queda
+   separado solo por el `margin-bottom` de `.aj-group`, como en Ajustes. */
+#eq-perfil-grupo-datos { margin-top: 16px; }
+#eq-perfil-grupo-datos + #eq-perfil-grupo-publico { margin-top: 0; }
 /* Los hints de las filas (cuota/admin, lesión) pueden ocupar 2 líneas -- a
    diferencia de Ajustes, donde `.aj-value` es un resumen de 1 línea. */
 .eq-perfil-grupo .aj-value { white-space: normal; }

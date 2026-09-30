@@ -213,10 +213,9 @@ var TOP_BAR_CONFIG = {
   // ver historial) hace que ir() (js/ui.js) oculte solo el botón atrás
   // (topBtn.style.display='none') sin ocultar el resto del top-bar -- el
   // título "AJUSTES" se sigue mostrando, solo desaparece la flecha.
-  // Flecha atrás solo si se entró desde el lápiz del detalle propio de
-  // Equipo (`_eqIrAjustes()`, js/equipo.js -> `_ajVolverA`); desde la nav
-  // inferior sigue siendo pantalla raíz sin flecha.
-  's-datos': { titulo: 'Ajustes', volver: function() { return (typeof _ajVolverA !== 'undefined' && _ajVolverA) || null; } },
+  // (El lápiz del detalle propio de Equipo que entraba acá con flecha atrás
+  // se eliminó: esos datos se editan ahora en el propio detalle.)
+  's-datos': { titulo: 'Ajustes', volver: null },
   // "Mi Liga" -- mismo criterio que 's-datos' (pantalla raíz de
   // APP_BOTTOM_NAV_ITEMS, sin flecha atrás real): `volver: null` reusa acá
   // el ícono decorativo de la tab (_iconoRaizDeNav()) en el slot de la
@@ -672,7 +671,7 @@ var APP_BOTTOM_NAV_ITEMS = [
     entrar: function() { irTareas(); },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
-    entrar: function() { if (typeof _ajVolverA !== 'undefined') _ajVolverA = null; irEditarDatos(); },
+    entrar: function() { irEditarDatos(); },
     // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
     // Ajustes (`#s-datos`) al abandonar la sección, distinto de
     // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba

@@ -125,6 +125,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-09-30 — Feat: los datos visibles para el equipo se editan en el perfil propio de Equipo. Grupo "Mis datos" con el mismo estilo que Estadísticas/Estado (nombre de usuario, nombre y número derby, pronombres, rol, fecha de ingreso, teléfono con prefijo en una sola fila, email de solo lectura), reusando los sheets de Ajustes; cada cambio se refleja en la fila, el header y el roster sin recargar. Foto editable desde el avatar o un badge de lápiz en la esquina superior derecha. Se quitó el lápiz de la nav del detalle propio. "Editar tu perfil" de Home abre este perfil. El perfil de otras personas no cambia. Ver MANIFEST.md.
+
 2026-09-30 — Feat: botón "Abrir en WhatsApp" (pill verde, token nuevo `--wa-text`) a la derecha de la fila del teléfono del perfil de detalle. La fila sigue llamando al tocarla; la pill es hermana del enlace `tel:` (no anidada), abre `wa.me` en otra pestaña y no aparece en el perfil propio ni sin teléfono/link válido. En pantallas angostas queda solo el ícono (container query). Ver MANIFEST.md.
 
 2026-09-28 — Header de la home de Equipo: buscador a todo el ancho (como en Ajustes) + botón de filtros (`tune`) con el contador de filtros activos; el panel desplegable queda solo con Puntos y Rol. En el detalle de perfil se quitó el título "Administración" del grupo de admin. Bottom nav: "Ajustes" vuelve a mostrar siempre el ícono de engranaje en lugar de la foto de perfil.
@@ -251,6 +253,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2026-08 (aprox.) — 3 estados de asistencia real ("A horario"/"Tarde"/"Ausente"+"Sin registrar") unificados en un solo componente `.ev-estado-pill` en todos los contextos.
 
 ## Perfil
+
+2026-09-30 — Ajustes queda solo para lo privado y la cuenta: sin la fila de perfil ni la de Teléfono (y sin los subs "Mi perfil" y "Contacto"); "Cerrar sesión" y "Eliminar cuenta" pasan al final de la home. Búsqueda y tour sin las filas eliminadas. Fix: el toast "El email no es editable" nunca se mostraba (`mostrarToast` silencia los toasts no-error sin `forzar`). Fix: guardar un dato sin sub de Ajustes abierto ya no navega a Ajustes. Ver MANIFEST.md.
 
 2026-09-03 — Cambio 65 (soporte offline, ver también Auth/Equipo/Tareas): `_ajGuardar()` — el guardado genérico de cualquier cambio de Ajustes (`actualizarDatosPersona`) — corta al inicio con un toast ("Sin conexión. Los cambios se guardarán cuando vuelvas a conectarte.") si `!navigator.onLine`, en vez de dejar que el `apiPost()` falle recién después con un error de red genérico.
 
