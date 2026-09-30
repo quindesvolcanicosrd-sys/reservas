@@ -615,12 +615,15 @@
 }
 /* Nombre en la nav al scrollear (`_eqNavTituloObservar()`, js/equipo.js):
    mismo `.app-nav-title` que el resto de las navs (absoluto, no empuja los
-   botones), centrado y con el mismo espacio reservado a ambos lados --
-   `--eq-nav-lado` (inline, `_eqNavHtml()`) = botones del lado más ancho
-   (1 atrás / 1-2 acciones); el gap entre botones es el de `.app-nav-actions`. */
+   botones), alineado a la izquierda con su `padding-left` heredado de
+   `.app-nav-title` (css/nav.css). Solo el `padding-right` es propio: reserva
+   los botones de acción -- `--eq-nav-lado` (inline, `_eqNavHtml()`) = 1 o 2
+   botones; el gap entre ellos es el de `.app-nav-actions`. Esta fila no
+   tiene el padding horizontal de `.app-nav` (lo pone `.contenedor`), así
+   que `left` corre la caja ese mismo inset para que el texto arranque a la
+   misma distancia de la flecha que en las demás navs. */
 .eq-perfil-nav-titulo {
-  text-align: center;
-  padding-left: calc(var(--nav-btn-size) * var(--eq-nav-lado, 1) + 10px * (var(--eq-nav-lado, 1) - 1) + 12px);
+  left: calc(-1 * var(--space-screen));
   padding-right: calc(var(--nav-btn-size) * var(--eq-nav-lado, 1) + 10px * (var(--eq-nav-lado, 1) - 1) + 12px);
   opacity: 0;
   transition: opacity 0.22s ease;

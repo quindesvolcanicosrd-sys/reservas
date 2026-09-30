@@ -188,6 +188,10 @@ var _eqPersonaActual = null;
 var _eqBusqueda = '';
 
 function _eqEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+// Nombre visible de una persona: el nombre derby o, si no tiene (llega `''`
+// desde getEquipo()), el username -- mismo fallback que el avatar
+// (`_eqAvatarHtml()`). Usado en el roster, el header y la nav del detalle.
+function _eqNombreVisible(p) { return (p && (p.nombreDerby || p.username)) || ''; }
 // Texto libre como contenido HTML (ej. el lugar de una asistencia externa).
 function _eqEscHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -800,7 +804,7 @@ function _eqFilaHtml(p) {
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
       '<div class="eq-miembro-info">' +
-        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + tuHtml + '</div>' +
+        '<div class="eq-miembro-nombre">' + _eqEsc(_eqNombreVisible(p)) + numeroHtml + tuHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
         (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
@@ -912,7 +916,7 @@ function _eqCompararPorPuntos(a, b) {
   var pa = Number(a.puntosEfectivos != null ? a.puntosEfectivos : a.puntosTotal) || 0;
   var pb = Number(b.puntosEfectivos != null ? b.puntosEfectivos : b.puntosTotal) || 0;
   if (pb !== pa) return pb - pa;
-  return String(a.nombreDerby || '').localeCompare(String(b.nombreDerby || ''), 'es');
+  return String(_eqNombreVisible(a)).localeCompare(String(_eqNombreVisible(b)), 'es');
 }
 function _eqPasaBusqueda(p) {
   if (!_eqBusqueda) return true;
@@ -2605,13 +2609,14 @@ function _eqNavHtml(p) {
   }
   // Sin lápiz en el detalle propio: los datos visibles se editan ahí mismo
   // ("Mis datos", `_eqMisDatosHtml()`) y la foto desde su badge.
-  // Título (nombre) centrado que aparece al scrollear (`_eqNavTituloObservar()`):
-  // absoluto, no mueve los botones; `--eq-nav-lado` = botones del lado más
-  // ancho, para reservar el mismo espacio a ambos lados y truncar con ellipsis.
+  // Título (nombre) que aparece al scrollear (`_eqNavTituloObservar()`):
+  // absoluto y alineado a la izquierda como el resto de las navs, no mueve
+  // los botones; `--eq-nav-lado` = botones de acción, reservados a la derecha
+  // (`padding-right`) para truncar con ellipsis antes de llegar a ellos.
   var nAcciones = esYo ? 0 : (waUrl ? 2 : 1);
   return '<div class="eq-perfil-nav-row" style="--eq-nav-lado:' + Math.max(1, nAcciones) + ';">' +
       '<button class="app-nav-back" onclick="_eqVolverLista()" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
-      '<span class="app-nav-title eq-perfil-nav-titulo" id="eq-perfil-nav-titulo" aria-hidden="true">' + _eqEscHtml(p.nombreDerby) + '</span>' +
+      '<span class="app-nav-title eq-perfil-nav-titulo" id="eq-perfil-nav-titulo" aria-hidden="true">' + _eqEscHtml(_eqNombreVisible(p)) + '</span>' +
       '<div class="app-nav-actions">' + acciones + '</div>' +
     '</div>';
 }
@@ -3861,7 +3866,7 @@ function _eqAbrirConfirmAdmin(id) {
   // Mensaje real (Cambio 55) -- el admin de esta app es global (tabla
   // `admins`), no un rol acotado a "editar el equipo": corregido para no
   // subestimar el alcance real del acceso que se está por otorgar.
-  if (msg) msg.textContent = '¿Dar acceso de administradora a ' + persona.nombreDerby + '? Tendrá acceso completo al panel de administración (Mi Liga).';
+  if (msg) msg.textContent = '¿Dar acceso de administradora a ' + _eqNombreVisible(persona) + '? Tendrá acceso completo al panel de administración (Mi Liga).';
   sheet.setAttribute('data-pendiente-id', id);
   sheet.classList.add('visible');
 }
@@ -4057,7 +4062,7 @@ function _eqPerfilContenidoHtml(p) {
         _eqBadgeAvatarHtml(p, 'eq-tendencia-badge--detalle', 'badge-estado--detalle') + // viaje/lesión reemplaza a tendencia, ver _eqBadgeAvatarHtml()
         (esYo ? '<span class="badge-editar-foto" aria-hidden="true"><span class="material-symbols-rounded">edit</span></span>' : '') +
       '</div>' +
-      '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
+      '<div class="eq-perfil-nombre">' + _eqEsc(_eqNombreVisible(p)) + '</div>' +
       categoriaPronombresHtml +
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +

@@ -125,6 +125,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-09-30 — Ajuste: el nombre que aparece en la nav del detalle al scrollear se alinea a la izquierda como en el resto de las navs (antes centrado). Quien no tiene nombre derby ahora muestra su username en el roster, el header y la nav del detalle (antes quedaba vacío), y se ordena por ese nombre visible. Ver MANIFEST.md.
+
 2026-09-30 — Feat: en el detalle de perfil (propio y ajeno), el nombre aparece centrado en la nav con fade al scrollear y desaparece al volver arriba (IntersectionObserver sobre el nombre del header, desconectado al salir o abrir otro perfil). La fila Categoría del grupo Administración abre un bottom sheet con las pills Quindes/Auto/Mirlxs (guarda igual que antes, con reversión si falla; check y cierre automático al confirmar); se eliminó la subsección de Categoría. La fila de asistencia externa pasa a "Asistencias externas" (con el conteo) y abre una subsección con "+ Registrar asistencia externa" y la lista de las registradas (más reciente primero), cada una con eliminar y sheet de confirmación; lista, contador y estadísticas se refrescan sin recargar. La fecha del sheet de registro usa el date picker de la app con fechas futuras deshabilitadas (hoy en Ecuador). Ver MANIFEST.md.
 
 2026-09-30 — Revertido: se quitó la pill "Abrir en WhatsApp" de la fila del teléfono del perfil de detalle (commit fcaa846). La fila vuelve a ser un enlace `tel:` simple, igual que la de email; se borraron sus estilos y el token `--wa-text`. El botón de WhatsApp de la nav del detalle ajeno sigue igual. Ver MANIFEST.md.
