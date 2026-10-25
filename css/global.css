@@ -270,6 +270,21 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 .bsheet-body { padding: 16px; }
 .bsheet-body--flush { padding: 0; }
+/* Variante roja de `.bsheet-title` -- confirmaciones destructivas (ver
+   `#eq-sheet-eliminar`/index.html, js/equipo.js) -- extraída en vez de
+   sumar otra repetición de `style="color:var(--danger);"` sobre
+   `.bsheet-title` (ya inline en varios sheets existentes -- #ev-sheet-
+   cancelar/#ev-sheet-borrar/#eq-sheet-ext-eliminar/etc., sin tocar esos,
+   fuera de alcance de este pedido). */
+.bsheet-title-danger { color: var(--danger); }
+/* Texto de aviso dentro del body de un bsheet de confirmación -- mismo
+   motivo que la clase de arriba: ya vivía repetido inline en varios sheets
+   existentes, esta extracción es solo para no sumar una repetición más. */
+.bsheet-texto-aviso { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin: 0 0 20px; }
+/* Columna de botones apilados de un bsheet (acción primaria + "Cancelar")
+   -- reemplaza el `margin-bottom:10px` inline del primer botón que ya
+   vivía repetido en varios sheets existentes, mismo motivo que arriba. */
+.bsheet-btns-col { display: flex; flex-direction: column; gap: 10px; }
 .bsheet.bsheet-scroll { max-height: 80vh; }
 /* Arrastre real de la manija (shared/bsheet.js, touchstart/touchmove/touchend
    en .bsheet-handle) — mismo criterio que .ptr-indicator.ptr-sin-transicion

@@ -582,6 +582,17 @@
 @media (hover: hover) { .eq-fav-btn:hover { background: var(--brand-lightest); } }
 .eq-fav-btn .material-symbols-outlined { font-size: 1.3rem; }
 .eq-fav-btn.activo { color: var(--brand); }
+/* Ícono de eliminar en la fila de persona (admin, SOLO grupo Inactivxs --
+   ver MANIFEST.md, "Eliminar usuarios desde Equipo") -- capa de
+   `.btn-outline-danger` (css/ui.css, color/borde compartidos con el botón
+   "Eliminar" de Mi Liga -> Usuarios) con la misma forma de ícono circular
+   que `.eq-fav-btn` arriba, en vez de la pill con texto que usa Mi Liga. */
+.eq-delete-btn {
+  width: 38px; height: 38px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.eq-delete-btn .material-symbols-outlined { font-size: 1.2rem; }
+@media (hover: hover) { .eq-delete-btn:hover { background: var(--error-light-border); } }
 
 /* Fade in/out breve al togglear favorito (`data-eq-fav`, `_eqToggleFavorito()`/
    js/equipo.js) -- aplica tanto sobre `.eq-fav-btn` (fila de lista/favoritos)

@@ -110,6 +110,22 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-danger:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Acción destructiva chica, "outline" -- Eliminar/Quitar dentro de una
+   fila/card (distinta de `.btn-danger` arriba, pensada para un CTA de
+   ancho completo, y de `.btn-danger-outline`/css/eventos.css, scopeada a
+   `.ev-sinrollcall-banner-acciones` y combinada con `.btn` para un look
+   full-width uppercase -- esta es un pill chico independiente) -- reusada
+   por el botón "Eliminar" de Mi Liga -> Usuarios (js/admin.js) y, con el
+   modificador `.eq-delete-btn` (forma de ícono circular, css/equipo.css),
+   por el ícono de borrar de la fila de persona en Equipo (ver MANIFEST.md
+   -- "Eliminar usuarios desde Equipo"). */
+.btn-outline-danger {
+  border: 2px solid var(--error-light-border); background: var(--error-lightest);
+  color: var(--error); border-radius: 10px; padding: 8px 12px;
+  cursor: pointer; font-weight: 800; font-size: 0.8rem; flex-shrink: 0;
+}
+@media (hover: hover) { .btn-outline-danger:hover { background: var(--error-light-border); } }
+
 /* Excepción de marca: mismo tamaño/forma que .btn, pero con el violeta
    oficial de DeUna en vez de --brand — método de pago #s-pago, ver MANIFEST. */
 .btn-deuna { background: var(--deuna); color: var(--white); border: none; }

@@ -1449,15 +1449,24 @@ function adminGuardarEquipAuto() {
 }
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
+// `u.inactiva` (ver MANIFEST.md, "Eliminar usuarios desde Equipo") --
+// calculada en el backend (`adminGetUsuarios()`, mismo criterio de 30 días
+// que `_eqEsInactivo()`/js/equipo.js) -- el botón "Eliminar" solo se pinta
+// para personas inactivas, mismo criterio que el ícono de borrar del grupo
+// "Inactivxs" en Equipo. `.btn-outline-danger` (css/ui.css, colores desde
+// colors.css) reemplaza el estilo inline que tenía este botón -- misma
+// clase base que usa ese ícono (con el modificador de forma `.eq-delete-btn`,
+// css/equipo.css, que acá no aplica -- este sigue siendo un botón de texto).
 function adminIrUsuarios() {
   mostrarCargando('Cargando usuarios...');
   adminApi({ action: 'adminGetUsuarios' }, function(res) {
     ocultarCargando();
     var html = '';
     (res || []).forEach(function(u) {
+      var nombreEsc = u.nombre.replace(/'/g, "\\'");
       html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:var(--muted);">' + (u.email || 'sin email') + '</div></div>' +
-        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
+        (u.inactiva ? '<button class="btn-outline-danger" onclick="adminEliminarUsuarioClick(\'' + nombreEsc + '\')">Eliminar</button>' : '') +
         '</div>';
     });
     document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:var(--muted);">Sin usuarios.</p>';
@@ -1465,8 +1474,15 @@ function adminIrUsuarios() {
   }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
 }
 
+// Texto neutro (ver MANIFEST.md -- "hoja Mirlxs" referenciaba el backend
+// legado de Google Sheets, ya migrado a Supabase) + alcance real del
+// borrado (pedido explícito, "borrado total, sin dejar historial") --
+// mismo texto que el bottom sheet equivalente de Equipo
+// (`_eqAbrirSheetEliminar()`/js/equipo.js), adaptado al `prompt()` de
+// escribir-para-confirmar que ya usaba esta pantalla (sin cambios en ese
+// mecanismo, fuera del alcance de este pedido).
 function adminEliminarUsuarioClick(nombre) {
-  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todos sus datos de la hoja Mirlxs.\n\nPara confirmar, escribe el nombre exactamente:');
+  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todo su historial (asistencias, puntos, reservas y tareas). Esta acción no se puede deshacer.\n\nPara confirmar, escribe el nombre exactamente:');
   if (escrito === null) return;
   if (escrito.trim() !== nombre) { mostrarToast('El nombre no coincide. No se eliminó nada.', 'error'); return; }
   mostrarCargando('Eliminando...');

@@ -862,7 +862,7 @@ function _evRestaurarTab(pantallaGuardada) {
   // (nunca se limpia al salir) -- alcanza con reusarlo para repintar la lista.
   if (pantallaGuardada === 's-eventos-marcar-asistencia' && document.getElementById('s-eventos-marcar-asistencia') && _evMarcarAsistIdEvento) {
     ir('s-eventos-marcar-asistencia');
-    _evRenderMarcarAsistLista('');
+    _evRenderMarcarAsistLista('', true);
     return;
   }
   irEventos();
@@ -4934,7 +4934,7 @@ function _evAbrirMarcarAsistencia(idEvento, origen) {
   _evMarcarAsistOrigen = origenFinal;
   var s = document.getElementById('ev-marcar-search'); if (s) s.value = '';
   ir('s-eventos-marcar-asistencia');
-  _evRenderMarcarAsistLista('');
+  _evRenderMarcarAsistLista('', true);
 }
 // Buscador local (ver "Cambios recientes") -- mismo criterio que otros
 // buscadores instantáneos de la app (`_adminFiltrarDestino()`/etc.): filtra
@@ -4949,7 +4949,17 @@ function _evMarcarAsistFiltrar(q) { _evRenderMarcarAsistLista(q); }
 // se entra a Eventos, normalmente ya está listo para cuando alguien abre
 // esta subpantalla), pero sin esto la lista quedaría en blanco sin
 // explicación si alguien llega acá en el primer instante.
-function _evRenderMarcarAsistLista(q) {
+// `instant` (nuevo -- ver "Cambios recientes", "usuarios inactivos no
+// aparecen en Marcar asistencia"): el repintado completo de la lista ahora
+// pasa por `_evFadeSwap()` (mismo mecanismo que el resto del archivo, ver
+// esa función más arriba) -- antes un `innerHTML` seco sin transición, más
+// notorio ahora que el grupo "Inactivxs" puede aparecer/desaparecer entero
+// según el buscador. Las 2 aperturas iniciales de esta subpantalla
+// (`_evAbrirMarcarAsistencia()`/restauración de última sub-pantalla, más
+// abajo en este archivo) mandan `true` -- primer pintado sobre una pantalla
+// recién montada, nada visible todavía que fadear desde. El buscador
+// (`_evMarcarAsistFiltrar()`) deja el default (`false`, con fade).
+function _evRenderMarcarAsistLista(q, instant) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === _evMarcarAsistIdEvento; })[0];
   var cont = document.getElementById('ev-marcar-lista');
   if (!ev || !cont) return;
@@ -4964,11 +4974,15 @@ function _evRenderMarcarAsistLista(q) {
   // scoping.
   if (window.console) console.log('Eventos: _evRenderMarcarAsistLista() -- _evRosterEquipo=' + (_evRosterEquipo === null ? 'null (todavía sin cargar)' : '[' + _evRosterEquipo.length + ' personas]'));
   if (_evRosterEquipo === null) { cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>'; return; }
-  cont.innerHTML = _evRosterAdminFilasHtml(ev, q);
-  // Sin animar (`false`) -- primer pintado de estas filas, no una respuesta
-  // a un toque (mismo criterio que `_evUpdateRsvpSliders(false)` tras
-  // `_evRenderTimeline()`, más abajo en este archivo).
-  cont.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, false); });
+  _evFadeSwap(cont, function() {
+    cont.innerHTML = _evRosterAdminFilasHtml(ev, q);
+    // Sin animar (`false`) -- posicionamiento interno del slider sobre la
+    // fila recién pintada, no una respuesta a un toque (mismo criterio que
+    // `_evUpdateRsvpSliders(false)` tras `_evRenderTimeline()`, más abajo en
+    // este archivo) -- distinto del fade de `_evFadeSwap()` que envuelve
+    // todo este bloque, que sí anima la aparición del contenido en sí.
+    cont.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, false); });
+  }, instant, _EV_FADE_MS);
 }
 // Si el roster tardó más que `getEventosRango()` en llegar y esta
 // subpantalla ya estaba abierta esperándolo -- caso raro pero posible --
@@ -4994,40 +5008,67 @@ function _evRepintarMarcarAsistSiHaceFalta() {
 // constante de arriba), el slider arranca sin ninguna opción activa
 // (`_evPosicionarRsvpSlider()` ya sabe mostrar eso con opacity:0, mismo
 // comportamiento que la barra de RSVP para alguien que nunca respondió).
-// Usuarios inactivos fuera del roster de "Marcar asistencia" (bug real
-// corregido, ver MANIFEST.md -- "no aparecen en las listas de toma de
-// asistencia"): mismo criterio de 30 días que `_eqEsInactivo()`/js/equipo.js
-// (duplicado a propósito acá, mismo patrón de duplicación ya usado en el
-// resto de este archivo -- `_evRosterEquipo` es un roster propio, distinto
-// del `_eqPersonas` de esa otra sección). **Client-side, depende de
-// `ultimaAsistencia`** (ahora poblada también por `adminGetRosterEquipo()`,
-// ver supabase/functions/api/index.ts) -- si esa columna se desincroniza,
-// este filtro queda evaluando contra un dato viejo sin aviso.
+// Criterio de 30 días sin marca real de admin -- mismo umbral que
+// `_eqEsInactivo()`/js/equipo.js (duplicado a propósito acá, mismo patrón
+// de duplicación ya usado en el resto de este archivo -- `_evRosterEquipo`
+// es un roster propio, distinto del `_eqPersonas` de esa otra sección).
+// **Client-side, depende de `ultimaAsistencia`** (poblada por
+// `adminGetRosterEquipo()`, ver supabase/functions/api/index.ts) -- si esa
+// columna se desincroniza, este filtro queda evaluando contra un dato viejo
+// sin aviso. Ya NO excluye a nadie del roster de "Marcar asistencia" (bug
+// real corregido, ver MANIFEST.md -- "usuarios inactivos no aparecen en
+// Marcar asistencia", nunca podían volver a marcarse una vez cruzado el
+// umbral) -- solo decide a qué grupo visual cae cada persona dentro de
+// `_evRosterAdminFilasHtml()`, más abajo.
 function _evEsInactivo(p) {
   if (!p || !p.ultimaAsistencia) return false;
   var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
   return dias >= 30;
 }
+// Una fila del roster -- extraída de `_evRosterAdminFilasHtml()` (antes
+// inline dentro de su único `.map()`) para poder reusarla sin duplicar
+// marcado entre el grupo de personas activas y el de inactivas, más abajo.
+function _evRosterFilaHtml(p, e, asistPorNombre) {
+  var estadoActual = asistPorNombre[String(p.nombre).trim().toUpperCase()];
+  if (estadoActual !== 'A tiempo' && estadoActual !== 'Tarde') estadoActual = null;
+  var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
+  var opts = ['A tiempo', 'Tarde'].map(function(estado) {
+    var act = estadoActual === estado ? ' activa' : '';
+    return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistenciaAdmin(\'' + e.id + '\',\'' + nombreAttr + '\',\'' + estado + '\',this)"><span class="material-symbols-outlined">' + _EV_ASISTENCIA_REAL_PILL_ICONO[estado] + '</span>' + _EV_ROLLCALL_LABEL_CORTO[estado] + '</div>';
+  }).join('');
+  return '<div class="ev-roster-fila">' +
+    '<span class="ev-roster-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
+    '<div class="ev-rsvp-seg ev-rsvp-seg-roster"><div class="ev-rsvp-slider"></div>' + opts + '</div>' +
+  '</div>';
+}
+// Bug real corregido (ver MANIFEST.md -- "usuarios inactivos no aparecen en
+// Marcar asistencia"): antes filtraba a quien `_evEsInactivo()` -- alguien
+// sin marca real hace 30+ días nunca podía volver a marcarse, no había
+// forma de reactivarlo desde esta pantalla. Ahora el roster completo entra
+// SIEMPRE -- activos primero, inactivos debajo de un separador "Inactivxs"
+// (`.ev-roster-separador`, css/eventos.css -- línea-label-línea, mismo
+// patrón visual que `.eq-grupo-linea`/`.eq-grupo-nombre`/css/equipo.css
+// pero COPIADO con clases propias, ver ese comentario en el CSS). El
+// buscador filtra los 2 grupos por separado -- cada uno puede vaciarse de
+// forma independiente del otro, y el separador no se pinta si el grupo de
+// inactivos queda en 0 tras filtrar (nunca un separador seguido de nada).
 function _evRosterAdminFilasHtml(e, q) {
-  var roster = (_evRosterEquipo || []).filter(function(p) { return !_evEsInactivo(p); });
+  var todos = _evRosterEquipo || [];
+  var activos = todos.filter(function(p) { return !_evEsInactivo(p); });
+  var inactivos = todos.filter(_evEsInactivo);
   var qn = (q || '').toLowerCase().trim();
-  var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
-  if (!filtrado.length) return '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
+  var coincide = function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; };
+  var activosF = qn ? activos.filter(coincide) : activos;
+  var inactivosF = qn ? inactivos.filter(coincide) : inactivos;
+  if (!activosF.length && !inactivosF.length) return '<div class="ev-roster-vacio">' + (todos.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
   var asistPorNombre = {};
   (e.asistentes || []).forEach(function(a) { asistPorNombre[String(a.nombre).trim().toUpperCase()] = a.estado; });
-  return filtrado.map(function(p) {
-    var estadoActual = asistPorNombre[String(p.nombre).trim().toUpperCase()];
-    if (estadoActual !== 'A tiempo' && estadoActual !== 'Tarde') estadoActual = null;
-    var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
-    var opts = ['A tiempo', 'Tarde'].map(function(estado) {
-      var act = estadoActual === estado ? ' activa' : '';
-      return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistenciaAdmin(\'' + e.id + '\',\'' + nombreAttr + '\',\'' + estado + '\',this)"><span class="material-symbols-outlined">' + _EV_ASISTENCIA_REAL_PILL_ICONO[estado] + '</span>' + _EV_ROLLCALL_LABEL_CORTO[estado] + '</div>';
-    }).join('');
-    return '<div class="ev-roster-fila">' +
-      '<span class="ev-roster-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
-      '<div class="ev-rsvp-seg ev-rsvp-seg-roster"><div class="ev-rsvp-slider"></div>' + opts + '</div>' +
-    '</div>';
-  }).join('');
+  var html = activosF.map(function(p) { return _evRosterFilaHtml(p, e, asistPorNombre); }).join('');
+  if (inactivosF.length) {
+    html += '<div class="ev-roster-separador"><span class="ev-roster-separador-linea"></span><span class="ev-roster-separador-nombre">Inactivxs</span><span class="ev-roster-separador-linea"></span></div>' +
+      inactivosF.map(function(p) { return _evRosterFilaHtml(p, e, asistPorNombre); }).join('');
+  }
+  return html;
 }
 // Marca A tiempo/Tarde para UNA persona puntual -- 3 llamadores posibles
 // (ver "Cambios recientes", consolidación final): el roster completo de la

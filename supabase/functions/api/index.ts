@@ -291,6 +291,61 @@ async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Re
   return porEvento;
 }
 
+// Última asistencia REAL por persona, para el gate de inactividad (30+ días
+// sin marca real = inactivo, ver `_evEsInactivo()`/js/eventos.js y
+// `_eqEsInactivo()`/js/equipo.js) -- bug real corregido (ver MANIFEST.md --
+// "Victor/Tormento aparecen inactivos pese a asistir a eventos externos
+// recientes"): `getEquipo()`, `adminGetRosterEquipo()` y
+// `adminBuscarPersonasParaEvento()` traían cada una su propia copia de este
+// cálculo (duplicación a propósito entre ellas, mismo criterio que el resto
+// del archivo) -- pero las 3 copias filtraban `origen==='Admin'`
+// ÚNICAMENTE, así que una persona cuya única marca reciente fuera
+// `origen='Externa'` (asistencia real a un evento FUERA del calendario del
+// equipo -- ver `adminRegistrarAsistenciaExterna()`, más abajo en este
+// archivo, y `recalcularPuntosAsistencia()`, que SÍ ya contaba `'Externa'`
+// para puntos) quedaba con una `ultimaAsistencia` vieja (la última marca
+// 'Admin', mucho más atrás) y clasificada como inactiva pese a haber
+// asistido hace poco. Extraído a un solo helper (en vez de arreglar las 3
+// copias por separado) para que no puedan volver a desalinearse entre sí.
+// Nunca `'Usuario'`/`'AsistenciaAnticipada'` (RSVP, no asistencia real) ni
+// `estado='Ninguno'` (ausente). Sin `.in('nombre_usuario', ...)` a
+// propósito -- ese filtro exacto del lado de la DB podía dejar afuera una
+// fila si `nombre_usuario` no coincidía carácter a carácter con
+// `equipo.username` (espacios/mayúsculas); la tabla filtrada a estos 2
+// orígenes es chica, se trae completa y el match contra cada persona se
+// hace acá mismo normalizando (trim + mayúsculas) los 2 lados. Respaldo de
+// fecha (defensivo) si `fecha_entrenamiento` viniera nula: usa
+// `asistencias.fecha` del mismo `id_evento`.
+async function _ultimaAsistenciaRealPorUsuario(): Promise<Record<string, string>> {
+  const { data: logs } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, fecha_entrenamiento, id_evento')
+    .in('origen', ['Admin', 'Externa']).neq('estado', 'Ninguno').limit(100000);
+  const filas = logs ?? [];
+  const idsSinFecha = filas.filter((l: any) => !l.fecha_entrenamiento).map((l: any) => l.id_evento);
+  const fechaPorEvento: Record<string, string> = {};
+  if (idsSinFecha.length) {
+    const { data: evs } = await supabase.from('asistencias').select('id_evento, fecha').in('id_evento', idsSinFecha);
+    (evs ?? []).forEach((e: any) => { if (e.fecha) fechaPorEvento[e.id_evento] = e.fecha; });
+  }
+  const ultimaPorUsuario: Record<string, string> = {};
+  filas.forEach((l: any) => {
+    const fecha = l.fecha_entrenamiento || fechaPorEvento[l.id_evento];
+    if (!fecha) return;
+    const clave = String(l.nombre_usuario ?? '').trim().toUpperCase();
+    if (!clave) return;
+    const actual = ultimaPorUsuario[clave];
+    if (!actual || fecha > actual) ultimaPorUsuario[clave] = fecha;
+  });
+  return ultimaPorUsuario;
+}
+// Lee el mapa de arriba para UNA persona puntual (`username` real, no
+// normalizado) -- devuelve la fecha ISO completa (con hora) tal cual quedó
+// en el mapa, o `null` sin marca real. Evita repetir el `.trim().toUpperCase()`
+// en cada call site.
+function _ultimaAsistenciaDe(mapa: Record<string, string>, username: string): string | null {
+  return mapa[String(username ?? '').trim().toUpperCase()] ?? null;
+}
+
 async function _asistenciaEFPorEvento(): Promise<Record<string, any[]>> {
   const { data } = await supabase.from('asistencias').select('id_evento, a_horario, tarde');
   const porEvento: Record<string, any[]> = {};
@@ -2311,21 +2366,12 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
   // `ultimaAsistencia` no es una columna real de `equipo` -- se calcula
-  // desde `log_asistencias`, mismo criterio que `adminGetRosterEquipo()`/
-  // `getEquipo()` más abajo en este archivo (30+ días sin marca real de
-  // admin = inactivo). Sin `.in()` a propósito -- mismo fix que
-  // `_ultimaAsistenciaPorPersonaTodas()` (ver comentario ahí, evita
-  // truncado por el límite de 1000 filas de PostgREST con listas largas).
-  const { data: logsUlt } = await supabase.from('log_asistencias')
-    .select('nombre_usuario, fecha_entrenamiento')
-    .eq('origen', 'Admin').neq('estado', 'Ninguno').limit(100000);
-  const ultimaPorUsuario: Record<string, string> = {};
-  (logsUlt ?? []).forEach((l: any) => {
-    if (!l.fecha_entrenamiento) return;
-    const actual = ultimaPorUsuario[l.nombre_usuario];
-    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
-  });
-  const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx', ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null }));
+  // desde `log_asistencias` vía `_ultimaAsistenciaRealPorUsuario()` (ver ese
+  // comentario, arriba en este archivo), mismo criterio que
+  // `adminGetRosterEquipo()`/`getEquipo()` más abajo (30+ días sin marca
+  // real = inactivo; cuenta `'Admin'` Y `'Externa'`, nunca RSVP).
+  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+  const personas = (equipo ?? []).map((r: any) => { const u = _ultimaAsistenciaDe(ultimaPorUsuario, r.username); return { nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx', ultimaAsistencia: u ? u.slice(0, 10) : null }; });
   return { personas };
 }
 
@@ -2770,9 +2816,26 @@ async function adminResolverSolicitudPago(params: Record<string, any>): Promise<
 
 // ─── Acciones: usuarios / admins ─────────────────────────────────────────────
 
+// `inactiva` (sumada al shape de salida, ver MANIFEST.md -- "Eliminar
+// usuarios desde Equipo"): calculada server-side con el MISMO helper que
+// `getEquipo()`/`adminGetRosterEquipo()`/`adminEliminarUsuario()`
+// (`_ultimaAsistenciaRealPorUsuario()`, ver ese comentario arriba en este
+// archivo) y el MISMO criterio de "sin ninguna marca real = inactiva" que
+// `_eqEsInactivo()`/js/equipo.js (`Infinity` días sin `ultimaAsistencia`,
+// no el criterio opuesto de `_evEsInactivo()`/js/eventos.js) -- Mi Liga ->
+// Usuarios (js/admin.js) la usa para mostrar el botón "Eliminar" SOLO en
+// personas inactivas, sin duplicar la cuenta de días en un 4to lugar.
 async function adminGetUsuarios(): Promise<any[]> {
   const { data } = await supabase.from('equipo').select('username, email, cupon_disponible').order('username');
-  return (data ?? []).map((r: any) => ({ nombre: r.username, email: r.email, cuponDisponible: !!r.cupon_disponible }));
+  const personas = (data ?? []).map((r: any) => ({ nombre: r.username, email: r.email, cuponDisponible: !!r.cupon_disponible }));
+  if (!personas.length) return personas;
+  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+  personas.forEach((p: any) => {
+    const u = _ultimaAsistenciaDe(ultimaPorUsuario, p.nombre);
+    const dias = u ? Math.floor((Date.now() - new Date(u).getTime()) / 86400000) : Infinity;
+    p.inactiva = dias >= 30;
+  });
+  return personas;
 }
 
 async function adminToggleCupon(params: Record<string, any>): Promise<Record<string, any>> {
@@ -3802,11 +3865,44 @@ async function adminRechazarLesion(params: Record<string, any>): Promise<Record<
 // existentes (de borrados históricos previos a este fix) no se tocaron --
 // decisión deliberada de no borrar datos reales (pagos/asistencias/puntos)
 // como efecto colateral, ver comentario de la migración.
+// Guardias nuevas sumadas sobre el fix de arriba (pedido explícito, ver
+// MANIFEST.md -- "Eliminar usuarios desde Equipo"):
+// - **Solo usuarios inactivos** -- rechaza con "Solo se pueden eliminar
+//   usuarios inactivos." si `_ultimaAsistenciaRealPorUsuario()` da menos de
+//   30 días para esta persona (mismo criterio que el ícono de borrar de
+//   Equipo/el botón de Mi Liga -- `_eqEsInactivo()`/js/equipo.js, `Infinity`
+//   días sin ninguna marca real) -- validado server-side para no depender
+//   solo del filtro de UI, saltable llamando al endpoint directo.
+// - **No autoeliminación** -- compara el email de la fila objetivo contra
+//   el email de la sesión admin que llama.
+// - **`reglas_asistencia`** sumada a la tanda de `Promise.all()` -- la
+//   migración `20260912120000_cascade_delete_usuario.sql` la descartó por
+//   error ("su columna `nombre` es el nombre de una regla, no de una
+//   persona" -- confirmado FALSO contra la DB real: 2 filas reales con
+//   `nombre:'Vic'`, 1 con `nombre:'Laru'`, mismos usernames que
+//   `equipo.username`) -- sin FK/cascade hacia `equipo`, quedaba huérfana
+//   en cada borrado, incluso después de esa migración.
+// - **Foto de perfil** (Storage, bucket `fotos-perfil`, ver
+//   `subirFotoPerfil()` más arriba) -- best-effort, DESPUÉS de que el
+//   borrado en DB confirma éxito (Storage vive fuera de Postgres, no
+//   participa de ninguna transacción/cascada de la DB).
 async function adminEliminarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
-  const { nombre } = params;
+  const nombre = String(params.nombre ?? '').trim();
   if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+
+  const { data: fila } = await supabase.from('equipo').select('username, email').eq('username', nombre).maybeSingle();
+  if (!fila) return { exito: false, error: 'Usuario no encontrado.' };
+  if (String(fila.email ?? '').toLowerCase() === adminEmail.toLowerCase()) {
+    return { exito: false, error: 'No podés eliminar tu propia cuenta.' };
+  }
+
+  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+  const ultima = _ultimaAsistenciaDe(ultimaPorUsuario, nombre);
+  const dias = ultima ? Math.floor((Date.now() - new Date(ultima).getTime()) / 86400000) : Infinity;
+  if (dias < 30) return { exito: false, error: 'Solo se pueden eliminar usuarios inactivos.' };
+
   await Promise.all([
     supabase.from('log_asistencias').delete().eq('nombre_usuario', nombre),
     supabase.from('reservas').delete().eq('nombre_usuario', nombre),
@@ -3820,10 +3916,12 @@ async function adminEliminarUsuario(params: Record<string, any>): Promise<Record
     supabase.from('historial_tier').delete().eq('username', nombre),
     supabase.from('cuota_excepcion').delete().eq('id_miembro', nombre),
     supabase.from('nivel_actual').delete().eq('nombre_usuario', nombre),
+    supabase.from('reglas_asistencia').delete().eq('nombre', nombre),
   ]);
   const { error } = await supabase.from('equipo').delete().eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   await supabase.from('sessions').delete().eq('username', nombre);
+  await supabase.storage.from('fotos-perfil').remove(['avatars/' + nombre + '.jpg']);
   return { exito: true };
 }
 
@@ -3873,25 +3971,14 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
   const personas = (data ?? []).map((r: any) => ({ nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '' }));
   if (!personas.length) return { personas };
   // `ultimaAsistencia` (bug real "usuarios inactivos siguen en la lista de
-  // toma de asistencia", ver MANIFEST.md): mismo query que getEquipo() (más
-  // abajo en este archivo) duplicado acá a propósito -- 2 endpoints
-  // distintos con su propio shape de salida, mismo criterio de duplicación
-  // ya usado en el resto del repo (ver comentario de cabecera de
-  // _eqFormatearFechaIngreso(), js/equipo.js) en vez de hacer que este
-  // endpoint dependa de getEquipo(). `_evEsInactivo()`/js/eventos.js filtra
+  // toma de asistencia", ver MANIFEST.md) vía `_ultimaAsistenciaRealPorUsuario()`
+  // (helper compartido con getEquipo()/adminBuscarPersonasParaEvento(), ver
+  // ese comentario arriba en este archivo -- cuenta `'Admin'` Y `'Externa'`,
+  // normaliza nombres, nunca RSVP). `_evEsInactivo()`/js/eventos.js filtra
   // el roster de "Marcar asistencia" con este campo, mismo criterio de 30
   // días que `_eqEstadoEfectivo()`/js/equipo.js.
-  const usernames = personas.map((p: any) => p.nombre);
-  const { data: logs } = await supabase.from('log_asistencias')
-    .select('nombre_usuario, fecha_entrenamiento')
-    .eq('origen', 'Admin').neq('estado', 'Ninguno').in('nombre_usuario', usernames);
-  const ultimaPorUsuario: Record<string, string> = {};
-  (logs ?? []).forEach((l: any) => {
-    if (!l.fecha_entrenamiento) return;
-    const actual = ultimaPorUsuario[l.nombre_usuario];
-    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
-  });
-  personas.forEach((p: any) => { p.ultimaAsistencia = ultimaPorUsuario[p.nombre] ? ultimaPorUsuario[p.nombre].slice(0, 10) : null; });
+  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+  personas.forEach((p: any) => { const u = _ultimaAsistenciaDe(ultimaPorUsuario, p.nombre); p.ultimaAsistencia = u ? u.slice(0, 10) : null; });
   return { personas };
 }
 
@@ -3916,19 +4003,13 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   const usernames = personas.map((p: any) => p.username);
 
   // Última asistencia REAL (no solicitada/rectificada por el usuario) --
-  // origen 'Admin' (rollcall real, no autoreporte) y estado != 'Ninguno'
-  // (no ausente). `log_asistencias.fecha_entrenamiento` ya viene copiada de
-  // `asistencias.fecha` al insertar (ver _agregarFilaLogAsistencia() arriba),
-  // sin necesitar JOIN.
-  const { data: logs } = await supabase.from('log_asistencias')
-    .select('nombre_usuario, fecha_entrenamiento')
-    .eq('origen', 'Admin').neq('estado', 'Ninguno').in('nombre_usuario', usernames);
-  const ultimaPorUsuario: Record<string, string> = {};
-  (logs ?? []).forEach((l: any) => {
-    if (!l.fecha_entrenamiento) return;
-    const actual = ultimaPorUsuario[l.nombre_usuario];
-    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
-  });
+  // `_ultimaAsistenciaRealPorUsuario()` (helper compartido, ver ese
+  // comentario arriba en este archivo): cuenta origen 'Admin' (rollcall
+  // real) Y 'Externa' (asistencia real a un evento fuera del calendario del
+  // equipo -- bug real corregido, ver MANIFEST.md -- "Victor/Tormento
+  // aparecen inactivos pese a asistir a eventos externos recientes"),
+  // estado != 'Ninguno' (no ausente), nunca RSVP.
+  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
 
   // Puntos mensuales (Bug/feature "exponer puntos en getEquipo()", ver
   // MANIFEST.md/CHANGELOG.md) -- `js/equipo.js` ya tenía las stat cards
@@ -4298,7 +4379,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     asistencias_ano: Number(r.asistencias_ano) || 0,
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
     termometro_pct: Number(r.termometro_pct) || 0,
-    ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
+    ultimaAsistencia: (function() { const u = _ultimaAsistenciaDe(ultimaPorUsuario, r.username); return u ? u.slice(0, 10) : null; })(),
     puntosAsistencia: puntosAsistenciaLivePorUsuario[r.username] || 0,
     puntosTareas: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].tareas : 0,
     // `puntos_bonificacion` + `puntos_extra` combinados -- ver comentario

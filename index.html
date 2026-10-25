@@ -34,16 +34,16 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=52ba4a4c"></script>
-<link rel="stylesheet" href="css/global.css?v=7f8d26e3">
+<link rel="stylesheet" href="css/global.css?v=379c51ac">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
-<link rel="stylesheet" href="css/ui.css?v=31fab976">
+<link rel="stylesheet" href="css/ui.css?v=81a926bc">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=3f9fd2fc">
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
-<link rel="stylesheet" href="css/eventos.css?v=e0608f43">
+<link rel="stylesheet" href="css/eventos.css?v=af02dea0">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=dfb94b5e">
+<link rel="stylesheet" href="css/equipo.css?v=e6f40c10">
 <link rel="stylesheet" href="css/perfil.css?v=c83f5230">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2864,6 +2864,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- "Eliminar usuario" (admin, grupo "Inactivxs" de Equipo -- ver
+       MANIFEST.md, "Eliminar usuarios desde Equipo") -- mismo patrón que
+       #eq-sheet-ext-eliminar arriba. Abierto/cerrado por
+       _eqAbrirSheetEliminar()/_eqCerrarSheetEliminar() (js/equipo.js) --
+       `_eqEliminarPendiente` (variable de módulo) guarda a quién aplica. -->
+  <div id="eq-sheet-eliminar-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarSheetEliminar()"></div>
+  <div id="eq-sheet-eliminar" class="bsheet" style="z-index:9701;">
+    <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title bsheet-title-danger">Eliminar usuario</div>
+    <div class="bsheet-body">
+      <p id="eq-sheet-eliminar-texto" class="bsheet-texto-aviso"></p>
+      <div class="bsheet-btns-col">
+        <button type="button" class="btn btn-danger" onclick="_eqConfirmarEliminarUsuario(this)">Eliminar definitivamente</button>
+        <button type="button" class="btn btn-outline" onclick="_eqCerrarSheetEliminar()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Estado "De viaje" (admin, feat nueva, ver MANIFEST.md) -- se abre al
        tocar la pill "De viaje" del selector de Estado del perfil de Equipo
        (`_eqCambiarEstado()`/`_eqAbrirSheetViaje()`, js/equipo.js).
@@ -3589,14 +3608,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=068448dc"></script>
-<script src="js/eventos.js?v=8594bf18"></script>
+<script src="js/eventos.js?v=87ac4b67"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=b0c0d40e"></script>
+<script src="js/equipo.js?v=90f011f5"></script>
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
 <script src="js/perfil.js?v=f093f5b6"></script>
-<script src="js/admin.js?v=6d98bcbe"></script>
+<script src="js/admin.js?v=edeb385f"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

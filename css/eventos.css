@@ -750,6 +750,21 @@
 .ev-roster-fila:last-child { border-bottom: none; }
 .ev-roster-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-roster-vacio { padding: 14px 4px; color: var(--muted); font-size: 0.78rem; text-align: center; }
+/* Separador "Inactivxs" dentro del roster de "Marcar asistencia" (bug real
+   corregido, ver MANIFEST.md -- "usuarios inactivos no aparecen en Marcar
+   asistencia": el roster los excluía del todo, impidiendo reactivarlos --
+   ahora se muestran debajo de este separador en vez de desaparecer) --
+   línea-label-línea, mismo patrón visual que `.eq-grupo-linea`/
+   `.eq-grupo-nombre`/`.eq-mis-stats-puntos-row` (css/equipo.css) pero
+   COPIADO con clases propias `.ev-*` en vez de reusado cross-archivo --
+   mismo criterio de "cada sección es dueña de sus propias clases" ya
+   aplicado en el resto de esta sección (ver comentario de
+   `#eq-busqueda-panel`/index.html). Sin chevron/pill -- a diferencia de
+   `.eq-grupo-header`, no es un acordeón colapsable, solo agrupa visualmente
+   dentro de una lista que ya se repinta entera en cada filtro. */
+.ev-roster-separador { display: flex; align-items: center; gap: 8px; width: 100%; margin: 14px 0 6px; }
+.ev-roster-separador-linea { flex: 1; height: 1px; background: var(--border-light); }
+.ev-roster-separador-nombre { flex-shrink: 0; font-size: 0.82rem; font-weight: 800; color: var(--text); text-transform: uppercase; letter-spacing: 0.6px; }
 /* Checkmark de selección de `.fi-circle` dentro de una `.ev-roster-fila` --
    mismo bug/patrón ya documentado en css/tareas.css para `.tar-persona-fila
    .fi-circle.sel`: `.fi-circle` por sí sola (arriba) es solo el círculo

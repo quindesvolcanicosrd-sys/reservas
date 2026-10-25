@@ -782,7 +782,18 @@ function _eqStatsInlineHtml(p) {
   return '<span class="eq-mini-stat"><span class="material-symbols-rounded">military_tech</span>' + efectivos + ' pts</span>';
 }
 
-function _eqFilaHtml(p) {
+// `mostrarEliminar` (2do parámetro nuevo, ver MANIFEST.md -- "Eliminar
+// usuarios desde Equipo"): llega `true` ÚNICAMENTE desde `_eqRenderInactivos()`
+// -- el resto de los renders que reusan esta misma función (Favoritos/
+// Quindes/Mirlxs/vista por rol) siguen llamando `.map(_eqFilaHtml)` sin
+// wrapper, así que el parámetro llega `undefined` ahí y el ícono nunca se
+// pinta -- solo las filas del acordeón "Inactivxs" lo muestran. Sin chequeo
+// de auto-eliminación acá: `_eqRenderInactivos()` ya excluye a la persona
+// logueada de ese grupo (`!_eqEsUsuarioActual(p)`, ver esa función), así
+// que su propia fila nunca llega con `mostrarEliminar:true` -- el backend
+// (`adminEliminarUsuario()`) igual la bloquea aparte, por si este camino
+// cambiara.
+function _eqFilaHtml(p, mostrarEliminar) {
   var fav = _eqEsFavorito(p.id);
   var statsHtml = _eqStatsInlineHtml(p);
   var idJs = _eqEscId(p.id); // seguro dentro de un argumento de onclick de comillas simples
@@ -801,6 +812,12 @@ function _eqFilaHtml(p) {
       '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
         '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
       '</button>';
+  // Ícono de eliminar (admin, SOLO fila de "Inactivxs" -- ver comentario de
+  // cabecera de esta función).
+  var eliminarHtml = '';
+  if (mostrarEliminar && typeof _adminToken !== 'undefined' && _adminToken) {
+    eliminarHtml = '<button type="button" class="btn-outline-danger eq-delete-btn" data-eq-delete="' + idAttr + '" onclick="event.stopPropagation();_eqAbrirSheetEliminar(\'' + idJs + '\',\'' + _eqEscId(_eqNombreVisible(p)) + '\')" title="Eliminar usuario"><span class="material-symbols-outlined">delete</span></button>';
+  }
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
       '<div class="eq-miembro-info">' +
@@ -808,6 +825,7 @@ function _eqFilaHtml(p) {
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
         (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
+      eliminarHtml +
       favHtml +
     '</div>';
 }
@@ -2104,7 +2122,7 @@ function _eqRenderInactivos() {
   var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
-  cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  cont.innerHTML = filtradas.map(function(p) { return _eqFilaHtml(p, true); }).join('');
   _eqHidratarAvatares();
   _eqActualizarListaVacia();
 }
@@ -3887,6 +3905,79 @@ function _eqConfirmarAdminOk() {
   apiPost({ action: 'adminAgregarAdmin', adminToken: _adminToken, email: persona.email }, function(res) {
     if (res && res.exito === false) revertir(res.error);
   }, function(e) { revertir(e && e.message); });
+}
+
+/* ── Eliminar usuario (admin, SOLO fila del grupo "Inactivxs" -- ver
+   MANIFEST.md, "Eliminar usuarios desde Equipo") -- bottom sheet estándar
+   `.bsheet-overlay`/`.bsheet` (index.html, #eq-sheet-eliminar), mismo
+   patrón abrir/cerrar que `_eqExtAbrirSheetEliminar()`/"Eliminar asistencia
+   externa" (más arriba en este archivo): `_registrarOverlayAbierto()` para
+   que el botón atrás del navegador (o el swipe-to-dismiss de
+   shared/bsheet.js) lo cierre igual que cualquier otro sheet.
+   `_eqEliminarPendiente` (variable de módulo, `{id, nombreDerby}`) en vez
+   de un data-attribute -- el sheet es único, sin instancias paralelas. ── */
+var _eqEliminarPendiente = null;
+function _eqAbrirSheetEliminar(id, nombreDerby) {
+  _eqEliminarPendiente = { id: id, nombreDerby: nombreDerby };
+  var ov = document.getElementById('eq-sheet-eliminar-overlay');
+  var sh = document.getElementById('eq-sheet-eliminar');
+  var texto = document.getElementById('eq-sheet-eliminar-texto');
+  if (!ov || !sh) return;
+  if (texto) texto.textContent = '¿Eliminar a ' + nombreDerby + '? Se borrarán su cuenta y todo su historial (asistencias, puntos, reservas y tareas). Esta acción no se puede deshacer.';
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqCerrarSheetEliminar);
+}
+function _eqCerrarSheetEliminar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('eq-sheet-eliminar-overlay');
+  var sh = document.getElementById('eq-sheet-eliminar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Al confirmar: optimista en la ANIMACIÓN, no en el dato -- la fila no se
+// toca hasta que `adminEliminarUsuario` confirma éxito, así que no hay
+// ningún estado optimista que revertir si falla (a diferencia del toggle
+// de favorito/admin de arriba, que sí revierten tras un error).
+function _eqConfirmarEliminarUsuario(btn) {
+  var pend = _eqEliminarPendiente;
+  if (!pend) return;
+  _eqEliminarPendiente = null;
+  _eqCerrarSheetEliminar();
+  if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+  apiPost({ action: 'adminEliminarUsuario', adminToken: _adminToken, nombre: pend.id }, function(res) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo eliminar.', 'error'); return; }
+    var botonFila = document.querySelector('[data-eq-delete="' + pend.id + '"]');
+    var fila = botonFila ? botonFila.closest('.eq-miembro-fila') : null;
+    _eqRemoverFilaConAnimacion(fila, function() {
+      _eqPersonas = _eqPersonas.filter(function(p) { return p.id !== pend.id; });
+      _eqRenderInactivos();
+      mostrarToast('Usuario eliminado.', 'ok');
+    });
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+    mostrarToast((e && e.message) || 'No se pudo eliminar.', 'error');
+  });
+}
+// Fade + slide de salida de una fila de persona (pedido explícito, "la fila
+// sale con fade+slide") -- colapsa su alto (`max-height`, mismo mecanismo
+// que los acordeones de esta sección) en paralelo a opacity+translateX, y
+// recién al terminar la saca del DOM y llama a `cb()` (que ahí recién toca
+// `_eqPersonas`/re-renderiza, ver `_eqConfirmarEliminarUsuario()` arriba) --
+// nunca un `.remove()` seco sin transición.
+function _eqRemoverFilaConAnimacion(fila, cb) {
+  if (!fila) { if (cb) cb(); return; }
+  var alto = fila.scrollHeight;
+  fila.style.overflow = 'hidden';
+  fila.style.maxHeight = alto + 'px';
+  void fila.offsetWidth;
+  fila.style.transition = 'opacity 0.25s ease, transform 0.25s ease, max-height 0.25s ease';
+  fila.style.opacity = '0';
+  fila.style.transform = 'translateX(-16px)';
+  requestAnimationFrame(function() { fila.style.maxHeight = '0px'; });
+  setTimeout(function() { fila.remove(); if (cb) cb(); }, 260);
 }
 
 function _eqConfirmarAdminCancelar() {
