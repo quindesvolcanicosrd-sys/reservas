@@ -5382,7 +5382,7 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
     // fallaba acá. `include_external_user_ids` (legado) sí funciona.
     payload.include_external_user_ids = destinoUnico;
   } else {
-    payload.included_segments = ['Total Subscriptions'];
+    payload.included_segments = [ONESIGNAL_SEGMENTO_TODOS];
   }
   if (sendAfter) payload.send_after = sendAfter;
   console.log('OneSignal key presente:', !!Deno.env.get('ONESIGNAL_API_KEY'), 'App ID presente:', !!Deno.env.get('ONESIGNAL_APP_ID'));
