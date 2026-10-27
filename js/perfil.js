@@ -45,6 +45,15 @@ function irEditarDatos(sinNavegar) {
       eqVal.textContent = eqPartes.join(' · ') || '—';
     }
   }
+  // Notificaciones -- preview en vivo del estado del dispositivo (lectura
+  // async, no bloquea el resto del pintado de esta función).
+  var notifVal = document.getElementById('aj-notif-val');
+  if (notifVal && typeof _oneSignalEstadoActual === 'function') {
+    notifVal.textContent = 'Verificando...';
+    _oneSignalEstadoActual(function(estado) {
+      notifVal.textContent = estado === 'activo' ? 'Activas' : estado === 'bloqueado' ? 'Bloqueadas' : estado === 'sin_permiso' ? 'No activadas' : 'Sin suscripción';
+    });
+  }
   // Privacidad
   var privVal = document.getElementById('aj-priv-val');
   if (privVal) {
@@ -746,7 +755,9 @@ function _ajCargarSub(id) {
     document.getElementById('aj-equip-protec-val').textContent = d.necesitaProtecciones || '—';
     return;
   }
-  if (id === 'aj-sub-privacidad') {
+  if (id === 'aj-sub-notificaciones') {
+    _ajCargarNotificaciones();
+  } else if (id === 'aj-sub-privacidad') {
     var fnRaw = (d.fechaNacimiento || '').toString().trim();
     _ajSetDatoVal('aj-fecha-display', fnRaw ? _ajFormatearFecha(fnRaw) : '', '—', false);
     var btnF = document.getElementById('aj-fechaPublica');
@@ -2145,6 +2156,123 @@ function _saludPrefillWizard() {
   _saludPrefillUnica(_saludData.atencionMedica, 'salud-atencionMedica-pills');
   _saludPrefillMulti(_saludData.seguro, 'salud-seguro-pills');
   document.getElementById('salud-seguroContacto-input').value = _saludData.seguroContacto;
+}
+
+/* ── Notificaciones (feat nueva, pedido explícito -- ver MANIFEST.md
+   sección push): toggles por tipo 100% generados desde el catálogo único
+   del backend (getCatalogoNotificaciones) -- este archivo nunca hardcodea
+   la lista de tipos, solo el layout. Interruptor general + estado del
+   dispositivo (lectura en vivo, _calcularEstadoPush()/js/pwa.js). ──────── */
+var _ajCatalogoNotif = null; // cache -- el catálogo no cambia durante la sesión, se pide 1 sola vez
+
+var _AJ_ESTADO_PUSH_TEXTO = {
+  activo:          'Activas en este dispositivo.',
+  sin_permiso:     'Todavía no las activaste en este dispositivo.',
+  bloqueado:       'Bloqueadas en este navegador -- revisa Configuración del sitio.',
+  sin_suscripcion: 'Permiso concedido, pero sin suscripción activa. Reintentando...',
+};
+
+function _ajCargarNotificaciones() {
+  var catCont = document.getElementById('aj-notif-categorias');
+  if (catCont) catCont.innerHTML = _skeletonQueLlevarHtml();
+
+  if (typeof _oneSignalEstadoActual === 'function') {
+    _oneSignalEstadoActual(function(estado) {
+      var el = document.getElementById('aj-notif-estado-dispositivo');
+      if (el) el.textContent = _AJ_ESTADO_PUSH_TEXTO[estado] || 'Verificando...';
+    });
+  }
+
+  api({ action: 'getPreferenciasPush' }, function(res) {
+    if (!res || res.exito === false) { if (catCont) catCont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:10px 0;">No se pudieron cargar tus preferencias.</p>'; return; }
+    var btnMaestro = document.getElementById('aj-notif-maestro');
+    if (btnMaestro) { var activas = res.activas !== false; btnMaestro.classList.toggle('toggle-on', activas); btnMaestro.classList.toggle('toggle-off', !activas); btnMaestro.setAttribute('aria-pressed', String(activas)); }
+    if (_ajCatalogoNotif) {
+      _ajRenderNotificaciones(_ajCatalogoNotif, res.preferencias || {}, res.activas !== false);
+    } else {
+      api({ action: 'getCatalogoNotificaciones' }, function(resCat) {
+        _ajCatalogoNotif = (resCat && resCat.tipos) || [];
+        _ajRenderNotificaciones(_ajCatalogoNotif, res.preferencias || {}, res.activas !== false);
+      }, function() { if (catCont) catCont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:10px 0;">No se pudo cargar el catálogo.</p>'; });
+    }
+  }, function(e) { if (catCont) catCont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:10px 0;">' + ((e && e.message) || 'Error al cargar.') + '</p>'; });
+}
+
+function _ajRenderNotificaciones(tipos, prefs, activas) {
+  var cont = document.getElementById('aj-notif-categorias');
+  if (!cont) return;
+  var categorias = [];
+  var porCategoria = {};
+  tipos.forEach(function(t) {
+    if (t.soloAdmin && !_adminToken) return; // categoría sin efecto práctico para quien no es admin
+    if (!porCategoria[t.categoria]) { porCategoria[t.categoria] = []; categorias.push(t.categoria); }
+    porCategoria[t.categoria].push(t);
+  });
+  var html = categorias.map(function(categoria) {
+    var filas = porCategoria[categoria].map(function(t) {
+      var on = prefs[t.clave] !== false;
+      return '<div class="privacy-row">' +
+          '<div style="min-width:0;flex:1;margin-right:12px;">' +
+            '<div style="font-size:0.88rem;color:var(--text-mid);font-weight:600;">' + t.nombre + '</div>' +
+            '<div style="font-size:0.74rem;color:var(--muted);margin-top:2px;">' + t.descripcion + '</div>' +
+          '</div>' +
+          '<button type="button" class="toggle-btn ' + (on ? 'toggle-on' : 'toggle-off') + '" aria-pressed="' + on + '" onclick="ajNotifToggleTipo(this,\'' + t.clave + '\')"><span class="toggle-thumb"></span></button>' +
+        '</div>';
+    }).join('');
+    return '<div class="seccion-label" style="margin-top:14px;">' + categoria + '</div><div class="aj-group">' + filas + '</div>';
+  }).join('');
+  cont.innerHTML = html;
+  void cont.offsetWidth; cont.style.animation = 'fadeIn 0.25s ease';
+  _ajSincronizarDisabledNotif(activas);
+}
+
+// Interruptor general apagado -- las filas por tipo quedan visualmente
+// atenuadas y sin tap (pedido explícito: "con un interruptor general para
+// activar o desactivar todas") -- no les toca el valor guardado (si
+// alguien tenía 'cumpleanos_hoy' desactivado puntualmente y después
+// reactiva el general, esa preferencia puntual sigue como estaba).
+function _ajSincronizarDisabledNotif(activas) {
+  var cont = document.getElementById('aj-notif-categorias');
+  if (!cont) return;
+  cont.style.opacity = activas ? '1' : '0.45';
+  cont.style.pointerEvents = activas ? '' : 'none';
+}
+
+function ajNotifToggleMaestro(btn) {
+  var on = btn.classList.contains('toggle-on');
+  var nuevo = !on;
+  btn.classList.toggle('toggle-on', nuevo);
+  btn.classList.toggle('toggle-off', !nuevo);
+  btn.setAttribute('aria-pressed', String(nuevo));
+  _ajSincronizarDisabledNotif(nuevo);
+  api({ action: 'guardarPreferenciasPush', activas: nuevo }, function(res) {
+    if (!res || res.exito === false) {
+      btn.classList.toggle('toggle-on', on); btn.classList.toggle('toggle-off', !on); btn.setAttribute('aria-pressed', String(on));
+      _ajSincronizarDisabledNotif(on);
+      mostrarToast((res && res.error) || 'No se pudo guardar.', 'error');
+    }
+  }, function(e) {
+    btn.classList.toggle('toggle-on', on); btn.classList.toggle('toggle-off', !on); btn.setAttribute('aria-pressed', String(on));
+    _ajSincronizarDisabledNotif(on);
+    mostrarToast((e && e.message) || 'Error de conexión.', 'error');
+  });
+}
+
+function ajNotifToggleTipo(btn, clave) {
+  var on = btn.classList.contains('toggle-on');
+  var nuevo = !on;
+  btn.classList.toggle('toggle-on', nuevo);
+  btn.classList.toggle('toggle-off', !nuevo);
+  btn.setAttribute('aria-pressed', String(nuevo));
+  api({ action: 'guardarPreferenciasPush', clave: clave, valor: nuevo }, function(res) {
+    if (!res || res.exito === false) {
+      btn.classList.toggle('toggle-on', on); btn.classList.toggle('toggle-off', !on); btn.setAttribute('aria-pressed', String(on));
+      mostrarToast((res && res.error) || 'No se pudo guardar.', 'error');
+    }
+  }, function(e) {
+    btn.classList.toggle('toggle-on', on); btn.classList.toggle('toggle-off', !on); btn.setAttribute('aria-pressed', String(on));
+    mostrarToast((e && e.message) || 'Error de conexión.', 'error');
+  });
 }
 
 /* ── Privacidad: autoguardado sin botón ───────────────── */

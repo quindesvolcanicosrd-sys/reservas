@@ -868,9 +868,11 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
   await sendPush({
-    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
+    tipo: 'integrante_nuevo',
+    broadcastEquipo: true,
+    excluirUsernames: [nombre],
     headings: { es: '¡Nuevo integrante en el equipo!' },
-    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
+    contents: { es: ` se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
   });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
@@ -913,9 +915,11 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
   await sendPush({
-    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
+    tipo: 'integrante_nuevo',
+    broadcastEquipo: true,
+    excluirUsernames: [nombre],
     headings: { es: '¡Nuevo integrante en el equipo!' },
-    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
+    contents: { es: ` se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
   });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
@@ -2133,7 +2137,8 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     if (ev) {
       const esHoy = ev.fecha === _hoyEcuadorISO();
       await sendPush({
-        filters: _adminOneSignalFiltro(),
+        tipo: 'avisos_admin',
+        include_external_user_ids: await _adminDestinatariosPush(),
         headings: { es: 'Baja de asistencia' },
         contents: { es: `${nombre} no asistirá al ${ev.tipo_evento || 'evento'} de ${esHoy ? 'hoy' : _fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
         url: APP_URL + '/?tab=eventos',
@@ -2605,7 +2610,8 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
 async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: string, accion: 'cancelar' | 'reagendar'): Promise<void> {
   if (r?.tipo !== 'mensual') return;
   await sendPush({
-    filters: _adminOneSignalFiltro(),
+    tipo: 'avisos_admin',
+    include_external_user_ids: await _adminDestinatariosPush(),
     headings: { es: accion === 'cancelar' ? 'Reserva cancelada' : 'Reserva reagendada' },
     contents: { es: `${nombre} ${accion === 'cancelar' ? 'canceló' : 'reagendó'} su reserva mensual.` },
     url: APP_URL + '/?tab=miliga',
@@ -2971,6 +2977,46 @@ async function _cerrarReglasNoAsistireVigentes(nombre: string): Promise<void> {
   }
 }
 
+// Avisa al resto del equipo (nunca a la propia persona) cuando alguien
+// ENTRA a 'De viaje'/'Lesionadx'/'Ausente' -- pedido explícito, sin
+// detalles de la lesión (motivo/duración real), solo el hecho. Un solo
+// call site para los 3 caminos que pueden disparar esto (autodeclararEstado,
+// adminSetEstadoMiembro, adminActualizarEstadoViaje) -- evita triplicar el
+// texto y el criterio de "nunca detalles". Solo dispara en la TRANSICIÓN
+// real (`estadoPrevio !== estadoNuevo`) -- evita duplicados si la misma
+// persona guarda el mismo estado 2 veces (ej. un admin re-confirma fechas
+// de un viaje ya vigente, o alguien repite su propia autodeclaración).
+async function _notificarCambioEstadoMiembro(
+  username: string,
+  estadoPrevio: string | null | undefined,
+  estadoNuevo: 'De viaje' | 'Lesionadx' | 'Ausente',
+  fechas?: { desde?: string | null; hasta?: string | null },
+): Promise<void> {
+  if (estadoPrevio === estadoNuevo) return;
+  const { data: fila } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
+  const nombreMostrar = fila?.nombre_derby || username;
+  let mensaje: string;
+  if (estadoNuevo === 'De viaje') {
+    const desdeTxt = fechas?.desde ? _fechaEs(fechas.desde) : null;
+    const hastaTxt = fechas?.hasta ? _fechaEs(fechas.hasta) : null;
+    mensaje = desdeTxt && hastaTxt
+      ? `${nombreMostrar} estará de viaje del ${desdeTxt} al ${hastaTxt}.`
+      : `${nombreMostrar} estará de viaje por un tiempo.`;
+  } else if (estadoNuevo === 'Lesionadx') {
+    mensaje = `${nombreMostrar} está lesionadx y no participará de los entrenamientos por un tiempo.`;
+  } else {
+    mensaje = `${nombreMostrar} estará ausente por un tiempo.`;
+  }
+  await sendPush({
+    tipo: 'cambio_estado_miembro',
+    broadcastEquipo: true,
+    excluirUsernames: [username],
+    headings: { es: 'Novedades del equipo' },
+    contents: { es: mensaje },
+    url: APP_URL + '/?tab=equipo',
+  });
+}
+
 async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -2992,6 +3038,9 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
     : { ..._camposSalidaEstado(actual, estadoMiembro), estado_miembro: estadoMiembro, exenta_cuota: false };
   const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
+  if (estadoMiembro === 'Lesionadx' || estadoMiembro === 'Ausente') {
+    await _notificarCambioEstadoMiembro(nombre, actual.estado_miembro, estadoMiembro);
+  }
   return { exito: true };
 }
 
@@ -3037,6 +3086,7 @@ async function autodeclararEstado(params: Record<string, any>): Promise<Record<s
   else update = { ..._camposSalidaEstado(fila, estado), estado_miembro: 'Ausente' };
   const { error } = await supabase.from('equipo').update(update).eq('username', username);
   if (error) return { exito: false, error: error.message };
+  await _notificarCambioEstadoMiembro(username, fila.estado_miembro, estado as 'De viaje' | 'Lesionadx' | 'Ausente', { desde, hasta });
   return {
     exito: true,
     estado,
@@ -3091,13 +3141,14 @@ async function adminActualizarEstadoViaje(params: Record<string, any>): Promise<
   if (desde === false || hasta === false) return { exito: false, error: 'Fecha inválida.' };
   if (desde && hasta && hasta < desde) return { exito: false, error: 'La fecha de regreso no puede ser anterior a la de salida.' };
 
-  const { data: persona } = await supabase.from('equipo').select('username').eq('username', idJugadora).maybeSingle();
+  const { data: persona } = await supabase.from('equipo').select('username, estado_miembro').eq('username', idJugadora).maybeSingle();
   if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
 
   const { error } = await supabase.from('equipo')
     .update({ estado_miembro: 'De viaje', exenta_cuota: false, viaje_desde: desde, viaje_hasta: hasta })
     .eq('username', persona.username);
   if (error) return { exito: false, error: error.message };
+  await _notificarCambioEstadoMiembro(persona.username, persona.estado_miembro, 'De viaje', { desde, hasta });
 
   const hoyEc = new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10); // Ecuador = UTC-5, sin DST
   let recalculado = false;
@@ -4762,16 +4813,129 @@ async function adminGetQueLlevar(): Promise<any[]> {
 
 // ─── Acciones: push ───────────────────────────────────────────────────────────
 
-// Segmento real de OneSignal para broadcast (TODA suscripción push
-// registrada, sin distinguir equipo/admin/rol) -- bug real corregido: el
-// resto de este archivo usaba el literal `'All'`, que NO es un segmento que
-// exista en este proyecto de OneSignal (confirmado contra la API real, ver
-// MANIFEST.md sección push) -- cada envío con ese nombre fallaba en
-// silencio (sin loguear nada, ver sendPush() más abajo). El envío MANUAL
-// desde el panel admin (adminEnviarPush(), más abajo) sí funciona porque
-// usa 'Total Subscriptions' -- el nombre real del segmento default de
-// OneSignal, el único que existe acá sin crear uno nuevo a mano.
+// Segmento real de OneSignal (TODA suscripción push registrada) -- usado
+// SOLO por adminEnviarPush() (envío manual "a todos", bypasea preferencias
+// a propósito, ver esa función) -- el resto de los envíos (sendPush(), abajo)
+// ya no usa segmentos desde que existen las preferencias por persona (ver
+// más abajo): "a todo el equipo" ahora es "a cada username que lo tenga
+// activado", no un segmento ciego de OneSignal. 'All' (el literal que
+// usaba este archivo antes) NO es un segmento que exista en este proyecto
+// de OneSignal (confirmado contra la API real) -- 'Total Subscriptions' es
+// el único que existe acá sin crear uno nuevo a mano.
 const ONESIGNAL_SEGMENTO_TODOS = 'Total Subscriptions';
+
+// ─── Catálogo único de tipos de notificación (pedido explícito, ver
+// MANIFEST.md sección push) ─────────────────────────────────────────────────
+// Fuente de verdad ÚNICA de qué notificaciones existen -- ni el frontend
+// (Ajustes → Notificaciones, generado 100% desde `getCatalogoNotificaciones`,
+// nunca una lista hardcodeada en JS) ni ningún `sendPush()` de este archivo
+// pueden mandar un tipo que no esté acá: `sendPush()` lo valida contra
+// `CATALOGO_CLAVES` y rechaza (con `console.error`, sin tumbar la acción que
+// lo disparó) cualquier `tipo` no registrado. Agregar una notificación nueva
+// SIEMPRE empieza por una entrada acá -- de ahí sale sola en Ajustes,
+// agrupada por `categoria`, sin tocar ningún HTML/JS del frontend.
+// `soloAdmin:true` -- categoría que solo tiene efecto real para cuentas
+// admin (el frontend la oculta para el resto, pero el toggle igual se
+// guarda si alguien llega a tocarlo, sin efecto práctico).
+type CatalogoNotifEntry = { clave: string; nombre: string; descripcion: string; categoria: string; soloAdmin?: boolean };
+const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
+  { clave: 'recordatorio_1h', nombre: 'Recordatorio 1 hora antes', descripcion: 'Si marcaste "Asistiré", te avisamos cuando falta 1 hora.', categoria: 'Entrenamientos' },
+  { clave: 'recordatorio_1dia', nombre: 'Recordatorio del día anterior', descripcion: 'Te preguntamos si vas, si todavía no respondiste.', categoria: 'Entrenamientos' },
+  { clave: 'entrenamiento_hoy', nombre: 'Entrenamiento de hoy', descripcion: 'Aviso general la mañana de un entrenamiento o evento.', categoria: 'Entrenamientos' },
+  { clave: 'evento_creado', nombre: 'Nuevo evento', descripcion: 'Cuando se crea un entrenamiento o evento nuevo.', categoria: 'Entrenamientos' },
+  { clave: 'evento_editado', nombre: 'Cambios en un evento', descripcion: 'Cuando cambia la fecha, hora o lugar de un evento futuro.', categoria: 'Entrenamientos' },
+  { clave: 'evento_cancelado', nombre: 'Evento cancelado', descripcion: 'Cuando se cancela un entrenamiento o evento.', categoria: 'Entrenamientos' },
+  { clave: 'descanso_programado', nombre: 'Período de descanso', descripcion: 'Cuando se programa una temporada sin entrenamientos.', categoria: 'Entrenamientos' },
+  { clave: 'cambios_asistencia', nombre: 'Cambios de asistencia', descripcion: 'Cuando alguien del equipo cambia su respuesta de asistencia a un evento.', categoria: 'Entrenamientos' },
+  { clave: 'cumpleanos_hoy', nombre: 'Cumpleaños del día', descripcion: 'El día del cumpleaños de alguien del equipo (si lo hizo público).', categoria: 'Equipo' },
+  { clave: 'cumpleanos_10dias', nombre: 'Cumpleaños próximo', descripcion: 'Un aviso 10 días antes del cumpleaños de alguien del equipo.', categoria: 'Equipo' },
+  { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumplís otro año en el equipo.', categoria: 'Equipo' },
+  { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
+  { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
+  { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debés la cuota.', categoria: 'Cuenta' },
+  { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando un admin cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
+  { clave: 'avisos_admin', nombre: 'Avisos para admins', descripcion: 'Resumen antes del entrenamiento, bajas de última hora, solicitudes pendientes y cambios de reservas.', categoria: 'Administración', soloAdmin: true },
+];
+const CATALOGO_CLAVES = new Set(CATALOGO_NOTIFICACIONES.map((c) => c.clave));
+
+async function getCatalogoNotificaciones(): Promise<Record<string, any>> {
+  return { exito: true, tipos: CATALOGO_NOTIFICACIONES };
+}
+
+// ─── Preferencias de notificación por persona (migración
+// 20261103_push_preferencias.sql) ───────────────────────────────────────────
+// `push_notificaciones_activas` (boolean, default true) -- interruptor
+// general, gana sobre cualquier preferencia puntual. `push_preferencias`
+// (jsonb, default '{}') -- mapa clave→boolean; una clave AUSENTE significa
+// "activada" (default on, pedido explícito) -- así una notificación nueva
+// agregada al catálogo no deja a nadie afuera retroactivamente, nadie tiene
+// que "activarla" a mano.
+function _personaQuierePush(row: { push_notificaciones_activas?: boolean | null; push_preferencias?: Record<string, boolean> | null } | null | undefined, tipo: string): boolean {
+  if (!row) return true; // sin fila en `equipo` (ej. admin puro) -- no hay dónde guardar una preferencia, se manda igual
+  if (row.push_notificaciones_activas === false) return false;
+  const prefs = row.push_preferencias || {};
+  return prefs[tipo] !== false;
+}
+
+async function getPreferenciasPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const { data, error } = await supabase.from('equipo').select('push_notificaciones_activas, push_preferencias').eq('username', username).maybeSingle();
+  if (error || !data) return { exito: false, error: error?.message ?? 'No encontrado.' };
+  return { exito: true, activas: data.push_notificaciones_activas !== false, preferencias: data.push_preferencias || {} };
+}
+
+// Guarda el interruptor general (`activas`) y/o 1 preferencia puntual
+// (`clave`+`valor`) -- ambos opcionales, se puede mandar cualquiera de los
+// 2 o los 2 juntos en la misma llamada (el interruptor general del frontend
+// solo manda `activas`, cada toggle individual solo manda `clave`+`valor`).
+async function guardarPreferenciasPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const update: Record<string, any> = {};
+  if (params.activas !== undefined) update.push_notificaciones_activas = (params.activas === 'true' || params.activas === true);
+  if (params.clave !== undefined) {
+    const clave = String(params.clave);
+    if (!CATALOGO_CLAVES.has(clave)) return { exito: false, error: 'Tipo de notificación inválido.' };
+    const { data: fila } = await supabase.from('equipo').select('push_preferencias').eq('username', username).maybeSingle();
+    const prefs: Record<string, boolean> = (fila?.push_preferencias as Record<string, boolean>) || {};
+    prefs[clave] = (params.valor === 'true' || params.valor === true);
+    update.push_preferencias = prefs;
+  }
+  if (!Object.keys(update).length) return { exito: false, error: 'Nada para guardar.' };
+  const { error } = await supabase.from('equipo').update(update).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// Destinatarios reales de un aviso "para todos los admins" -- bug real
+// corregido (ver MANIFEST.md sección push): antes era una lista de alias
+// 'admin_'+email que dejó de coincidir con el external_id real de un admin
+// con fila propia en `equipo` (ahora su username, ver js/pwa.js/js/auth.js),
+// y DESPUÉS un filtro de OneSignal por tag `es_admin` (sin forma de
+// respetar la preferencia por persona, ya que `filters` no se puede
+// combinar con una lista de destinatarios). Esta versión resuelve la
+// identidad real de cada admin (username si tiene fila en `equipo`, si no
+// 'admin_'+email) Y filtra por su preferencia de `avisos_admin` antes de
+// devolver la lista -- pensada para pasar directo a `sendPush({
+// include_external_user_ids: ... })`. `excluirEmail` -- quien disparó el
+// cambio que motiva el aviso, para no notificarle de su propia acción (si
+// además es admin).
+async function _adminDestinatariosPush(excluirEmail?: string): Promise<string[]> {
+  const { data: adminsRows } = await supabase.from('admins').select('email');
+  const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsRows ?? []).map((a: any) => String(a.email).toLowerCase())]);
+  if (excluirEmail) emails.delete(excluirEmail.toLowerCase());
+  const { data: equipoRows } = await supabase.from('equipo').select('username, email, push_notificaciones_activas, push_preferencias');
+  const porEmail: Record<string, any> = {};
+  (equipoRows ?? []).forEach((r: any) => { if (r.email) porEmail[String(r.email).toLowerCase()] = r; });
+  const out: string[] = [];
+  emails.forEach((email) => {
+    const fila = porEmail[email];
+    if (!_personaQuierePush(fila, 'avisos_admin')) return;
+    out.push(fila ? fila.username : 'admin_' + email);
+  });
+  return out;
+}
 
 // Helper genérico de push automáticas (a diferencia de adminEnviarPush(),
 // que es el envío MANUAL desde el panel admin, con su propio payload/target
@@ -4780,34 +4944,33 @@ const ONESIGNAL_SEGMENTO_TODOS = 'Total Subscriptions';
 // sin app_id en la URL, target_channel:'push') -- confirmado funcionando,
 // se reusa tal cual en vez del v1 (`onesignal.com/api/v1/...`, deprecado).
 // Best-effort a propósito: un push que falla nunca debe tumbar la acción
-// real (crear evento, marcar RSVP, etc.) que lo disparó -- pero ya no en
-// silencio total: un error de OneSignal (status != 2xx) se loguea con
-// console.error (status + body) para que quede en los logs de la Edge
-// Function, sin bloquear ni reintentar nada acá.
+// real (crear evento, marcar RSVP, etc.) que lo disparó -- un error de
+// OneSignal (status != 2xx) se loguea con console.error (status + body),
+// sin bloquear ni reintentar nada acá.
 // `headings`/`contents` solo exigen 'es' -- si falta 'en', sendPush() lo
-// rellena con el mismo texto en español (pedido explícito: notificaciones
-// en ambos idiomas, sin traducir de verdad -- esta app es 100% en español,
-// 'en' es solo para que OneSignal no caiga a un default propio en
-// dispositivos con el idioma del sistema en inglés).
-// `include_external_user_ids` (NO `include_aliases.external_id`) -- bug
-// real grave encontrado al probar el push de prueba a un usuario puntual
-// (ver MANIFEST.md sección push, 2026-10-27): este proyecto de OneSignal
-// responde `{"errors":{"invalid_aliases":{"external_id":[...]}}}` con
-// `include_aliases` -- el sistema de "aliases" de la API nueva de OneSignal
-// simplemente no está habilitado para esta app, pese a que `OneSignal.login()`
-// (frontend, nuevo User Model) y `filters` por tag SÍ funcionan bien
-// (confirmado con pushes reales de prueba). El campo legado
-// `include_external_user_ids` SÍ entrega (confirmado `successful:1` contra
-// la API real) -- probablemente TODO push dirigido a una persona puntual
-// (`pushAsistenciaCambio`, recordatorios, cuota, etc.) fallaba en silencio
-// desde que se adoptó `include_aliases`, sin que nadie lo notara (mismo
-// síntoma de fondo que el bug de segmento `'All'` de arriba: sin logging de
-// error, no había forma de verlo). `filters` (admin por tag) no se tocó --
-// ya confirmado funcionando tal cual.
+// rellena con el mismo texto en español (notificaciones en ambos idiomas
+// sin traducir de verdad -- esta app es 100% en español, 'en' es solo para
+// que OneSignal no caiga a un default propio en dispositivos con el idioma
+// del sistema en inglés).
+// `include_external_user_ids` (NO `include_aliases.external_id`, que no
+// entrega en este proyecto de OneSignal, ver MANIFEST.md sección push).
+// `tipo` es OBLIGATORIO y se valida contra `CATALOGO_NOTIFICACIONES` --
+// ninguna notificación sin registrar llega a mandarse (`console.error` y
+// return temprano). `broadcastEquipo:true` reemplaza al segmento de antes:
+// resuelve TODO `equipo.username` acá mismo y filtra por preferencia del
+// `tipo` (`_personaQuierePush()`) -- `excluirUsernames` saca, además, a
+// quien no debe recibir su propio aviso (ej. la persona de un cumpleaños).
+// Con `include_external_user_ids` ya armado por el caller (ej. solo quien
+// marcó 'Asistiré'), igual se vuelve a filtrar por preferencia acá -- un
+// username sin fila en `equipo` (alias 'admin_'+email de un admin puro,
+// ver `_adminDestinatariosPush()`) no tiene preferencia que mirar y se
+// manda igual. Lotes de 1000 (OneSignal acepta hasta 2000 por request) --
+// "en lotes si hace falta", pedido explícito.
 async function sendPush(payload: {
+  tipo: string;
   include_external_user_ids?: string[];
-  included_segments?: string[];
-  filters?: Record<string, any>[];
+  broadcastEquipo?: boolean;
+  excluirUsernames?: string[];
   headings: { es: string; en?: string };
   contents: { es: string; en?: string };
   url?: string;
@@ -4815,44 +4978,53 @@ async function sendPush(payload: {
   data?: Record<string, any>;
 }): Promise<void> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
-  if (!payload.include_external_user_ids && !payload.included_segments && !payload.filters) return;
-  const body = {
-    app_id: ONESIGNAL_APP_ID,
-    target_channel: 'push',
-    ...payload,
-    headings: { es: payload.headings.es, en: payload.headings.en ?? payload.headings.es },
-    contents: { es: payload.contents.es, en: payload.contents.en ?? payload.contents.es },
-  };
-  try {
-    const resp = await fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ONESIGNAL_API_KEY },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      const errBody = await resp.text().catch(() => '');
-      console.error('sendPush: OneSignal respondió', resp.status, errBody);
-    }
-  } catch (e) { console.error('sendPush: fetch falló', (e as Error).message ?? e); }
-}
+  if (!CATALOGO_CLAVES.has(payload.tipo)) {
+    console.error('sendPush: tipo no registrado en el catálogo, no se envía:', payload.tipo);
+    return;
+  }
+  let destinatarios: string[];
+  if (payload.broadcastEquipo) {
+    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias');
+    const excluir = new Set(payload.excluirUsernames ?? []);
+    destinatarios = (filas ?? [])
+      .filter((r: any) => r.username && !excluir.has(r.username) && _personaQuierePush(r, payload.tipo))
+      .map((r: any) => r.username);
+  } else {
+    const usernames = payload.include_external_user_ids ?? [];
+    if (!usernames.length) return;
+    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias').in('username', usernames);
+    const porUsername: Record<string, any> = {};
+    (filas ?? []).forEach((r: any) => { porUsername[r.username] = r; });
+    destinatarios = usernames.filter((u) => _personaQuierePush(porUsername[u], payload.tipo));
+  }
+  if (!destinatarios.length) return;
 
-// Filtro de OneSignal para "todos los admins" -- bug real corregido: antes
-// era una lista de alias 'admin_'+email (_adminOneSignalAliases(), DB:
-// tabla `admins` + ADMIN_PRINCIPAL) que dejó de servir apenas un admin con
-// fila propia en `equipo` empezó a loguear con su username real (ver
-// js/pwa.js/js/auth.js, MANIFEST.md sección push) -- esa lista vieja de
-// alias 'admin_'+email ya no coincide con el external_id real de esas
-// cuentas, así que el push a admins simplemente no llegaba. El tag
-// `es_admin='1')` (seteado por `vincularPush()` en cada login/restauración,
-// sin importar qué external_id tenga esa cuenta) es agnóstico de esa
-// identidad -- un solo filtro sirve para cualquier combinación de admin
-// con o sin fila en `equipo`. Sin exclusión por destinatario (a diferencia
-// de la lista de alias vieja, que sí podía excluir uno puntual) -- la API
-// de notificaciones de OneSignal no combina `filters` con una exclusión por
-// identidad; el único call site que la necesitaba (notificarCambioAsistencia(),
-// más abajo) la pierde a propósito, trade-off aceptado (ver ese comentario).
-function _adminOneSignalFiltro(): Record<string, any>[] {
-  return [{ field: 'tag', key: 'es_admin', relation: '=', value: '1' }];
+  const headings = { es: payload.headings.es, en: payload.headings.en ?? payload.headings.es };
+  const contents = { es: payload.contents.es, en: payload.contents.en ?? payload.contents.es };
+  const BATCH = 1000;
+  for (let i = 0; i < destinatarios.length; i += BATCH) {
+    const lote = destinatarios.slice(i, i + BATCH);
+    const body: Record<string, any> = {
+      app_id: ONESIGNAL_APP_ID,
+      target_channel: 'push',
+      include_external_user_ids: lote,
+      headings, contents,
+    };
+    if (payload.url) body.url = payload.url;
+    if (payload.web_buttons) body.web_buttons = payload.web_buttons;
+    if (payload.data) body.data = payload.data;
+    try {
+      const resp = await fetch('https://api.onesignal.com/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ONESIGNAL_API_KEY },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        const errBody = await resp.text().catch(() => '');
+        console.error('sendPush: OneSignal respondió', resp.status, errBody, 'tipo:', payload.tipo);
+      }
+    } catch (e) { console.error('sendPush: fetch falló', (e as Error).message ?? e, 'tipo:', payload.tipo); }
+  }
 }
 
 const DIAS_ES  = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -4954,6 +5126,7 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
       if (!token) return;
       const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
+        tipo: 'recordatorio_1h',
         include_external_user_ids: [username],
         headings: { es: '¡Tu entrenamiento es en 1 hora!' },
         contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
@@ -5001,6 +5174,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
       if (!token) return;
       const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
+        tipo: 'recordatorio_1dia',
         include_external_user_ids: [username],
         headings: { es: '¿Vas al entrenamiento mañana?' },
         contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)}` },
@@ -5037,6 +5211,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  const adminDestinatarios = await _adminDestinatariosPush();
   let enviados = 0;
   for (const ev of enVentana) {
     const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
@@ -5065,7 +5240,8 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
 
     const urlEventos = APP_URL + '/?tab=eventos';
     await sendPush({
-      filters: _adminOneSignalFiltro(),
+      tipo: 'avisos_admin',
+      include_external_user_ids: adminDestinatarios,
       headings: { es: 'Resumen del entrenamiento en 1 hora' },
       contents: { es: partes.join(' ') },
       url: urlEventos,
@@ -5103,6 +5279,7 @@ async function pushAsistenciaCambio(params: Record<string, any>): Promise<Record
 
   const urlEventos = APP_URL + '/?tab=eventos';
   await sendPush({
+    tipo: 'cambios_asistencia',
     include_external_user_ids: destinatarios,
     headings: { es: 'Cambio de asistencia' },
     contents: { es: `${nombreMostrar} cambió su asistencia a ${estadoNuevo}` },
@@ -5130,7 +5307,8 @@ async function pushSolicitudPendiente(params: Record<string, any>): Promise<Reco
     ? (String(urlSeccion).startsWith('http') ? String(urlSeccion) : APP_URL + urlSeccion)
     : APP_URL;
   await sendPush({
-    filters: _adminOneSignalFiltro(),
+    tipo: 'avisos_admin',
+    include_external_user_ids: await _adminDestinatariosPush(),
     headings: { es: 'Nueva solicitud pendiente' },
     contents: { es: String(descripcionBreve) },
     url: urlFinal,
@@ -5239,14 +5417,14 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
   const fecha = ev?.fecha ? ev.fecha.slice(5).replace('-', '/') : '';
   const lugar = ev?.donde ? ' — ' + ev.donde : '';
   const contenido = nombre + ': ' + estadoAnterior + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + (lugar || '') + ')' : '');
-  // Notificar a admins (cualquier cambio) -- filtro por tag `es_admin`
-  // (_adminOneSignalFiltro(), arriba), agnóstico de qué external_id tenga
-  // cada admin. Sin excluir a quien hizo el cambio si además es admin --
-  // la API de notificaciones de OneSignal no combina `filters` con una
-  // exclusión por identidad (trade-off aceptado, antes sí se excluía vía
-  // la lista de alias 'admin_'+email que este filtro reemplaza).
+  // Notificar a admins (cualquier cambio), excluyendo a quien hizo el
+  // cambio si además es admin (_adminDestinatariosPush() ya resuelve la
+  // identidad real de cada admin -- username o 'admin_'+email -- y filtra
+  // por su preferencia de `avisos_admin`).
+  const { data: quienCambio } = await supabase.from('equipo').select('email').eq('username', nombre).maybeSingle();
   await sendPush({
-    filters: _adminOneSignalFiltro(),
+    tipo: 'avisos_admin',
+    include_external_user_ids: await _adminDestinatariosPush(quienCambio?.email),
     headings: { es: 'Cambio de asistencia' },
     contents: { es: contenido },
   });
@@ -5259,6 +5437,7 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
       .filter((u: string) => u !== nombre);
     if (destinatarios.length > 0) {
       await sendPush({
+        tipo: 'cambios_asistencia',
         include_external_user_ids: destinatarios,
         headings: { es: 'Cambio de asistencia' },
         contents: { es: contenido },
@@ -5317,16 +5496,18 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
   // en BACKGROUND (sin abrir la app, ver OneSignalSDKWorker.js) vía un token
   // firmado POR PERSONA (_firmarTokenAccion arriba). Eso exige 1 llamada a
   // OneSignal POR PERSONA -- a diferencia de cualquier otro sendPush() de
-  // este archivo (1 sola llamada broadcast a `included_segments:[ONESIGNAL_SEGMENTO_TODOS]`),
-  // el campo `data` de la API de OneSignal es compartido por TODA la
-  // llamada, no hay forma de variarlo por destinatario dentro de un mismo
-  // POST. `url: '_osp=do_not_open'` en cada botón (magic string documentado
-  // por OneSignal, Chrome/Firefox -- no soportado en Safari, ahí cae al
-  // default de abrir esa "url" literal) para que el handler default de
-  // OneSignal no abra ventana en esos 2 botones -- el clic en el CUERPO
-  // sigue abriendo la app normal (`url` de más arriba, sin tocar). Best-
-  // effort por persona (Promise.allSettled, nunca tumba el resto ni la
-  // acción real de crear el evento) -- mismo espíritu que sendPush().
+  // este archivo (1 sola llamada broadcast, `broadcastEquipo:true`), el
+  // campo `data` de la API de OneSignal es compartido por TODA la llamada,
+  // no hay forma de variarlo por destinatario dentro de un mismo POST.
+  // `url: '_osp=do_not_open'` en cada botón (magic string documentado por
+  // OneSignal, Chrome/Firefox -- no soportado en Safari, ahí cae al default
+  // de abrir esa "url" literal) para que el handler default de OneSignal no
+  // abra ventana en esos 2 botones -- el clic en el CUERPO sigue abriendo
+  // la app normal (`url` de más arriba, sin tocar). Best-effort por persona
+  // (Promise.allSettled, nunca tumba el resto ni la acción real de crear el
+  // evento) -- mismo espíritu que sendPush(); cada llamada individual ya
+  // filtra por preferencia (`sendPush()`, arriba), así que alguien con
+  // `evento_creado` desactivado tampoco recibe el botón de RSVP.
   if (idEvento && PUSH_TOKEN_SECRET) {
     const { data: equipoRows } = await supabase.from('equipo').select('username');
     const usernames: string[] = (equipoRows ?? []).map((r: any) => r.username).filter(Boolean);
@@ -5334,6 +5515,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
       const token = await _firmarTokenAccion(username, String(idEvento));
       if (!token) return;
       await sendPush({
+        tipo: 'evento_creado',
         include_external_user_ids: [username],
         headings, contents,
         url: APP_URL + '/?tab=eventos',
@@ -5349,7 +5531,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
 
   // Sin idEvento, o sin PUSH_TOKEN_SECRET configurado todavía -- broadcast
   // simple sin botones de acción (comportamiento previo, sin cambios).
-  await sendPush({ included_segments: [ONESIGNAL_SEGMENTO_TODOS], headings, contents, url: APP_URL + '/?tab=eventos' });
+  await sendPush({ tipo: 'evento_creado', broadcastEquipo: true, headings, contents, url: APP_URL + '/?tab=eventos' });
   return { exito: true };
 }
 
@@ -5358,7 +5540,8 @@ async function pushEventoCancelado(params: Record<string, any>): Promise<Record<
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { tipo, fecha, hora, lugar } = params;
   await sendPush({
-    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
+    tipo: 'evento_cancelado',
+    broadcastEquipo: true,
     headings: { es: 'Evento cancelado' },
     contents: { es: `${tipo || 'Evento'} del ${_fechaEs(fecha)} · ${lugar || ''} · ${_horaEs(hora)}` },
     url: APP_URL + '/?tab=eventos',
@@ -5366,15 +5549,49 @@ async function pushEventoCancelado(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// Diff real antes/después, en vez de depender de un texto "cambios" armado
+// en el frontend (bug real corregido, ver MANIFEST.md sección push) -- el
+// PATCH de la edición ya ocurrió (REST directo desde js/eventos.js, ver
+// comentario de arriba), así que este backend compara el snapshot PREVIO
+// (`antesLugar`/`antesHoraInicio`/`antesHoraFin`, mandados por el frontend
+// -- los tenía en memoria de ANTES de editar, `_evEditarOriginal`) contra la
+// fila YA ACTUALIZADA en `asistencias` (el "después" real). Si ninguno de
+// los 3 campos cambió de verdad (ej. el admin confirmó un campo con el
+// mismo valor que ya tenía), no manda nada. Solo eventos FUTUROS (pedido
+// explícito) -- un evento pasado no le importa a nadie que le avisen.
 async function pushEventoEditado(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
-  const { fecha, lugar, cambios } = params;
-  if (!cambios) return { exito: true };
+  const idEvento = String(params.idEvento ?? '').trim();
+  if (!idEvento) return { exito: true, omitido: true };
+  const { data: ev } = await supabase.from('asistencias').select('fecha, donde, inicia, termina').eq('id_evento', idEvento).maybeSingle();
+  if (!ev) return { exito: true, omitido: true };
+  if (ev.fecha < _hoyEcuadorISO()) return { exito: true, omitido: true };
+
+  const SIN_DEFINIR = 'sin definir';
+  const diffs: string[] = [];
+  if (params.antesLugar !== undefined) {
+    const antes = String(params.antesLugar || '');
+    const despues = String(ev.donde || '');
+    if (antes !== despues) diffs.push(`Cambió el lugar: ${antes || SIN_DEFINIR} → ${despues || SIN_DEFINIR}`);
+  }
+  if (params.antesHoraInicio !== undefined) {
+    const antes = String(params.antesHoraInicio || '');
+    const despues = ev.inicia ? String(ev.inicia).substring(0, 5) : '';
+    if (antes !== despues) diffs.push(`Cambió la hora de inicio: ${antes ? _horaEs(antes) : SIN_DEFINIR} → ${despues ? _horaEs(despues) : SIN_DEFINIR}`);
+  }
+  if (params.antesHoraFin !== undefined) {
+    const antes = String(params.antesHoraFin || '');
+    const despues = ev.termina ? String(ev.termina).substring(0, 5) : '';
+    if (antes !== despues) diffs.push(`Cambió la hora de fin: ${antes ? _horaEs(antes) : SIN_DEFINIR} → ${despues ? _horaEs(despues) : SIN_DEFINIR}`);
+  }
+  if (!diffs.length) return { exito: true, omitido: true };
+
   await sendPush({
-    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
-    headings: { es: `Evento actualizado: ${_fechaEs(fecha)}` },
-    contents: { es: `${lugar || ''} · Cambios: ${cambios}` },
+    tipo: 'evento_editado',
+    broadcastEquipo: true,
+    headings: { es: `Evento actualizado: ${_fechaEs(ev.fecha)}` },
+    contents: { es: diffs.join(' · ') },
     url: APP_URL + '/?tab=eventos',
   });
   return { exito: true };
@@ -5385,7 +5602,8 @@ async function pushOffseasonCreado(params: Record<string, any>): Promise<Record<
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { desde, hasta } = params;
   await sendPush({
-    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
+    tipo: 'descanso_programado',
+    broadcastEquipo: true,
     headings: { es: 'Período de descanso programado' },
     contents: { es: `Sin entrenamientos del ${_fechaEs(desde)} al ${_fechaEs(hasta)}.` },
     url: APP_URL + '/?tab=eventos',
@@ -5416,7 +5634,8 @@ async function cronDiario(): Promise<Record<string, any>> {
   for (const ev of (eventosHoy ?? [])) {
     const asistentes = (asistPorEvento[ev.id_evento] ?? []).filter((a: any) => a.estado === 'Asistiré').length;
     await sendPush({
-      included_segments: [ONESIGNAL_SEGMENTO_TODOS],
+      tipo: 'entrenamiento_hoy',
+      broadcastEquipo: true,
       headings: { es: `${ev.tipo_evento || 'Entrenamiento'} hoy a las ${_horaEs(ev.inicia)}` },
       contents: { es: `${asistentes} ${asistentes === 1 ? 'persona asistirá' : 'personas asistirán'} · ${ev.donde || ''}` },
       url: APP_URL + '/?tab=eventos',
@@ -5424,21 +5643,44 @@ async function cronDiario(): Promise<Record<string, any>> {
   }
 
   // 2) Cumpleaños -- mismo doble opt-in que getCumpleañosRango() (fecha
-  // guardada Y hecha pública); edad solo si edad_publica='Sí'.
+  // guardada Y hecha pública); edad solo si edad_publica='Sí'. Nunca a la
+  // propia persona que cumple (`excluirUsernames`, bug real corregido --
+  // antes era `included_segments`, TODA suscripción, incluida la suya).
+  const diaMes10 = _fechaEcuadorMasDias(10).substring(5); // 'MM-DD', aviso "en 10 días"
   const { data: cumpleaneros } = await supabase.from('equipo')
-    .select('username, fecha_nacimiento, edad_publica')
+    .select('username, nombre_derby, fecha_nacimiento, edad_publica')
     .not('fecha_nacimiento', 'is', null)
     .not('fecha_publica', 'is', null);
   for (const p of (cumpleaneros ?? [])) {
-    if (String(p.fecha_nacimiento).substring(5) !== diaMes) continue;
-    const edad = anio - Number(String(p.fecha_nacimiento).substring(0, 4));
-    const mostrarEdad = p.edad_publica === 'Sí';
-    await sendPush({
-      included_segments: [ONESIGNAL_SEGMENTO_TODOS],
-      headings: { es: `Hoy es el cumpleaños de ${p.username}` },
-      contents: { es: mostrarEdad ? `Deséale felices ${edad} años.` : 'Deséale feliz cumpleaños.' },
-      url: APP_URL + '/?tab=equipo',
-    });
+    const mesDia = String(p.fecha_nacimiento).substring(5);
+    const nombreMostrar = p.nombre_derby || p.username;
+    if (mesDia === diaMes) {
+      const edad = anio - Number(String(p.fecha_nacimiento).substring(0, 4));
+      const mostrarEdad = p.edad_publica === 'Sí';
+      await sendPush({
+        tipo: 'cumpleanos_hoy',
+        broadcastEquipo: true,
+        excluirUsernames: [p.username],
+        headings: { es: `Hoy es el cumpleaños de ${nombreMostrar}` },
+        contents: { es: mostrarEdad ? `Deséale felices ${edad} años.` : 'Deséale feliz cumpleaños.' },
+        url: APP_URL + '/?tab=equipo',
+      });
+    } else if (mesDia === diaMes10) {
+      // Fecha real del cumpleaños próximo (año actual -- este cron corre a
+      // diario, así que "en 10 días" siempre cae dentro del mismo año o el
+      // que sigue; se usa el año de `_fechaEcuadorMasDias(10)` para no
+      // mostrar un 29 de febrero que no exista ese año en particular).
+      const anioFecha = Number(_fechaEcuadorMasDias(10).substring(0, 4));
+      const fechaProxima = `${anioFecha}-${mesDia}`;
+      await sendPush({
+        tipo: 'cumpleanos_10dias',
+        broadcastEquipo: true,
+        excluirUsernames: [p.username],
+        headings: { es: `En 10 días es el cumpleaños de ${nombreMostrar}` },
+        contents: { es: `El ${_fechaEs(fechaProxima)} es el cumpleaños de ${nombreMostrar}.` },
+        url: APP_URL + '/?tab=equipo',
+      });
+    }
   }
 
   // 3) Aniversario en el equipo (fecha_ingreso, solo a la propia persona).
@@ -5450,6 +5692,7 @@ async function cronDiario(): Promise<Record<string, any>> {
     const anios = anio - Number(String(p.fecha_ingreso).substring(0, 4));
     if (anios <= 0) continue;
     await sendPush({
+      tipo: 'aniversario',
       include_external_user_ids: [p.username],
       headings: { es: '¡Feliz aniversario!' },
       contents: { es: `Hoy cumples ${anios} ${anios === 1 ? 'año' : 'años'} en el equipo. ¡Gracias por estar!` },
@@ -5473,6 +5716,7 @@ async function cronDiario(): Promise<Record<string, any>> {
       const estadoPago = _estadoPagoPersonaMes(nombre, mes, anio, pagosDelMes ?? [], solicitudesAprobadas ?? [], hoyDate);
       if (estadoPago !== 'Debe') continue;
       await sendPush({
+        tipo: 'cuota_pendiente',
         include_external_user_ids: [nombre],
         headings: { es: 'Recordatorio de cuota mensual' },
         contents: { es: `${nombre}, tienes cuota pendiente. Haz una reserva y envía el comprobante.` },
@@ -5774,6 +6018,9 @@ Deno.serve(async (req: Request) => {
       case 'pushSolicitudPendiente':        return json(await pushSolicitudPendiente(params));
       case 'reportarEstadoPush':            return json(await reportarEstadoPush(params));
       case 'adminGetEstadoPush':            return json(await adminGetEstadoPush(params));
+      case 'getCatalogoNotificaciones':      return json(await getCatalogoNotificaciones());
+      case 'getPreferenciasPush':           return json(await getPreferenciasPush(params));
+      case 'guardarPreferenciasPush':       return json(await guardarPreferenciasPush(params));
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
@@ -5852,6 +6099,7 @@ Deno.serve(async (req: Request) => {
         if (filaPrevia && filaPrevia.categoria !== params.categoria) {
           const subio = filaPrevia.categoria === 'Mirlxs' && params.categoria === 'Quindes';
           await sendPush({
+            tipo: 'cambio_categoria',
             include_external_user_ids: [params.nombre],
             headings: { es: subio ? '¡Subiste de categoría!' : 'Cambio de categoría' },
             contents: { es: subio ? '¡Ahora eres Quindes! Felicitaciones.' : `Pasaste a ${params.categoria}.` },

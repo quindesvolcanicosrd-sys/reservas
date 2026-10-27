@@ -6970,21 +6970,6 @@ function _evEditarScopeValido() {
 // (ej. el pill de lugar del sticky) mostraba el dato desactualizado por un
 // instante -- o directamente uno viejo si `ir('s-eventos')` no esperaba ese
 // refetch.
-// Arma el texto de "Cambios: ..." de la push notification de edición, a
-// partir de los mismos `_evEditarCambios`/`_evEditarOriginal` que ya arma el
-// resumen en pantalla (`_evEditarActualizarResumenCampo()`, arriba en este
-// archivo) -- solo los campos que el admin efectivamente confirmó, mismo
-// criterio. String vacío si no hay ningún cambio confirmado (no debería
-// pasar -- el footer exige al menos 1 -- pero sin esto un llamado con
-// `cambios` vacío mandaría un push sin contenido real).
-function _evEditarResumenCambios() {
-  var partes = [];
-  if (_evEditarCambios.hasOwnProperty('lugar')) partes.push('Lugar: ' + (_evEditarOriginal.lugar || 'sin definir') + ' → ' + _evEditarCambios.lugar);
-  if (_evEditarCambios.hasOwnProperty('horaInicio')) partes.push('Hora: ' + (_evEditarOriginal.horaInicio || 'sin definir') + ' → ' + _evEditarCambios.horaInicio);
-  if (_evEditarCambios.hasOwnProperty('horaFin')) partes.push('Hora fin: ' + (_evEditarOriginal.horaFin || 'sin definir') + ' → ' + _evEditarCambios.horaFin);
-  if (_evEditarCambios.hasOwnProperty('descripcion')) partes.push('Descripción actualizada');
-  return partes.join(' · ');
-}
 function _evEditarConfirmar() {
   if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
@@ -7009,26 +6994,22 @@ function _evEditarConfirmar() {
   var fechaHasta = modo === 'periodo' ? _evEditarFechaHasta : null;
 
   mostrarCargando('Guardando cambios...');
-  var _cambiosTexto = _evEditarResumenCambios();
-  var _lugarParaNotif = _evEditarCambios.hasOwnProperty('lugar') ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
-  var _fechaParaNotif = ev.fecha;
   _evAdminEditarEvento(
     ev.id, campos, modo, ev.fecha, fechaHasta,
     function() {
       ocultarCargando();
       _evEditarAplicarCambiosLocal(ev);
       mostrarToast('Cambios guardados.', 'ok', true);
-      if (_cambiosTexto) {
-        api({ action: 'pushEventoEditado', adminToken: _adminToken, fecha: _fechaParaNotif, lugar: _lugarParaNotif, cambios: _cambiosTexto }, function(){}, function(){});
-      }
-      var _notifPartes = [];
-      if (campos.donde) _notifPartes.push('Lugar: ' + campos.donde);
-      if (campos.inicia) _notifPartes.push('Inicio: ' + campos.inicia.substring(0, 5));
-      if (campos.termina) _notifPartes.push('Fin: ' + campos.termina.substring(0, 5));
-      var _notifFp = (ev.fecha || '').split('-');
-      var _notifFecha = _notifFp.length === 3 ? _notifFp[2] + '/' + _notifFp[1] : (ev.fecha || '');
-      var _notifMsg = 'El evento del ' + _notifFecha + ' fue actualizado' + (_notifPartes.length ? ': ' + _notifPartes.join(', ') : '');
-      apiPost({ action: 'adminEnviarPush', adminToken: _adminToken, titulo: 'Evento actualizado', mensaje: _notifMsg, destino: 'todos' }, function(){}, function(){});
+      // El backend compara este snapshot "antes" (ya lo teníamos en memoria,
+      // `_evEditarOriginal`) contra la fila YA actualizada en la base y
+      // arma un solo push con lo que realmente cambió -- nada si ninguno
+      // de los 3 campos cambió de verdad (bug real corregido, ver
+      // MANIFEST.md sección push: antes esto armaba el texto del push
+      // acá mismo Y ADEMÁS disparaba un 2do push broadcast duplicado vía
+      // adminEnviarPush(), sin pasar por el catálogo/preferencias).
+      api({ action: 'pushEventoEditado', adminToken: _adminToken, idEvento: ev.id,
+        antesLugar: _evEditarOriginal.lugar, antesHoraInicio: _evEditarOriginal.horaInicio, antesHoraFin: _evEditarOriginal.horaFin
+      }, function(){}, function(){});
       ir('s-eventos');
       // Re-sincroniza `_evDetalleActual` con el objeto FRESCO que trae este
       // refetch (mismo patrón que `_evPollAsistencias()`, más arriba en este

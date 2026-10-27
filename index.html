@@ -2983,6 +2983,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
+    <!-- Notificaciones (feat nueva, pedido explícito -- ver MANIFEST.md
+         sección push): toggles por tipo generados desde el catálogo único
+         (getCatalogoNotificaciones) + interruptor general + estado del
+         dispositivo. -->
+    <div class="aj-group">
+      <div class="aj-row" data-aj-key="notificaciones" onclick="irAjSub('aj-sub-notificaciones')">
+        <div class="aj-icon aj-icon-blue"><span class="material-symbols-outlined">notifications</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Notificaciones</div>
+          <div class="aj-value" id="aj-notif-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
     <!-- Seguridad y emergencias -->
     <div class="aj-group">
       <div class="aj-row" data-aj-key="legal" onclick="irAjSub('aj-sub-legal')">
@@ -3617,15 +3632,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=068448dc"></script>
-<script src="js/eventos.js?v=87ac4b67"></script>
+<script src="js/eventos.js?v=4b664a7e"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
 <script src="js/equipo.js?v=90f011f5"></script>
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
-<script src="js/perfil.js?v=f093f5b6"></script>
+<script src="js/perfil.js?v=e76defc9"></script>
 <script src="js/admin.js?v=8c60e8f4"></script>
-<script src="js/pwa.js?v=09104224"></script>
+<script src="js/pwa.js?v=f257413a"></script>
 <script src="js/auth.js?v=3cb09b4f"></script>
 
   <!-- Modal primer login: permisos Google -->
@@ -4081,6 +4096,42 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- SUB: Notificaciones (feat nueva, pedido explícito -- ver MANIFEST.md
+     sección push) -- toggles por tipo generados 100% desde el catálogo
+     único (getCatalogoNotificaciones, _ajCargarNotificaciones()/js/perfil.js),
+     nunca hardcodeados acá: agregar un tipo nuevo al catálogo del backend
+     alcanza para que aparezca solo, agrupado por categoría. Mismos
+     componentes que el resto de Ajustes (.aj-sub/.privacy-row/.toggle-btn),
+     sin color hardcodeado. -->
+<div class="aj-sub" id="aj-sub-notificaciones">
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-notificaciones')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Notificaciones</span>
+    <div style="width:40px;flex-shrink:0;"></div>
+  </div>
+  <div class="aj-sub-inner">
+    <div class="aj-group" style="margin-bottom:14px;">
+      <div class="privacy-row">
+        <div>
+          <div style="font-size:0.85rem;color:var(--text-mid);font-weight:600;">Estado en este dispositivo</div>
+          <div id="aj-notif-estado-dispositivo" style="font-size:0.76rem;color:var(--muted);margin-top:3px;">Verificando...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aj-group" style="margin-bottom:6px;">
+      <div class="privacy-row">
+        <label style="font-size:0.9rem;font-weight:700;">Recibir notificaciones</label>
+        <button type="button" id="aj-notif-maestro" class="toggle-btn toggle-on" aria-pressed="true" onclick="ajNotifToggleMaestro(this)"><span class="toggle-thumb"></span></button>
+      </div>
+    </div>
+
+    <div id="aj-notif-categorias"></div>
   </div>
 </div>
 

@@ -462,6 +462,29 @@ function _oneSignalAutorreparar(OneSignal) {
   }
 }
 
+// Clasifica el estado real de la suscripción push de ESTE dispositivo --
+// mismas 4 categorías que ya usa el servidor (equipo.push_estado, ver
+// PUSH_ESTADOS_VALIDOS/supabase/functions/api/index.ts), extraído a su
+// propia función para que `_reportarEstadoPush()` (reporte al servidor) Y
+// la sección Ajustes → Notificaciones (`_ajEstadoPushTexto()`/js/perfil.js,
+// lectura en vivo para mostrarle el estado a la propia persona) usen
+// exactamente el mismo criterio sin duplicarlo.
+function _calcularEstadoPush(OneSignal) {
+  var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+  if (perm === 'denied') return 'bloqueado';
+  if (perm !== 'granted') return 'sin_permiso';
+  var sub = OneSignal.User.PushSubscription;
+  return (sub.optedIn && sub.token) ? 'activo' : 'sin_suscripcion';
+}
+
+// Lee el estado actual vía OneSignalDeferred y lo pasa a `cb(estado)` --
+// usado por Ajustes → Notificaciones para mostrar el estado del
+// dispositivo sin duplicar el acceso a `OneSignal.User.PushSubscription`.
+function _oneSignalEstadoActual(cb) {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(function(OneSignal) { cb(_calcularEstadoPush(OneSignal)); });
+}
+
 // Reporta al backend el estado real de la suscripción push de ESTA cuenta
 // (equipo.push_estado/push_actualizado, ver migración + acción
 // `reportarEstadoPush`/supabase/functions/api/index.ts) -- alimenta la
@@ -472,14 +495,7 @@ function _oneSignalAutorreparar(OneSignal) {
 // onSuccess/onError reales -- un reporte que falla no debe interrumpir nada.
 function _reportarEstadoPush(OneSignal) {
   if (typeof _token === 'undefined' || !_token) return;
-  var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
-  var estado;
-  if (perm === 'denied') estado = 'bloqueado';
-  else if (perm !== 'granted') estado = 'sin_permiso';
-  else {
-    var sub = OneSignal.User.PushSubscription;
-    estado = (sub.optedIn && sub.token) ? 'activo' : 'sin_suscripcion';
-  }
+  var estado = _calcularEstadoPush(OneSignal);
   // 1 reintento a los 4s si la 1ra falla (red inestable al abrir -- caso
   // real observado: reporte perdido en silencio pese a que el login/optIn
   // de arriba sí llegó a buen puerto) -- nunca más de 1, no hace falta un
