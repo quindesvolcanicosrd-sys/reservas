@@ -1,0 +1,21 @@
+-- Estado de push notifications por persona, pedido explícito (ver
+-- MANIFEST.md sección push): la app reporta en cada apertura (tras
+-- login/restaurarSesion, `_reportarEstadoPush()`/js/pwa.js) si su
+-- suscripción de OneSignal está realmente operativa -- caso real que
+-- motivó esto: permiso del navegador concedido pero la suscripción de
+-- OneSignal perdida (confirmado contra la API real de OneSignal, token
+-- vacío/`enabled:false`), sin ninguna señal visible de que el push no
+-- estaba llegando. Alimenta la sección "Notificaciones del equipo" de Mi
+-- Liga (js/admin.js), que lista a quién le llegan los avisos y a quién no.
+--
+-- `push_estado`: 'activo' | 'sin_permiso' | 'bloqueado' | 'sin_suscripcion'
+-- (ver `reportarEstadoPush()`/supabase/functions/api/index.ts para el
+-- significado exacto de cada valor) -- texto libre, no un enum de Postgres,
+-- mismo criterio que el resto de columnas de estado de `equipo`
+-- (`estado_miembro`, etc.) para no necesitar una migración aparte si se
+-- agrega un valor nuevo más adelante.
+-- `push_actualizado`: cuándo se guardó ese estado por última vez -- NULL
+-- en ambas columnas para quien nunca abrió la app con esta versión
+-- todavía (no es lo mismo que "sin_suscripcion": es "todavía no sabemos").
+ALTER TABLE public.equipo ADD COLUMN IF NOT EXISTS push_estado text;
+ALTER TABLE public.equipo ADD COLUMN IF NOT EXISTS push_actualizado timestamptz;

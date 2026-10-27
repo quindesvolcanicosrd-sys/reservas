@@ -868,7 +868,7 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
   await sendPush({
-    included_segments: ['All'],
+    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
     headings: { es: '¡Nuevo integrante en el equipo!' },
     contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
@@ -913,7 +913,7 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
   await sendPush({
-    included_segments: ['All'],
+    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
     headings: { es: '¡Nuevo integrante en el equipo!' },
     contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
@@ -2133,7 +2133,7 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     if (ev) {
       const esHoy = ev.fecha === _hoyEcuadorISO();
       await sendPush({
-        include_aliases: { external_id: await _adminOneSignalAliases() },
+        filters: _adminOneSignalFiltro(),
         headings: { es: 'Baja de asistencia' },
         contents: { es: `${nombre} no asistirá al ${ev.tipo_evento || 'evento'} de ${esHoy ? 'hoy' : _fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
         url: APP_URL + '/?tab=eventos',
@@ -2605,7 +2605,7 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
 async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: string, accion: 'cancelar' | 'reagendar'): Promise<void> {
   if (r?.tipo !== 'mensual') return;
   await sendPush({
-    include_aliases: { external_id: await _adminOneSignalAliases() },
+    filters: _adminOneSignalFiltro(),
     headings: { es: accion === 'cancelar' ? 'Reserva cancelada' : 'Reserva reagendada' },
     contents: { es: `${nombre} ${accion === 'cancelar' ? 'canceló' : 'reagendó'} su reserva mensual.` },
     url: APP_URL + '/?tab=miliga',
@@ -4762,6 +4762,17 @@ async function adminGetQueLlevar(): Promise<any[]> {
 
 // ─── Acciones: push ───────────────────────────────────────────────────────────
 
+// Segmento real de OneSignal para broadcast (TODA suscripción push
+// registrada, sin distinguir equipo/admin/rol) -- bug real corregido: el
+// resto de este archivo usaba el literal `'All'`, que NO es un segmento que
+// exista en este proyecto de OneSignal (confirmado contra la API real, ver
+// MANIFEST.md sección push) -- cada envío con ese nombre fallaba en
+// silencio (sin loguear nada, ver sendPush() más abajo). El envío MANUAL
+// desde el panel admin (adminEnviarPush(), más abajo) sí funciona porque
+// usa 'Total Subscriptions' -- el nombre real del segmento default de
+// OneSignal, el único que existe acá sin crear uno nuevo a mano.
+const ONESIGNAL_SEGMENTO_TODOS = 'Total Subscriptions';
+
 // Helper genérico de push automáticas (a diferencia de adminEnviarPush(),
 // que es el envío MANUAL desde el panel admin, con su propio payload/target
 // -- este helper no se reusa ahí para no tocar ese flujo ya en producción).
@@ -4769,35 +4780,64 @@ async function adminGetQueLlevar(): Promise<any[]> {
 // sin app_id en la URL, target_channel:'push') -- confirmado funcionando,
 // se reusa tal cual en vez del v1 (`onesignal.com/api/v1/...`, deprecado).
 // Best-effort a propósito: un push que falla nunca debe tumbar la acción
-// real (crear evento, marcar RSVP, etc.) que lo disparó.
+// real (crear evento, marcar RSVP, etc.) que lo disparó -- pero ya no en
+// silencio total: un error de OneSignal (status != 2xx) se loguea con
+// console.error (status + body) para que quede en los logs de la Edge
+// Function, sin bloquear ni reintentar nada acá.
+// `headings`/`contents` solo exigen 'es' -- si falta 'en', sendPush() lo
+// rellena con el mismo texto en español (pedido explícito: notificaciones
+// en ambos idiomas, sin traducir de verdad -- esta app es 100% en español,
+// 'en' es solo para que OneSignal no caiga a un default propio en
+// dispositivos con el idioma del sistema en inglés).
 async function sendPush(payload: {
   include_aliases?: { external_id: string[] };
   included_segments?: string[];
-  headings: { es: string };
-  contents: { es: string };
+  filters?: Record<string, any>[];
+  headings: { es: string; en?: string };
+  contents: { es: string; en?: string };
   url?: string;
   web_buttons?: { id: string; text: string; url: string }[];
   data?: Record<string, any>;
 }): Promise<void> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
-  if (!payload.include_aliases && !payload.included_segments) return;
+  if (!payload.include_aliases && !payload.included_segments && !payload.filters) return;
+  const body = {
+    app_id: ONESIGNAL_APP_ID,
+    target_channel: 'push',
+    ...payload,
+    headings: { es: payload.headings.es, en: payload.headings.en ?? payload.headings.es },
+    contents: { es: payload.contents.es, en: payload.contents.en ?? payload.contents.es },
+  };
   try {
-    await fetch('https://api.onesignal.com/notifications', {
+    const resp = await fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ONESIGNAL_API_KEY },
-      body: JSON.stringify({ app_id: ONESIGNAL_APP_ID, target_channel: 'push', ...payload }),
+      body: JSON.stringify(body),
     });
-  } catch (_e) { /* best-effort, no bloquea la acción que disparó el push */ }
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '');
+      console.error('sendPush: OneSignal respondió', resp.status, errBody);
+    }
+  } catch (e) { console.error('sendPush: fetch falló', (e as Error).message ?? e); }
 }
 
-// Identidades OneSignal de cuentas admin -- 'admin_'+email, mismo prefijo que
-// ya usa auth.js (OneSignal.login('admin_'+_adminEmail)) en cada login/
-// restauración de sesión admin. Fuente real: tabla `admins` + ADMIN_PRINCIPAL
-// (mismo criterio que adminGetCandidatosAdmin()/adminGetAdmins(), más abajo).
-async function _adminOneSignalAliases(): Promise<string[]> {
-  const { data } = await supabase.from('admins').select('email');
-  const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(data ?? []).map((a: any) => String(a.email).toLowerCase())]);
-  return Array.from(emails).map((e) => 'admin_' + e);
+// Filtro de OneSignal para "todos los admins" -- bug real corregido: antes
+// era una lista de alias 'admin_'+email (_adminOneSignalAliases(), DB:
+// tabla `admins` + ADMIN_PRINCIPAL) que dejó de servir apenas un admin con
+// fila propia en `equipo` empezó a loguear con su username real (ver
+// js/pwa.js/js/auth.js, MANIFEST.md sección push) -- esa lista vieja de
+// alias 'admin_'+email ya no coincide con el external_id real de esas
+// cuentas, así que el push a admins simplemente no llegaba. El tag
+// `es_admin='1')` (seteado por `vincularPush()` en cada login/restauración,
+// sin importar qué external_id tenga esa cuenta) es agnóstico de esa
+// identidad -- un solo filtro sirve para cualquier combinación de admin
+// con o sin fila en `equipo`. Sin exclusión por destinatario (a diferencia
+// de la lista de alias vieja, que sí podía excluir uno puntual) -- la API
+// de notificaciones de OneSignal no combina `filters` con una exclusión por
+// identidad; el único call site que la necesitaba (notificarCambioAsistencia(),
+// más abajo) la pierde a propósito, trade-off aceptado (ver ese comentario).
+function _adminOneSignalFiltro(): Record<string, any>[] {
+  return [{ field: 'tag', key: 'es_admin', relation: '=', value: '1' }];
 }
 
 const DIAS_ES  = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -4982,7 +5022,6 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
-  const adminAliases = await _adminOneSignalAliases();
   let enviados = 0;
   for (const ev of enVentana) {
     const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
@@ -5011,7 +5050,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
 
     const urlEventos = APP_URL + '/?tab=eventos';
     await sendPush({
-      include_aliases: { external_id: adminAliases },
+      filters: _adminOneSignalFiltro(),
       headings: { es: 'Resumen del entrenamiento en 1 hora' },
       contents: { es: partes.join(' ') },
       url: urlEventos,
@@ -5075,15 +5114,61 @@ async function pushSolicitudPendiente(params: Record<string, any>): Promise<Reco
   const urlFinal = urlSeccion
     ? (String(urlSeccion).startsWith('http') ? String(urlSeccion) : APP_URL + urlSeccion)
     : APP_URL;
-  const adminAliases = await _adminOneSignalAliases();
   await sendPush({
-    include_aliases: { external_id: adminAliases },
+    filters: _adminOneSignalFiltro(),
     headings: { es: 'Nueva solicitud pendiente' },
     contents: { es: String(descripcionBreve) },
     url: urlFinal,
     data: { url: urlFinal, tipo_solicitud: tipoSolicitud },
   });
   return { exito: true };
+}
+
+const PUSH_ESTADOS_VALIDOS = ['activo', 'sin_permiso', 'bloqueado', 'sin_suscripcion'];
+
+// Reporte de estado real de la suscripción push de esta cuenta -- llamada
+// por el frontend en cada apertura con sesión iniciada, tras intentar
+// login/autorreparación de OneSignal (`_reportarEstadoPush()`/js/pwa.js,
+// ver MANIFEST.md sección push). Alimenta `equipo.push_estado`/
+// `push_actualizado` (migración `push_estado_equipo`), que a su vez
+// alimenta la sección "Notificaciones del equipo" de Mi Liga
+// (adminGetEstadoPush(), más abajo). Gateada por `token` propio -- nunca
+// confía en un `username` del body (mismo criterio que el resto de
+// acciones de este archivo).
+async function reportarEstadoPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const estado = String(params.estado ?? '');
+  if (!PUSH_ESTADOS_VALIDOS.includes(estado)) return { exito: false, error: 'Estado inválido.' };
+  const { error } = await supabase.from('equipo')
+    .update({ push_estado: estado, push_actualizado: new Date().toISOString() })
+    .eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// Estado de push de todo el equipo activo, para la sección "Notificaciones
+// del equipo" de Mi Liga -- admin-only. `EQUIPO_ACTIVO_FILTRO` (arriba, ya
+// usado por cronRecordatorio1Dia()/pushAsistenciaCambio()) excluye
+// Lesionadx/Ausente/De viaje -- mismo universo de "a quién le debería
+// llegar un push" que ya usa el resto de este archivo.
+async function adminGetEstadoPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { data, error } = await supabase.from('equipo')
+    .select('username, nombre_derby, foto_perfil, estado_miembro, push_estado, push_actualizado')
+    .order('username');
+  if (error) return { exito: false, error: error.message };
+  const personas = (data ?? [])
+    .filter((r: any) => EQUIPO_ACTIVO_FILTRO(r))
+    .map((r: any) => ({
+      username: r.username,
+      nombreDerby: r.nombre_derby || r.username,
+      fotoPerfil: r.foto_perfil || '',
+      pushEstado: r.push_estado || null,
+      pushActualizado: r.push_actualizado || null,
+    }));
+  return { exito: true, personas };
 }
 
 async function adminEnviarPush(params: Record<string, any>): Promise<Record<string, any>> {
@@ -5135,28 +5220,17 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
   const fecha = ev?.fecha ? ev.fecha.slice(5).replace('-', '/') : '';
   const lugar = ev?.donde ? ' — ' + ev.donde : '';
   const contenido = nombre + ': ' + estadoAnterior + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + (lugar || '') + ')' : '');
-  // Buscar email del usuario que cambió (para excluirlo de notifs admin)
-  const { data: quienCambio } = await supabase.from('equipo').select('email').eq('username', nombre).maybeSingle();
-  const emailQuienCambio = (quienCambio?.email ?? '').toLowerCase();
-  // Notificar a admins (cualquier cambio, excepto el propio usuario) -- reusa
-  // _adminOneSignalAliases() (ADMIN_PRINCIPAL + tabla admins, ya prefijado
-  // 'admin_', mismo helper que usan pushSolicitudPendiente()/cronAdminEvento())
-  // en vez de re-derivar la lista acá, evita depender de una env var
-  // (ADMIN_PRINCIPAL es un const en código, no un secret de Supabase).
-  const adminAliases = (await _adminOneSignalAliases()).filter((a) => a !== 'admin_' + emailQuienCambio);
-  if (adminAliases.length > 0) {
-    await fetch('https://api.onesignal.com/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
-      body: JSON.stringify({
-        app_id: ONESIGNAL_APP_ID,
-        target_channel: 'push',
-        headings: { en: 'Cambio de asistencia' },
-        contents: { en: contenido },
-        include_aliases: { external_id: adminAliases },
-      }),
-    });
-  }
+  // Notificar a admins (cualquier cambio) -- filtro por tag `es_admin`
+  // (_adminOneSignalFiltro(), arriba), agnóstico de qué external_id tenga
+  // cada admin. Sin excluir a quien hizo el cambio si además es admin --
+  // la API de notificaciones de OneSignal no combina `filters` con una
+  // exclusión por identidad (trade-off aceptado, antes sí se excluía vía
+  // la lista de alias 'admin_'+email que este filtro reemplaza).
+  await sendPush({
+    filters: _adminOneSignalFiltro(),
+    headings: { es: 'Cambio de asistencia' },
+    contents: { es: contenido },
+  });
   // Notificar al resto de usuarios solo si cambió de "Asistiré" a "No asistiré"
   if (estadoAnterior === 'Asistiré' && estadoNuevo === 'No asistiré') {
     const { data: miembros } = await supabase.from('equipo').select('username, estado_miembro');
@@ -5165,16 +5239,10 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
       .map((m: any) => m.username)
       .filter((u: string) => u !== nombre);
     if (destinatarios.length > 0) {
-      await fetch('https://api.onesignal.com/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
-        body: JSON.stringify({
-          app_id: ONESIGNAL_APP_ID,
-          target_channel: 'push',
-          headings: { en: 'Cambio de asistencia' },
-          contents: { en: contenido },
-          include_aliases: { external_id: destinatarios },
-        }),
+      await sendPush({
+        include_aliases: { external_id: destinatarios },
+        headings: { es: 'Cambio de asistencia' },
+        contents: { es: contenido },
       });
     }
   }
@@ -5230,7 +5298,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
   // en BACKGROUND (sin abrir la app, ver OneSignalSDKWorker.js) vía un token
   // firmado POR PERSONA (_firmarTokenAccion arriba). Eso exige 1 llamada a
   // OneSignal POR PERSONA -- a diferencia de cualquier otro sendPush() de
-  // este archivo (1 sola llamada broadcast a `included_segments:['All']`),
+  // este archivo (1 sola llamada broadcast a `included_segments:[ONESIGNAL_SEGMENTO_TODOS]`),
   // el campo `data` de la API de OneSignal es compartido por TODA la
   // llamada, no hay forma de variarlo por destinatario dentro de un mismo
   // POST. `url: '_osp=do_not_open'` en cada botón (magic string documentado
@@ -5262,7 +5330,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
 
   // Sin idEvento, o sin PUSH_TOKEN_SECRET configurado todavía -- broadcast
   // simple sin botones de acción (comportamiento previo, sin cambios).
-  await sendPush({ included_segments: ['All'], headings, contents, url: APP_URL + '/?tab=eventos' });
+  await sendPush({ included_segments: [ONESIGNAL_SEGMENTO_TODOS], headings, contents, url: APP_URL + '/?tab=eventos' });
   return { exito: true };
 }
 
@@ -5271,7 +5339,7 @@ async function pushEventoCancelado(params: Record<string, any>): Promise<Record<
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { tipo, fecha, hora, lugar } = params;
   await sendPush({
-    included_segments: ['All'],
+    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
     headings: { es: 'Evento cancelado' },
     contents: { es: `${tipo || 'Evento'} del ${_fechaEs(fecha)} · ${lugar || ''} · ${_horaEs(hora)}` },
     url: APP_URL + '/?tab=eventos',
@@ -5285,7 +5353,7 @@ async function pushEventoEditado(params: Record<string, any>): Promise<Record<st
   const { fecha, lugar, cambios } = params;
   if (!cambios) return { exito: true };
   await sendPush({
-    included_segments: ['All'],
+    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
     headings: { es: `Evento actualizado: ${_fechaEs(fecha)}` },
     contents: { es: `${lugar || ''} · Cambios: ${cambios}` },
     url: APP_URL + '/?tab=eventos',
@@ -5298,7 +5366,7 @@ async function pushOffseasonCreado(params: Record<string, any>): Promise<Record<
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { desde, hasta } = params;
   await sendPush({
-    included_segments: ['All'],
+    included_segments: [ONESIGNAL_SEGMENTO_TODOS],
     headings: { es: 'Período de descanso programado' },
     contents: { es: `Sin entrenamientos del ${_fechaEs(desde)} al ${_fechaEs(hasta)}.` },
     url: APP_URL + '/?tab=eventos',
@@ -5329,7 +5397,7 @@ async function cronDiario(): Promise<Record<string, any>> {
   for (const ev of (eventosHoy ?? [])) {
     const asistentes = (asistPorEvento[ev.id_evento] ?? []).filter((a: any) => a.estado === 'Asistiré').length;
     await sendPush({
-      included_segments: ['All'],
+      included_segments: [ONESIGNAL_SEGMENTO_TODOS],
       headings: { es: `${ev.tipo_evento || 'Entrenamiento'} hoy a las ${_horaEs(ev.inicia)}` },
       contents: { es: `${asistentes} ${asistentes === 1 ? 'persona asistirá' : 'personas asistirán'} · ${ev.donde || ''}` },
       url: APP_URL + '/?tab=eventos',
@@ -5347,7 +5415,7 @@ async function cronDiario(): Promise<Record<string, any>> {
     const edad = anio - Number(String(p.fecha_nacimiento).substring(0, 4));
     const mostrarEdad = p.edad_publica === 'Sí';
     await sendPush({
-      included_segments: ['All'],
+      included_segments: [ONESIGNAL_SEGMENTO_TODOS],
       headings: { es: `Hoy es el cumpleaños de ${p.username}` },
       contents: { es: mostrarEdad ? `Deséale felices ${edad} años.` : 'Deséale feliz cumpleaños.' },
       url: APP_URL + '/?tab=equipo',
@@ -5685,6 +5753,8 @@ Deno.serve(async (req: Request) => {
       // Push disparados por el frontend (gateados por _validarToken, no admin)
       case 'pushAsistenciaCambio':          return json(await pushAsistenciaCambio(params));
       case 'pushSolicitudPendiente':        return json(await pushSolicitudPendiente(params));
+      case 'reportarEstadoPush':            return json(await reportarEstadoPush(params));
+      case 'adminGetEstadoPush':            return json(await adminGetEstadoPush(params));
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));

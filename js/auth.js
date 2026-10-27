@@ -133,8 +133,6 @@ function onGoogleCredentialUsuario(resp) {
       // sin fila en Equipo (nunca tiene 'session'/token regular, así que no
       // hay ningún otro camino del que sacar este dato al restaurar).
       localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
       // dashboardAdmin:true (o ausente, retrocompatibilidad con cuentas admin
       // sin fila en Equipo) -- cuenta admin "pura" que no paga cuota: entra
       // directo a Mi Liga (adminEntrar() -> irMiLiga() -> s-miliga, ver
@@ -152,6 +150,15 @@ function onGoogleCredentialUsuario(resp) {
           E.datos = res.datos;
           E.datosCompletos = res.datos;
           localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
+          // Identidad única = username (ver js/pwa.js) -- ya NO un login
+          // aparte con 'admin_'+email que pisaba este, dejando la
+          // suscripción real huérfana (bug real corregido, ver MANIFEST.md).
+          vincularPush(E.nombre, true);
+        } else {
+          // Única excepción real: admin sin fila propia en `equipo`, sin
+          // username del que valerse -- sigue usando 'admin_'+email como
+          // identidad (ver MANIFEST.md sección push).
+          vincularPush('admin_' + _adminEmail, true);
         }
         adminEntrar();
         return;
@@ -186,7 +193,7 @@ function onGoogleCredentialUsuario(resp) {
     E.datos = res.datos;
     E.datosCompletos = res.datos;
     localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
-    vincularPush(E.nombre);
+    vincularPush(E.nombre, !!res.esAdmin);
     mostrarCargando('Cargando tus reservas...');
     api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
       _todasReservas = reservas;
@@ -280,7 +287,7 @@ function continuar_pin() {
       E.datos = res.datos;
       E.datosCompletos = res.datos;
       localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
-      vincularPush(E.nombre);
+      vincularPush(E.nombre, !!res.esAdmin);
 
       if (res.esAdmin) {
         _adminToken = res.adminToken;
@@ -288,8 +295,6 @@ function continuar_pin() {
         _adminNombre = E.nombre;
         _dashboardAdminLimitado = (res.dashboardAdmin !== false);
         localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
         if (res.dashboardAdmin !== false) {
           ocultarCargando();
           adminEntrar();
@@ -560,16 +565,16 @@ window.onload = function() {
             _adminNombre = E.nombre;
             _dashboardAdminLimitado = (res.dashboardAdmin !== false);
             localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+            vincularPush(E.nombre, true);
             if (res.dashboardAdmin !== false) {
               window._restaurandoSesion = false;
               ocultarCargando();
               adminEntrar();
               return;
             }
+          } else {
+            vincularPush(E.nombre);
           }
-          vincularPush(E.nombre);
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
             prepararHome();
@@ -603,6 +608,10 @@ window.onload = function() {
         _restaurando = true;
         _adminToken = ad.adminToken; _adminEmail = ad.email;
         _dashboardAdminLimitado = (ad.dashboardAdmin !== false);
+        // Restauración 100% desde cache local (sin 'session', sin pasar por
+        // el backend acá) -- único caso real de admin sin username del que
+        // valerse, sigue la misma excepción documentada en js/pwa.js.
+        vincularPush('admin_' + _adminEmail, true);
         adminEntrar();
         ocultarCargando();
       } else { localStorage.removeItem('adminSession'); }
@@ -619,7 +628,7 @@ window.onload = function() {
         if (!res.valido || !res.datos) { _token = ''; ocultarCargando(); ir('s1', true); return; }
         E.nombre = res.nombre; E.datos = res.datos; E.datosCompletos = res.datos;
         localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
-        vincularPush(E.nombre);
+        vincularPush(E.nombre, !!res.esAdmin);
         if (res.esAdmin) {
           _adminToken = res.adminToken; _adminEmail = res.email; _adminNombre = E.nombre;
           _dashboardAdminLimitado = (res.dashboardAdmin !== false);

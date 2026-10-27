@@ -114,8 +114,11 @@ function onGoogleCredential(resp) {
     var _pl = _decodificarJwtGoogle(resp.credential);
     _adminNombre = (_pl && _pl.name) || _adminEmail;
     localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+    // Identidad única = username real cuando esta cuenta admin también
+    // tiene fila en `equipo` (adminLogin() backend ya la devuelve en
+    // `res.nombre`) -- 'admin_'+email solo como excepción sin esa fila,
+    // mismo criterio que js/auth.js (ver MANIFEST.md sección push).
+    vincularPush(res.nombre || ('admin_' + _adminEmail), true);
     adminEntrar();
   }, function(e) { ocultarCargando(); err('err-admin-login', 'Error al verificar acceso. Intenta de nuevo.'); });
 }
@@ -1530,6 +1533,69 @@ function adminQuitarClick(email) {
   }, function(e) { mostrarToast(e.message || 'Error.', 'error'); });
 }
 
+// ── "Notificaciones del equipo" (Mi Liga, pedido explícito -- ver
+// MANIFEST.md sección push) ─────────────────────────────────────────────────
+// Quién recibe avisos push y quién no, con la fecha del último reporte --
+// `equipo.push_estado`/`push_actualizado`, reportado por cada dispositivo
+// en cada apertura con sesión iniciada (`_reportarEstadoPush()`/js/pwa.js,
+// `reportarEstadoPush()`/`adminGetEstadoPush()` en el backend). Mismo
+// patrón de carga lazy + fadeIn que Administradorxs/Estado actual del
+// equipo, arriba en este archivo -- cards `.reserva-card`, badges
+// `.badge-confirmada`/`.badge-pendiente`/`.badge-cancelada` (css/ui.css,
+// 100% var(--…), sin color hardcodeado) ya usados en el resto de Mi Liga.
+var PUSH_ESTADO_INFO = {
+  activo:          { texto: 'Recibe avisos',             clase: 'badge-confirmada' },
+  sin_permiso:     { texto: 'No las activó',              clase: 'badge-pendiente' },
+  bloqueado:       { texto: 'Las bloqueó',                clase: 'badge-cancelada' },
+  sin_suscripcion: { texto: 'Sin suscripción activa',     clase: 'badge-cancelada' },
+};
+
+function _mlCargarEstadoPush() {
+  var lista = document.getElementById('ml-push-lista');
+  if (lista) lista.innerHTML = _skeletonQueLlevarHtml();
+  adminApi({ action: 'adminGetEstadoPush' }, function(res) {
+    _mlRenderEstadoPush(res.personas || []);
+  }, function(e) { mostrarToast(e.message || 'Error al cargar notificaciones del equipo.', 'error'); });
+}
+
+// 'YYYY-MM-DDTHH:mm:ss...Z' -> "27 de octubre, 2:30 p.m." -- mismo criterio
+// de array de meses en español ya repetido sin un helper compartido en el
+// resto de este archivo/js/eventos.js/js/perfil.js/js/equipo.js.
+function _mlFechaPush(iso) {
+  if (!iso) return 'Todavía sin datos';
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return 'Todavía sin datos';
+  var hora = d.toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
+  return d.getDate() + ' de ' + meses[d.getMonth()] + ', ' + hora;
+}
+
+function _mlRenderEstadoPush(personas) {
+  var lista = document.getElementById('ml-push-lista');
+  if (!lista) return;
+  if (!personas.length) {
+    lista.innerHTML = '<p style="text-align:center;color:var(--muted);padding:10px 0;">Sin personas activas en el equipo.</p>';
+    return;
+  }
+  var html = personas.map(function(p) {
+    var info = PUSH_ESTADO_INFO[p.pushEstado] || { texto: 'Todavía sin datos', clase: 'badge-pendiente' };
+    var inicial = (p.nombreDerby || '?').charAt(0).toUpperCase();
+    var foto = p.fotoPerfil
+      ? '<img src="' + p.fotoPerfil + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">'
+      : '<div style="width:36px;height:36px;border-radius:50%;background:var(--brand-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand);font-weight:700;">' + inicial + '</div>';
+    return '<div class="reserva-card" style="display:flex;align-items:center;gap:10px;">' +
+        foto +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:700;font-size:0.88rem;">' + p.nombreDerby + '</div>' +
+          '<div style="font-size:0.75rem;color:var(--muted);">' + _mlFechaPush(p.pushActualizado) + '</div>' +
+        '</div>' +
+        '<span class="badge ' + info.clase + '" style="flex-shrink:0;">' + info.texto + '</span>' +
+      '</div>';
+  }).join('');
+  lista.innerHTML = html;
+  void lista.offsetWidth; lista.style.animation = 'fadeIn 0.3s ease';
+}
+
 // ── Cupones (Mi Liga) — restaurar/quitar el cupón de clase gratis de una
 // persona (equipo.cupon_disponible). Lista ya cargada + filtro local por
 // nombre (mismo patrón que _adminRenderCandidatosAdmin/_adminFiltrarDestino).
@@ -1651,6 +1717,7 @@ function _adminCargarMiLiga() {
   // cargaba al abrir la tile "Categorías" (`_mlIrSeccion()`), que es la
   // única caller que le queda a esa función además de esta.
   _mlCargarMiembros();
+  _mlCargarEstadoPush();
 }
 
 // ── Mi Liga — "Categorías" (Fase A del sistema de tiers, config_tiers) ──────

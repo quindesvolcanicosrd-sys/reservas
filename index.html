@@ -3416,6 +3416,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="seccion-label" style="margin-top:8px;">Estado actual del equipo</div>
     <div id="ml-miembros-lista"></div>
 
+    <!-- "Notificaciones del equipo" (feat nueva, pedido explícito -- ver
+         MANIFEST.md sección push): quién recibe avisos push y quién no, con
+         la fecha del último reporte de cada dispositivo. Mismo patrón que
+         "Estado actual del equipo"/Administradorxs arriba -- `.seccion-label`
+         + lista cargada lazy (_mlCargarEstadoPush()/js/admin.js), sin
+         subpantalla ni burbuja aparte. -->
+    <div class="seccion-label" style="margin-top:8px;">Notificaciones del equipo</div>
+    <div id="ml-push-lista"></div>
+
     <!-- Copiar link de registro-express/ -- .btn-text-simple, mismo botón
          "secundario" que ya usa Mi Liga (ver "Agregar administradorx"/
          "Agregar talla"/"Actualizar" en esta misma pantalla), no .btn-outline/
@@ -3615,9 +3624,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
 <script src="js/perfil.js?v=f093f5b6"></script>
-<script src="js/admin.js?v=edeb385f"></script>
-<script src="js/pwa.js"></script>
-<script src="js/auth.js?v=d18bc0da"></script>
+<script src="js/admin.js?v=8c60e8f4"></script>
+<script src="js/pwa.js?v=cf22a52f"></script>
+<script src="js/auth.js?v=3cb09b4f"></script>
 
   <!-- Modal primer login: permisos Google -->
   <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">
