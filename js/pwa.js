@@ -480,7 +480,16 @@ function _reportarEstadoPush(OneSignal) {
     var sub = OneSignal.User.PushSubscription;
     estado = (sub.optedIn && sub.token) ? 'activo' : 'sin_suscripcion';
   }
-  api({ action: 'reportarEstadoPush', estado: estado }, function(){}, function(){});
+  // 1 reintento a los 4s si la 1ra falla (red inestable al abrir -- caso
+  // real observado: reporte perdido en silencio pese a que el login/optIn
+  // de arriba sí llegó a buen puerto) -- nunca más de 1, no hace falta un
+  // reintento infinito para un reporte best-effort que de todas formas se
+  // vuelve a mandar en la próxima apertura/evento `change`.
+  api({ action: 'reportarEstadoPush', estado: estado }, function(){}, function() {
+    setTimeout(function() {
+      api({ action: 'reportarEstadoPush', estado: estado }, function(){}, function(){});
+    }, 4000);
+  });
 }
 
 // Listener único de cambio de suscripción (idempotente -- `vincularPush()`

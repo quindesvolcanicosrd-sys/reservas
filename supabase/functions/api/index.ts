@@ -4789,8 +4789,23 @@ const ONESIGNAL_SEGMENTO_TODOS = 'Total Subscriptions';
 // en ambos idiomas, sin traducir de verdad -- esta app es 100% en español,
 // 'en' es solo para que OneSignal no caiga a un default propio en
 // dispositivos con el idioma del sistema en inglés).
+// `include_external_user_ids` (NO `include_aliases.external_id`) -- bug
+// real grave encontrado al probar el push de prueba a un usuario puntual
+// (ver MANIFEST.md sección push, 2026-10-27): este proyecto de OneSignal
+// responde `{"errors":{"invalid_aliases":{"external_id":[...]}}}` con
+// `include_aliases` -- el sistema de "aliases" de la API nueva de OneSignal
+// simplemente no está habilitado para esta app, pese a que `OneSignal.login()`
+// (frontend, nuevo User Model) y `filters` por tag SÍ funcionan bien
+// (confirmado con pushes reales de prueba). El campo legado
+// `include_external_user_ids` SÍ entrega (confirmado `successful:1` contra
+// la API real) -- probablemente TODO push dirigido a una persona puntual
+// (`pushAsistenciaCambio`, recordatorios, cuota, etc.) fallaba en silencio
+// desde que se adoptó `include_aliases`, sin que nadie lo notara (mismo
+// síntoma de fondo que el bug de segmento `'All'` de arriba: sin logging de
+// error, no había forma de verlo). `filters` (admin por tag) no se tocó --
+// ya confirmado funcionando tal cual.
 async function sendPush(payload: {
-  include_aliases?: { external_id: string[] };
+  include_external_user_ids?: string[];
   included_segments?: string[];
   filters?: Record<string, any>[];
   headings: { es: string; en?: string };
@@ -4800,7 +4815,7 @@ async function sendPush(payload: {
   data?: Record<string, any>;
 }): Promise<void> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
-  if (!payload.include_aliases && !payload.included_segments && !payload.filters) return;
+  if (!payload.include_external_user_ids && !payload.included_segments && !payload.filters) return;
   const body = {
     app_id: ONESIGNAL_APP_ID,
     target_channel: 'push',
@@ -4939,7 +4954,7 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
       if (!token) return;
       const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
-        include_aliases: { external_id: [username] },
+        include_external_user_ids: [username],
         headings: { es: '¡Tu entrenamiento es en 1 hora!' },
         contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
         url: urlEventos,
@@ -4986,7 +5001,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
       if (!token) return;
       const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
-        include_aliases: { external_id: [username] },
+        include_external_user_ids: [username],
         headings: { es: '¿Vas al entrenamiento mañana?' },
         contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)}` },
         url: urlEventos,
@@ -5088,7 +5103,7 @@ async function pushAsistenciaCambio(params: Record<string, any>): Promise<Record
 
   const urlEventos = APP_URL + '/?tab=eventos';
   await sendPush({
-    include_aliases: { external_id: destinatarios },
+    include_external_user_ids: destinatarios,
     headings: { es: 'Cambio de asistencia' },
     contents: { es: `${nombreMostrar} cambió su asistencia a ${estadoNuevo}` },
     url: urlEventos,
@@ -5177,13 +5192,17 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { exito: false, error: 'OneSignal no configurado.' };
   const payload: Record<string, any> = {
     app_id: ONESIGNAL_APP_ID, target_channel: 'push',
-    headings: { en: titulo }, contents: { en: mensaje },
+    headings: { es: titulo, en: titulo }, contents: { es: mensaje, en: mensaje },
     chrome_web_icon: 'https://app.quindesvolcanicos.com/icons/icon-192B.png',
   };
   const destinoArr = destino ? (Array.isArray(destino) ? destino : [destino]) : [];
   const destinoUnico = [...new Set(destinoArr)];
   if (destinoUnico.length > 0 && !(destinoUnico.length === 1 && destinoUnico[0] === 'todos')) {
-    payload.include_aliases = { external_id: destinoUnico };
+    // Bug real corregido (ver sendPush() más arriba para el detalle
+    // completo) -- `include_aliases` no entrega en este proyecto de
+    // OneSignal; un envío manual a un destinatario puntual (no "todos")
+    // fallaba acá. `include_external_user_ids` (legado) sí funciona.
+    payload.include_external_user_ids = destinoUnico;
   } else {
     payload.included_segments = ['Total Subscriptions'];
   }
@@ -5240,7 +5259,7 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
       .filter((u: string) => u !== nombre);
     if (destinatarios.length > 0) {
       await sendPush({
-        include_aliases: { external_id: destinatarios },
+        include_external_user_ids: destinatarios,
         headings: { es: 'Cambio de asistencia' },
         contents: { es: contenido },
       });
@@ -5315,7 +5334,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
       const token = await _firmarTokenAccion(username, String(idEvento));
       if (!token) return;
       await sendPush({
-        include_aliases: { external_id: [username] },
+        include_external_user_ids: [username],
         headings, contents,
         url: APP_URL + '/?tab=eventos',
         data: { token, evento_id: String(idEvento) },
@@ -5431,7 +5450,7 @@ async function cronDiario(): Promise<Record<string, any>> {
     const anios = anio - Number(String(p.fecha_ingreso).substring(0, 4));
     if (anios <= 0) continue;
     await sendPush({
-      include_aliases: { external_id: [p.username] },
+      include_external_user_ids: [p.username],
       headings: { es: '¡Feliz aniversario!' },
       contents: { es: `Hoy cumples ${anios} ${anios === 1 ? 'año' : 'años'} en el equipo. ¡Gracias por estar!` },
       url: APP_URL + '/?tab=ajustes',
@@ -5454,7 +5473,7 @@ async function cronDiario(): Promise<Record<string, any>> {
       const estadoPago = _estadoPagoPersonaMes(nombre, mes, anio, pagosDelMes ?? [], solicitudesAprobadas ?? [], hoyDate);
       if (estadoPago !== 'Debe') continue;
       await sendPush({
-        include_aliases: { external_id: [nombre] },
+        include_external_user_ids: [nombre],
         headings: { es: 'Recordatorio de cuota mensual' },
         contents: { es: `${nombre}, tienes cuota pendiente. Haz una reserva y envía el comprobante.` },
         url: APP_URL + '/?tab=ajustes',
@@ -5833,7 +5852,7 @@ Deno.serve(async (req: Request) => {
         if (filaPrevia && filaPrevia.categoria !== params.categoria) {
           const subio = filaPrevia.categoria === 'Mirlxs' && params.categoria === 'Quindes';
           await sendPush({
-            include_aliases: { external_id: [params.nombre] },
+            include_external_user_ids: [params.nombre],
             headings: { es: subio ? '¡Subiste de categoría!' : 'Cambio de categoría' },
             contents: { es: subio ? '¡Ahora eres Quindes! Felicitaciones.' : `Pasaste a ${params.categoria}.` },
             url: APP_URL + '/?tab=ajustes',
