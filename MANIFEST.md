@@ -329,6 +329,22 @@ Flujo a seguir desde ahora (reemplaza el workaround de `db query -f` a mano, que
 6. **Orden con la Edge Function**: si el código nuevo lee/escribe la columna, aplicar la migración ANTES de `supabase functions deploy`.
 7. **No re-ejecutar** migraciones de datos ya aplicadas (`20260912170000`, `20260912180000`, `20260912200000`, `20260913010000`, `20260925020000`, `20260910224155` parte seed): borran/reescriben filas por nombre o resetean contadores; que figuren como aplicadas en el historial es lo que impide que `db push` las vuelva a correr.
 
+## Backups
+
+El proyecto está en el **plan Free de Supabase** — sin backups automáticos de la plataforma (confirmado: `supabase backups list --linked` devuelve PITR deshabilitado, sin ningún backup gestionado por Supabase). La única copia de seguridad real es la que corre desde un repo separado:
+
+**[`reservas-backups`](https://github.com/quindesvolcanicosrd-sys/reservas-backups)** (privado, repo propio — nunca convive con el código de la app para no acercar las credenciales de la base al código). Una sola Action (`.github/workflows/backup.yml`), corre sola todos los días a las 04:00 hora de Ecuador (`cron: '0 9 * * *'`, UTC fijo — Ecuador no tiene horario de verano, así que nunca hay que recalcular el cron) y también admite `workflow_dispatch` (botón "Run workflow" en la pestaña Actions) para correrla a mano.
+
+Qué respalda, en cada corrida:
+- **Base Postgres completa** — `supabase db dump --linked` (esquema) + `--data-only` (datos).
+- **Storage** — bucket `fotos-perfil` completo (`supabase storage cp -r ss:///fotos-perfil`), el único bucket real que usa la app. Los "comprobantes" de pago (`pagos`/`ingresos`/`egresos.comprobante_url`) son un link de texto que el admin pega a mano, no un archivo en Storage — no hay nada más que respaldar ahí.
+
+Cada uno de los 2 (dump / Storage) se empaqueta en su propio `.tar.gz` y se cifra con **gpg simétrico AES256** (passphrase en el secret `BACKUP_PASSPHRASE` del repo de backups) antes de subirse — el dump trae datos personales y médicos (`equipo`: enfermedades, alergias, medicamentos, contactos de emergencia, documentos de identidad) y las fotos son datos personales también, así que el texto plano se borra del runner apenas se cifra, nunca sobrevive ni como residuo temporal. Se suben como **artefactos de la Action** (`actions/upload-artifact`, `retention-days: 30`) — nunca como commit al repo (un commit diario haría crecer el historial de git para siempre; un artefacto se borra solo al vencer, sin dejar rastro pesando en ningún lado). En cualquier momento hay como mínimo los últimos ~30 backups diarios disponibles para descargar desde la pestaña Actions de `reservas-backups`.
+
+**Restaurar**: instrucciones completas (comando exacto de `gpg --decrypt`, sin pasar la passphrase como argumento — queda en el historial de la terminal, se deja que gpg la pida de forma interactiva) en el README de `reservas-backups`. Siempre contra un **proyecto Supabase nuevo y vacío**, nunca sobre `reservas` en producción — para recuperar solo filas puntuales, se extraen a mano del `.sql` restaurado en esa copia temporal, nunca se sobreescribe producción con un dump completo.
+
+**Huérfanos conocidos, a propósito sin limpiar** (ver investigación 2026-10-27): las columnas legado `asistencias.a_horario`/`tarde` y `ingresos.responsables` todavía mencionan a varias cuentas eliminadas antes de que existiera el `ON DELETE CASCADE` (`Alejandro`/`Byron`/`Dani`/`Flor`/`Nadine`/`Paulo`/`Robin`/`Sebas`, entre otros nombres que solo aparecen en rollcall y podrían ser invitadxs nunca registradxs). Decisión explícita de Victor: **no tocarlos** — sin backups reales de antes de esas eliminaciones, es el único rastro que queda de esas personas.
+
 ## Cambios recientes
 
 - **Usuarios inactivos reactivables en "Marcar asistencia" + Eliminar usuarios desde Equipo + fix de `ultimaAsistencia` con asistencia externa** (pedido explícito, 2026-10-25; `js/eventos.js`, `js/equipo.js`, `js/admin.js`, `index.html`, `css/eventos.css`, `css/equipo.css`, `css/ui.css`, `css/global.css`, `supabase/functions/api/index.ts`). 3 pedidos relacionados, mismo día:
