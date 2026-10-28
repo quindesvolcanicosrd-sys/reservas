@@ -49,7 +49,7 @@ var TALLAS_EU_US = [
   { eu: 42, us: '10.5' }, { eu: 43, us: '11.5' }, { eu: 44, us: '12.5' }, { eu: 45, us: '13.5' }
 ];
 
-var ADMIN_PANTALLAS = ['s-admin-login','s-admin-usuarios'];
+var ADMIN_PANTALLAS = ['s-admin-login'];
 
 function adminApi(params, onSuccess, onError) {
   params.adminToken = _adminToken;
@@ -466,7 +466,7 @@ var ADMIN_TILE_INFO = {
       document.getElementById('adm-notif-destino').value = 'todos';
       document.getElementById('admin-destino-trigger-label').textContent = 'Todes (suscritxs)';
       adminApi({ action: 'adminGetUsuarios' }, function(res) {
-        _admDestinatarios = (res || []).map(function(u) { return u.nombre; });
+        _admDestinatarios = (res || []).filter(function(u) { return !u.eliminado; }).map(function(u) { return u.nombre; });
         var buscador = document.getElementById('admin-destino-search');
         _adminRenderDestinoLista(buscador ? buscador.value : '');
       }, function() {});
@@ -525,7 +525,7 @@ var ADMIN_TILE_INFO = {
     cargar: function() {
       var s = document.getElementById('admin-cupones-search'); if (s) s.value = '';
       adminApi({ action: 'adminGetUsuarios' }, function(res) {
-        _admUsuariosCupones = res || [];
+        _admUsuariosCupones = (res || []).filter(function(u) { return !u.eliminado; });
         _adminRenderCupones('');
       }, function(e) { mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
     }
@@ -549,6 +549,19 @@ var ADMIN_TILE_INFO = {
     bubbleId: 'admin-burbuja-cuota-excepciones',
     listaId: 'admin-cuotaexc-lista',
     cargar: function() { adminCargarCuotaExcepciones(); }
+  },
+  // "Usuarios" -- pedido explícito, "dejar de perder historial al eliminar
+  // usuarios" (ver MANIFEST.md). Antes vivía como pantalla propia
+  // (`s-admin-usuarios`) sin ningún trigger real de navegación -- código
+  // muerto, nunca alcanzable desde la app (el único "Eliminar" real que
+  // usaban las admins vivía en el grupo "Inactivxs" de Equipo,
+  // `_eqAbrirSheetEliminar()`/js/equipo.js). Convertida a burbuja embebida
+  // en Mi Liga, mismo patrón que el resto -- ahora sí alcanzable, y es
+  // donde aparece la marca "Cuenta eliminada"/botón "Restaurar cuenta".
+  'admin-usuarios': {
+    bubbleId: 'admin-burbuja-usuarios',
+    listaId: 'admin-usuarios-lista',
+    cargar: function() { adminIrUsuarios(); }
   }
 };
 
@@ -860,8 +873,9 @@ function adminRenderReservas() {
         // afirmar ninguno.
         var montoNum = Number(r.monto) || 0;
         var detalleMonto = ' · <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">payments</span> Pagó: $' + montoNum;
+        var marcaEliminada = r.cuentaEliminada ? ' <span class="badge badge-cancelada">Cuenta eliminada</span>' : '';
         html += '<div class="reserva-card" style="margin-bottom:8px;">' +
-          '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
+          '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + marcaEliminada + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
           '<div class="reserva-detalle">' + detalleEquip + detalleMonto + '</div>';
         if (r.estado === 'Pendiente') {
           html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
@@ -1461,38 +1475,57 @@ function adminGuardarEquipAuto() {
 // clase base que usa ese ícono (con el modificador de forma `.eq-delete-btn`,
 // css/equipo.css, que acá no aplica -- este sigue siendo un botón de texto).
 function adminIrUsuarios() {
-  mostrarCargando('Cargando usuarios...');
   adminApi({ action: 'adminGetUsuarios' }, function(res) {
-    ocultarCargando();
     var html = '';
     (res || []).forEach(function(u) {
       var nombreEsc = u.nombre.replace(/'/g, "\\'");
-      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      var acciones = '';
+      if (u.eliminado) {
+        acciones = '<span class="badge badge-cancelada">Cuenta eliminada</span>' +
+          (u.eliminadoPor === 'admin' ? ' <button class="btn-outline" onclick="adminRestaurarUsuarioClick(\'' + nombreEsc + '\')">Restaurar cuenta</button>' : '');
+      } else if (u.inactiva) {
+        acciones = '<button class="btn-outline-danger" onclick="adminEliminarUsuarioClick(\'' + nombreEsc + '\')">Eliminar</button>';
+      }
+      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">' +
         '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:var(--muted);">' + (u.email || 'sin email') + '</div></div>' +
-        (u.inactiva ? '<button class="btn-outline-danger" onclick="adminEliminarUsuarioClick(\'' + nombreEsc + '\')">Eliminar</button>' : '') +
+        acciones +
         '</div>';
     });
     document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:var(--muted);">Sin usuarios.</p>';
-    ir('s-admin-usuarios');
-  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
+  }, function(e) { mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
 }
 
 // Texto neutro (ver MANIFEST.md -- "hoja Mirlxs" referenciaba el backend
-// legado de Google Sheets, ya migrado a Supabase) + alcance real del
-// borrado (pedido explícito, "borrado total, sin dejar historial") --
-// mismo texto que el bottom sheet equivalente de Equipo
-// (`_eqAbrirSheetEliminar()`/js/equipo.js), adaptado al `prompt()` de
-// escribir-para-confirmar que ya usaba esta pantalla (sin cambios en ese
-// mecanismo, fuera del alcance de este pedido).
+// legado de Google Sheets, ya migrado a Supabase) + alcance real de la
+// acción (pedido explícito, "dejar de perder historial al eliminar
+// usuarios" -- ya no es un borrado total: `adminEliminarUsuario()` ahora
+// ARCHIVA, conserva todo el historial de pagos/asistencias/puntos y puede
+// restaurarse después con el botón "Restaurar cuenta" de esta misma
+// pantalla) -- mismo mecanismo de escribir-para-confirmar que ya usaba esta
+// pantalla (sin cambios ahí, fuera del alcance de este pedido).
 function adminEliminarUsuarioClick(nombre) {
-  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todo su historial (asistencias, puntos, reservas y tareas). Esta acción no se puede deshacer.\n\nPara confirmar, escribe el nombre exactamente:');
+  var escrito = prompt('Vas a archivar a "' + nombre + '": deja de aparecer en Equipo, eventos y notificaciones, y no podrá volver a iniciar sesión. Su historial de pagos, asistencias y puntos se conserva, y podés restaurar la cuenta después.\n\nPara confirmar, escribe el nombre exactamente:');
   if (escrito === null) return;
-  if (escrito.trim() !== nombre) { mostrarToast('El nombre no coincide. No se eliminó nada.', 'error'); return; }
-  mostrarCargando('Eliminando...');
+  if (escrito.trim() !== nombre) { mostrarToast('El nombre no coincide. No se archivó nada.', 'error'); return; }
+  mostrarCargando('Archivando...');
   adminApi({ action: 'adminEliminarUsuario', nombre: nombre }, function(res) {
     ocultarCargando();
-    if (res.exito) { adminIrUsuarios(); } else { mostrarToast(res.error || 'Error al eliminar.', 'error'); }
-  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al eliminar.', 'error'); });
+    if (res.exito) { adminIrUsuarios(); } else { mostrarToast(res.error || 'Error al archivar.', 'error'); }
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al archivar.', 'error'); });
+}
+
+// "Restaurar cuenta" (pedido explícito) -- solo disponible para cuentas
+// archivadas por un admin (`eliminadoPor === 'admin'`); una cuenta
+// auto-eliminada nunca pinta este botón (ver adminIrUsuarios() arriba),
+// porque esa persona ya vació sus propios datos personales al eliminarse
+// -- restaurarla dejaría una cuenta "activa" sin datos de contacto reales.
+function adminRestaurarUsuarioClick(nombre) {
+  if (!confirm('¿Restaurar la cuenta de "' + nombre + '"? Vuelve a aparecer en Equipo, eventos y notificaciones, con todo su historial.')) return;
+  mostrarCargando('Restaurando...');
+  adminApi({ action: 'adminRestaurarUsuario', nombre: nombre }, function(res) {
+    ocultarCargando();
+    if (res.exito) { adminIrUsuarios(); } else { mostrarToast(res.error || 'Error al restaurar.', 'error'); }
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al restaurar.', 'error'); });
 }
 
 // ── Administradorxs (Tanda 3, embebido en Mi Liga — ver MANIFEST.md

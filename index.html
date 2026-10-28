@@ -2873,11 +2873,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="eq-sheet-eliminar" class="bsheet" style="z-index:9701;">
     <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
     <div class="bsheet-handle"></div>
-    <div class="bsheet-title bsheet-title-danger">Eliminar usuario</div>
+    <div class="bsheet-title bsheet-title-danger">Archivar usuario</div>
     <div class="bsheet-body">
       <p id="eq-sheet-eliminar-texto" class="bsheet-texto-aviso"></p>
       <div class="bsheet-btns-col">
-        <button type="button" class="btn btn-danger" onclick="_eqConfirmarEliminarUsuario(this)">Eliminar definitivamente</button>
+        <button type="button" class="btn btn-danger" onclick="_eqConfirmarEliminarUsuario(this)">Archivar cuenta</button>
         <button type="button" class="btn btn-outline" onclick="_eqCerrarSheetEliminar()">Cancelar</button>
       </div>
     </div>
@@ -3260,6 +3260,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">event_available</span></div>
         <div class="admin-dash-tile-label">Excepciones de cuota</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-usuarios" onclick="adminToggleBurbuja('admin-usuarios', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">group</span></div>
+        <div class="admin-dash-tile-label">Usuarios</div>
+      </div>
     </div>
 
     <!-- Burbuja "Precios de clases". -->
@@ -3319,6 +3323,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">confirmation_number</span> Cupones</div>
       <input type="text" id="admin-cupones-search" placeholder="Buscar por nombre..." style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:100%;" oninput="adminFiltrarCupones(this.value)">
       <div id="admin-cupones-lista"></div>
+    </div>
+
+    <!-- Burbuja "Usuarios" (pedido explícito -- ver MANIFEST.md, "Archivado
+         de usuarios") -- mismo componente .admin-tile-bubble que las demás.
+         Lista completa de `equipo` (incluidas las cuentas archivadas, con la
+         marca "Cuenta eliminada" -- a diferencia del resto de Mi Liga, que
+         las excluye por completo). Ver adminIrUsuarios()/js/admin.js. -->
+    <div id="admin-burbuja-usuarios" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">group</span> Usuarios</div>
+      <p style="font-size:0.85rem;color:var(--danger);font-weight:600;">Archivar una cuenta inactiva la oculta de Equipo, eventos y notificaciones, sin borrar su historial de pagos, asistencias y puntos. Las cuentas archivadas por un admin se pueden restaurar desde aquí.</p>
+      <div id="admin-usuarios-lista"></div>
     </div>
 
     <!-- Burbuja "Excepciones de pago" -- mismo componente .admin-tile-bubble
@@ -3589,15 +3604,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <div class="pantalla" id="s-admin-usuarios">
-    <div class="card">
-      <div class="seccion-label">Admin — Usuarios</div>
-      <h2>Personas registradas</h2>
-      <p style="font-size:0.85rem;color:var(--danger);font-weight:600;">⚠️ Eliminar borra la fila completa de la hoja Mirlxs. No se puede deshacer desde la app.</p>
-      <div id="admin-usuarios-lista"></div>
-
-    </div>
-  </div>
 
 </div>
 
@@ -3631,15 +3637,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
-<script src="js/ui.js?v=068448dc"></script>
+<script src="js/ui.js?v=598902e2"></script>
 <script src="js/eventos.js?v=4b664a7e"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=90f011f5"></script>
+<script src="js/equipo.js?v=56d01ce9"></script>
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
 <script src="js/perfil.js?v=e76defc9"></script>
-<script src="js/admin.js?v=8c60e8f4"></script>
+<script src="js/admin.js?v=5980b2f6"></script>
 <script src="js/pwa.js?v=f257413a"></script>
 <script src="js/auth.js?v=3cb09b4f"></script>
 
@@ -3816,7 +3822,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-title">Eliminar cuenta</div>
   <div class="bsheet-body">
     <div style="text-align:center;margin-bottom:12px;"><span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--danger);">person_cancel</span></div>
-    <p style="font-size:0.85rem;color:var(--neutral-mid);text-align:center;margin-bottom:20px;line-height:1.5;">Esta acción es <strong>permanente e irreversible</strong>. Se borrarán todos tus datos y reservas.</p>
+    <p style="font-size:0.85rem;color:var(--neutral-mid);text-align:center;margin-bottom:20px;line-height:1.5;">Esta acción es <strong>permanente e irreversible</strong>. Se borrarán tus datos personales y no vas a poder volver a iniciar sesión. Tu historial de pagos, asistencias y reservas se conserva por motivos de registro.</p>
     <div style="background:var(--error-lightest);border:2px solid var(--error-light-border);border-radius:12px;padding:14px 16px;margin-bottom:18px;">
       <div style="font-size:0.78rem;font-weight:700;color:var(--danger-dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Para confirmar, escribe tu nombre:</div>
       <div class="mec-nombre" style="font-size:0.88rem;font-weight:800;color:var(--danger);margin-bottom:10px;" id="mec-nombre-label"></div>

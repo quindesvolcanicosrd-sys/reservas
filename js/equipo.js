@@ -816,7 +816,7 @@ function _eqFilaHtml(p, mostrarEliminar) {
   // cabecera de esta función).
   var eliminarHtml = '';
   if (mostrarEliminar && typeof _adminToken !== 'undefined' && _adminToken) {
-    eliminarHtml = '<button type="button" class="btn-outline-danger eq-delete-btn" data-eq-delete="' + idAttr + '" onclick="event.stopPropagation();_eqAbrirSheetEliminar(\'' + idJs + '\',\'' + _eqEscId(_eqNombreVisible(p)) + '\')" title="Eliminar usuario"><span class="material-symbols-outlined">delete</span></button>';
+    eliminarHtml = '<button type="button" class="btn-outline-danger eq-delete-btn" data-eq-delete="' + idAttr + '" onclick="event.stopPropagation();_eqAbrirSheetEliminar(\'' + idJs + '\',\'' + _eqEscId(_eqNombreVisible(p)) + '\')" title="Archivar usuario"><span class="material-symbols-outlined">delete</span></button>';
   }
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
@@ -3923,7 +3923,7 @@ function _eqAbrirSheetEliminar(id, nombreDerby) {
   var sh = document.getElementById('eq-sheet-eliminar');
   var texto = document.getElementById('eq-sheet-eliminar-texto');
   if (!ov || !sh) return;
-  if (texto) texto.textContent = '¿Eliminar a ' + nombreDerby + '? Se borrarán su cuenta y todo su historial (asistencias, puntos, reservas y tareas). Esta acción no se puede deshacer.';
+  if (texto) texto.textContent = '¿Archivar a ' + nombreDerby + '? Deja de aparecer en Equipo, eventos y notificaciones, y no podrá volver a iniciar sesión. Su historial de pagos, asistencias y puntos se conserva, y la cuenta se puede restaurar después desde Mi Liga → Usuarios.';
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
@@ -3945,20 +3945,20 @@ function _eqConfirmarEliminarUsuario(btn) {
   if (!pend) return;
   _eqEliminarPendiente = null;
   _eqCerrarSheetEliminar();
-  if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Archivando...'; }
   apiPost({ action: 'adminEliminarUsuario', adminToken: _adminToken, nombre: pend.id }, function(res) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo eliminar.', 'error'); return; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Archivar cuenta'; }
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo archivar.', 'error'); return; }
     var botonFila = document.querySelector('[data-eq-delete="' + pend.id + '"]');
     var fila = botonFila ? botonFila.closest('.eq-miembro-fila') : null;
     _eqRemoverFilaConAnimacion(fila, function() {
       _eqPersonas = _eqPersonas.filter(function(p) { return p.id !== pend.id; });
       _eqRenderInactivos();
-      mostrarToast('Usuario eliminado.', 'ok');
+      mostrarToast('Usuario archivado.', 'ok');
     });
   }, function(e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
-    mostrarToast((e && e.message) || 'No se pudo eliminar.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Archivar cuenta'; }
+    mostrarToast((e && e.message) || 'No se pudo archivar.', 'error');
   });
 }
 // Fade + slide de salida de una fila de persona (pedido explícito, "la fila

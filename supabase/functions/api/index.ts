@@ -137,6 +137,22 @@ async function _getEquipoRowByEmail(email: string): Promise<Record<string, any> 
   return data;
 }
 
+// Cuenta archivada (`equipo.eliminado_en` != null, ver migración
+// `20261027...archivar_usuarios_restrict_fk.sql`) -- helper centralito para
+// no repetir `!!row?.eliminado_en` en cada call site. `_getEquipoRow()`/
+// `_getEquipoRowByEmail()` arriba siguen devolviendo la fila archivada tal
+// cual (nunca filtran solas) -- cada caller decide qué hacer: login/sesión
+// la rechazan explícitamente (ver loginGoogle/adminLogin/validarPin/
+// restaurarSesion, más abajo -- el caso de loginGoogle/adminLogin es
+// especial: si la fila no existe en absoluto cae al camino de "admin puro
+// sin fila", pero si existe Y está archivada se rechaza derecho, nunca cae
+// a ese fallback), Mi Liga → historial la sigue mostrando (con la marca
+// "Cuenta eliminada"), Mi Liga → Usuarios la sigue listando (con botón
+// Restaurar si la archivó un admin).
+function _estaArchivado(row: { eliminado_en?: string | null } | null | undefined): boolean {
+  return !!row?.eliminado_en;
+}
+
 async function _validarToken(token: string): Promise<string | null> {
   if (!token) return null;
   const { data } = await supabase.from('sessions').select('username, expires_at').eq('token', token).maybeSingle();
@@ -485,17 +501,26 @@ async function loginGoogle(params: Record<string, any>): Promise<Record<string, 
   const foto = info.picture ?? '';
   const esAdmin = await _esAdmin(email);
   if (esAdmin) {
+    // Bug real corregido (pedido explícito, ver MANIFEST.md sección
+    // "Archivado de usuarios"): la fila se busca ANTES de emitir ningún
+    // token -- si existe y está archivada, se rechaza derecho. Antes
+    // (cuando "archivada" significaba simplemente "borrada") esto no
+    // existía porque la fila ya no estaba; ahora la fila sigue estando, así
+    // que sin este chequeo una cuenta admin archivada caía al mismo
+    // `return` de "admin puro sin fila" de abajo y entraba igual.
+    const rowPrevia = await _getEquipoRowByEmail(email);
+    if (_estaArchivado(rowPrevia)) return { valido: false, error: 'Esta cuenta fue eliminada.' };
     const adminToken = await _crearAdminToken(email);
-    const row = await _getEquipoRowByEmail(email);
-    if (row) {
-      const token = await _crearToken(row.username);
-      const pagaCuota = (row.paga_cuota ?? '').toLowerCase();
-      return { valido: true, token, nombre: row.username, datos: getDatosCompletos(row), foto, esAdmin: true, adminToken, dashboardAdmin: !(pagaCuota === 'sí' || pagaCuota === 'si') };
+    if (rowPrevia) {
+      const token = await _crearToken(rowPrevia.username);
+      const pagaCuota = (rowPrevia.paga_cuota ?? '').toLowerCase();
+      return { valido: true, token, nombre: rowPrevia.username, datos: getDatosCompletos(rowPrevia), foto, esAdmin: true, adminToken, dashboardAdmin: !(pagaCuota === 'sí' || pagaCuota === 'si') };
     }
     return { valido: true, esAdmin: true, email, adminToken, dashboardAdmin: true };
   }
   const row = await _getEquipoRowByEmail(email);
   if (!row) return { valido: false, noRegistrado: true };
+  if (_estaArchivado(row)) return { valido: false, error: 'Esta cuenta fue eliminada.' };
   const token = await _crearToken(row.username);
   return { valido: true, token, nombre: row.username, datos: getDatosCompletos(row), foto };
 }
@@ -506,8 +531,12 @@ async function adminLogin(params: Record<string, any>): Promise<Record<string, a
   const email = (info.email ?? '').toLowerCase();
   const esAdmin = await _esAdmin(email);
   if (!esAdmin) return { ok: false, error: 'Este email no tiene permisos de administradorx.' };
-  const adminToken = await _crearAdminToken(email);
+  // Mismo fix que loginGoogle() -- ver ese comentario: buscar la fila ANTES
+  // de emitir el adminToken, para poder rechazar una cuenta archivada sin
+  // que caiga al fallback de "admin puro sin fila".
   const row = await _getEquipoRowByEmail(email);
+  if (_estaArchivado(row)) return { ok: false, error: 'Esta cuenta fue eliminada.' };
+  const adminToken = await _crearAdminToken(email);
   if (row) {
     const token = await _crearToken(row.username);
     const pagaCuota = (row.paga_cuota ?? '').toLowerCase();
@@ -528,7 +557,7 @@ async function validarPin(params: Record<string, any>): Promise<Record<string, a
     await supabase.from('pin_attempts').update({ count: 0, blocked_until: null }).eq('username', nombre);
   }
   const row = await _getEquipoRow(nombre);
-  if (!row) return { valido: false };
+  if (!row || _estaArchivado(row)) return { valido: false };
   if (row.pin_needs_reset) return { valido: false, pinNeedsReset: true };
   if (!row.pin_hash) { await _registrarIntentoFallido(nombre, attemptCount); return { valido: false }; }
   if (row.pin_hash !== pinHash) {
@@ -553,7 +582,7 @@ async function restaurarSesion(params: Record<string, any>): Promise<Record<stri
   const username = await _validarToken(params.token);
   if (!username) return { valido: false };
   const row = await _getEquipoRow(username);
-  if (!row) return { valido: false };
+  if (!row || _estaArchivado(row)) return { valido: false };
   const result: Record<string, any> = { valido: true, nombre: username, datos: getDatosCompletos(row) };
   return _adjuntarAdmin(result, row);
 }
@@ -693,7 +722,7 @@ async function marcarCuponUsado(params: Record<string, any>): Promise<Record<str
 }
 
 async function getNombres(): Promise<string[]> {
-  const { data } = await supabase.from('equipo').select('username').order('username');
+  const { data } = await supabase.from('equipo').select('username').is('eliminado_en', null).order('username');
   return (data ?? []).map((r: any) => r.username);
 }
 
@@ -949,28 +978,49 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
 // Fix: se agrega `.select('username')` al delete de `equipo` para poder
 // verificar cuántas filas se borraron de verdad -- si `error` o 0 filas,
 // se devuelve `{exito:false}` en vez de una falsa confirmación.
+// Archivado (soft delete) -- pedido explícito, ver MANIFEST.md sección
+// "Archivado de usuarios": "ya perdimos el historial de 10 cuentas, el
+// historial de pagos, montos y asistencias debe conservarse siempre". Ya
+// NO borra ninguna de las 13 tablas con historial real (`log_asistencias`/
+// `reservas`/`puntos_mensuales`/`asignaciones_tareas`/
+// `rectificaciones_asistencia`/`solicitudes_excepcion`/`solicitudes_pago`/
+// `pagos`/`historial_tier`/`cuota_excepcion`/`nivel_actual`/
+// `reglas_asistencia`) -- esas FK pasaron a `ON DELETE RESTRICT`
+// (`20261028022932_archivar_usuarios_restrict_fk.sql`), un DELETE directo
+// sobre `equipo` fallaría de todos modos. Marca `eliminado_en`+
+// `eliminado_por:'usuario'` en la misma fila (nunca se borra) -- distinto
+// de `adminEliminarUsuario()` (abajo, `eliminado_por:'admin'`), esta
+// versión ADEMÁS vacía los datos personales/médicos/de contacto (pedido
+// explícito: "conserva username y nombre_derby para que los registros
+// sigan identificables", todo lo demás que sea dato personal se borra) --
+// incluido `pin_hash` (al revés que el archivado por admin, que lo
+// conserva a propósito para que una restauración deje todo funcionando).
+// Solo se siguen borrando `sessions`/`pin_attempts` (no son historial) y se
+// anulan las invitaciones pendientes (`invite_tokens.usado=true` -- no
+// tiene sentido un link de activación vivo para una cuenta archivada).
 async function eliminarCuenta(params: Record<string, any>): Promise<Record<string, any>> {
   const tok = params.token as string;
   const usr = await _validarToken(tok);
   if (!usr) return { exito: false, error: 'Sesión inválida.' };
-  await Promise.all([
-    supabase.from('log_asistencias').delete().eq('nombre_usuario', usr),
-    supabase.from('reservas').delete().eq('nombre_usuario', usr),
-    supabase.from('puntos_mensuales').delete().eq('nombre_usuario', usr),
-    supabase.from('asignaciones_tareas').delete().eq('nombre_usuario', usr),
-    supabase.from('rectificaciones_asistencia').delete().eq('nombre', usr),
-    supabase.from('solicitudes_excepcion').delete().eq('nombre', usr),
-    supabase.from('solicitudes_pago').delete().eq('nombre_usuario', usr),
-    supabase.from('pagos').delete().eq('nombre_usuario', usr),
-    supabase.from('pin_attempts').delete().eq('username', usr),
-    supabase.from('historial_tier').delete().eq('username', usr),
-    supabase.from('cuota_excepcion').delete().eq('id_miembro', usr),
-    supabase.from('nivel_actual').delete().eq('nombre_usuario', usr),
-  ]);
-  const { data, error } = await supabase.from('equipo').delete().eq('username', usr).select('username');
+  const limpieza: Record<string, any> = {
+    eliminado_en: new Date().toISOString(), eliminado_por: 'usuario',
+    email: '', prefijo: '', telefono: '',
+    fecha_nacimiento: null, fecha_publica: null, edad_publica: null,
+    tipo_documento: '', pais_expedicion: '', numero_documento: '', nombre_legal: '',
+    calle_principal: '', calle_secundaria: '', numeracion: '', sector: '', canton: '',
+    emerg1_nombre: '', emerg1_relacion: '', emerg1_prefijo: '', emerg1_telefono: '',
+    emerg2_nombre: '', emerg2_relacion: '', emerg2_prefijo: '', emerg2_telefono: '',
+    enfermedad: '', alergias: '', alergias_desc: '', dieta: '', antecedentes: '',
+    medicamentos: '', medicamentos_desc: '', atencion_medica: '', seguro: '', seguro_contacto: '',
+    foto_perfil: '', pin_hash: null,
+  };
+  const { data, error } = await supabase.from('equipo').update(limpieza).eq('username', usr).select('username');
   if (error) return { exito: false, error: error.message };
   if (!data || data.length === 0) return { exito: false, error: 'No se encontró la cuenta a eliminar.' };
   await supabase.from('sessions').delete().eq('username', usr);
+  await supabase.from('pin_attempts').delete().eq('username', usr);
+  await supabase.from('invite_tokens').update({ usado: true }).eq('username', usr).eq('usado', false);
+  await supabase.storage.from('fotos-perfil').remove(['avatars/' + usr + '.jpg']);
   return { exito: true };
 }
 
@@ -1181,7 +1231,7 @@ async function adminBackfillHistorialTier(params: Record<string, any>): Promise<
   if (!tierDefault) return { exito: false, error: 'No hay ningún tier marcado como es_default=true en config_tiers.' };
   const tiersNoDefault = tiers.filter((t: any) => t.id !== tierDefault.id).sort((a: any, b: any) => a.orden - b.orden);
 
-  const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username');
+  const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username').is('eliminado_en', null);
   if (equipoError) return { exito: false, error: equipoError.message };
   const usernames: string[] = (equipoData ?? []).map((r: any) => r.username).filter(Boolean);
   if (!usernames.length) return { exito: true, filasEscritas: 0 };
@@ -2012,7 +2062,7 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
 
 async function getCumpleañosRango(params: Record<string, any>): Promise<Record<string, any>> {
   const d0 = new Date(params.desde), d1 = new Date(params.hasta);
-  const { data } = await supabase.from('equipo').select('username, fecha_nacimiento, fecha_publica, edad_publica, foto_perfil').not('fecha_nacimiento', 'is', null).not('fecha_publica', 'is', null);
+  const { data } = await supabase.from('equipo').select('username, fecha_nacimiento, fecha_publica, edad_publica, foto_perfil').not('fecha_nacimiento', 'is', null).not('fecha_publica', 'is', null).is('eliminado_en', null);
   const resultado: any[] = [];
   for (const r of (data ?? [])) {
     if (!r.fecha_nacimiento || !r.fecha_publica) continue;
@@ -2366,7 +2416,7 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   // respuesta" a quien esté 'Ausente' (el único valor de este enum que
   // representa inactividad detectada -- ver el mismo criterio en
   // `adminMarcarAsistencia()`, arriba en este archivo).
-  const { data: equipo } = await supabase.from('equipo').select('username, estado_miembro').order('username');
+  const { data: equipo } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null).order('username');
   const asistLog = await _ultimaAsistenciaPorPersonaTodas([idEvento]);
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
@@ -2756,7 +2806,7 @@ async function adminRegistrarEgreso(params: Record<string, any>): Promise<any> {
 async function adminGetEstadoPagosMes(params: Record<string, any>): Promise<any[]> {
   const mes = Number(params.mes), anio = Number(params.anio);
   const hoy = new Date();
-  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes').is('eliminado_en', null);
   const personas = (quindes ?? []).map((n: any) => n.username);
   const [{ data: pagosDelMes }, { data: solicitudesAprobadas }] = await Promise.all([
     supabase.from('pagos').select('nombre_usuario, exoneradx, monto').eq('mes', mes).eq('anio', anio),
@@ -2769,7 +2819,7 @@ async function adminGetEstadoPagosMes(params: Record<string, any>): Promise<any[
 async function adminGetPagosAnual(params: Record<string, any>): Promise<Record<string, any>> {
   const anio = Number(params.anio);
   const hoy = new Date();
-  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes').is('eliminado_en', null);
   const personas = (quindes ?? []).map((n: any) => n.username);
   const [{ data: pagosDelAnio }, { data: solicitudesDelAnio }] = await Promise.all([
     supabase.from('pagos').select('nombre_usuario, mes, exoneradx, monto').eq('anio', anio),
@@ -2831,9 +2881,19 @@ async function adminResolverSolicitudPago(params: Record<string, any>): Promise<
 // no el criterio opuesto de `_evEsInactivo()`/js/eventos.js) -- Mi Liga ->
 // Usuarios (js/admin.js) la usa para mostrar el botón "Eliminar" SOLO en
 // personas inactivas, sin duplicar la cuenta de días en un 4to lugar.
+// A diferencia del resto de los rosters de este archivo, ESTE
+// deliberadamente NO filtra `eliminado_en` -- pedido explícito, ver
+// MANIFEST.md sección "Archivado de usuarios": Mi Liga → Usuarios es la
+// única pantalla donde las cuentas archivadas siguen siendo visibles (de
+// solo lectura, con la marca "Cuenta eliminada" + botón "Restaurar cuenta"
+// si `eliminadoPor==='admin'`, js/admin.js) -- es la única forma de ver/
+// gestionar quién está archivado sin entrar a la base directo.
 async function adminGetUsuarios(): Promise<any[]> {
-  const { data } = await supabase.from('equipo').select('username, email, cupon_disponible').order('username');
-  const personas = (data ?? []).map((r: any) => ({ nombre: r.username, email: r.email, cuponDisponible: !!r.cupon_disponible }));
+  const { data } = await supabase.from('equipo').select('username, nombre_derby, email, cupon_disponible, eliminado_en, eliminado_por').order('username');
+  const personas = (data ?? []).map((r: any) => ({
+    nombre: r.username, nombreDerby: r.nombre_derby || r.username, email: r.email, cuponDisponible: !!r.cupon_disponible,
+    eliminado: !!r.eliminado_en, eliminadoPor: r.eliminado_por || null,
+  }));
   if (!personas.length) return personas;
   const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
   personas.forEach((p: any) => {
@@ -3366,7 +3426,7 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   const eventos = filasAsist ?? [];
   const totalEventos = eventos.length;
 
-  const { data: miembros, error: errorMiembros } = await supabase.from('equipo').select('username');
+  const { data: miembros, error: errorMiembros } = await supabase.from('equipo').select('username').is('eliminado_en', null);
   if (errorMiembros) return { exito: false, error: errorMiembros.message };
 
   const parseNombres = (s: string | null | undefined): string[] =>
@@ -3605,7 +3665,7 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
   if (soloUsuario) {
     usuarios = [soloUsuario];
   } else {
-    const { data: equipoRows } = await supabase.from('equipo').select('username');
+    const { data: equipoRows } = await supabase.from('equipo').select('username').is('eliminado_en', null);
     usuarios = (equipoRows ?? []).map((r: any) => String(r.username ?? '').trim()).filter(Boolean);
   }
 
@@ -3855,7 +3915,7 @@ async function adminGetSolicitudesLesion(params: Record<string, any>): Promise<a
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return [];
   const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil, estado_miembro')
-    .eq('solicitud_lesion_pendiente', true).order('username');
+    .eq('solicitud_lesion_pendiente', true).is('eliminado_en', null).order('username');
   return (data ?? []).map((r: any) => ({
     nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '',
     estado_miembro: r.estado_miembro ?? 'Activx',
@@ -3895,56 +3955,46 @@ async function adminRechazarLesion(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
-// Bug real corregido (pedido explícito de Victor -- "usuario eliminado sigue
-// apareciendo en listas de 'Asistiré' de eventos"): esta función NO
-// validaba `adminToken` (cualquiera podía borrar cualquier cuenta con solo
-// mandar `nombre`) y solo borraba `equipo`/`sessions` -- todo lo demás
-// (asistencias, reservas, puntos, tareas, pagos, etc.) quedaba huérfano en
-// silencio, confirmado contra la DB real: 151 filas huérfanas en
-// `log_asistencias`, 24 en `puntos_mensuales`, 13 en `pagos`, 12 en
-// `asignaciones_tareas`, 2 en `reservas`, 1 en `nivel_actual` (ver
-// `getEventosRango()` -- `existeEnEquipo` ya filtraba estos huérfanos en el
-// FRONTEND, pero nunca los borraba). Fix en 2 capas:
-// (1) esta función ahora borra explícitamente cada tabla con datos por
-// usuario ANTES de borrar `equipo` -- así el orden es correcto incluso si
-// la migración de abajo no llegara a estar aplicada en algún entorno.
-// (2) migración `20260912120000_cascade_delete_usuario.sql` agrega
-// `ON DELETE CASCADE` a `equipo(username)` en las 14 tablas reales del
-// schema con datos por usuario (confirmado contra `information_schema`) --
-// garantía a nivel DB para cualquier borrado futuro que no pase por acá
-// (`supabase db query --linked` directo, por ejemplo). Los huérfanos YA
-// existentes (de borrados históricos previos a este fix) no se tocaron --
-// decisión deliberada de no borrar datos reales (pagos/asistencias/puntos)
-// como efecto colateral, ver comentario de la migración.
-// Guardias nuevas sumadas sobre el fix de arriba (pedido explícito, ver
-// MANIFEST.md -- "Eliminar usuarios desde Equipo"):
-// - **Solo usuarios inactivos** -- rechaza con "Solo se pueden eliminar
-//   usuarios inactivos." si `_ultimaAsistenciaRealPorUsuario()` da menos de
-//   30 días para esta persona (mismo criterio que el ícono de borrar de
-//   Equipo/el botón de Mi Liga -- `_eqEsInactivo()`/js/equipo.js, `Infinity`
-//   días sin ninguna marca real) -- validado server-side para no depender
-//   solo del filtro de UI, saltable llamando al endpoint directo.
-// - **No autoeliminación** -- compara el email de la fila objetivo contra
-//   el email de la sesión admin que llama.
-// - **`reglas_asistencia`** sumada a la tanda de `Promise.all()` -- la
-//   migración `20260912120000_cascade_delete_usuario.sql` la descartó por
-//   error ("su columna `nombre` es el nombre de una regla, no de una
-//   persona" -- confirmado FALSO contra la DB real: 2 filas reales con
-//   `nombre:'Vic'`, 1 con `nombre:'Laru'`, mismos usernames que
-//   `equipo.username`) -- sin FK/cascade hacia `equipo`, quedaba huérfana
-//   en cada borrado, incluso después de esa migración.
-// - **Foto de perfil** (Storage, bucket `fotos-perfil`, ver
-//   `subirFotoPerfil()` más arriba) -- best-effort, DESPUÉS de que el
-//   borrado en DB confirma éxito (Storage vive fuera de Postgres, no
-//   participa de ninguna transacción/cascada de la DB).
+// Archivado (soft delete) -- pedido explícito, ver MANIFEST.md sección
+// "Archivado de usuarios". Historia completa de este endpoint: primero
+// (2026-09-12) se encontró que no validaba `adminToken` y dejaba 151+
+// filas huérfanas en 6 tablas al borrar `equipo` directo (fix: borrado
+// explícito por tabla + `ON DELETE CASCADE`, ver
+// `20260912120000_cascade_delete_usuario.sql`); el 2026-10-27 se confirmó
+// que ese CASCADE (automático, sin que nadie lo revisara) ya se había
+// comido el historial de pagos/asistencias/puntos de 10 cuentas reales --
+// la causa de fondo no era "faltaba borrar una tabla más", era borrar
+// `equipo` en absoluto. Esta versión YA NO BORRA LA FILA -- marca
+// `eliminado_en`+`eliminado_por:'admin'` nada más, sin tocar ningún dato
+// personal (a diferencia de `eliminarCuenta()`, arriba, que sí los vacía --
+// la persona lo pide para sí misma; un admin archivando a otra persona no
+// tiene por qué borrarle sus datos). Las 12 tablas con historial real
+// (`log_asistencias`/`reservas`/`puntos_mensuales`/`asignaciones_tareas`/
+// `rectificaciones_asistencia`/`solicitudes_excepcion`/`solicitudes_pago`/
+// `pagos`/`historial_tier`/`cuota_excepcion`/`nivel_actual`/
+// `reglas_asistencia`) ya tienen `ON DELETE RESTRICT` hacia `equipo`
+// (`20261028022932_archivar_usuarios_restrict_fk.sql`) -- red de seguridad
+// a nivel DB, no dependen de que este código se acuerde de no tocarlas.
+// Guardias que se conservan tal cual (sin relación con el cambio de
+// borrado→archivado):
+// - **Solo usuarios inactivos** -- `_ultimaAsistenciaRealPorUsuario()`,
+//   mismo criterio de 30 días que el ícono de borrar de Equipo.
+// - **No autoeliminación** -- email de la fila objetivo vs. sesión admin.
+// Nuevo: anula las invitaciones pendientes (`invite_tokens.usado=true`) --
+// no tiene sentido un link de activación vivo para una cuenta archivada.
+// `pin_hash` se CONSERVA a propósito (al revés que `eliminarCuenta()`) --
+// si se restaura (`adminRestaurarUsuario()`, abajo) la cuenta vuelve a
+// funcionar con el mismo PIN de antes, sin que la persona tenga que
+// configurar uno nuevo.
 async function adminEliminarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const nombre = String(params.nombre ?? '').trim();
   if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
 
-  const { data: fila } = await supabase.from('equipo').select('username, email').eq('username', nombre).maybeSingle();
+  const { data: fila } = await supabase.from('equipo').select('username, email, eliminado_en').eq('username', nombre).maybeSingle();
   if (!fila) return { exito: false, error: 'Usuario no encontrado.' };
+  if (_estaArchivado(fila)) return { exito: false, error: 'Esta cuenta ya está eliminada.' };
   if (String(fila.email ?? '').toLowerCase() === adminEmail.toLowerCase()) {
     return { exito: false, error: 'No podés eliminar tu propia cuenta.' };
   }
@@ -3954,25 +4004,34 @@ async function adminEliminarUsuario(params: Record<string, any>): Promise<Record
   const dias = ultima ? Math.floor((Date.now() - new Date(ultima).getTime()) / 86400000) : Infinity;
   if (dias < 30) return { exito: false, error: 'Solo se pueden eliminar usuarios inactivos.' };
 
-  await Promise.all([
-    supabase.from('log_asistencias').delete().eq('nombre_usuario', nombre),
-    supabase.from('reservas').delete().eq('nombre_usuario', nombre),
-    supabase.from('puntos_mensuales').delete().eq('nombre_usuario', nombre),
-    supabase.from('asignaciones_tareas').delete().eq('nombre_usuario', nombre),
-    supabase.from('rectificaciones_asistencia').delete().eq('nombre', nombre),
-    supabase.from('solicitudes_excepcion').delete().eq('nombre', nombre),
-    supabase.from('solicitudes_pago').delete().eq('nombre_usuario', nombre),
-    supabase.from('pagos').delete().eq('nombre_usuario', nombre),
-    supabase.from('pin_attempts').delete().eq('username', nombre),
-    supabase.from('historial_tier').delete().eq('username', nombre),
-    supabase.from('cuota_excepcion').delete().eq('id_miembro', nombre),
-    supabase.from('nivel_actual').delete().eq('nombre_usuario', nombre),
-    supabase.from('reglas_asistencia').delete().eq('nombre', nombre),
-  ]);
-  const { error } = await supabase.from('equipo').delete().eq('username', nombre);
+  const { error } = await supabase.from('equipo')
+    .update({ eliminado_en: new Date().toISOString(), eliminado_por: 'admin' })
+    .eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   await supabase.from('sessions').delete().eq('username', nombre);
-  await supabase.storage.from('fotos-perfil').remove(['avatars/' + nombre + '.jpg']);
+  await supabase.from('pin_attempts').delete().eq('username', nombre);
+  await supabase.from('invite_tokens').update({ usado: true }).eq('username', nombre).eq('usado', false);
+  return { exito: true };
+}
+
+// Restaura una cuenta archivada POR UN ADMIN -- pedido explícito, Mi Liga →
+// Usuarios → botón "Restaurar cuenta". Solo si `eliminado_por==='admin'`:
+// una cuenta que se archivó a sí misma (`eliminarCuenta()`, `eliminado_por:
+// 'usuario'`) ya perdió sus datos personales/médicos/de contacto para
+// siempre, "restaurarla" dejaría una cuenta a medio completar en vez de
+// devolverla a la normalidad real -- se rechaza derecho, el frontend ni
+// muestra el botón para ese caso pero esto es la validación autoritativa.
+async function adminRestaurarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const nombre = String(params.nombre ?? '').trim();
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  const { data: fila } = await supabase.from('equipo').select('eliminado_en, eliminado_por').eq('username', nombre).maybeSingle();
+  if (!fila) return { exito: false, error: 'Usuario no encontrado.' };
+  if (!fila.eliminado_en) return { exito: false, error: 'Esta cuenta no está eliminada.' };
+  if (fila.eliminado_por !== 'admin') return { exito: false, error: 'Esta cuenta fue eliminada por la propia persona -- no se puede restaurar.' };
+  const { error } = await supabase.from('equipo').update({ eliminado_en: null, eliminado_por: null }).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
 
@@ -4008,7 +4067,7 @@ async function adminQuitarAdmin(params: Record<string, any>): Promise<Record<str
 }
 
 async function adminGetCandidatosAdmin(): Promise<any[]> {
-  const { data: equipo } = await supabase.from('equipo').select('username, email').order('username');
+  const { data: equipo } = await supabase.from('equipo').select('username, email').is('eliminado_en', null).order('username');
   const { data: admins } = await supabase.from('admins').select('email');
   const adminEmails = new Set([(ADMIN_PRINCIPAL.toLowerCase()), ...(admins ?? []).map((a: any) => a.email.toLowerCase())]);
   return (equipo ?? []).filter((r: any) => {
@@ -4018,7 +4077,7 @@ async function adminGetCandidatosAdmin(): Promise<any[]> {
 }
 
 async function adminGetRosterEquipo(): Promise<Record<string, any>> {
-  const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil').order('username');
+  const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil').is('eliminado_en', null).order('username');
   const personas = (data ?? []).map((r: any) => ({ nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '' }));
   if (!personas.length) return { personas };
   // `ultimaAsistencia` (bug real "usuarios inactivos siguen en la lista de
@@ -4047,6 +4106,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   const vistaAdmin = params.adminToken ? !!(await _validarAdminToken(String(params.adminToken))) : false;
   const { data: filas } = await supabase.from('equipo')
     .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, viaje_desde, viaje_hasta')
+    .is('eliminado_en', null)
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -4790,7 +4850,7 @@ async function adminGetQueLlevar(): Promise<any[]> {
   const eventosPorId: Record<string, any> = {};
   (eventos ?? []).forEach((e: any) => { eventosPorId[e.id_evento] = e; });
 
-  const { data: equipo } = await supabase.from('equipo').select('username, pronombres, prefijo, telefono');
+  const { data: equipo } = await supabase.from('equipo').select('username, pronombres, prefijo, telefono').is('eliminado_en', null);
   const pronMap: Record<string, string> = {}, waMap: Record<string, string> = {};
   (equipo ?? []).forEach((r: any) => {
     pronMap[r.username] = r.pronombres ?? '';
@@ -4925,12 +4985,20 @@ async function _adminDestinatariosPush(excluirEmail?: string): Promise<string[]>
   const { data: adminsRows } = await supabase.from('admins').select('email');
   const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsRows ?? []).map((a: any) => String(a.email).toLowerCase())]);
   if (excluirEmail) emails.delete(excluirEmail.toLowerCase());
-  const { data: equipoRows } = await supabase.from('equipo').select('username, email, push_notificaciones_activas, push_preferencias');
+  // Sin filtrar `eliminado_en` en el `.select()` a propósito -- mismo
+  // motivo que en `sendPush()` (ver ese comentario): si se filtrara acá, un
+  // admin archivado perdería su fila de `porEmail` y caería al fallback
+  // "sin fila = admin puro, mandar a 'admin_'+email" de más abajo, cuando
+  // en realidad hay que excluirlo del todo (archivado es archivado, sea
+  // admin o no). `_estaArchivado()` lo excluye explícito ANTES de llegar a
+  // ese fallback.
+  const { data: equipoRows } = await supabase.from('equipo').select('username, email, push_notificaciones_activas, push_preferencias, eliminado_en');
   const porEmail: Record<string, any> = {};
   (equipoRows ?? []).forEach((r: any) => { if (r.email) porEmail[String(r.email).toLowerCase()] = r; });
   const out: string[] = [];
   emails.forEach((email) => {
     const fila = porEmail[email];
+    if (_estaArchivado(fila)) return;
     if (!_personaQuierePush(fila, 'avisos_admin')) return;
     out.push(fila ? fila.username : 'admin_' + email);
   });
@@ -4984,7 +5052,7 @@ async function sendPush(payload: {
   }
   let destinatarios: string[];
   if (payload.broadcastEquipo) {
-    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias');
+    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias').is('eliminado_en', null);
     const excluir = new Set(payload.excluirUsernames ?? []);
     destinatarios = (filas ?? [])
       .filter((r: any) => r.username && !excluir.has(r.username) && _personaQuierePush(r, payload.tipo))
@@ -4992,10 +5060,20 @@ async function sendPush(payload: {
   } else {
     const usernames = payload.include_external_user_ids ?? [];
     if (!usernames.length) return;
-    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias').in('username', usernames);
+    // Trae `eliminado_en` SIN filtrar por él en el `.select()` (a
+    // diferencia del `broadcastEquipo` de arriba) -- un alias 'admin_'+email
+    // de un admin sin fila (ver `_adminDestinatariosPush()`) no tiene fila
+    // en absoluto, y `_personaQuierePush(undefined, ...)` lo manda igual
+    // por default (correcto, sin relación con archivado); una persona
+    // archivada SÍ tiene fila, así que se excluye explícito con
+    // `_estaArchivado()` -- si en cambio se filtrara en el `.select()`, su
+    // fila directamente no volvería y `porUsername[u]` quedaría
+    // `undefined`, cayendo al MISMO default "sin fila = mandar igual" que
+    // un alias admin -- justo lo que no se quiere acá.
+    const { data: filas } = await supabase.from('equipo').select('username, push_notificaciones_activas, push_preferencias, eliminado_en').in('username', usernames);
     const porUsername: Record<string, any> = {};
     (filas ?? []).forEach((r: any) => { porUsername[r.username] = r; });
-    destinatarios = usernames.filter((u) => _personaQuierePush(porUsername[u], payload.tipo));
+    destinatarios = usernames.filter((u) => !_estaArchivado(porUsername[u]) && _personaQuierePush(porUsername[u], payload.tipo));
   }
   if (!destinatarios.length) return;
 
@@ -5161,7 +5239,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
   });
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
-  const { data: equipoRows } = await supabase.from('equipo').select('username, estado_miembro');
+  const { data: equipoRows } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null);
   const activos: string[] = (equipoRows ?? []).filter((r: any) => r.username && EQUIPO_ACTIVO_FILTRO(r)).map((r: any) => r.username);
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
@@ -5220,7 +5298,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
 
     const { data: equipoRows } = await supabase.from('equipo')
       .select('username, nombre_derby, necesita_patines, necesita_protecciones, talla')
-      .in('username', asistentes);
+      .in('username', asistentes).is('eliminado_en', null);
     const porUsername: Record<string, any> = {};
     (equipoRows ?? []).forEach((r: any) => { porUsername[r.username] = r; });
 
@@ -5269,7 +5347,7 @@ async function pushAsistenciaCambio(params: Record<string, any>): Promise<Record
   if (!estadoAnterior) return { exito: true, omitido: true };
   if (!idEvento || !estadoNuevo) return { exito: false, error: 'Parámetros inválidos.' };
 
-  const { data: equipoRows } = await supabase.from('equipo').select('username, nombre_derby, estado_miembro');
+  const { data: equipoRows } = await supabase.from('equipo').select('username, nombre_derby, estado_miembro').is('eliminado_en', null);
   const propio = (equipoRows ?? []).find((r: any) => r.username === username);
   const nombreMostrar = propio?.nombre_derby || username;
   const destinatarios: string[] = (equipoRows ?? [])
@@ -5350,6 +5428,7 @@ async function adminGetEstadoPush(params: Record<string, any>): Promise<Record<s
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { data, error } = await supabase.from('equipo')
     .select('username, nombre_derby, foto_perfil, estado_miembro, push_estado, push_actualizado')
+    .is('eliminado_en', null)
     .order('username');
   if (error) return { exito: false, error: error.message };
   const personas = (data ?? [])
@@ -5430,7 +5509,7 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
   });
   // Notificar al resto de usuarios solo si cambió de "Asistiré" a "No asistiré"
   if (estadoAnterior === 'Asistiré' && estadoNuevo === 'No asistiré') {
-    const { data: miembros } = await supabase.from('equipo').select('username, estado_miembro');
+    const { data: miembros } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null);
     const destinatarios = (miembros ?? [])
       .filter((m: any) => m.username && EQUIPO_ACTIVO_FILTRO(m))
       .map((m: any) => m.username)
@@ -5509,7 +5588,7 @@ async function pushEventoCreado(params: Record<string, any>): Promise<Record<str
   // filtra por preferencia (`sendPush()`, arriba), así que alguien con
   // `evento_creado` desactivado tampoco recibe el botón de RSVP.
   if (idEvento && PUSH_TOKEN_SECRET) {
-    const { data: equipoRows } = await supabase.from('equipo').select('username');
+    const { data: equipoRows } = await supabase.from('equipo').select('username').is('eliminado_en', null);
     const usernames: string[] = (equipoRows ?? []).map((r: any) => r.username).filter(Boolean);
     await Promise.allSettled(usernames.map(async (username) => {
       const token = await _firmarTokenAccion(username, String(idEvento));
@@ -5650,7 +5729,8 @@ async function cronDiario(): Promise<Record<string, any>> {
   const { data: cumpleaneros } = await supabase.from('equipo')
     .select('username, nombre_derby, fecha_nacimiento, edad_publica')
     .not('fecha_nacimiento', 'is', null)
-    .not('fecha_publica', 'is', null);
+    .not('fecha_publica', 'is', null)
+    .is('eliminado_en', null);
   for (const p of (cumpleaneros ?? [])) {
     const mesDia = String(p.fecha_nacimiento).substring(5);
     const nombreMostrar = p.nombre_derby || p.username;
@@ -5686,7 +5766,8 @@ async function cronDiario(): Promise<Record<string, any>> {
   // 3) Aniversario en el equipo (fecha_ingreso, solo a la propia persona).
   const { data: miembros } = await supabase.from('equipo')
     .select('username, fecha_ingreso')
-    .not('fecha_ingreso', 'is', null);
+    .not('fecha_ingreso', 'is', null)
+    .is('eliminado_en', null);
   for (const p of (miembros ?? [])) {
     if (String(p.fecha_ingreso).substring(5) !== diaMes) continue;
     const anios = anio - Number(String(p.fecha_ingreso).substring(0, 4));
@@ -5705,7 +5786,7 @@ async function cronDiario(): Promise<Record<string, any>> {
   // más arriba en este archivo) -- únicamente cuentas 'Quindes' pagan cuota.
   if (diaDelMes === 1) {
     const mes = Number(hoyIso.substring(5, 7));
-    const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+    const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes').is('eliminado_en', null);
     const personas = (quindes ?? []).map((q: any) => q.username);
     const [{ data: pagosDelMes }, { data: solicitudesAprobadas }] = await Promise.all([
       supabase.from('pagos').select('nombre_usuario, exoneradx, monto').eq('mes', mes).eq('anio', anio),
@@ -5739,9 +5820,22 @@ async function adminGetReservas(params: Record<string, any>): Promise<any[]> {
     : { data: [] };
   const evPorId: Record<string, any> = {};
   (eventos ?? []).forEach((e: any) => { evPorId[e.id_evento] = e; });
+  // Marca "Cuenta eliminada" (pedido explícito -- el historial de reservas
+  // de una cuenta archivada sigue apareciendo acá, con el monto, pero
+  // identificable) -- sin filtrar por `eliminado_en`, a propósito: esta
+  // pantalla es historial, no un roster de personas activas.
+  const usernames = [...new Set(reservas.map((r: any) => r.nombre_usuario).filter(Boolean))];
+  const { data: filasEquipo } = usernames.length
+    ? await supabase.from('equipo').select('username, eliminado_en').in('username', usernames)
+    : { data: [] };
+  const eliminadoPorUsername: Record<string, boolean> = {};
+  (filasEquipo ?? []).forEach((f: any) => { eliminadoPorUsername[f.username] = !!f.eliminado_en; });
   return reservas.map((r: any) => {
     const ev = evPorId[r.id_evento];
-    return { ...r, fechaEvento: ev?.fecha ?? null, donde: ev?.donde ?? null, horaInicio: ev?.inicia?.substring(0, 5) ?? null };
+    return {
+      ...r, fechaEvento: ev?.fecha ?? null, donde: ev?.donde ?? null, horaInicio: ev?.inicia?.substring(0, 5) ?? null,
+      cuentaEliminada: !!eliminadoPorUsername[r.nombre_usuario],
+    };
   });
 }
 
@@ -5976,6 +6070,7 @@ Deno.serve(async (req: Request) => {
       case 'adminAprobarLesion':             return json(await adminAprobarLesion(params));
       case 'adminRechazarLesion':            return json(await adminRechazarLesion(params));
       case 'adminEliminarUsuario':           return json(await adminEliminarUsuario(params));
+      case 'adminRestaurarUsuario':          return json(await adminRestaurarUsuario(params));
       case 'adminGetAdmins':                 return json(await adminGetAdmins());
       case 'adminAgregarAdmin':              return json(await adminAgregarAdmin(params));
       case 'adminQuitarAdmin':               return json(await adminQuitarAdmin(params));
@@ -6083,7 +6178,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetCategorias': {
         const adminEmail = await _validarAdminToken(params.adminToken);
         if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
-        const { data, error } = await supabase.from('equipo').select('username, categoria, estado_miembro').order('username');
+        const { data, error } = await supabase.from('equipo').select('username, categoria, estado_miembro').is('eliminado_en', null).order('username');
         if (error) return json({ error: error.message }, 500);
         return json({ personas: data });
       }

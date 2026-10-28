@@ -141,7 +141,8 @@ Deno.serve(async (req: Request) => {
       return usa(patines) || usa(protecciones);
     };
     const { data: equipoData, error: equipoError } = await supabase.from('equipo')
-      .select('username, estado_miembro, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes');
+      .select('username, estado_miembro, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes')
+      .is('eliminado_en', null);
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
     const miembros: {
       username: string; estadoMiembro: string | null; tierModo: string | null; categoria: string | null;

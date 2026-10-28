@@ -221,12 +221,12 @@ var TOP_BAR_CONFIG = {
   // el ícono decorativo de la tab (_iconoRaizDeNav()) en el slot de la
   // flecha, igual que cualquier otra raíz de nav con TOP_BAR_CONFIG.
   's-miliga': { titulo: 'Mi Liga', volver: null },
-  's-admin-login': { titulo: 'Administradorx', volver: 's1' },
+  's-admin-login': { titulo: 'Administradorx', volver: 's1' }
   // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip'/'notif'/
-  // 'admin-color'/'admin-precios' NUNCA son pantallas propias -- viven como
-  // burbujas embebidas dentro de "Mi Liga" (s-miliga), nunca pantalla
-  // completa/navegación, así que no necesitan entrada acá.
-  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-datos' }
+  // 'admin-color'/'admin-precios'/'admin-usuarios' NUNCA son pantallas
+  // propias -- viven como burbujas embebidas dentro de "Mi Liga"
+  // (s-miliga), nunca pantalla completa/navegación, así que no necesitan
+  // entrada acá.
 };
 
 // Navegación entre pantallas con fade simple (animation:smoothSlideUp vía
