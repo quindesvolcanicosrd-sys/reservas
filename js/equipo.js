@@ -816,7 +816,7 @@ function _eqFilaHtml(p, mostrarEliminar) {
   // cabecera de esta función).
   var eliminarHtml = '';
   if (mostrarEliminar && typeof _adminToken !== 'undefined' && _adminToken) {
-    eliminarHtml = '<button type="button" class="btn-outline-danger eq-delete-btn" data-eq-delete="' + idAttr + '" onclick="event.stopPropagation();_eqAbrirSheetEliminar(\'' + idJs + '\',\'' + _eqEscId(_eqNombreVisible(p)) + '\')" title="Archivar usuario"><span class="material-symbols-outlined">delete</span></button>';
+    eliminarHtml = '<button type="button" class="btn-outline-danger eq-delete-btn" data-eq-delete="' + idAttr + '" onclick="event.stopPropagation();_eqAbrirSheetEliminar(\'' + idJs + '\',\'' + _eqEscId(_eqNombreVisible(p)) + '\')" title="Archivar usuario"><span class="material-symbols-outlined">archive</span></button>';
   }
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
