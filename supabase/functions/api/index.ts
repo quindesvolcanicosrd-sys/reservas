@@ -5233,45 +5233,126 @@ function _instanteEventoUTC(fecha: string | null, hora: string | null): number |
 const EQUIPO_ACTIVO_FILTRO = (r: { estado_miembro?: string | null }) =>
   r.estado_miembro !== 'Lesionadx' && r.estado_miembro !== 'Ausente' && r.estado_miembro !== 'De viaje';
 
-// Recordatorio 1h antes, SOLO a quien marcó 'Asistiré' -- ventana 55-65min
-// (10min de ancho = 1 tick del cron cada 10min, sin solaparse con el
-// siguiente). Con botones de acción + token firmado, igual que
-// pushEventoCreado() -- responde en background (ver OneSignalSDKWorker.js).
-async function cronRecordatorioEvento(): Promise<Record<string, any>> {
-  const ahora = Date.now();
-  const desde = ahora + 55 * 60 * 1000;
-  const hasta = ahora + 65 * 60 * 1000;
-  const fechas = [0, 1].map(_fechaEcuadorMasDias);
+// ─── Cómo nombrar un evento en el texto de una push (2026-11-06) ──────────
+// Pedido explícito: "este sábado" si es esta semana (lunes a domingo),
+// "el próximo sábado" si es la semana siguiente, la fecha (1/1/2027) si es
+// más adelante. Se agregan "hoy"/"mañana" (se leen más naturales). Todo en
+// hora de pared de Ecuador (_hoyEcuadorISO()).
+const _DIAS_SEMANA_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function _diasEntreISO(a: string, b: string): number {
+  return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+}
+function _lunesDeISO(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  const desdeLunes = (d.getUTCDay() + 6) % 7;
+  return new Date(d.getTime() - desdeLunes * 86400000).toISOString().substring(0, 10);
+}
+// Complemento con su preposición: 'de hoy' | 'de mañana' | 'de este sábado' |
+// 'del próximo sábado' | 'del 1/1/2027'.
+function _cuandoEvento(fechaIso: string): string {
+  const hoy = _hoyEcuadorISO();
+  const f = String(fechaIso ?? '').substring(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return '';
+  const dif = _diasEntreISO(hoy, f);
+  if (dif === 0) return 'de hoy';
+  if (dif === 1) return 'de mañana';
+  const dia = _DIAS_SEMANA_ES[new Date(f + 'T00:00:00Z').getUTCDay()];
+  const semanas = _diasEntreISO(_lunesDeISO(hoy), _lunesDeISO(f)) / 7;
+  if (dif > 0 && semanas === 0) return `de este ${dia}`;
+  if (dif > 0 && semanas === 1) return `del próximo ${dia}`;
+  const [y, m, d] = f.split('-').map(Number);
+  return `del ${d}/${m}/${y}`;
+}
+function _tipoEventoMin(tipo?: string | null): string {
+  const t = String(tipo ?? '').trim();
+  return t ? t.charAt(0).toLowerCase() + t.slice(1) : 'entrenamiento';
+}
+// 'entrenamiento de este sábado' (para "al ..." / "del ...").
+function _eventoFrase(tipo: string | null | undefined, fecha: string): string {
+  return `${_tipoEventoMin(tipo)} ${_cuandoEvento(fecha)}`.trim();
+}
+function _listaNombresEs(nombres: string[]): string {
+  if (nombres.length <= 1) return nombres.join('');
+  return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1];
+}
+function _urlEvento(idEvento: string, extra = ''): string {
+  return APP_URL + '/?evento=' + encodeURIComponent(idEvento) + extra;
+}
+async function _nombresMostrarPorUsername(usernames: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  usernames.forEach((u) => { out[u] = u; });
+  if (!usernames.length) return out;
+  const { data } = await supabase.from('equipo').select('username, nombre_derby').in('username', usernames);
+  (data ?? []).forEach((r: any) => { out[r.username] = _nombreMostrar(r); });
+  return out;
+}
+// Anti-duplicado de push por persona+evento (tabla `push_enviados`,
+// migración 20261106201736) -- para recordatorios con ventana ancha que
+// corren cada hora y deben salir UNA sola vez.
+async function _pushYaEnviados(tipo: string, idsEvento: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (!idsEvento.length) return out;
+  const { data } = await supabase.from('push_enviados').select('id_evento, username').eq('tipo', tipo).in('id_evento', idsEvento);
+  (data ?? []).forEach((r: any) => out.add(r.id_evento + '|' + r.username));
+  return out;
+}
+async function _marcarPushEnviado(tipo: string, idEvento: string, username: string): Promise<void> {
+  await supabase.from('push_enviados').upsert({ tipo, id_evento: idEvento, username }, { onConflict: 'tipo,id_evento,username', ignoreDuplicates: true });
+}
+async function _eventosEnVentana(desdeMs: number, hastaMs: number, diasCandidatos: number[]): Promise<any[]> {
   const { data: eventos } = await supabase.from('asistencias')
     .select('id_evento, fecha, inicia, donde, tipo_evento')
-    .in('fecha', fechas)
+    .in('fecha', diasCandidatos.map(_fechaEcuadorMasDias))
     .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
-  const enVentana = (eventos ?? []).filter((e: any) => {
+  return (eventos ?? []).filter((e: any) => {
     const t = _instanteEventoUTC(e.fecha, e.inicia);
-    return t !== null && t >= desde && t <= hasta;
+    return t !== null && t >= desdeMs && t <= hastaMs;
   });
+}
+const _BTN_ASISTIRE = { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' };
+const _BTN_NO_ASISTIRE = { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' };
+
+// Aviso 1 hora antes (2026-11-06, reemplaza al "¡Tu entrenamiento es en 1
+// hora!" anterior). Ventana 55-65min (1 tick del cron cada 10min).
+//   - Quien marcó 'Asistiré' o 'No jugador' (y NO es admin): lista de quiénes
+//     asisten + botón "No asistiré" (RSVP en background, ver
+//     OneSignalSDKWorker.js / record-attendance).
+//   - Admins: lo reciben en cronAdminEvento() (abajo) con el botón "Cancelar
+//     entrenamiento" en vez de "No asistiré" -- se excluyen acá para que no
+//     les lleguen 2 avisos del mismo evento.
+async function cronRecordatorioEvento(): Promise<Record<string, any>> {
+  const ahora = Date.now();
+  const enVentana = await _eventosEnVentana(ahora + 55 * 60 * 1000, ahora + 65 * 60 * 1000, [0, 1]);
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  const admins = new Set(await _adminDestinatariosPush());
   let enviados = 0;
   for (const ev of enVentana) {
-    const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
-      .filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
-    await Promise.allSettled(asistentes.map(async (username: string) => {
+    const filas = asistPorEvento[ev.id_evento] ?? [];
+    const asisten: string[] = filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
+    const noJugador: string[] = filas.filter((a: any) => a.estado === 'No jugador').map((a: any) => a.nombre);
+    const destinatarios = [...asisten, ...noJugador].filter((u) => !admins.has(u));
+    if (!destinatarios.length) continue;
+    const nombres = await _nombresMostrarPorUsername([...asisten, ...noJugador]);
+    const tipo = _tipoEventoMin(ev.tipo_evento);
+    const n = asisten.length;
+    let cuerpo = n === 0 ? 'Todavía nadie confirmó que asistirá.'
+      : `${n === 1 ? 'Asistirá 1 persona' : `Asistirán ${n} personas`}: ${_listaNombresEs(asisten.map((u) => nombres[u]))}.`;
+    if (noJugador.length) cuerpo += ` Como no jugador: ${_listaNombresEs(noJugador.map((u) => nombres[u]))}.`;
+    cuerpo += ' ¿Ya no puedes ir? Cambia tu estado:';
+    const url = _urlEvento(String(ev.id_evento));
+    await Promise.allSettled(destinatarios.map(async (username: string) => {
       const token = await _firmarTokenAccion(username, String(ev.id_evento));
       if (!token) return;
-      const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
         tipo: 'recordatorio_1h',
         include_external_user_ids: [username],
-        headings: { es: '¡Tu entrenamiento es en 1 hora!' },
-        contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
-        url: urlEventos,
-        data: { token, evento_id: String(ev.id_evento), url: urlEventos },
-        web_buttons: [
-          { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' },
-          { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' },
-        ],
+        headings: { es: `El ${tipo} ${_cuandoEvento(ev.fecha)} empieza en 1 hora` },
+        contents: { es: cuerpo },
+        url,
+        data: { token, evento_id: String(ev.id_evento), url },
+        web_buttons: [_BTN_NO_ASISTIRE],
       });
       enviados++;
     }));
@@ -5279,109 +5360,106 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
   return { exito: true, eventos: enVentana.length, enviados };
 }
 
-// Recordatorio 1 día antes, SOLO a quien NO tiene ninguna fila en
-// log_asistencias para ese evento (cualquier origen/estado) -- ventana
-// 23-25h antes (2h de ancho = 1 tick del cron cada hora).
+// Recordatorio "no pusiste tu asistencia" (2026-11-06) -- a quien NO tiene
+// ninguna fila en log_asistencias para un evento que empieza en las
+// próximas 24h (y en más de 90min). Corre cada hora; `push_enviados` evita
+// repetirlo, así que un evento creado con menos de 24h de anticipación
+// también avisa en el siguiente tick (antes solo salía en la ventana
+// 23-25h y esos eventos nunca avisaban). Botones Asistiré/No asistiré en
+// background; tocar la notificación abre el detalle del evento.
 async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
   const ahora = Date.now();
-  const desde = ahora + 23 * 3600 * 1000;
-  const hasta = ahora + 25 * 3600 * 1000;
-  const fechas = [0, 1, 2].map(_fechaEcuadorMasDias);
-  const { data: eventos } = await supabase.from('asistencias')
-    .select('id_evento, fecha, inicia, donde, tipo_evento')
-    .in('fecha', fechas)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
-  const enVentana = (eventos ?? []).filter((e: any) => {
-    const t = _instanteEventoUTC(e.fecha, e.inicia);
-    return t !== null && t >= desde && t <= hasta;
-  });
+  const enVentana = await _eventosEnVentana(ahora + 90 * 60 * 1000, ahora + 24 * 3600 * 1000 + 5 * 60 * 1000, [0, 1, 2]);
+  // Limpieza de registros viejos del anti-duplicado (best-effort).
+  await supabase.from('push_enviados').delete().lt('enviado_en', new Date(ahora - 30 * 24 * 3600 * 1000).toISOString());
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const { data: equipoRows } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null);
   const activos: string[] = (equipoRows ?? []).filter((r: any) => r.username && EQUIPO_ACTIVO_FILTRO(r)).map((r: any) => r.username);
 
-  const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  const ids = enVentana.map((e: any) => String(e.id_evento));
+  const [asistPorEvento, yaEnviados] = await Promise.all([_ultimaAsistenciaPorPersonaTodas(ids), _pushYaEnviados('recordatorio_1dia', ids)]);
   let enviados = 0;
   for (const ev of enVentana) {
+    const idEv = String(ev.id_evento);
     const respondieron = new Set((asistPorEvento[ev.id_evento] ?? []).map((a: any) => a.nombre));
-    const sinRespuesta = activos.filter((u) => !respondieron.has(u));
-    await Promise.allSettled(sinRespuesta.map(async (username) => {
-      const token = await _firmarTokenAccion(username, String(ev.id_evento));
+    const pendientes = activos.filter((u) => !respondieron.has(u) && !yaEnviados.has(idEv + '|' + u));
+    const evento = _eventoFrase(ev.tipo_evento, ev.fecha);
+    const detalle = [_horaEs(ev.inicia), ev.donde].filter(Boolean).join(' · ');
+    const url = _urlEvento(idEv);
+    await Promise.allSettled(pendientes.map(async (username) => {
+      const token = await _firmarTokenAccion(username, idEv);
       if (!token) return;
-      const urlEventos = APP_URL + '/?tab=eventos';
       await sendPush({
         tipo: 'recordatorio_1dia',
         include_external_user_ids: [username],
-        headings: { es: '¿Vas al entrenamiento mañana?' },
-        contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)}` },
-        url: urlEventos,
-        data: { token, evento_id: String(ev.id_evento), url: urlEventos },
-        web_buttons: [
-          { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' },
-          { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' },
-        ],
+        headings: { es: `¿Vas al ${evento}?` },
+        contents: { es: `Aún no has puesto tu asistencia${detalle ? ' (' + detalle + ')' : ''}. Avisa al equipo:` },
+        url,
+        data: { token, evento_id: idEv, url },
+        web_buttons: [_BTN_ASISTIRE, _BTN_NO_ASISTIRE],
       });
+      await _marcarPushEnviado('recordatorio_1dia', idEv, username);
       enviados++;
     }));
   }
   return { exito: true, eventos: enVentana.length, enviados };
 }
 
-// Resumen para admins 1h antes -- 1 sola llamada a OneSignal (todos los
-// aliases admin de una, mismo criterio que el resto de este archivo) con
-// quiénes vienen + equipamiento a prestar. Sin action buttons -- solo
-// informativo. Nada si nadie marcó 'Asistiré' para ese evento.
+// Resumen para admins 1h antes (2026-11-06) -- quiénes vienen +
+// equipamiento a prestar + botón "Cancelar entrenamiento" (abre la app en
+// el detalle del evento con la confirmación de cancelar, nunca cancela en
+// background: un toque accidental cancelaría para todo el equipo). Ahora
+// sale también si nadie confirmó (es justo cuando más sentido tiene
+// cancelar). 1 sola llamada para todos los admins.
 async function cronAdminEvento(): Promise<Record<string, any>> {
   const ahora = Date.now();
-  const desde = ahora + 55 * 60 * 1000;
-  const hasta = ahora + 65 * 60 * 1000;
-  const fechas = [0, 1].map(_fechaEcuadorMasDias);
-  const { data: eventos } = await supabase.from('asistencias')
-    .select('id_evento, fecha, inicia, donde, tipo_evento')
-    .in('fecha', fechas)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
-  const enVentana = (eventos ?? []).filter((e: any) => {
-    const t = _instanteEventoUTC(e.fecha, e.inicia);
-    return t !== null && t >= desde && t <= hasta;
-  });
+  const enVentana = await _eventosEnVentana(ahora + 55 * 60 * 1000, ahora + 65 * 60 * 1000, [0, 1]);
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
   const adminDestinatarios = await _adminDestinatariosPush();
+  if (!adminDestinatarios.length) return { exito: true, eventos: enVentana.length, enviados: 0 };
   let enviados = 0;
   for (const ev of enVentana) {
-    const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
-      .filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
-    if (!asistentes.length) continue;
+    const filas = asistPorEvento[ev.id_evento] ?? [];
+    const asisten: string[] = filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
+    const noJugador: string[] = filas.filter((a: any) => a.estado === 'No jugador').map((a: any) => a.nombre);
 
-    const { data: equipoRows } = await supabase.from('equipo')
+    const { data: equipoRows } = asisten.length ? await supabase.from('equipo')
       .select('username, nombre_derby, necesita_patines, necesita_protecciones, talla')
-      .in('username', asistentes).is('eliminado_en', null);
+      .in('username', asisten).is('eliminado_en', null) : { data: [] as any[] };
     const porUsername: Record<string, any> = {};
     (equipoRows ?? []).forEach((r: any) => { porUsername[r.username] = r; });
+    const nombres = await _nombresMostrarPorUsername([...asisten, ...noJugador]);
 
-    const nombresMostrar = asistentes.map((u) => porUsername[u]?.nombre_derby || u);
     const equipamiento: string[] = [];
-    asistentes.forEach((u) => {
+    asisten.forEach((u) => {
       const r = porUsername[u];
       if (!r) return;
       const necesita: string[] = [];
       if (r.necesita_patines === 'Sí') necesita.push(`patines${r.talla ? ' talla ' + r.talla : ''}`);
       if (r.necesita_protecciones === 'Sí') necesita.push('protecciones');
-      if (necesita.length) equipamiento.push(`${r.nombre_derby || u} → ${necesita.join(', ')}`);
+      if (necesita.length) equipamiento.push(`${nombres[u]}: ${necesita.join(', ')}`);
     });
 
-    const partes = [`Vienen ${asistentes.length} ${asistentes.length === 1 ? 'persona' : 'personas'}: ${nombresMostrar.join(', ')}.`];
-    if (equipamiento.length) partes.push(`Equipamiento: ${equipamiento.join('; ')}.`);
+    const tipo = _tipoEventoMin(ev.tipo_evento);
+    const n = asisten.length;
+    const partes = [n === 0 ? 'Todavía nadie confirmó que asistirá.'
+      : `${n === 1 ? 'Asistirá 1 persona' : `Asistirán ${n} personas`}: ${_listaNombresEs(asisten.map((u) => nombres[u]))}.`];
+    if (noJugador.length) partes.push(`Como no jugador: ${_listaNombresEs(noJugador.map((u) => nombres[u]))}.`);
+    if (equipamiento.length) partes.push(`Equipamiento a prestar: ${equipamiento.join('; ')}.`);
+    if (n <= 3) partes.push('Si son muy pocas personas, puedes cancelarlo:');
 
-    const urlEventos = APP_URL + '/?tab=eventos';
+    const url = _urlEvento(String(ev.id_evento));
     await sendPush({
       tipo: 'avisos_admin',
       include_external_user_ids: adminDestinatarios,
-      headings: { es: 'Resumen del entrenamiento en 1 hora' },
+      headings: { es: `El ${tipo} ${_cuandoEvento(ev.fecha)} empieza en 1 hora` },
       contents: { es: partes.join(' ') },
-      url: urlEventos,
-      data: { url: urlEventos },
+      url,
+      data: { url },
+      web_buttons: [{ id: 'cancelar', text: `Cancelar ${tipo}`, url: _urlEvento(String(ev.id_evento), '&accion=cancelar') }],
     });
     enviados++;
   }
@@ -5541,43 +5619,70 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
 // (_evMarcarAsistencia(), mismo call site que ya dispara pushAsistenciaCambio)
 // justo después de que marcarAsistenciaUsuario() confirma éxito.
 async function notificarCambioAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
-  const nombre = await _validarToken(params.token);
-  if (!nombre) return { exito: false };
-  const idEvento = String(params.idEvento ?? '').trim();
-  const estadoNuevo = String(params.estadoNuevo ?? '').trim();
-  const estadoAnterior = String(params.estadoAnterior ?? '').trim();
-  if (!idEvento || !estadoNuevo) return { exito: false };
-  // Solo notificar si había un RSVP previo (no en el primer RSVP)
-  if (!estadoAnterior) return { exito: true };
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false };
+  return await _notificarCambioAsistenciaCore(username, params.idEvento, params.estadoNuevo, params.estadoAnterior);
+}
+
+// Texto (pedido explícito 2026-11-06): siempre empieza por el nombre derby
+// (o el username si no tiene), sin "null → ..." cuando no había estado
+// previo, y con la fecha dicha como "de hoy"/"de mañana"/"de este sábado"/
+// "del próximo sábado"/"del 1/1/2027" (_cuandoEvento()). Destinatarios sin
+// cambios: admins siempre (menos quien cambió); el resto del equipo solo
+// cuando alguien pasa de 'Asistiré' a 'No asistiré'. Lo usan
+// notificarCambioAsistencia (app, identidad del token) y
+// notificarCambioAsistenciaInterno (record-attendance, botones de la push,
+// gateado por x-cron-secret en el router).
+function _estadoAsistenciaVacio(v: unknown): boolean {
+  const s = String(v ?? '').trim().toLowerCase();
+  return !s || s === 'null' || s === 'undefined' || s === 'sin respuesta';
+}
+async function _notificarCambioAsistenciaCore(username: string, idEventoRaw: unknown, estadoNuevoRaw: unknown, estadoAnteriorRaw: unknown): Promise<Record<string, any>> {
+  const idEvento = String(idEventoRaw ?? '').trim();
+  const estadoNuevo = String(estadoNuevoRaw ?? '').trim();
+  const estadoAnterior = _estadoAsistenciaVacio(estadoAnteriorRaw) ? '' : String(estadoAnteriorRaw).trim();
+  if (!idEvento || _estadoAsistenciaVacio(estadoNuevo)) return { exito: false };
+  if (estadoAnterior === estadoNuevo) return { exito: true };
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { exito: false };
-  const { data: ev } = await supabase.from('asistencias').select('fecha, donde').eq('id_evento', idEvento).maybeSingle();
-  const fecha = ev?.fecha ? ev.fecha.slice(5).replace('-', '/') : '';
-  const lugar = ev?.donde ? ' — ' + ev.donde : '';
-  const contenido = nombre + ': ' + estadoAnterior + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + (lugar || '') + ')' : '');
-  // Notificar a admins (cualquier cambio), excluyendo a quien hizo el
-  // cambio si además es admin (_adminDestinatariosPush() ya resuelve la
-  // identidad real de cada admin -- username o 'admin_'+email -- y filtra
-  // por su preferencia de `avisos_admin`).
-  const { data: quienCambio } = await supabase.from('equipo').select('email').eq('username', nombre).maybeSingle();
+  const [{ data: ev }, { data: quien }] = await Promise.all([
+    supabase.from('asistencias').select('fecha, tipo_evento').eq('id_evento', idEvento).maybeSingle(),
+    supabase.from('equipo').select('username, nombre_derby, email').eq('username', username).maybeSingle(),
+  ]);
+  if (!ev) return { exito: false };
+  const nombre = _nombreMostrar(quien ?? { username });
+  const evento = _eventoFrase(ev.tipo_evento, ev.fecha);
+  let texto: string;
+  if (!estadoAnterior) {
+    texto = estadoNuevo === 'Asistiré' ? `${nombre} confirmó que asistirá al ${evento}.`
+      : estadoNuevo === 'No asistiré' ? `${nombre} avisó que no asistirá al ${evento}.`
+      : estadoNuevo === 'No jugador' ? `${nombre} irá como no jugador al ${evento}.`
+      : `${nombre} marcó "${estadoNuevo}" en el ${evento}.`;
+  } else {
+    texto = `${nombre} cambió su asistencia del ${evento} a ${estadoNuevo}.`;
+  }
+  const url = _urlEvento(idEvento);
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(quienCambio?.email),
-    headings: { es: 'Cambio de asistencia' },
-    contents: { es: contenido },
+    include_external_user_ids: await _adminDestinatariosPush(quien?.email),
+    headings: { es: estadoAnterior ? 'Cambio de asistencia' : 'Nueva asistencia' },
+    contents: { es: texto },
+    url,
+    data: { url },
   });
-  // Notificar al resto de usuarios solo si cambió de "Asistiré" a "No asistiré"
   if (estadoAnterior === 'Asistiré' && estadoNuevo === 'No asistiré') {
     const { data: miembros } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null);
     const destinatarios = (miembros ?? [])
       .filter((m: any) => m.username && EQUIPO_ACTIVO_FILTRO(m))
       .map((m: any) => m.username)
-      .filter((u: string) => u !== nombre);
+      .filter((u: string) => u !== username);
     if (destinatarios.length > 0) {
       await sendPush({
         tipo: 'cambios_asistencia',
         include_external_user_ids: destinatarios,
         headings: { es: 'Cambio de asistencia' },
-        contents: { es: contenido },
+        contents: { es: texto },
+        url,
+        data: { url },
       });
     }
   }
@@ -6151,6 +6256,12 @@ Deno.serve(async (req: Request) => {
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
+      case 'notificarCambioAsistenciaInterno': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        if (!params.username) return json({ exito: false });
+        return json(await _notificarCambioAsistenciaCore(String(params.username), params.idEvento, params.estadoNuevo, params.estadoAnterior));
+      }
       case 'notificarCambioAsistencia':     return json(await notificarCambioAsistencia(params));
       case 'pushEventoCreado':              return json(await pushEventoCreado(params));
       case 'pushEventoCancelado':           return json(await pushEventoCancelado(params));

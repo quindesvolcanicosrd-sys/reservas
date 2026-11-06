@@ -27,6 +27,8 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // -- debe configurarse IDÉNTICO en ambas funciones:
 //   supabase secrets set PUSH_TOKEN_SECRET=<valor> --project-ref uusbnreitoobqssizbfq
 const PUSH_TOKEN_SECRET = Deno.env.get('PUSH_TOKEN_SECRET') ?? '';
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -117,6 +119,18 @@ Deno.serve(async (req: Request) => {
   const estado = accion === 'asistire' ? 'Asistiré' : accion === 'no_asistire' ? 'No asistiré' : null;
   if (!estado) return json({ exito: false, error: 'action inválida.' }, 400);
 
+  // Estado previo (para el aviso de cambio de asistencia, abajo) -- la
+  // última fila de RSVP de esta persona para este evento, antes de limpiar.
+  const { data: previa } = await supabase.from('log_asistencias')
+    .select('estado')
+    .eq('id_evento', idEvento)
+    .eq('nombre_usuario', username)
+    .in('origen', ['Usuario', 'AsistenciaAnticipada'])
+    .order('marca_temporal', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const estadoAnterior = previa?.estado ?? '';
+
   // Click manual (siempre, acá): limpiar filas RSVP previas para que este
   // click sea definitivo -- mismo criterio que marcarAsistenciaUsuario()
   // (supabase/functions/api/index.ts) en su rama `!esAuto`.
@@ -128,6 +142,26 @@ Deno.serve(async (req: Request) => {
 
   const { error } = await _agregarFilaLogAsistencia(idEvento, username, estado);
   if (error) return json({ exito: false, error: 'No se pudo guardar la asistencia: ' + error }, 500);
+
+  // Mismo aviso de "cambio de asistencia" que dispara la app
+  // (notificarCambioAsistencia, api/index.ts) -- antes una respuesta desde
+  // los botones de la push no le avisaba a nadie. Best-effort: si falla, la
+  // asistencia ya quedó guardada igual. Va a `api` con la anon key (gateway,
+  // verify_jwt) + x-cron-secret (autorización real de la acción interna).
+  if (CRON_SECRET && SUPABASE_ANON_KEY && estadoAnterior !== estado) {
+    try {
+      await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'x-cron-secret': CRON_SECRET,
+        },
+        body: JSON.stringify({ action: 'notificarCambioAsistenciaInterno', username, idEvento, estadoNuevo: estado, estadoAnterior }),
+      });
+    } catch (_e) { /* best-effort */ }
+  }
 
   return json({ exito: true });
 });

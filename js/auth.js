@@ -489,6 +489,39 @@ window.onload = function() {
     }, 350);
   }
 
+  // Abrir un evento desde una push (2026-11-06): ?evento=<id> abre su
+  // detalle; con &accion=cancelar (botón "Cancelar entrenamiento" del aviso
+  // de 1 hora antes para admins) además abre la confirmación de cancelar --
+  // nunca cancela sola. Mismo poll que ?rsvp= (arriba): espera a que
+  // `_EV_EVENTOS` tenga el evento; si a los ~3,5s no apareció (la persona
+  // aterrizó en otra pestaña), fuerza `irEventos()` una vez para cargarlo.
+  var _evIdUrl = _urlParams.get('evento') || '';
+  var _evAccionUrl = _urlParams.get('accion') || '';
+  if (_evIdUrl) {
+    history.replaceState({}, '', location.pathname);
+    var _evUrlIntentos = 0;
+    var _evUrlPoll = setInterval(function() {
+      _evUrlIntentos++;
+      var listo = typeof _EV_EVENTOS !== 'undefined' && _EV_EVENTOS && _EV_EVENTOS.some(function(e) { return e.id === _evIdUrl; });
+      if (listo) {
+        clearInterval(_evUrlPoll);
+        if (typeof irEventos === 'function') irEventos();
+        setTimeout(function() {
+          if (typeof abrirEvDetalle === 'function') abrirEvDetalle(_evIdUrl);
+          if (_evAccionUrl !== 'cancelar') return;
+          var ev = _EV_EVENTOS.filter(function(e) { return e.id === _evIdUrl; })[0];
+          if (!_adminToken) { mostrarToast('Solo un admin puede cancelar el entrenamiento.', 'error'); return; }
+          if (ev && ev.estado === 'Cancelado') { mostrarToast('Este entrenamiento ya está cancelado.'); return; }
+          setTimeout(function() { if (typeof _evAbrirSheetCancelar === 'function') _evAbrirSheetCancelar(_evIdUrl); }, 450);
+        }, 300);
+      } else if (_evUrlIntentos === 10 && typeof E !== 'undefined' && E.nombre && typeof irEventos === 'function') {
+        irEventos();
+      } else if (_evUrlIntentos >= 45) {
+        clearInterval(_evUrlPoll);
+      }
+    }, 350);
+  }
+
   var _restaurando = false;
 
   // Prioridad de restauración (bug real corregido -- ver MANIFEST.md
