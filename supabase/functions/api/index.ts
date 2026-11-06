@@ -663,6 +663,8 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   };
   const update: Record<string, any> = {};
   for (const camel of Object.keys(datos ?? {})) { if (CAMPO_MAP[camel]) update[CAMPO_MAP[camel]] = datos[camel]; }
+  // `fecha_nacimiento` es `date`: '' o un formato raro romperían el UPDATE entero.
+  if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
   if (!Object.keys(update).length) return { exito: true };
   await supabase.from('equipo').update(update).eq('username', params.nombre);
   return { exito: true };
@@ -885,8 +887,8 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
   };
   if (pinHash && pinHash.length === 64) row.pin_hash = pinHash;
   if (foto && foto.startsWith('http')) row.foto_perfil = foto;
-  if (guardarFecha === 'si' && fechaNac) {
-    row.fecha_nacimiento = fechaNac;
+  if (guardarFecha === 'si' && _normalizarFechaNac(fechaNac)) {
+    row.fecha_nacimiento = _normalizarFechaNac(fechaNac);
     row.fecha_publica    = fechaPublica === 'Sí' ? 'Sí' : 'No';
     row.edad_publica     = edadPublica  === 'Sí' ? 'Sí' : 'No';
   }
@@ -1029,8 +1031,8 @@ async function actualizarPerfilGoogle(params: Record<string, any>): Promise<Reco
   if (!username) return { exito: false, error: 'Sesión inválida.' };
   const update: Record<string, any> = { permisos_configurados: true };
   if (params.foto && params.foto.toString().startsWith('http')) update.foto_perfil = params.foto;
-  if (params.fechaNac && params.guardarFecha === 'si') {
-    update.fecha_nacimiento = params.fechaNac;
+  if (_normalizarFechaNac(params.fechaNac) && params.guardarFecha === 'si') {
+    update.fecha_nacimiento = _normalizarFechaNac(params.fechaNac);
     update.fecha_publica    = params.fechaPublica === 'Sí' ? 'Sí' : 'No';
     update.edad_publica     = params.edadPublica  === 'Sí' ? 'Sí' : 'No';
   }
@@ -2060,23 +2062,79 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
   return { eventos };
 }
 
+// ── Cumpleaños ──────────────────────────────────────────────────────────
+// `equipo.fecha_nacimiento` es `date` (migración 20261106193340) -- PostgREST
+// la devuelve como 'YYYY-MM-DD'. `_normalizarFechaNac()` es el ÚNICO punto
+// de entrada para escribirla: acepta 'YYYY-MM-DD' (lo que manda el date
+// picker), devuelve null para vacío/inválido/futuro/antes de 1920.
+function _normalizarFechaNac(v: unknown): string | null {
+  const s = String(v ?? '').trim().substring(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  if (y < 1920 || s > _hoyEcuadorISO()) return null;
+  return s;
+}
+function _esPublico(v: unknown): boolean { return v === 'Sí' || v === 'Si'; }
+// 'MM-DD' del cumpleaños en un año dado -- un 29 de febrero cae el 28 en
+// años no bisiestos (para que nadie se quede sin cumpleaños 3 de cada 4 años).
+function _mesDiaCumple(fechaNac: string, anio: number): string {
+  const md = fechaNac.substring(5, 10);
+  const bisiesto = (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0;
+  return (md === '02-29' && !bisiesto) ? '02-28' : md;
+}
+function _nombreMostrar(p: { nombre_derby?: string | null; username: string }): string {
+  return (p.nombre_derby ?? '').toString().trim() || p.username;
+}
+
+// Todas las ocurrencias de cada cumpleaños dentro de [desde, hasta] -- el
+// timeline carga 25 meses de una (js/eventos.js `_evRangoCargaCompleto()`),
+// así que cada persona aparece en CADA año del rango (antes solo 1 vez).
+// Solo fechas públicas (`fecha_publica='Sí'` -- antes `.not(null)` dejaba
+// pasar también 'No'); edad solo si `edad_publica='Sí'`.
 async function getCumpleañosRango(params: Record<string, any>): Promise<Record<string, any>> {
-  const d0 = new Date(params.desde), d1 = new Date(params.hasta);
-  const { data } = await supabase.from('equipo').select('username, fecha_nacimiento, fecha_publica, edad_publica, foto_perfil').not('fecha_nacimiento', 'is', null).not('fecha_publica', 'is', null).is('eliminado_en', null);
+  const desde = String(params.desde ?? '').substring(0, 10);
+  const hasta = String(params.hasta ?? '').substring(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || desde > hasta) return { cumpleanos: [] };
+  const { data } = await supabase.from('equipo')
+    .select('username, nombre_derby, fecha_nacimiento, edad_publica, foto_perfil')
+    .not('fecha_nacimiento', 'is', null)
+    .in('fecha_publica', ['Sí', 'Si'])
+    .is('eliminado_en', null);
+  const y0 = Number(desde.substring(0, 4)), y1 = Number(hasta.substring(0, 4));
   const resultado: any[] = [];
   for (const r of (data ?? [])) {
-    if (!r.fecha_nacimiento || !r.fecha_publica) continue;
-    const fnac = new Date(r.fecha_nacimiento + 'T00:00:00');
-    const cand1 = new Date(d0.getFullYear(), fnac.getMonth(), fnac.getDate());
-    const cand2 = new Date(d1.getFullYear(), fnac.getMonth(), fnac.getDate());
-    const candidato = (cand1 >= d0 && cand1 <= d1) ? cand1 : ((cand2 >= d0 && cand2 <= d1) ? cand2 : null);
-    if (!candidato) continue;
-    const entrada: Record<string, any> = { nombre: r.username, fecha: candidato.toISOString().substring(0, 10), fotoPerfil: r.foto_perfil ?? '' };
-    if (r.edad_publica === 'Sí' || r.edad_publica === 'Si') entrada.edad = candidato.getFullYear() - fnac.getFullYear();
-    resultado.push(entrada);
+    const fnac = String(r.fecha_nacimiento ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fnac)) continue;
+    const anioNac = Number(fnac.substring(0, 4));
+    for (let y = Math.max(y0, anioNac + 1); y <= y1; y++) {
+      const iso = `${y}-${_mesDiaCumple(fnac, y)}`;
+      if (iso < desde || iso > hasta) continue;
+      const entrada: Record<string, any> = { nombre: _nombreMostrar(r), username: r.username, fecha: iso, fotoPerfil: r.foto_perfil ?? '' };
+      if (_esPublico(r.edad_publica)) entrada.edad = y - anioNac;
+      resultado.push(entrada);
+    }
   }
   resultado.sort((a, b) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
   return { cumpleanos: resultado };
+}
+
+// Pantalla obligatoria #cumple-gate (js/perfil.js) -- la persona logueada
+// registra su propia fecha + privacidad. Identidad SIEMPRE del token.
+async function guardarFechaNacimiento(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const fecha = _normalizarFechaNac(params.fechaNac);
+  if (!fecha) return { exito: false, error: 'Elige una fecha de nacimiento válida.' };
+  const fechaPublica = params.fechaPublica === 'Sí' ? 'Sí' : 'No';
+  // La edad solo puede ser pública si la fecha también lo es.
+  const edadPublica = (fechaPublica === 'Sí' && params.edadPublica === 'Sí') ? 'Sí' : 'No';
+  const { error } = await supabase.from('equipo')
+    .update({ fecha_nacimiento: fecha, fecha_publica: fechaPublica, edad_publica: edadPublica })
+    .eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, fechaNacimiento: fecha, fechaPublica, edadPublica };
 }
 
 async function getEventosFiltrados(params: Record<string, any>): Promise<Record<string, any>> {
@@ -4907,9 +4965,9 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'evento_cancelado', nombre: 'Evento cancelado', descripcion: 'Cuando se cancela un entrenamiento o evento.', categoria: 'Entrenamientos' },
   { clave: 'descanso_programado', nombre: 'Período de descanso', descripcion: 'Cuando se programa una temporada sin entrenamientos.', categoria: 'Entrenamientos' },
   { clave: 'cambios_asistencia', nombre: 'Cambios de asistencia', descripcion: 'Cuando alguien del equipo cambia su respuesta de asistencia a un evento.', categoria: 'Entrenamientos' },
-  { clave: 'cumpleanos_hoy', nombre: 'Cumpleaños del día', descripcion: 'El día del cumpleaños de alguien del equipo (si lo hizo público).', categoria: 'Equipo' },
-  { clave: 'cumpleanos_10dias', nombre: 'Cumpleaños próximo', descripcion: 'Un aviso 10 días antes del cumpleaños de alguien del equipo.', categoria: 'Equipo' },
-  { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumplís otro año en el equipo.', categoria: 'Equipo' },
+  { clave: 'cumpleanos', nombre: 'Cumpleaños del equipo', descripcion: 'Un aviso el día antes y otro el mismo día del cumpleaños de alguien del equipo (si lo hizo público).', categoria: 'Equipo' },
+  { clave: 'cumpleanos_propio', nombre: 'Tu cumpleaños', descripcion: 'Un saludo del equipo el día de tu cumpleaños.', categoria: 'Equipo' },
+  { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumples otro año en el equipo.', categoria: 'Equipo' },
   { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
   { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
   { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debés la cuota.', categoria: 'Cuenta' },
@@ -5721,43 +5779,54 @@ async function cronDiario(): Promise<Record<string, any>> {
     });
   }
 
-  // 2) Cumpleaños -- mismo doble opt-in que getCumpleañosRango() (fecha
-  // guardada Y hecha pública); edad solo si edad_publica='Sí'. Nunca a la
-  // propia persona que cumple (`excluirUsernames`, bug real corregido --
-  // antes era `included_segments`, TODA suscripción, incluida la suya).
-  const diaMes10 = _fechaEcuadorMasDias(10).substring(5); // 'MM-DD', aviso "en 10 días"
+  // 2) Cumpleaños (pedido explícito 2026-11-06: se quita el aviso de 10
+  // días antes) -- 3 avisos, todos desde `fecha_nacimiento` (`date`):
+  //   a) el día antes, a todo el equipo menos quien cumple   (tipo 'cumpleanos')
+  //   b) el mismo día, a todo el equipo menos quien cumple   (tipo 'cumpleanos')
+  //   c) el mismo día, un saludo SOLO a quien cumple         (tipo 'cumpleanos_propio')
+  // a/b exigen `fecha_publica='Sí'` (mismo criterio que getCumpleañosRango());
+  // c no (saludar a alguien por su propio cumpleaños no expone nada). Edad
+  // solo con `edad_publica='Sí'`. 29 de febrero -> 28 en años no bisiestos.
+  const mananaIso = _fechaEcuadorMasDias(1);
+  const anioManana = Number(mananaIso.substring(0, 4));
   const { data: cumpleaneros } = await supabase.from('equipo')
-    .select('username, nombre_derby, fecha_nacimiento, edad_publica')
+    .select('username, nombre_derby, fecha_nacimiento, fecha_publica, edad_publica')
     .not('fecha_nacimiento', 'is', null)
-    .not('fecha_publica', 'is', null)
     .is('eliminado_en', null);
   for (const p of (cumpleaneros ?? [])) {
-    const mesDia = String(p.fecha_nacimiento).substring(5);
-    const nombreMostrar = p.nombre_derby || p.username;
-    if (mesDia === diaMes) {
-      const edad = anio - Number(String(p.fecha_nacimiento).substring(0, 4));
-      const mostrarEdad = p.edad_publica === 'Sí';
+    const fnac = String(p.fecha_nacimiento ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fnac)) continue;
+    const anioNac = Number(fnac.substring(0, 4));
+    const nombre = _nombreMostrar(p);
+    const fechaPub = _esPublico(p.fecha_publica);
+    const edadPub = fechaPub && _esPublico(p.edad_publica);
+    if (_mesDiaCumple(fnac, anio) === diaMes && anio > anioNac) {
+      const edad = anio - anioNac;
+      if (fechaPub) {
+        await sendPush({
+          tipo: 'cumpleanos',
+          broadcastEquipo: true,
+          excluirUsernames: [p.username],
+          headings: { es: `🎉 ¡Hoy es el cumpleaños de ${nombre}!` },
+          contents: { es: edadPub ? `Cumple ${edad} años. Escríbele y celébralo con el equipo.` : 'Escríbele y celébralo con el equipo.' },
+          url: APP_URL + '/?tab=equipo',
+        });
+      }
       await sendPush({
-        tipo: 'cumpleanos_hoy',
-        broadcastEquipo: true,
-        excluirUsernames: [p.username],
-        headings: { es: `Hoy es el cumpleaños de ${nombreMostrar}` },
-        contents: { es: mostrarEdad ? `Deséale felices ${edad} años.` : 'Deséale feliz cumpleaños.' },
-        url: APP_URL + '/?tab=equipo',
+        tipo: 'cumpleanos_propio',
+        include_external_user_ids: [p.username],
+        headings: { es: `🎉 ¡Feliz cumpleaños, ${nombre}!` },
+        contents: { es: 'Todo el equipo te desea un gran día. ¡A celebrar!' },
+        url: APP_URL + '/?tab=eventos',
       });
-    } else if (mesDia === diaMes10) {
-      // Fecha real del cumpleaños próximo (año actual -- este cron corre a
-      // diario, así que "en 10 días" siempre cae dentro del mismo año o el
-      // que sigue; se usa el año de `_fechaEcuadorMasDias(10)` para no
-      // mostrar un 29 de febrero que no exista ese año en particular).
-      const anioFecha = Number(_fechaEcuadorMasDias(10).substring(0, 4));
-      const fechaProxima = `${anioFecha}-${mesDia}`;
+    } else if (fechaPub && _mesDiaCumple(fnac, anioManana) === mananaIso.substring(5) && anioManana > anioNac) {
+      const edad = anioManana - anioNac;
       await sendPush({
-        tipo: 'cumpleanos_10dias',
+        tipo: 'cumpleanos',
         broadcastEquipo: true,
         excluirUsernames: [p.username],
-        headings: { es: `En 10 días es el cumpleaños de ${nombreMostrar}` },
-        contents: { es: `El ${_fechaEs(fechaProxima)} es el cumpleaños de ${nombreMostrar}.` },
+        headings: { es: `🎂 Mañana es el cumpleaños de ${nombre}` },
+        contents: { es: edadPub ? `Cumple ${edad} años. ¡Prepara tu saludo!` : '¡Prepara tu saludo!' },
         url: APP_URL + '/?tab=equipo',
       });
     }
@@ -6015,6 +6084,7 @@ Deno.serve(async (req: Request) => {
       }
       case 'getEventosRango':                 return json(await getEventosRango(params));
       case 'getCumpleañosRango':              return json(await getCumpleañosRango(params));
+      case 'guardarFechaNacimiento':          return json(await guardarFechaNacimiento(params));
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
