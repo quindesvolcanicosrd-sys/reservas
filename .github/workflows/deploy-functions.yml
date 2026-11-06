@@ -66,6 +66,6 @@ jobs:
           for f in ${{ steps.elegir.outputs.lista }}; do
             [ -f "supabase/functions/$f/index.ts" ] || continue
             echo "::group::$f"
-            supabase functions deploy "$f" --project-ref "$PROJECT_REF" --use-api
+            supabase functions deploy "$f" --project-ref "$PROJECT_REF" --use-api --yes
             echo "::endgroup::"
           done
