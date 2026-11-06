@@ -5063,6 +5063,117 @@ async function _adminDestinatariosPush(excluirEmail?: string): Promise<string[]>
   return out;
 }
 
+// ─── Push nativo: Firebase Cloud Messaging (app Android, 2026-11-06) ────────
+// FCM_SERVICE_ACCOUNT = JSON de una cuenta de servicio del proyecto Firebase
+// "pivot-d65f4" (secret de Supabase, nunca en el repo). Se firma un JWT
+// RS256 y se cambia por un access token OAuth2 (cacheado ~55 min por
+// instancia). Mensajes SOLO de datos (sin bloque `notification`): la app
+// arma la notificación con sus botones (app/lib/push/push.dart), incluso
+// con la app cerrada. Tokens inválidos (UNREGISTERED) se borran solos.
+const FCM_SERVICE_ACCOUNT = Deno.env.get('FCM_SERVICE_ACCOUNT') ?? '';
+let _fcmAcceso: { token: string; vence: number; proyecto: string } | null = null;
+
+function _b64urlTexto(texto: string): string {
+  return _b64urlEncode(new TextEncoder().encode(texto));
+}
+
+async function _fcmAccessToken(): Promise<{ token: string; proyecto: string } | null> {
+  if (_fcmAcceso && _fcmAcceso.vence > Date.now() + 60_000) return _fcmAcceso;
+  let cuenta: any;
+  try { cuenta = JSON.parse(FCM_SERVICE_ACCOUNT); } catch { console.error('FCM: FCM_SERVICE_ACCOUNT no es JSON válido'); return null; }
+  const ahora = Math.floor(Date.now() / 1000);
+  const cabecera = _b64urlTexto(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const cuerpo = _b64urlTexto(JSON.stringify({
+    iss: cuenta.client_email,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: ahora,
+    exp: ahora + 3600,
+  }));
+  const pem = String(cuenta.private_key ?? '').replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const llave = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const firma = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', llave, new TextEncoder().encode(cabecera + '.' + cuerpo));
+  const jwt = cabecera + '.' + cuerpo + '.' + _b64urlEncode(new Uint8Array(firma));
+  const resp = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + jwt,
+  });
+  if (!resp.ok) { console.error('FCM: no se obtuvo access token', resp.status, await resp.text().catch(() => '')); return null; }
+  const out = await resp.json();
+  _fcmAcceso = { token: out.access_token, vence: Date.now() + (Number(out.expires_in) || 3600) * 1000, proyecto: cuenta.project_id };
+  return _fcmAcceso;
+}
+
+async function _tokensFcmDe(usernames: string[]): Promise<Map<string, string[]>> {
+  const mapa = new Map<string, string[]>();
+  if (!usernames.length) return mapa;
+  const { data, error } = await supabase.from('dispositivos_push').select('token, username').in('username', usernames);
+  if (error) { console.error('dispositivos_push (lectura):', error.message); return mapa; }
+  (data ?? []).forEach((r: any) => {
+    const lista = mapa.get(r.username) ?? [];
+    lista.push(r.token);
+    mapa.set(r.username, lista);
+  });
+  return mapa;
+}
+
+async function _enviarFcm(tokens: string[], payload: {
+  tipo: string; headings: { es: string }; contents: { es: string }; url?: string;
+  web_buttons?: { id: string; text: string; url: string }[]; data?: Record<string, any>;
+}): Promise<void> {
+  const acceso = await _fcmAccessToken();
+  if (!acceso) return;
+  const datos: Record<string, string> = {
+    tipo: payload.tipo,
+    titulo: payload.headings.es,
+    cuerpo: payload.contents.es,
+  };
+  if (payload.url) datos.url = payload.url;
+  if (payload.data?.evento_id) datos.evento_id = String(payload.data.evento_id);
+  if (payload.data?.token) datos.token_accion = String(payload.data.token);
+  if (payload.web_buttons?.length) {
+    datos.botones = JSON.stringify(payload.web_buttons.map((b) => ({ id: b.id, texto: b.text })));
+  }
+  const fin = 'https://fcm.googleapis.com/v1/projects/' + acceso.proyecto + '/messages:send';
+  await Promise.allSettled(tokens.map(async (token) => {
+    const resp = await fetch(fin, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + acceso.token },
+      body: JSON.stringify({ message: { token, data: datos, android: { priority: 'HIGH', ttl: '86400s' } } }),
+    });
+    if (resp.ok) return;
+    const texto = await resp.text().catch(() => '');
+    if (resp.status === 404 || texto.includes('UNREGISTERED') || texto.includes('registration-token-not-registered')) {
+      await supabase.from('dispositivos_push').delete().eq('token', token);
+      return;
+    }
+    console.error('FCM: envío falló', resp.status, texto.substring(0, 300), 'tipo:', payload.tipo);
+  }));
+}
+
+// La app registra/borra su token de FCM (identidad SIEMPRE del token de sesión).
+async function registrarDispositivoPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const fcmToken = String(params.fcmToken ?? '').trim();
+  if (fcmToken.length < 20 || fcmToken.length > 4096) return { exito: false, error: 'Token de dispositivo inválido.' };
+  const { error } = await supabase.from('dispositivos_push').upsert(
+    { token: fcmToken, username, plataforma: 'android', actualizado_en: new Date().toISOString() },
+    { onConflict: 'token' },
+  );
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+async function eliminarDispositivoPush(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  await supabase.from('dispositivos_push').delete().eq('token', String(params.fcmToken ?? '')).eq('username', username);
+  return { exito: true };
+}
+
 // Helper genérico de push automáticas (a diferencia de adminEnviarPush(),
 // que es el envío MANUAL desde el panel admin, con su propio payload/target
 // -- este helper no se reusa ahí para no tocar ese flujo ya en producción).
@@ -5103,7 +5214,6 @@ async function sendPush(payload: {
   web_buttons?: { id: string; text: string; url: string }[];
   data?: Record<string, any>;
 }): Promise<void> {
-  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
   if (!CATALOGO_CLAVES.has(payload.tipo)) {
     console.error('sendPush: tipo no registrado en el catálogo, no se envía:', payload.tipo);
     return;
@@ -5134,6 +5244,20 @@ async function sendPush(payload: {
     destinatarios = usernames.filter((u) => !_estaArchivado(porUsername[u]) && _personaQuierePush(porUsername[u], payload.tipo));
   }
   if (!destinatarios.length) return;
+
+  // App Android nativa (2026-11-06): quien tenga la app instalada recibe
+  // por Firebase Cloud Messaging; el resto (web/iPhone) por OneSignal.
+  // Sin FCM_SERVICE_ACCOUNT configurado, todo sigue por OneSignal.
+  if (FCM_SERVICE_ACCOUNT) {
+    const tokensPorUsuario = await _tokensFcmDe(destinatarios);
+    const conApp = destinatarios.filter((u) => tokensPorUsuario.has(u));
+    if (conApp.length) {
+      await _enviarFcm(conApp.flatMap((u) => tokensPorUsuario.get(u)!), payload);
+      destinatarios = destinatarios.filter((u) => !tokensPorUsuario.has(u));
+      if (!destinatarios.length) return;
+    }
+  }
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
 
   const headings = { es: payload.headings.es, en: payload.headings.en ?? payload.headings.es };
   const contents = { es: payload.contents.es, en: payload.contents.en ?? payload.contents.es };
@@ -6199,6 +6323,8 @@ Deno.serve(async (req: Request) => {
       case 'getEventosRango':                 return json(await getEventosRango(params));
       case 'getCumpleañosRango':              return json(await getCumpleañosRango(params));
       case 'guardarFechaNacimiento':          return json(await guardarFechaNacimiento(params));
+      case 'registrarDispositivoPush':        return json(await registrarDispositivoPush(params));
+      case 'eliminarDispositivoPush':         return json(await eliminarDispositivoPush(params));
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));

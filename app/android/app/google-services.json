@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "167871376984",
+    "project_id": "pivot-d65f4",
+    "storage_bucket": "pivot-d65f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:167871376984:android:67fdb97028f90473eae42d",
+        "android_client_info": {
+          "package_name": "com.pivotapp.coach"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC98GVEpItTHGWARJoGeX12HHTrYh9bX1E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

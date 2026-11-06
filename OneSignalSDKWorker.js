@@ -58,9 +58,17 @@ self.addEventListener('notificationclick', function (e) {
   if (!token || !idEvento) return;
 
   e.waitUntil(
+    // apikey/Authorization con la anon key pública (la misma de js/config.js):
+    // record-attendance está desplegada con verify_jwt, y sin estas cabeceras
+    // el gateway de Supabase rechazaba la llamada antes de llegar a la
+    // función (bug real, 2026-11-06). La autorización real es el token firmado.
     fetch('https://uusbnreitoobqssizbfq.supabase.co/functions/v1/record-attendance', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1c2JucmVpdG9vYnFzc2l6YmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNDg2NDgsImV4cCI6MjEwMTYyNDY0OH0.1LkHIpmhaA8pY_BKFGMiKK4VHoNzQcVAX05DC1BV4Wk',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1c2JucmVpdG9vYnFzc2l6YmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNDg2NDgsImV4cCI6MjEwMTYyNDY0OH0.1LkHIpmhaA8pY_BKFGMiKK4VHoNzQcVAX05DC1BV4Wk',
+      },
       body: JSON.stringify({
         token: token,
         action: accion === 'asistire' ? 'asistire' : 'no_asistire',
