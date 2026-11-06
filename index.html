@@ -34,7 +34,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=52ba4a4c"></script>
-<link rel="stylesheet" href="css/global.css?v=379c51ac">
+<link rel="stylesheet" href="css/global.css?v=edbdd92c">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=81a926bc">
 <link rel="stylesheet" href="css/login.css">
@@ -3638,16 +3638,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=598902e2"></script>
-<script src="js/eventos.js?v=4b664a7e"></script>
+<script src="js/eventos.js?v=bfca8117"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
 <script src="js/equipo.js?v=a8bf95f2"></script>
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
-<script src="js/perfil.js?v=e76defc9"></script>
+<script src="js/perfil.js?v=9ba956e9"></script>
 <script src="js/admin.js?v=5980b2f6"></script>
 <script src="js/pwa.js?v=f257413a"></script>
-<script src="js/auth.js?v=3cb09b4f"></script>
+<script src="js/auth.js?v=b6853614"></script>
 
   <!-- Modal primer login: permisos Google -->
   <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">
@@ -5463,6 +5463,44 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           Ir a ajustes de notificaciones
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pantalla obligatoria de fecha de nacimiento (2026-11-06, pedido explícito)
+     -- `_cumpleGateSiHaceFalta()`/js/perfil.js, llamada desde
+     `_mostrarPermisosSiHaceFalta()`/js/auth.js (login y restauración de
+     sesión). Sin botón de cierre: bloquea la app hasta guardar la fecha. -->
+<div id="cumple-gate" style="display:none">
+  <div class="cumple-gate-overlay">
+    <div class="cumple-gate-card">
+      <span class="material-symbols-rounded cumple-gate-icon">cake</span>
+      <h2 class="cumple-gate-titulo">¿Cuándo es tu cumpleaños?</h2>
+      <p class="cumple-gate-desc">Así el equipo puede saludarte en tu día. Tú decides si lo ven.</p>
+      <button type="button" class="fnac-trigger-btn cumple-gate-fecha" id="cg-fecha-btn" onclick="cumpleGateElegirFecha()">
+        <span class="fnac-placeholder" id="cg-fecha-display">Elige tu fecha de nacimiento</span>
+        <span class="material-symbols-outlined cumple-gate-fecha-icono">calendar_month</span>
+      </button>
+      <input type="hidden" id="cg-fecha-iso">
+      <div class="cumple-gate-opciones">
+        <div class="cumple-gate-opcion">
+          <div class="cumple-gate-opcion-texto">
+            <div class="cumple-gate-opcion-titulo">Mostrar mi cumpleaños</div>
+            <div class="cumple-gate-opcion-sub">Aparecerá en Eventos y el equipo recibirá un aviso</div>
+          </div>
+          <div class="toggle-wrap"><button type="button" id="cg-tog-fecha" class="toggle-btn toggle-on" aria-pressed="true" onclick="cumpleGateToggle(this)"><span class="toggle-thumb"></span></button></div>
+        </div>
+        <div class="cumple-gate-opcion" id="cg-fila-edad">
+          <div class="cumple-gate-opcion-texto">
+            <div class="cumple-gate-opcion-titulo">Mostrar mi edad</div>
+            <div class="cumple-gate-opcion-sub">El equipo verá cuántos años cumples</div>
+          </div>
+          <div class="toggle-wrap"><button type="button" id="cg-tog-edad" class="toggle-btn toggle-off" aria-pressed="false" onclick="cumpleGateToggle(this)"><span class="toggle-thumb"></span></button></div>
+        </div>
+      </div>
+      <div class="error-msg" id="err-cumple-gate"></div>
+      <button type="button" class="cumple-gate-btn" id="cg-btn-guardar" onclick="cumpleGateGuardar()">Guardar y continuar</button>
+      <p class="cumple-gate-nota">Puedes cambiar la privacidad cuando quieras desde Ajustes → Privacidad.</p>
     </div>
   </div>
 </div>

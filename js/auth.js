@@ -107,7 +107,14 @@ function iniciarGoogleSignInUsuario() {
 // modal-info-home simplemente no se dispara esta vez (no es un bug, ver esa
 // función), este modal de permisos sigue mostrándose igual sin depender de
 // cuál haya sido.
-function _mostrarPermisosSiHaceFalta(fotoFallback) {
+function _mostrarPermisosSiHaceFalta(fotoFallback, gateYaVisto) {
+  // Fecha de nacimiento obligatoria (#cumple-gate, js/perfil.js) primero;
+  // el modal de permisos de primer login, si corresponde, sale al cerrarla
+  // (2do parámetro: esa 2da pasada ya no vuelve a evaluar el gate).
+  if (!gateYaVisto && typeof _cumpleGateSiHaceFalta === 'function') {
+    _cumpleGateSiHaceFalta(function() { _mostrarPermisosSiHaceFalta(fotoFallback, true); });
+    return;
+  }
   if (!(E.datos && !E.datos.permisosConfigurados)) return;
   var mostrarPermisos = function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || fotoFallback || ''); };
   if (_yaVioModal('home')) {

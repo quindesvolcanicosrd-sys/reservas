@@ -226,6 +226,102 @@ function cerrarModalEdadBloqueo(porGesto) {
 }
 
 // ─── PIN de acceso (desde modal-permisos) ─────────────────────────────────────
+// ─── Pantalla obligatoria de fecha de nacimiento (#cumple-gate) ──────────
+// Pedido explícito 2026-11-06: quien no tenga fecha de nacimiento registrada
+// (ej. cuentas migradas desde Sheets con la fecha vacía) no puede usar la
+// app hasta registrarla y elegir su privacidad. Llamada desde
+// `_mostrarPermisosSiHaceFalta()`/js/auth.js (login y restauración de
+// sesión). Solo con conexión -- con E.datos cacheado offline podría ser un
+// dato viejo, y sin red el guardado fallaría igual.
+function _cumpleGateHaceFalta() {
+  if (!E.datos || !E.nombre) return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+  return !/^\d{4}-\d{2}-\d{2}$/.test((E.datos.fechaNacimiento || '').toString().trim());
+}
+// `alCerrar` corre al guardar (o de inmediato si no hace falta el gate) --
+// así el modal de permisos de primer login sigue saliendo después.
+function _cumpleGateSiHaceFalta(alCerrar) {
+  var gate = document.getElementById('cumple-gate');
+  if (!gate || !_cumpleGateHaceFalta()) { if (alCerrar) alCerrar(); return; }
+  window._cumpleGateAlCerrar = alCerrar || null;
+  gate.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.body.classList.add('cumple-gate-abierto');
+  void gate.offsetWidth;
+  gate.classList.add('cumple-gate-visible');
+  _cumpleGateSincronizarEdad();
+}
+function _cumpleGateCerrar() {
+  var gate = document.getElementById('cumple-gate');
+  if (!gate) return;
+  gate.classList.remove('cumple-gate-visible');
+  setTimeout(function() {
+    gate.style.display = 'none';
+    document.body.style.overflow = '';
+    document.body.classList.remove('cumple-gate-abierto');
+    var cb = window._cumpleGateAlCerrar; window._cumpleGateAlCerrar = null;
+    if (cb) cb();
+  }, 300);
+}
+function cumpleGateElegirFecha() {
+  abrirPickerMisDatos({ hiddenId: 'cg-fecha-iso', displayId: 'cg-fecha-display', maxFecha: _evToISO(new Date()), anioDefault: 1995 });
+}
+function cumpleGateToggle(btn) {
+  _mpToggleClick(btn);
+  _cumpleGateSincronizarEdad();
+}
+// La edad solo puede ser pública si el cumpleaños también lo es.
+function _cumpleGateSincronizarEdad() {
+  var togF = document.getElementById('cg-tog-fecha');
+  var togE = document.getElementById('cg-tog-edad');
+  var fila = document.getElementById('cg-fila-edad');
+  if (!togF || !togE) return;
+  var fechaOn = togF.classList.contains('toggle-on');
+  if (!fechaOn && togE.classList.contains('toggle-on')) _mpToggleClick(togE);
+  togE.disabled = !fechaOn;
+  if (fila) fila.classList.toggle('cumple-gate-opcion-off', !fechaOn);
+}
+function _cumpleGateError(msg) {
+  var errEl = document.getElementById('err-cumple-gate');
+  if (!errEl) return;
+  errEl.textContent = msg;
+  errEl.style.display = 'block';
+  setTimeout(function() { errEl.style.display = 'none'; }, 4000);
+}
+function cumpleGateGuardar() {
+  var fecha = document.getElementById('cg-fecha-iso').value;
+  if (!fecha) { _cumpleGateError('Elige tu fecha de nacimiento para continuar.'); return; }
+  var fechaPublica = document.getElementById('cg-tog-fecha').classList.contains('toggle-on') ? 'Sí' : 'No';
+  var edadPublica = (fechaPublica === 'Sí' && document.getElementById('cg-tog-edad').classList.contains('toggle-on')) ? 'Sí' : 'No';
+  var btn = document.getElementById('cg-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  api({ action: 'guardarFechaNacimiento', fechaNac: fecha, fechaPublica: fechaPublica, edadPublica: edadPublica }, function(res) {
+    btn.disabled = false; btn.textContent = 'Guardar y continuar';
+    if (!res || !res.exito) { _cumpleGateError((res && res.error) || 'No se pudo guardar. Inténtalo de nuevo.'); return; }
+    if (E.datos) {
+      E.datos.fechaNacimiento = res.fechaNacimiento;
+      E.datos.fechaPublica = res.fechaPublica;
+      E.datos.edadPublica = res.edadPublica;
+    }
+    // El modal de permisos de primer login (si todavía sale) no vuelve a
+    // pedir lo mismo: queda precargado con lo recién guardado.
+    var mpIso = document.getElementById('mp-fecha-iso');
+    var mpDisp = document.getElementById('mp-fecha-display');
+    if (mpIso) mpIso.value = res.fechaNacimiento;
+    if (mpDisp) { mpDisp.textContent = _ajFormatearFecha(res.fechaNacimiento); mpDisp.classList.remove('fnac-placeholder'); }
+    ['mp-tog-fecha', 'mp-tog-edad'].forEach(function(id, i) {
+      var t = document.getElementById(id);
+      var on = (i === 0 ? res.fechaPublica : res.edadPublica) === 'Sí';
+      if (t && t.classList.contains('toggle-on') !== on) _mpToggleClick(t);
+    });
+    mostrarToast('¡Listo! Guardamos tu cumpleaños.');
+    _cumpleGateCerrar();
+  }, function(e) {
+    btn.disabled = false; btn.textContent = 'Guardar y continuar';
+    _cumpleGateError((e && e.message) || 'Error de conexión. Inténtalo de nuevo.');
+  });
+}
+
 function _mpToggleClick(btn) {
   var on = btn.classList.contains('toggle-on');
   btn.classList.toggle('toggle-on', !on);
@@ -2330,6 +2426,11 @@ function _ajGuardar(payload, btn, subId, onExito) {
 function _ajFormatearFecha(fechaStr) {
   if (!fechaStr) return '—';
   var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  // 'YYYY-MM-DD' (fecha_nacimiento es `date` desde 2026-11-06) -- se lee
+  // por partes: `new Date('1994-04-15')` es medianoche UTC, que en Ecuador
+  // cae el día anterior.
+  var iso = String(fechaStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return (+iso[3]) + ' de ' + meses[+iso[2] - 1] + ' de ' + iso[1];
   var d = new Date(fechaStr);
   if (isNaN(d.getTime())) return fechaStr;
   return d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
