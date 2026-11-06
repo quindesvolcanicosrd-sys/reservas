@@ -2167,7 +2167,13 @@ const ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
 const ESTADOS_RSVP_BAJA = ['No asistiré', 'No jugador'];
 
 async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Record<string, any>> {
-  const { nombre, idEvento, estado } = params;
+  // Seguridad (2026-11-06, pedido explícito): la identidad sale SIEMPRE del
+  // token de sesión. Antes se usaba `params.nombre` sin validar, así que
+  // cualquiera podía marcar la asistencia de otra persona. `params.nombre`
+  // se sigue aceptando (la web y la app lo mandan) pero se ignora.
+  const nombre = await _validarToken(params.token);
+  if (!nombre) return { exito: false, error: 'Tu sesión venció. Vuelve a iniciar sesión.' };
+  const { idEvento, estado } = params;
   if (!idEvento) return { exito: false, error: 'Evento inválido.' };
   if (!ESTADOS_RSVP.includes(estado)) return { exito: false, error: 'Estado inválido.' };
 

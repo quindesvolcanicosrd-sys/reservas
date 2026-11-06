@@ -379,6 +379,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Edge Function / Backend
 
+2026-11-06 — Fix de seguridad: `marcarAsistenciaUsuario` ahora toma la identidad del token de sesión en lugar del `nombre` enviado por el cliente.
+
 2026-11-06 — Feature: envío de notificaciones por Firebase Cloud Messaging para la app Android (`dispositivos_push`, `registrarDispositivoPush`/`eliminarDispositivoPush`, `sendPush()` separa app vs web). Fix: los botones de la push web no llegaban a `record-attendance` (faltaban las cabeceras del gateway).
 
 2026-11-06 — Feature: despliegue automático de Edge Functions desde GitHub Actions (`.github/workflows/deploy-functions.yml`) en cada push a `main` que toque `supabase/functions/**`, usando el secreto `SUPABASE_ACCESS_TOKEN`.
