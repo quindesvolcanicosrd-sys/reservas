@@ -73,7 +73,29 @@ class Push {
     _pluginListo = true;
   }
 
-  /// Arranque en primer plano (main): plugin, mensaje en segundo plano y la
+  /// true cuando Firebase y el plugin quedaron listos; si no, todo lo de
+  /// notificaciones se omite sin afectar al resto de la app.
+  static bool disponible = false;
+
+  /// Arranque desde main(), DESPUÉS de dibujar la interfaz: nunca lanza ni
+  /// bloquea (timeout de 15 s).
+  static Future<void> arrancarSeguro() async {
+    try {
+      await Firebase.initializeApp().timeout(const Duration(seconds: 15));
+      await iniciar().timeout(const Duration(seconds: 15));
+      disponible = true;
+      final inicial = aperturaInicial;
+      if (inicial != null) _aperturas.add(inicial);
+      _listo.complete();
+    } catch (e) {
+      debugPrint('Notificaciones no disponibles: $e');
+      if (!_listo.isCompleted) _listo.complete();
+    }
+  }
+
+  static final _listo = Completer<void>();
+
+  /// Arranque en primer plano: plugin, mensaje en segundo plano y la
   /// notificación que abrió la app en frío, si la hubo.
   static Future<void> iniciar() async {
     FirebaseMessaging.onBackgroundMessage(manejarMensajeEnSegundoPlano);
@@ -89,14 +111,21 @@ class Push {
   /// Con sesión activa: pide permiso (Android 13+) y registra el token en
   /// el backend; lo vuelve a registrar si Firebase lo renueva.
   static Future<void> registrar(Api api) async {
-    final fm = FirebaseMessaging.instance;
-    await fm.requestPermission();
-    final token = await fm.getToken();
-    if (token != null) await _enviarToken(api, token);
-    fm.onTokenRefresh.listen((t) => _enviarToken(api, t));
+    await _listo.future;
+    if (!disponible) return;
+    try {
+      final fm = FirebaseMessaging.instance;
+      await fm.requestPermission();
+      final token = await fm.getToken();
+      if (token != null) await _enviarToken(api, token);
+      fm.onTokenRefresh.listen((t) => _enviarToken(api, t));
+    } catch (e) {
+      debugPrint('No se pudo activar las notificaciones: $e');
+    }
   }
 
   static Future<void> desregistrar(Api api) async {
+    if (!disponible) return;
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await api.post('eliminarDispositivoPush', {'fcmToken': token});

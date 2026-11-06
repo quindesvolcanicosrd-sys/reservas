@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La compilación de release elimina recursos que no ve referenciados.
+     flutter_local_notifications pide el ícono por NOMBRE en tiempo de
+     ejecución, así que hay que conservarlo explícitamente (si no, la app
+     fallaba al iniciar y quedaba en la pantalla del logo). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_notificacion" />

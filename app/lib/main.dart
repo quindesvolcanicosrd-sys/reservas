@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'core/api.dart';
@@ -16,11 +15,13 @@ final _navegador = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await Push.iniciar();
   final sesion = Sesion(Api());
-  sesion.restaurar();
+  // La interfaz se dibuja SIEMPRE primero (bug real 1.0.4: si Firebase o las
+  // notificaciones fallaban al iniciar, la app quedaba en el logo). Firebase
+  // y las notificaciones arrancan después y, si fallan, la app sigue andando.
   runApp(PivotApp(sesion: sesion));
+  sesion.restaurar();
+  await Push.arrancarSeguro();
 }
 
 class PivotApp extends StatelessWidget {
@@ -50,7 +51,7 @@ class _Raiz extends StatefulWidget {
 class _RaizState extends State<_Raiz> {
   late final EventosRepo _repo = EventosRepo(widget.sesion);
   StreamSubscription<AperturaPush>? _sub;
-  AperturaPush? _pendiente = Push.aperturaInicial;
+  AperturaPush? _pendiente;
   String? _registradoPara;
 
   @override
