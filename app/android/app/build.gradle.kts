@@ -8,7 +8,8 @@ plugins {
 
 android {
     namespace = "com.pivotapp.coach"
-    compileSdk = flutter.compileSdkVersion
+    // 37: flutter_local_notifications 23 lo exige (solo compilación; minSdk/targetSdk no cambian).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
