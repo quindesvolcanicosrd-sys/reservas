@@ -5289,15 +5289,23 @@ async function _nombresMostrarPorUsername(usernames: string[]): Promise<Record<s
 // Anti-duplicado de push por persona+evento (tabla `push_enviados`,
 // migración 20261106201736) -- para recordatorios con ventana ancha que
 // corren cada hora y deben salir UNA sola vez.
-async function _pushYaEnviados(tipo: string, idsEvento: string[]): Promise<Set<string>> {
+// Devuelve `null` si la lectura falla -- quien llama NO debe enviar nada en
+// ese caso (bug real 2026-11-06: sin GRANT para service_role la lectura
+// fallaba en silencio, el set quedaba vacío y se reenviaban recordatorios).
+async function _pushYaEnviados(tipo: string, idsEvento: string[]): Promise<Set<string> | null> {
   const out = new Set<string>();
   if (!idsEvento.length) return out;
-  const { data } = await supabase.from('push_enviados').select('id_evento, username').eq('tipo', tipo).in('id_evento', idsEvento);
+  const { data, error } = await supabase.from('push_enviados').select('id_evento, username').eq('tipo', tipo).in('id_evento', idsEvento);
+  if (error) { console.error('push_enviados (lectura):', error.message); return null; }
   (data ?? []).forEach((r: any) => out.add(r.id_evento + '|' + r.username));
   return out;
 }
-async function _marcarPushEnviado(tipo: string, idEvento: string, username: string): Promise<void> {
-  await supabase.from('push_enviados').upsert({ tipo, id_evento: idEvento, username }, { onConflict: 'tipo,id_evento,username', ignoreDuplicates: true });
+// Marca ANTES de enviar: si la marca falla, no se envía (mejor un aviso
+// perdido que uno repetido cada hora).
+async function _marcarPushEnviado(tipo: string, idEvento: string, username: string): Promise<boolean> {
+  const { error } = await supabase.from('push_enviados').upsert({ tipo, id_evento: idEvento, username }, { onConflict: 'tipo,id_evento,username', ignoreDuplicates: true });
+  if (error) { console.error('push_enviados (escritura):', error.message); return false; }
+  return true;
 }
 async function _eventosEnVentana(desdeMs: number, hastaMs: number, diasCandidatos: number[]): Promise<any[]> {
   const { data: eventos } = await supabase.from('asistencias')
@@ -5379,6 +5387,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
 
   const ids = enVentana.map((e: any) => String(e.id_evento));
   const [asistPorEvento, yaEnviados] = await Promise.all([_ultimaAsistenciaPorPersonaTodas(ids), _pushYaEnviados('recordatorio_1dia', ids)]);
+  if (!yaEnviados) return { exito: false, error: 'No se pudo leer push_enviados; no se envió nada.' };
   let enviados = 0;
   for (const ev of enVentana) {
     const idEv = String(ev.id_evento);
@@ -5390,6 +5399,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
     await Promise.allSettled(pendientes.map(async (username) => {
       const token = await _firmarTokenAccion(username, idEv);
       if (!token) return;
+      if (!(await _marcarPushEnviado('recordatorio_1dia', idEv, username))) return;
       await sendPush({
         tipo: 'recordatorio_1dia',
         include_external_user_ids: [username],
@@ -5399,7 +5409,6 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
         data: { token, evento_id: idEv, url },
         web_buttons: [_BTN_ASISTIRE, _BTN_NO_ASISTIRE],
       });
-      await _marcarPushEnviado('recordatorio_1dia', idEv, username);
       enviados++;
     }));
   }
