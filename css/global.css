@@ -464,12 +464,12 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    la pantalla hasta que la condición real se resuelve (app instalada /
    permiso concedido). Mismo layout para los 2 (icono + título + texto +
    contenido propio), solo el prefijo de clase cambia. */
-#pwa-gate, #notif-gate {
+#pwa-gate, #notif-gate, #cumple-gate {
   position: fixed;
   inset: 0;
   z-index: 9999;
 }
-.pwa-gate-overlay, .notif-gate-overlay {
+.pwa-gate-overlay, .notif-gate-overlay, .cumple-gate-overlay {
   width: 100%;
   height: 100%;
   background: var(--bg);
@@ -479,23 +479,23 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   padding: 24px;
   box-sizing: border-box;
 }
-.pwa-gate-card, .notif-gate-card {
+.pwa-gate-card, .notif-gate-card, .cumple-gate-card {
   max-width: 360px;
   width: 100%;
   text-align: center;
 }
-.pwa-gate-icon, .notif-gate-icon {
+.pwa-gate-icon, .notif-gate-icon, .cumple-gate-icon {
   font-size: 56px;
   color: var(--brand);
   margin-bottom: 16px;
 }
-.pwa-gate-titulo, .notif-gate-titulo {
+.pwa-gate-titulo, .notif-gate-titulo, .cumple-gate-titulo {
   font-size: 22px;
   font-weight: 700;
   color: var(--text);
   margin: 0 0 12px;
 }
-.pwa-gate-desc, .notif-gate-desc {
+.pwa-gate-desc, .notif-gate-desc, .cumple-gate-desc {
   font-size: 15px;
   color: var(--muted);
   margin: 0 0 24px;
@@ -574,7 +574,7 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   margin: 0;
   line-height: 1.5;
 }
-.notif-gate-btn {
+.notif-gate-btn, .cumple-gate-btn {
   width: 100%;
   border: none;
   border-radius: var(--radius);
@@ -585,7 +585,7 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   padding: 14px;
   cursor: pointer;
 }
-.notif-gate-btn:active {
+.notif-gate-btn:active, .cumple-gate-btn:active {
   background: var(--btn-primary-hover);
 }
 /* Instrucciones manuales de #notif-gate-denegado (index.html) -- mismo
@@ -636,4 +636,74 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 .notif-gate-btn-ajustes .material-symbols-rounded {
   font-size: 18px;
+}
+
+/* ── #cumple-gate (index.html) -- fecha de nacimiento obligatoria ─────────
+   Mismo layout que #pwa-gate/#notif-gate (selectores compartidos arriba);
+   acá solo lo propio: fade de entrada/salida, campo de fecha y la lista de
+   2 interruptores de privacidad. Ver _cumpleGateSiHaceFalta()/js/perfil.js. */
+#cumple-gate {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+#cumple-gate.cumple-gate-visible {
+  opacity: 1;
+}
+.cumple-gate-overlay {
+  overflow-y: auto;
+}
+.cumple-gate-fecha {
+  margin-bottom: 16px;
+  text-align: left;
+}
+.cumple-gate-fecha-icono {
+  color: var(--brand);
+  font-size: 1.1rem;
+}
+.cumple-gate-opciones {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  text-align: left;
+  overflow: hidden;
+}
+.cumple-gate-opcion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  transition: opacity 0.25s ease;
+}
+.cumple-gate-opcion + .cumple-gate-opcion {
+  border-top: 1px solid var(--border-light);
+}
+.cumple-gate-opcion.cumple-gate-opcion-off {
+  opacity: 0.45;
+}
+.cumple-gate-opcion-titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cumple-gate-opcion-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.cumple-gate-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cumple-gate-nota {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 16px 0 0;
+  line-height: 1.4;
+}
+/* El date picker (#ddp-modal, 9800, css/perfil.css) se abre DESDE este gate
+   (9999) -- mientras el gate está abierto tiene que quedar por encima. */
+body.cumple-gate-abierto #ddp-modal {
+  z-index: 10000;
 }

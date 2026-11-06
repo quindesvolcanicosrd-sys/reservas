@@ -352,10 +352,9 @@ function _evMapEventoBackend(raw) {
     sinRollcall: !!raw.sinRollcall,
   };
 }
-// getCumpleañosRango() no manda `fotoPerfil` (no está en el contrato
-// documentado en MANIFEST.md) -- cae sola al fallback de inicial de
-// _evHidratarAvatares(), igual que un E.datos.fotoPerfil vacío en cualquier
-// otro lado de la app. `id` es solo para el `id` del host de confetti
+// getCumpleañosRango() manda `fotoPerfil` (vacío si la persona no tiene
+// foto -- cae al fallback de inicial de _evHidratarAvatares()) y `nombre`
+// ya resuelto (nombre derby o username). `id` es solo para el `id` del host de confetti
 // (_evCardCumpleHtml()) -- por índice alcanza, se regenera en cada carga.
 function _evComputarAniversariosIngreso() {
   var fi = E.datos && E.datos.fechaIngreso;
@@ -377,7 +376,7 @@ function _evComputarAniversariosIngreso() {
 }
 function _evMapCumpleBackend(raw, idx) {
   var conEdad = typeof raw.edad === 'number';
-  return { id: 'cumple-' + idx, nombre: raw.nombre, fecha: raw.fecha, edad: conEdad ? raw.edad : null, edadPublica: conEdad, fotoPerfil: '' };
+  return { id: 'cumple-' + idx, nombre: raw.nombre, fecha: raw.fecha, edad: conEdad ? raw.edad : null, edadPublica: conEdad, fotoPerfil: raw.fotoPerfil || '' };
 }
 // Único punto de carga real de esta pantalla -- 3 pedidos en paralelo,
 // `onListo()` corre cuando los 3 terminaron (éxito o error). getEventosRango
@@ -5203,9 +5202,23 @@ function _evActualizarAsistenciaPropiaCard(idEvento) {
    vez de vivir en ese cuadrado. Sin color propio: `.ev-card-titulo` queda en
    `var(--text)`, como cualquier otra card -- ya no hace falta que el título
    se destaque, el avatar + "Cumpleaños de <nombre>" ya son señal suficiente. */
+// Texto según si el cumpleaños ya pasó, es hoy o viene (2026-11-06,
+// pedido explícito: "en años anteriores cuántos cumplió"). Antes decía
+// "Hoy cumple" para cualquier fecha sin edad pública.
+function _evCumpleTexto(c) {
+  var cmp = _evFechaCmp(c.fecha, _evToISO(new Date()));
+  var conEdad = c.edadPublica && c.edad;
+  if (cmp < 0) return conEdad ? ('Cumplió ' + c.edad + ' años') : 'Celebró su cumpleaños';
+  if (cmp === 0) return conEdad ? ('¡Hoy cumple ' + c.edad + ' años!') : '¡Hoy es su cumpleaños!';
+  return conEdad ? ('Cumplirá ' + c.edad + ' años') : 'Próximo cumpleaños';
+}
+function _evEscHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 function _evCardCumpleHtml(c) {
-  var texto = (c.edadPublica && c.edad) ? ('cumple ' + c.edad + ' años') : 'Hoy cumple';
-  var nombreAttr = c.nombre.replace(/"/g, '&quot;');
+  var texto = _evCumpleTexto(c);
+  var nombreHtml = _evEscHtml(c.nombre);
+  var nombreAttr = nombreHtml;
   var fotoAttr = (c.fotoPerfil || '').replace(/"/g, '&quot;');
   // `.ev-card-top-row` (ver "Cambios recientes" -- corrección de alineación
   // del RSVP de eventos, reusada tal cual acá): antes esta fila (avatar+
@@ -5217,7 +5230,7 @@ function _evCardCumpleHtml(c) {
     '<div class="ev-card-top-row">' +
       '<div class="avatar-pill ev-card-cumple-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
       '<div class="ev-card-body">' +
-        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div></div>' +
+        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + nombreHtml + '</div></div>' +
         '<div class="ev-card-sub">' + texto + '</div>' +
       '</div>' +
     '</div>' +
