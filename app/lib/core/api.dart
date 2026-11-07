@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 /// satisface el gateway; la autorización real es el token de sesión.
 class ApiConfig {
   static const backend = 'https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api';
+  static const rest = 'https://uusbnreitoobqssizbfq.supabase.co/rest/v1';
   static const recordAttendance = 'https://uusbnreitoobqssizbfq.supabase.co/functions/v1/record-attendance';
   static const anonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1c2JucmVpdG9vYnFzc2l6YmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNDg2NDgsImV4cCI6MjEwMTYyNDY0OH0.1LkHIpmhaA8pY_BKFGMiKK4VHoNzQcVAX05DC1BV4Wk';
@@ -62,6 +63,22 @@ class Api {
             body: _conToken({'action': action, ...params}))
         .timeout(_timeout);
     return _decodificar(resp);
+  }
+
+  /// Lectura directa de PostgREST (mismo mecanismo que la web para venues,
+  /// temporadas de descanso y la edición de eventos).
+  Future<List<dynamic>> restGet(String ruta) async {
+    final resp = await _client.get(Uri.parse('${ApiConfig.rest}/$ruta'), headers: _headers).timeout(_timeout);
+    if (resp.statusCode >= 300) throw ApiException('No se pudo leer del servidor (${resp.statusCode}).');
+    return jsonDecode(utf8.decode(resp.bodyBytes)) as List<dynamic>;
+  }
+
+  Future<void> restPatch(String ruta, Map<String, Object?> cuerpo) async {
+    final resp = await _client
+        .patch(Uri.parse('${ApiConfig.rest}/$ruta'),
+            headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'}, body: jsonEncode(cuerpo))
+        .timeout(_timeout);
+    if (resp.statusCode >= 300) throw ApiException('No se pudieron guardar los cambios (${resp.statusCode}).');
   }
 
   Map<String, dynamic> _decodificar(http.Response resp) {

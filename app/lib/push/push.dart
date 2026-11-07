@@ -171,7 +171,7 @@ class Push {
           channelDescription: _canal.description,
           importance: Importance.high,
           priority: Priority.high,
-          color: PivotColores.marca,
+          color: PivotPaleta.claro.marca,
           styleInformation: BigTextStyleInformation(cuerpo),
           actions: botones,
         ),

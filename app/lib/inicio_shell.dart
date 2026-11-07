@@ -27,7 +27,7 @@ class _InicioShellState extends State<InicioShell> {
     final destinos = <(NavigationDestination, Widget)>[
       (
         const NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Eventos'),
-        TimelineScreen(repo: widget.repo, nombreParaAvatar: widget.sesion.nombreMostrar, fotoParaAvatar: widget.sesion.fotoPerfil),
+        TimelineScreen(repo: widget.repo),
       ),
       (
         const NavigationDestination(icon: Icon(Icons.group_outlined), selectedIcon: Icon(Icons.group), label: 'Equipo'),
@@ -76,7 +76,7 @@ class _EnLaWeb extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.construction_rounded, size: 48, color: PivotColores.textoSecundario),
+            Icon(Icons.construction_rounded, size: 48, color: context.pivot.textoSecundario),
             const SizedBox(height: 16),
             Text('$titulo llega pronto a la app', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700), textAlign: TextAlign.center),
             const SizedBox(height: 8),

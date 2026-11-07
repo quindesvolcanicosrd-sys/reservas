@@ -52,6 +52,7 @@ class Evento {
     required this.miEstado,
     required this.mapsUrl,
     required this.descripcion,
+    required this.videoInstructivo,
   });
 
   final String id;
@@ -65,6 +66,17 @@ class Evento {
   EstadoRsvp? miEstado;
   final String mapsUrl;
   final String descripcion;
+  final String videoInstructivo;
+
+  /// Evento ya terminado (o del pasado): no se puede editar.
+  bool get finalizado {
+    final i = inicioUtc;
+    if (i == null) return fecha.isBefore(DateTime.now().subtract(const Duration(days: 1)));
+    final p = horaFin.split(':');
+    final h = int.tryParse(p.first), m = p.length > 1 ? int.tryParse(p[1]) : null;
+    final fin = (h != null && m != null) ? DateTime.utc(fecha.year, fecha.month, fecha.day, h + 5, m) : i.add(const Duration(hours: 2));
+    return DateTime.now().toUtc().isAfter(fin);
+  }
 
   bool get cancelado => estado == EstadoEvento.cancelado || estado == EstadoEvento.sinEntrenamiento;
 
@@ -132,8 +144,17 @@ class Evento {
       miEstado: mio,
       mapsUrl: (raw['mapsUrl'] ?? '').toString(),
       descripcion: (raw['descripcion'] ?? '').toString(),
+      videoInstructivo: (raw['videoInstructivo'] ?? '').toString(),
     );
   }
+}
+
+/// Lugar (tabla `venues`): para editar eventos.
+class Lugar {
+  const Lugar({required this.nombre, required this.mapsUrl, required this.tipo});
+  final String nombre;
+  final String mapsUrl;
+  final String tipo;
 }
 
 class Cumple {

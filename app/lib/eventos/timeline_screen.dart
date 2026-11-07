@@ -1,292 +1,481 @@
 import 'package:flutter/material.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import 'calendario_sheet.dart';
 import 'detalle_screen.dart';
 import 'eventos_repo.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 
-/// Timeline vertical de Eventos (maqueta aprobada 2026-11-06): fecha a la
-/// izquierda, línea continua con un punto por evento, marca de "ahora" y
-/// separadores por semana.
+/// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
+/// - Barra: "Noviembre ⌄" abre el calendario del mes (cambiar de mes y tocar
+///   un día lleva a ese punto del timeline), buscador con filtros y "Hoy".
+/// - Fecha a la izquierda, línea con un punto por evento, marca de "ahora",
+///   separadores por semana.
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key, required this.repo, required this.nombreParaAvatar, required this.fotoParaAvatar});
+  const TimelineScreen({super.key, required this.repo});
   final EventosRepo repo;
-  final String nombreParaAvatar;
-  final String fotoParaAvatar;
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
 }
 
-/// Un elemento del día: evento o cumpleaños.
 class _Item {
   _Item.evento(this.evento) : cumple = null;
   _Item.cumple(this.cumple) : evento = null;
   final Evento? evento;
   final Cumple? cumple;
+  DateTime get fecha => evento?.fecha ?? cumple!.fecha;
+}
+
+/// Una fila del timeline: fecha (solo en la primera del día), punto y contenido.
+class _Fila {
+  _Fila({required this.dia, this.mostrarFecha = false, this.item, this.ahora = false, this.semana, this.vacioHoy = false});
+  final DateTime dia;
+  final bool mostrarFecha;
+  final _Item? item;
+  final bool ahora;
+  final DateTime? semana; // separador de semana (lunes)
+  final bool vacioHoy;
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  bool _verAnteriores = false;
+  final _scroll = ItemScrollController();
+  final _posiciones = ItemPositionsListener.create();
+  final _textoBusqueda = TextEditingController();
+  final _focoBusqueda = FocusNode();
+
+  bool _buscando = false;
+  String _consulta = '';
+  String? _filtroLugar;
+  String? _filtroTipo;
+  DateTime _mesVisible = Fechas.hoy();
+  List<_Fila> _filas = const [];
+  bool _saltoInicialHecho = false;
 
   static const _anchoFecha = 52.0;
   static const _anchoRiel = 28.0;
 
+  EventosRepo get repo => widget.repo;
+
   @override
   void initState() {
     super.initState();
-    widget.repo.cargar();
+    repo.cargar();
+    _posiciones.itemPositions.addListener(_alDesplazar);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: widget.repo,
-      builder: (context, _) => Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: RefreshIndicator(
-            onRefresh: () => widget.repo.cargar(forzar: true),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(child: _encabezado(context)),
-                ..._cuerpo(context),
-                const SliverToBoxAdapter(child: SizedBox(height: 96)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _posiciones.itemPositions.removeListener(_alDesplazar);
+    _textoBusqueda.dispose();
+    _focoBusqueda.dispose();
+    super.dispose();
   }
 
-  Widget _encabezado(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text('Eventos', style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.4))),
-          AvatarPersona(nombre: widget.nombreParaAvatar, foto: widget.fotoParaAvatar, tamano: 36),
-        ]),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, children: [
-          FilterChip(
-            label: Text(Fechas.mesAnio(Fechas.hoy())),
-            selected: !_verAnteriores,
-            showCheckmark: false,
-            onSelected: (_) => setState(() => _verAnteriores = false),
-          ),
-          FilterChip(
-            label: const Text('Anteriores'),
-            selected: _verAnteriores,
-            showCheckmark: false,
-            onSelected: (_) => setState(() => _verAnteriores = !_verAnteriores),
-          ),
-        ]),
-      ]),
-    );
+  void _alDesplazar() {
+    final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0).toList();
+    if (pos.isEmpty || _filas.isEmpty) return;
+    pos.sort((a, b) => a.index.compareTo(b.index));
+    final i = pos.first.index.clamp(0, _filas.length - 1);
+    final d = _filas[i].dia;
+    if (d.month != _mesVisible.month || d.year != _mesVisible.year) setState(() => _mesVisible = d);
   }
 
-  List<Widget> _cuerpo(BuildContext context) {
-    final repo = widget.repo;
-    if (repo.cargando && repo.eventos.isEmpty) {
-      return [const SliverFillRemaining(hasScrollBody: false, child: Center(child: CircularProgressIndicator()))];
+  // ─── Filtros ────────────────────────────────────────────────────────────
+
+  bool _coincideTexto(_Item it) {
+    final q = _consulta.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final ev = it.evento;
+    final texto = ev != null
+        ? '${ev.tipo} ${ev.lugar} ${ev.descripcion} ${textoEstadoEvento(ev)} ${Fechas.encabezado(ev.fecha)} ${Fechas.mes(ev.fecha)}'
+        : 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}';
+    return q.split(RegExp(r'\s+')).every((palabra) => texto.toLowerCase().contains(palabra));
+  }
+
+  bool _pasaFiltros(_Item it) {
+    if (!_coincideTexto(it)) return false;
+    final ev = it.evento;
+    if (_filtroLugar != null && ev?.lugar != _filtroLugar) return false;
+    if (_filtroTipo != null) {
+      if (_filtroTipo == 'Cumpleaños') return it.cumple != null;
+      if (ev?.tipo != _filtroTipo) return false;
     }
-    if (repo.error != null && repo.eventos.isEmpty) {
-      return [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(repo.error!, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                OutlinedButton(onPressed: () => repo.cargar(forzar: true), child: const Text('Reintentar')),
-              ]),
-            ),
-          ),
-        ),
+    return true;
+  }
+
+  bool get _hayFiltros => _consulta.trim().isNotEmpty || _filtroLugar != null || _filtroTipo != null;
+
+  List<_Item> _todos() => [
+        for (final e in repo.eventos) _Item.evento(e),
+        for (final c in repo.cumples) _Item.cumple(c),
       ];
-    }
 
+  /// Opciones de los filtros: solo las que existen en lo que ya coincide con
+  /// el texto buscado (y con el otro filtro), igual que la web.
+  List<String> _opcionesLugar() {
+    final s = <String>{};
+    for (final it in _todos()) {
+      final ev = it.evento;
+      if (ev == null || !_coincideTexto(it)) continue;
+      if (_filtroTipo != null && _filtroTipo != ev.tipo) continue;
+      if (ev.lugar.isNotEmpty) s.add(ev.lugar);
+    }
+    return s.toList()..sort();
+  }
+
+  List<String> _opcionesTipo() {
+    final s = <String>{};
+    var hayCumples = false;
+    for (final it in _todos()) {
+      if (!_coincideTexto(it)) continue;
+      final ev = it.evento;
+      if (ev == null) {
+        hayCumples = true;
+        continue;
+      }
+      if (_filtroLugar != null && _filtroLugar != ev.lugar) continue;
+      s.add(ev.tipo);
+    }
+    return [...(s.toList()..sort()), if (hayCumples && _filtroLugar == null) 'Cumpleaños'];
+  }
+
+  // ─── Filas ──────────────────────────────────────────────────────────────
+
+  List<_Fila> _armarFilas() {
     final hoy = Fechas.hoy();
     final porDia = <DateTime, List<_Item>>{};
-    for (final e in repo.eventos) {
-      porDia.putIfAbsent(Fechas.soloDia(e.fecha), () => []).add(_Item.evento(e));
+    for (final it in _todos()) {
+      if (!_pasaFiltros(it)) continue;
+      porDia.putIfAbsent(Fechas.soloDia(it.fecha), () => []).add(it);
     }
-    for (final c in repo.cumples) {
-      porDia.putIfAbsent(Fechas.soloDia(c.fecha), () => []).add(_Item.cumple(c));
-    }
-    porDia.putIfAbsent(hoy, () => []);
-    final dias = porDia.keys.where((d) => _verAnteriores ? d.isBefore(hoy) : !d.isBefore(hoy)).toList()..sort();
-    if (_verAnteriores) dias.sort((a, b) => b.compareTo(a));
-
-    final filas = <Widget>[];
+    if (!_hayFiltros) porDia.putIfAbsent(hoy, () => []);
+    final dias = porDia.keys.toList()..sort();
+    final filas = <_Fila>[];
     DateTime? lunesPrevio;
+    final ahora = Fechas.hora(Fechas.ahoraEcuador());
     for (final dia in dias) {
       final lunes = Fechas.lunesDe(dia);
-      if (lunesPrevio != null && lunes != lunesPrevio) filas.add(_separadorSemana(lunes));
+      if (lunesPrevio != null && lunes != lunesPrevio) filas.add(_Fila(dia: dia, semana: lunes));
       lunesPrevio = lunes;
-      filas.addAll(_filasDelDia(dia, porDia[dia]!, dia == hoy));
-    }
-    if (_verAnteriores && dias.isEmpty) {
-      filas.add(const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('No hay eventos en los últimos 30 días.'))));
-    }
-
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 16, 0),
-        sliver: SliverList.list(children: filas),
-      ),
-    ];
-  }
-
-  List<Widget> _filasDelDia(DateTime dia, List<_Item> items, bool esHoy) {
-    items.sort((a, b) {
-      final ha = a.evento?.horaInicio ?? '00:00', hb = b.evento?.horaInicio ?? '00:00';
-      return ha.compareTo(hb);
-    });
-    final filas = <Widget>[];
-    var primera = true;
-    var ahoraPuesto = !esHoy;
-    final ahora = Fechas.hora(Fechas.ahoraEcuador());
-    for (final it in items) {
-      if (!ahoraPuesto && (it.evento?.horaInicio ?? '00:00').compareTo(ahora) > 0) {
-        filas.add(_fila(dia: primera ? dia : null, esHoy: esHoy, punto: null, hijo: _lineaAhora(ahora)));
+      final items = porDia[dia]!
+        ..sort((a, b) => (a.evento?.horaInicio ?? '00:00').compareTo(b.evento?.horaInicio ?? '00:00'));
+      final esHoy = dia == hoy && !_hayFiltros;
+      var primera = true;
+      var ahoraPuesto = !esHoy;
+      for (final it in items) {
+        if (!ahoraPuesto && (it.evento?.horaInicio ?? '00:00').compareTo(ahora) > 0) {
+          filas.add(_Fila(dia: dia, mostrarFecha: primera, ahora: true));
+          primera = false;
+          ahoraPuesto = true;
+        }
+        filas.add(_Fila(dia: dia, mostrarFecha: primera, item: it));
         primera = false;
-        ahoraPuesto = true;
       }
-      filas.add(_fila(dia: primera ? dia : null, esHoy: esHoy, punto: _punto(it), hijo: _tarjeta(it)));
-      primera = false;
-    }
-    if (!ahoraPuesto) {
-      filas.add(_fila(
-        dia: primera ? dia : null,
-        esHoy: esHoy,
-        punto: null,
-        hijo: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _lineaAhora(ahora),
-          if (items.isEmpty || items.every((i) => i.evento == null || i.evento!.yaEmpezo))
-            const Padding(
-              padding: EdgeInsets.only(top: 10, bottom: 8),
-              child: Text('Sin más eventos hoy', style: TextStyle(fontSize: 14, color: PivotColores.textoSecundario)),
-            ),
-        ]),
-      ));
+      if (!ahoraPuesto) {
+        final sinMas = items.every((i) => i.evento == null || i.evento!.yaEmpezo);
+        filas.add(_Fila(dia: dia, mostrarFecha: primera, ahora: true, vacioHoy: sinMas));
+      }
     }
     return filas;
   }
 
-  Widget _fila({required DateTime? dia, required bool esHoy, required Widget? punto, required Widget hijo}) {
-    return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SizedBox(width: _anchoFecha, child: dia == null ? null : _columnaFecha(dia, esHoy)),
-        SizedBox(
-          width: _anchoRiel,
-          child: Stack(children: [
-            Positioned(left: 13, top: 0, bottom: 0, child: Container(width: 2, color: PivotColores.lineaTimeline)),
-            if (punto != null) Positioned(left: 7, top: 18, child: punto),
+  int _indiceDeDia(DateTime dia) {
+    final d = Fechas.soloDia(dia);
+    for (var i = 0; i < _filas.length; i++) {
+      if (_filas[i].semana == null && !_filas[i].dia.isBefore(d)) return i;
+    }
+    return _filas.isEmpty ? 0 : _filas.length - 1;
+  }
+
+  void _irA(DateTime dia, {bool animado = true}) {
+    if (!_scroll.isAttached || _filas.isEmpty) return;
+    final i = _indiceDeDia(dia);
+    if (animado) {
+      _scroll.scrollTo(index: i, duration: const Duration(milliseconds: 450), curve: Curves.easeInOutCubic, alignment: 0.02);
+    } else {
+      _scroll.jumpTo(index: i, alignment: 0.02);
+    }
+  }
+
+  Future<void> _abrirCalendario() async {
+    final dia = await mostrarCalendario(context, repo: repo, mesInicial: _mesVisible);
+    if (dia == null || !mounted) return;
+    await repo.asegurarMes(dia);
+    if (!mounted) return;
+    setState(() {
+      _buscando = false;
+      _limpiarFiltros();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _irA(dia));
+  }
+
+  void _limpiarFiltros() {
+    _consulta = '';
+    _textoBusqueda.clear();
+    _filtroLugar = null;
+    _filtroTipo = null;
+  }
+
+  // ─── Construcción ───────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: repo,
+      builder: (context, _) {
+        _filas = _armarFilas();
+        if (!_saltoInicialHecho && repo.eventos.isNotEmpty && !_hayFiltros) {
+          _saltoInicialHecho = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
+        }
+        return Scaffold(
+          body: SafeArea(
+            bottom: false,
+            child: Column(children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c)),
+                child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
+              ),
+              Expanded(child: _cuerpo(context)),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _barraNormal(BuildContext context) {
+    final p = context.pivot;
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      key: const ValueKey('normal'),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 4),
+      child: Row(children: [
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: p.texto, padding: const EdgeInsets.symmetric(horizontal: 12)),
+          onPressed: _abrirCalendario,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Text(
+                _mesVisible.year == Fechas.hoy().year ? Fechas.mesNombre(_mesVisible) : Fechas.mesAnio(_mesVisible),
+                key: ValueKey('${_mesVisible.year}-${_mesVisible.month}'),
+                style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down_rounded),
           ]),
         ),
-        Expanded(child: Padding(padding: const EdgeInsets.only(top: 4, bottom: 14), child: hijo)),
+        const Spacer(),
+        IconButton(tooltip: 'Buscar', icon: const Icon(Icons.search_rounded), onPressed: () {
+          setState(() => _buscando = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _focoBusqueda.requestFocus());
+        }),
+        IconButton(tooltip: 'Ir a hoy', icon: const Icon(Icons.today_outlined), onPressed: () => _irA(Fechas.hoy())),
       ]),
     );
   }
 
-  Widget _columnaFecha(DateTime dia, bool esHoy) {
+  Widget _barraBusqueda(BuildContext context) {
+    final lugares = _opcionesLugar();
+    final tipos = _opcionesTipo();
+    return Padding(
+      key: const ValueKey('busqueda'),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextField(
+          controller: _textoBusqueda,
+          focusNode: _focoBusqueda,
+          textInputAction: TextInputAction.search,
+          onChanged: (v) => setState(() => _consulta = v),
+          decoration: InputDecoration(
+            hintText: 'Busca por lugar, tipo, mes o persona',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: IconButton(
+              tooltip: 'Cerrar búsqueda',
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+                setState(() {
+                  _buscando = false;
+                  _limpiarFiltros();
+                });
+                WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            _chipFiltro(context, etiqueta: 'Lugar', valor: _filtroLugar, opciones: lugares, alElegir: (v) => setState(() => _filtroLugar = v)),
+            const SizedBox(width: 8),
+            _chipFiltro(context, etiqueta: 'Tipo', valor: _filtroTipo, opciones: tipos, alElegir: (v) => setState(() => _filtroTipo = v)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _chipFiltro(BuildContext context,
+      {required String etiqueta, required String? valor, required List<String> opciones, required ValueChanged<String?> alElegir}) {
+    return PopupMenuButton<String>(
+      tooltip: etiqueta,
+      onSelected: (v) => alElegir(v == '__todos' ? null : v),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: '__todos', child: Text('Todos los ${etiqueta == 'Lugar' ? 'lugares' : 'tipos'}')),
+        for (final o in opciones) PopupMenuItem(value: o, child: Text(o)),
+      ],
+      child: Chip(
+        avatar: Icon(etiqueta == 'Lugar' ? Icons.place_outlined : Icons.category_outlined, size: 18),
+        label: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(valor ?? etiqueta),
+          const Icon(Icons.arrow_drop_down_rounded, size: 20),
+        ]),
+        backgroundColor: valor != null ? context.pivot.suave : null,
+      ),
+    );
+  }
+
+  Widget _cuerpo(BuildContext context) {
+    final p = context.pivot;
+    if (repo.cargando && repo.eventos.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (repo.error != null && repo.eventos.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(repo.error!, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: () => repo.cargar(forzar: true), child: const Text('Reintentar')),
+          ]),
+        ),
+      );
+    }
+    if (_filas.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text('No hay eventos que coincidan con la búsqueda.', textAlign: TextAlign.center, style: TextStyle(color: p.textoSecundario)),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: () => repo.cargar(forzar: true),
+      child: ScrollablePositionedList.builder(
+        itemScrollController: _scroll,
+        itemPositionsListener: _posiciones,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(8, 4, 16, 96),
+        itemCount: _filas.length,
+        itemBuilder: (context, i) => _fila(context, _filas[i]),
+      ),
+    );
+  }
+
+  Widget _fila(BuildContext context, _Fila f) {
+    final p = context.pivot;
+    final esHoy = f.dia == Fechas.hoy();
+    final Widget contenido;
+    Widget? punto;
+    if (f.semana != null) {
+      contenido = Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Text(Fechas.rangoSemana(f.semana!), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p.textoSecundario)),
+      );
+    } else if (f.ahora) {
+      contenido = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _lineaAhora(p),
+        if (f.vacioHoy)
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 8),
+            child: Text('Sin más eventos hoy', style: TextStyle(fontSize: 14, color: p.textoSecundario)),
+          ),
+      ]);
+    } else {
+      punto = _punto(p, f.item!);
+      contenido = f.item!.cumple != null
+          ? _TarjetaCumple(cumple: f.item!.cumple!)
+          : _TarjetaEvento(evento: f.item!.evento!, repo: repo, alAbrir: () => _abrirDetalle(f.item!.evento!));
+    }
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(width: _anchoFecha, child: f.mostrarFecha ? _columnaFecha(p, f.dia, esHoy) : null),
+        SizedBox(
+          width: _anchoRiel,
+          child: Stack(children: [
+            Positioned(left: 13, top: 0, bottom: 0, child: Container(width: 2, color: p.lineaTimeline)),
+            if (punto != null) Positioned(left: 7, top: 18, child: punto),
+          ]),
+        ),
+        Expanded(child: Padding(padding: const EdgeInsets.only(top: 4, bottom: 14), child: contenido)),
+      ]),
+    );
+  }
+
+  void _abrirDetalle(Evento ev) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => DetalleScreen(repo: repo, eventoId: ev.id)));
+  }
+
+  Widget _columnaFecha(PivotPaleta p, DateTime dia, bool esHoy) {
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Column(children: [
         Text(Fechas.diaCorto(dia),
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: esHoy ? PivotColores.marcaOscura : PivotColores.textoSecundario)),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: esHoy ? p.marcaTexto : p.textoSecundario)),
         const SizedBox(height: 2),
         esHoy
             ? Container(
                 width: 36,
                 height: 36,
-                decoration: const BoxDecoration(color: PivotColores.marca, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: p.marca, shape: BoxShape.circle),
                 alignment: Alignment.center,
-                child: Text('${dia.day}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: PivotColores.blanco)),
+                child: Text('${dia.day}', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: p.sobreMarca)),
               )
             : Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text('${dia.day}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                child: Text('${dia.day}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: p.texto)),
               ),
       ]),
     );
   }
 
-  Widget _separadorSemana(DateTime lunes) {
-    return _fila(
-      dia: null,
-      esHoy: false,
-      punto: null,
-      hijo: Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Text(Fechas.rangoSemana(lunes),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: PivotColores.textoSecundario)),
-      ),
-    );
-  }
-
-  Widget _lineaAhora(String hora) {
+  Widget _lineaAhora(PivotPaleta p) {
     return Transform.translate(
       offset: const Offset(-22, 0),
       child: Row(children: [
-        Container(width: 12, height: 12, decoration: const BoxDecoration(color: PivotColores.marca, shape: BoxShape.circle)),
-        Expanded(child: Container(height: 2, color: PivotColores.marca)),
+        Container(width: 12, height: 12, decoration: BoxDecoration(color: p.marca, shape: BoxShape.circle)),
+        Expanded(child: Container(height: 2, color: p.marca)),
         Padding(
           padding: const EdgeInsets.only(left: 6),
-          child: Text(hora, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: PivotColores.marcaOscura)),
+          child: Text(Fechas.hora(Fechas.ahoraEcuador()), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: p.marcaTexto)),
         ),
       ]),
     );
   }
 
-  Widget _punto(_Item it) {
+  Widget _punto(PivotPaleta p, _Item it) {
+    BoxDecoration deco(Color relleno, Color borde, double ancho) =>
+        BoxDecoration(color: relleno, shape: BoxShape.circle, border: Border.all(color: borde, width: ancho));
     final ev = it.evento;
+    final Decoration d;
     if (ev == null) {
-      return Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(color: PivotColores.fondo, shape: BoxShape.circle, border: Border.all(color: PivotColores.lineaTimeline, width: 2.5)),
-      );
+      d = deco(p.fondo, p.lineaTimeline, 2.5);
+    } else if (ev.cancelado || ev.miEstado == EstadoRsvp.noAsistire) {
+      d = deco(p.apagadoPunto, p.fondo, 2);
+    } else if (ev.miEstado != null) {
+      d = deco(p.marca, p.fondo, 2);
+    } else {
+      d = deco(p.fondo, p.marca, 2.5);
     }
-    if (ev.cancelado || ev.miEstado == EstadoRsvp.noAsistire) {
-      return Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(color: PivotColores.canceladoPunto, shape: BoxShape.circle, border: Border.all(color: PivotColores.fondo, width: 2)),
-      );
-    }
-    if (ev.miEstado != null) {
-      return Container(
-        width: 14,
-        height: 14,
-        decoration: BoxDecoration(color: PivotColores.marca, shape: BoxShape.circle, border: Border.all(color: PivotColores.fondo, width: 2)),
-      );
-    }
-    return Container(
-      width: 14,
-      height: 14,
-      decoration: BoxDecoration(color: PivotColores.fondo, shape: BoxShape.circle, border: Border.all(color: PivotColores.marca, width: 2.5)),
-    );
-  }
-
-  Widget _tarjeta(_Item it) {
-    if (it.cumple != null) return _TarjetaCumple(cumple: it.cumple!);
-    return _TarjetaEvento(
-      evento: it.evento!,
-      repo: widget.repo,
-      alAbrir: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => DetalleScreen(repo: widget.repo, eventoId: it.evento!.id),
-      )),
-    );
+    return Container(width: 14, height: 14, decoration: d);
   }
 }
 
@@ -298,12 +487,13 @@ class _TarjetaEvento extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.pivot;
     final ev = evento;
     final apagado = ev.cancelado;
-    final colorSecundario = apagado ? PivotColores.cancelado : PivotColores.textoSecundario;
     final pedirRespuesta = !apagado && ev.miEstado == null && !ev.yaEmpezo;
+    final asisten = ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
     return Material(
-      color: apagado ? PivotColores.canceladoFondo : PivotColores.superficieTarjeta,
+      color: apagado ? p.apagadoFondo : p.tarjeta,
       borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
       child: InkWell(
         borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
@@ -314,41 +504,47 @@ class _TarjetaEvento extends StatelessWidget {
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(ev.rangoHorario,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: apagado ? PivotColores.cancelado : PivotColores.marcaOscura)),
+                  Text(ev.rangoHorario, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: apagado ? p.apagado : p.marcaTexto)),
                   const SizedBox(height: 3),
                   Text(ev.tipo,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: apagado ? PivotColores.cancelado : PivotColores.texto,
+                        color: apagado ? p.apagado : p.texto,
                         decoration: apagado ? TextDecoration.lineThrough : null,
                       )),
                   const SizedBox(height: 3),
-                  Text(
-                    apagado || ev.cantidadAsisten == 0
-                        ? ev.lugar
-                        : '${ev.lugar} · ${ev.cantidadAsisten} ${ev.cantidadAsisten == 1 ? 'asistirá' : 'asistirán'}',
-                    style: TextStyle(fontSize: 13, color: colorSecundario),
-                  ),
+                  Text(ev.lugar, style: TextStyle(fontSize: 13, color: apagado ? p.apagado : p.textoSecundario)),
                 ]),
               ),
               if (apagado)
-                Etiqueta(texto: textoEstadoEvento(ev), fondo: PivotColores.canceladoEtiqueta, color: PivotColores.texto)
+                Etiqueta(texto: textoEstadoEvento(ev), apagada: true)
               else if (ev.miEstado != null)
                 Etiqueta(texto: textoMiEstado(ev.miEstado!), icono: iconoMiEstado(ev.miEstado!)),
             ]),
+            if (!apagado && asisten.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Row(children: [
+                PilaAvatares(personas: asisten),
+                Text('${asisten.length} ${asisten.length == 1 ? 'asistirá' : 'asistirán'}',
+                    style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+              ]),
+            ],
             AnimatedSize(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOut,
               child: pedirRespuesta
                   ? Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Row(children: [
-                        Expanded(child: FilledButton(onPressed: () => _marcar(context, EstadoRsvp.asistire), child: const Text('Asistiré'))),
-                        const SizedBox(width: 8),
-                        Expanded(child: OutlinedButton(onPressed: () => _marcar(context, EstadoRsvp.noAsistire), child: const Text('No asistiré'))),
-                      ]),
+                      child: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(40),
+                          backgroundColor: p.suave,
+                          foregroundColor: p.sobreSuave,
+                        ),
+                        onPressed: alAbrir,
+                        child: const Text('¿Vas a ir? Responde'),
+                      ),
                     )
                   : const SizedBox(width: double.infinity),
             ),
@@ -356,15 +552,6 @@ class _TarjetaEvento extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _marcar(BuildContext context, EstadoRsvp estado) async {
-    final mensajero = ScaffoldMessenger.of(context);
-    try {
-      await repo.marcar(evento, estado);
-    } catch (e) {
-      mensajero.showSnackBar(SnackBar(content: Text(e.toString().isEmpty ? 'No se pudo guardar tu asistencia.' : e.toString())));
-    }
   }
 }
 
@@ -374,26 +561,27 @@ class _TarjetaCumple extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.pivot;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: PivotColores.blanco,
-        border: Border.all(color: PivotColores.lineaTimeline),
+        color: p.fondo,
+        border: Border.all(color: p.tarjetaBorde),
         borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
       ),
       child: Row(children: [
         Container(
           width: 44,
           height: 44,
-          decoration: const BoxDecoration(color: PivotColores.contenedorSuave, shape: BoxShape.circle),
-          child: const Icon(Icons.cake_outlined, color: PivotColores.marcaOscura),
+          decoration: BoxDecoration(color: p.suave, shape: BoxShape.circle),
+          child: Icon(Icons.cake_outlined, color: p.marcaTexto),
         ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Cumpleaños de ${cumple.nombre}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            Text('Cumpleaños de ${cumple.nombre}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.texto)),
             const SizedBox(height: 2),
-            Text(textoCumple(cumple, Fechas.hoy()), style: const TextStyle(fontSize: 13, color: PivotColores.textoSecundario)),
+            Text(textoCumple(cumple, Fechas.hoy()), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
           ]),
         ),
       ]),

@@ -34,7 +34,9 @@ class PivotApp extends StatelessWidget {
       title: 'Pivot',
       navigatorKey: _navegador,
       debugShowCheckedModeBanner: false,
-      theme: construirTema(),
+      theme: construirTema(Brightness.light),
+      darkTheme: construirTema(Brightness.dark),
+      themeMode: ThemeMode.system,
       home: _Raiz(sesion: sesion),
     );
   }

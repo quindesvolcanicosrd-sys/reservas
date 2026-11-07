@@ -55,19 +55,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(color: PivotColores.marca, borderRadius: BorderRadius.circular(PivotRadios.grande)),
-                      alignment: Alignment.center,
-                      child: Text('P', style: t.headlineLarge?.copyWith(color: PivotColores.blanco, fontWeight: FontWeight.w800)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(PivotRadios.grande),
+                      child: Image.asset('assets/logo.png', width: 88, height: 88),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text('Bienvenidx a Pivot', textAlign: TextAlign.center, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   Text('Entrena, confirma tu asistencia y sigue al equipo.',
-                      textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: PivotColores.textoSecundario)),
+                      textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: context.pivot.textoSecundario)),
                   const SizedBox(height: 32),
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
@@ -79,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 16),
-                            child: Text(_error!, textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: PivotColores.marcaOscura)),
+                            child: Text(_error!, textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: context.pivot.marcaTexto)),
                           ),
                   ),
                 ],
@@ -100,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
           onPressed: _ocupado ? null : () => _ejecutar(widget.sesion.conGoogle),
           child: _ocupado
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: PivotColores.blanco))
+              ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: context.pivot.sobreMarca))
               : const Text('Entrar con Google'),
         ),
         const SizedBox(height: 12),
@@ -135,7 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
           onPressed: _ocupado ? null : _entrarConPin,
           child: _ocupado
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: PivotColores.blanco))
+              ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: context.pivot.sobreMarca))
               : const Text('Entrar'),
         ),
         TextButton(

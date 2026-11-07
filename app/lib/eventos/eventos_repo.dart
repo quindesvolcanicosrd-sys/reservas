@@ -5,9 +5,18 @@ import '../core/fechas.dart';
 import '../sesion/sesion.dart';
 import 'modelos.dart';
 
-/// Datos de la sección Eventos: carga eventos + cumpleaños de un rango y
-/// guarda la asistencia propia (mismo flujo que `_evMarcarAsistencia()` de
-/// la web: marcarAsistenciaUsuario y, si salió bien, notificarCambioAsistencia).
+/// Modo de edición de un evento recurrente (mismos 3 de la web,
+/// `_evAdminEditarEvento()`): solo este, un período o desde este en adelante.
+enum AlcanceEdicion { individual, periodo, desdeAqui }
+
+/// Persona del equipo sin respuesta para un evento (solo admins).
+class SinRespuesta {
+  const SinRespuesta(this.persona);
+  final Persona persona;
+}
+
+/// Datos de la sección Eventos. Carga por rango (inicio: 30 días atrás y 120
+/// adelante) y amplía el rango cuando el calendario pide otro mes.
 class EventosRepo extends ChangeNotifier {
   EventosRepo(this.sesion);
 
@@ -19,23 +28,44 @@ class EventosRepo extends ChangeNotifier {
   bool cargando = false;
   String? error;
   DateTime? _cargadoEn;
+  DateTime? _desde;
+  DateTime? _hasta;
+  List<Lugar>? _lugares;
 
   static const diasAtras = 30;
   static const diasAdelante = 120;
 
+  DateTime? get desdeCargado => _desde;
+  DateTime? get hastaCargado => _hasta;
+
   Future<void> cargar({bool forzar = false}) async {
     if (cargando) return;
     if (!forzar && _cargadoEn != null && DateTime.now().difference(_cargadoEn!) < const Duration(minutes: 2)) return;
+    final hoy = Fechas.hoy();
+    final desde = _desde ?? hoy.subtract(const Duration(days: diasAtras));
+    final hasta = _hasta ?? hoy.add(const Duration(days: diasAdelante));
+    await _traer(desde, hasta, reemplazar: true);
+  }
+
+  /// Garantiza que el mes de [dia] esté cargado (navegación por calendario).
+  Future<void> asegurarMes(DateTime dia) async {
+    final inicio = DateTime(dia.year, dia.month, 1);
+    final fin = DateTime(dia.year, dia.month + 1, 0);
+    if (_desde != null && _hasta != null && !inicio.isBefore(_desde!) && !fin.isAfter(_hasta!)) return;
+    final desde = _desde == null || inicio.isBefore(_desde!) ? inicio : _desde!;
+    final hasta = _hasta == null || fin.isAfter(_hasta!) ? fin : _hasta!;
+    await _traer(desde, hasta, reemplazar: true);
+  }
+
+  Future<void> _traer(DateTime desde, DateTime hasta, {required bool reemplazar}) async {
     cargando = true;
     error = null;
     notifyListeners();
-    final hoy = Fechas.hoy();
-    final desde = Fechas.iso(hoy.subtract(const Duration(days: diasAtras)));
-    final hasta = Fechas.iso(hoy.add(const Duration(days: diasAdelante)));
     try {
+      final d = Fechas.iso(desde), h = Fechas.iso(hasta);
       final resultados = await Future.wait([
-        _api.get('getEventosRango', {'desde': desde, 'hasta': hasta}),
-        _api.get('getCumpleañosRango', {'desde': desde, 'hasta': hasta}).catchError((_) => <String, dynamic>{}),
+        _api.get('getEventosRango', {'desde': d, 'hasta': h}),
+        _api.get('getCumpleañosRango', {'desde': d, 'hasta': h}).catchError((_) => <String, dynamic>{}),
       ]);
       final yo = sesion.nombre ?? '';
       eventos = (resultados[0]['eventos'] as List? ?? const [])
@@ -45,9 +75,9 @@ class EventosRepo extends ChangeNotifier {
           final c = a.fecha.compareTo(b.fecha);
           return c != 0 ? c : a.horaInicio.compareTo(b.horaInicio);
         });
-      cumples = (resultados[1]['cumpleanos'] as List? ?? const [])
-          .map((c) => Cumple.desdeJson(c as Map<String, dynamic>))
-          .toList();
+      cumples = (resultados[1]['cumpleanos'] as List? ?? const []).map((c) => Cumple.desdeJson(c as Map<String, dynamic>)).toList();
+      _desde = desde;
+      _hasta = hasta;
       _cargadoEn = DateTime.now();
     } catch (e) {
       error = e is ApiException ? e.message : 'No se pudieron cargar los eventos. Revisa tu conexión.';
@@ -72,13 +102,8 @@ class EventosRepo extends ChangeNotifier {
     _reemplazarMiRsvp(ev, estado);
     notifyListeners();
     try {
-      final res = await _api.post('marcarAsistenciaUsuario', {
-        'nombre': sesion.nombre,
-        'idEvento': ev.id,
-        'estado': estado.valor,
-      });
+      final res = await _api.post('marcarAsistenciaUsuario', {'nombre': sesion.nombre, 'idEvento': ev.id, 'estado': estado.valor});
       if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo guardar tu asistencia.').toString());
-      // Aviso a admins/equipo (fire-and-forget, igual que la web).
       _api.post('notificarCambioAsistencia', {
         'idEvento': ev.id,
         'estadoNuevo': estado.valor,
@@ -92,21 +117,142 @@ class EventosRepo extends ChangeNotifier {
     }
   }
 
-  /// Cancela un evento (solo admins): mismo par de acciones que la web
-  /// (`_evCancelarEvento()`): adminCancelarEvento y el aviso al equipo.
-  Future<void> cancelar(Evento ev) async {
-    final adminToken = sesion.adminToken;
-    if (adminToken == null) throw ApiException('Solo un admin puede cancelar el evento.');
-    final res = await _api.get('adminCancelarEvento', {'adminToken': adminToken, 'idEvento': ev.id});
-    if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo cancelar el evento.').toString());
-    _api.get('pushEventoCancelado', {
-      'adminToken': adminToken,
-      'tipo': ev.tipo,
-      'fecha': Fechas.iso(ev.fecha),
-      'hora': ev.horaInicio,
-      'lugar': ev.lugar,
+  // ─── Solo admins ────────────────────────────────────────────────────────
+
+  String get _adminToken {
+    final t = sesion.adminToken;
+    if (t == null) throw ApiException('Esta acción es solo para admins.');
+    return t;
+  }
+
+  /// Miembros activos sin respuesta (mismo filtro que la web: ni 'Ausente'
+  /// ni 30+ días sin una asistencia real).
+  Future<List<Persona>> sinRespuesta(Evento ev) async {
+    final res = await _api.get('adminBuscarPersonasParaEvento', {'adminToken': _adminToken, 'idEvento': ev.id});
+    final respondieron = ev.rsvps.map((r) => r.persona.username.trim().toUpperCase()).toSet();
+    final hoy = DateTime.now();
+    final out = <Persona>[];
+    for (final p in (res['personas'] as List? ?? const [])) {
+      final m = p as Map<String, dynamic>;
+      final nombre = (m['nombre'] ?? '').toString();
+      if (respondieron.contains(nombre.trim().toUpperCase())) continue;
+      if (m['estadoMiembro'] == 'Ausente') continue;
+      final ultima = DateTime.tryParse((m['ultimaAsistencia'] ?? '').toString());
+      if (ultima == null || hoy.difference(ultima).inDays >= 30) continue;
+      out.add(Persona(username: nombre, nombreDerby: (m['nombreDerby'] ?? '').toString(), fotoPerfil: (m['fotoPerfil'] ?? '').toString()));
+    }
+    out.sort((a, b) => a.nombreMostrar.toLowerCase().compareTo(b.nombreMostrar.toLowerCase()));
+    return out;
+  }
+
+  Future<List<Lugar>> lugares() async {
+    if (_lugares != null) return _lugares!;
+    final filas = await _api.restGet('venues?select=lugar,google_maps,tipo_icono&order=lugar.asc');
+    final vistos = <String>{};
+    _lugares = [
+      for (final f in filas)
+        if (vistos.add(((f as Map)['lugar'] ?? '').toString()) && (f['lugar'] ?? '').toString().isNotEmpty)
+          Lugar(nombre: f['lugar'].toString(), mapsUrl: (f['google_maps'] ?? '').toString(), tipo: (f['tipo_icono'] ?? '').toString()),
+    ];
+    return _lugares!;
+  }
+
+  /// Edita lugar/horario/descripción. Mismo mecanismo que la web
+  /// (`_evAdminEditarEvento()`): PATCH directo a `asistencias` (y a `venues`
+  /// si es "desde este en adelante"), verificación del guardado y aviso al equipo.
+  Future<void> editar(
+    Evento ev, {
+    String? lugar,
+    String? horaInicio,
+    String? horaFin,
+    String? descripcion,
+    required AlcanceEdicion alcance,
+    DateTime? hasta,
+  }) async {
+    final token = _adminToken;
+    final upd = <String, Object?>{};
+    if (lugar != null) upd['donde'] = lugar;
+    if (horaInicio != null) upd['inicia'] = horaInicio;
+    if (horaFin != null) upd['termina'] = horaFin;
+    if (descripcion != null) upd['info_adicional'] = descripcion;
+    if (upd.isEmpty) return;
+    Lugar? lugarNuevo;
+    if (lugar != null) {
+      for (final l in await lugares()) {
+        if (l.nombre == lugar) lugarNuevo = l;
+      }
+      if (lugarNuevo != null) {
+        upd['google_maps'] = lugarNuevo.mapsUrl.isEmpty ? null : lugarNuevo.mapsUrl;
+        if (lugarNuevo.tipo.isNotEmpty) upd['tipo_evento'] = lugarNuevo.tipo;
+      }
+    }
+    final id = Uri.encodeComponent(ev.id);
+    if (alcance == AlcanceEdicion.individual) {
+      await _api.restPatch('asistencias?id_evento=eq.$id', {...upd, 'es_excepcion': true});
+    } else {
+      final filas = await _api.restGet('asistencias?id_evento=eq.$id&select=id_regla&limit=1');
+      final idRegla = filas.isEmpty ? null : (filas.first as Map)['id_regla'];
+      if (idRegla == null) throw ApiException('Este evento no es recurrente: edítalo como "Solo este evento".');
+      final regla = Uri.encodeComponent(idRegla.toString());
+      final desde = Fechas.iso(ev.fecha);
+      final filtro = alcance == AlcanceEdicion.periodo ? '&fecha=gte.$desde&fecha=lte.${Fechas.iso(hasta!)}' : '&fecha=gte.$desde';
+      await _api.restPatch('asistencias?id_regla=eq.$regla$filtro', {...upd, 'es_excepcion': true});
+      if (alcance == AlcanceEdicion.desdeAqui) {
+        final patchLugar = <String, Object?>{};
+        if (horaInicio != null) patchLugar['inicia'] = horaInicio;
+        if (lugar != null) patchLugar['lugar'] = lugar;
+        if (lugarNuevo != null) {
+          patchLugar['google_maps'] = lugarNuevo.mapsUrl.isEmpty ? null : lugarNuevo.mapsUrl;
+          if (lugarNuevo.tipo.isNotEmpty) patchLugar['tipo_icono'] = lugarNuevo.tipo;
+        }
+        if (patchLugar.isNotEmpty) await _api.restPatch('venues?id=eq.$regla', patchLugar);
+      }
+    }
+    // Verificación: relee el evento y confirma que quedó guardado.
+    final campos = upd.keys.where((k) => k != 'google_maps' && k != 'tipo_evento').toList();
+    final fila = await _api.restGet('asistencias?id_evento=eq.$id&select=${campos.join(',')}&limit=1');
+    if (fila.isEmpty) throw ApiException('No se encontró el evento tras guardar.');
+    final guardado = fila.first as Map;
+    for (final c in campos) {
+      final esperado = upd[c]?.toString() ?? '';
+      final real = guardado[c]?.toString() ?? '';
+      final ok = (c == 'inicia' || c == 'termina')
+          ? real.padRight(5).substring(0, 5) == esperado.padRight(5).substring(0, 5)
+          : real == esperado;
+      if (!ok) throw ApiException('Los cambios no se guardaron: el evento sigue con los valores anteriores.');
+    }
+    _api.get('pushEventoEditado', {
+      'adminToken': token,
+      'idEvento': ev.id,
+      'antesLugar': ev.lugar,
+      'antesHoraInicio': ev.horaInicio,
+      'antesHoraFin': ev.horaFin,
     }).catchError((_) => <String, dynamic>{});
     await cargar(forzar: true);
+  }
+
+  /// Cancela un evento: mismas acciones que la web (`_evCancelarEvento()`).
+  Future<void> cancelar(Evento ev) async {
+    final token = _adminToken;
+    final res = await _api.get('adminCancelarEvento', {'adminToken': token, 'idEvento': ev.id});
+    if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo cancelar el evento.').toString());
+    if (!ev.finalizado) {
+      _api.get('pushEventoCancelado', {
+        'adminToken': token,
+        'tipo': ev.tipo,
+        'fecha': Fechas.iso(ev.fecha),
+        'hora': ev.horaInicio,
+        'lugar': ev.lugar,
+      }).catchError((_) => <String, dynamic>{});
+    }
+    await cargar(forzar: true);
+  }
+
+  Future<void> eliminar(Evento ev) async {
+    final res = await _api.get('adminBorrarEvento', {'adminToken': _adminToken, 'idEvento': ev.id});
+    if (res['exito'] == false) throw ApiException((res['error'] ?? 'Este evento no pudo ser eliminado.').toString());
+    eventos.removeWhere((e) => e.id == ev.id);
+    notifyListeners();
   }
 
   void _reemplazarMiRsvp(Evento ev, EstadoRsvp? estado) {

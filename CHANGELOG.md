@@ -454,6 +454,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## General
 
+2026-11-06 — App Android: Eventos pulido (calendario desplegable del mes, buscador con filtros, botón Hoy, avatares en las tarjetas, detalle compacto con video instructivo y contadores que filtran, Sin respuesta para admins, FAB de admin con editar/cancelar/eliminar), modo oscuro automático y logo de Pivot como ícono.
+
 2026-11-06 — Feature: base de la app Android nativa en `app/` (Flutter): login con Google o PIN, Eventos (timeline, detalle, asistencia, cancelar para admins) y notificaciones nativas; compilación firmada en GitHub Actions.
 
 2026-09-03 — Rebrand del producto de "Mirlxs — Reservas"/"Mirlxs RD" a **Pivot**: `<title>`, `apple-mobile-web-app-title` y meta tags nuevas (`description`/`og:title`/`og:description`/`og:site_name`/`twitter:title`/`twitter:description`/`application-name`) en index.html, `name`/`short_name`/`description` de `manifest.json`, y el texto del banner de instalación descartable ("Instala la app de Pivot"). Sin tocar `inscripcion/`/`registro-express/` (siguen con "Mirlxs Roller Derby Quito" en su `<title>` — nombre real del club, no del producto software, distinto de este rebrand) ni nada relacionado a la categoría/tier de integrantes "Mirlxs" (variables, lógica, clases CSS, storage, nombres de función).

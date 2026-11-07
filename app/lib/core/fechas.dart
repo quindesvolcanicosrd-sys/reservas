@@ -27,6 +27,7 @@ class Fechas {
   static String diaCorto(DateTime d) => _diasCortos[d.weekday - 1];
   static String dia(DateTime d) => _dias[d.weekday - 1];
   static String mes(DateTime d) => _meses[d.month - 1];
+  static String mesNombre(DateTime d) => _mayuscula(_meses[d.month - 1]);
   static String mesAnio(DateTime d) => '${_mayuscula(_meses[d.month - 1])} ${d.year}';
 
   /// "Mañana · sábado 7 de noviembre", "Hoy · viernes 6 de noviembre",

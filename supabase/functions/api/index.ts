@@ -2480,7 +2480,7 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   // respuesta" a quien esté 'Ausente' (el único valor de este enum que
   // representa inactividad detectada -- ver el mismo criterio en
   // `adminMarcarAsistencia()`, arriba en este archivo).
-  const { data: equipo } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null).order('username');
+  const { data: equipo } = await supabase.from('equipo').select('username, estado_miembro, nombre_derby, foto_perfil').is('eliminado_en', null).order('username');
   const asistLog = await _ultimaAsistenciaPorPersonaTodas([idEvento]);
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
@@ -2490,7 +2490,7 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   // `adminGetRosterEquipo()`/`getEquipo()` más abajo (30+ días sin marca
   // real = inactivo; cuenta `'Admin'` Y `'Externa'`, nunca RSVP).
   const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
-  const personas = (equipo ?? []).map((r: any) => { const u = _ultimaAsistenciaDe(ultimaPorUsuario, r.username); return { nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx', ultimaAsistencia: u ? u.slice(0, 10) : null }; });
+  const personas = (equipo ?? []).map((r: any) => { const u = _ultimaAsistenciaDe(ultimaPorUsuario, r.username); return { nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '', estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx', ultimaAsistencia: u ? u.slice(0, 10) : null }; });
   return { personas };
 }
 
