@@ -949,11 +949,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   Future<void> _tourSiCorresponde() async {
     if (!mounted || _buscando || _calMontado || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
         // El texto del "+" nombra lo que tiene el menú de esta persona.
-    final nombres = _acciones.map((a) => a.texto.toLowerCase()).toList();
+        // Frase natural según el menú: "Toca aquí para reservar tus clases o crear eventos."
+    const verbos = {
+      'Reserva por clase': 'reservar tus clases',
+      'Reserva por mes': 'pagar tu mensualidad',
+      'Nuevo evento': 'crear eventos',
+      'Asistencia anticipada': 'marcar tu asistencia a varios entrenamientos de una vez',
+    };
+    final nombres = [for (final a in _acciones) verbos[a.texto] ?? a.texto.toLowerCase()];
     final lista = nombres.length <= 1 ? nombres.join() : '${nombres.sublist(0, nombres.length - 1).join(', ')} o ${nombres.last}';
     final reserva = ReservasRepo(repo.sesion).opciones.isNotEmpty;
     final tituloMas = reserva ? 'Reserva tu lugar' : (_esAdmin ? 'Crea eventos' : 'Asistencia anticipada');
-    final textoMas = 'Toca aquí para: $lista.';
+    final textoMas = 'Toca aquí para $lista.';
     await Tour.mostrarSiCorresponde(
       context,
       preferencia: 'tour.eventos.visto',
