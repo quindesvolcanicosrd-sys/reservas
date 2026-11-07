@@ -443,124 +443,120 @@ class _AdministracionState extends State<_Administracion> {
       color: pal.tarjeta,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
       clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        leading: Icon(Icons.admin_panel_settings_outlined, color: pal.marcaTexto),
-        title: const Text('Administración', style: TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: const Text('Solo admins'),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: _ocupado ? 0.5 : 1,
-            child: IgnorePointer(
-              ignoring: _ocupado,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Categoría', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
-                  const SizedBox(height: 6),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'auto', label: Text('Automática')),
-                      ButtonSegment(value: 'quinde', label: Text('Quindes')),
-                      ButtonSegment(value: 'mirlxs', label: Text('Mirlxs')),
-                    ],
-                    selected: {p.tierModo},
-                    onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría actualizada'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: const ['Activx', 'Ausente', 'Técnico', 'Lesionadx'].contains(p.estado) ? p.estado : null,
-                    decoration: const InputDecoration(labelText: 'Estado'),
-                    items: const [
-                      DropdownMenuItem(value: 'Activx', child: Text('Activx')),
-                      DropdownMenuItem(value: 'Ausente', child: Text('Ausente')),
-                      DropdownMenuItem(value: 'Técnico', child: Text('Técnico')),
-                      DropdownMenuItem(value: 'Lesionadx', child: Text('Lesionadx')),
-                    ],
-                    onChanged: (v) => v == null ? null : _hacer(() => repo.cambiarEstado(p, v), 'Estado actualizado'),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Paga cuota'),
-                    value: !p.exentaCuota,
-                    onChanged: (v) => _hacer(() => repo.cambiarPagaCuota(p, v), v ? 'Ahora paga cuota' : 'Ya no paga cuota'),
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Acceso admin'),
-                    value: p.esAdminMiembro,
-                    onChanged: p.email.isEmpty
-                        ? null
-                        : (v) async {
-                            if (!await _confirmar(
-                              v ? '¿Dar acceso admin?' : '¿Quitar acceso admin?',
-                              v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
-                              v ? 'Dar acceso' : 'Quitar acceso',
-                            )) {
-                              return;
-                            }
-                            _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso admin otorgado' : 'Acceso admin quitado');
-                          },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.link_rounded),
-                    title: const Text('Copiar link de activación de cuenta'),
-                    onTap: () => _hacer(() async {
-                      final link = await repo.linkActivacion(p);
-                      await Clipboard.setData(ClipboardData(text: link));
-                    }, 'Link copiado'),
-                  ),
-                  // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
-                  if (p.deViaje)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
-                      title: Text(_textoViaje(p)),
-                      trailing: TextButton(
-                        onPressed: () async {
-                          if (!await _confirmar('¿Cancelar el viaje?', '${p.nombreMostrar} vuelve a quedar Activx.', 'Cancelar viaje')) return;
-                          await _hacer(() => repo.cancelarViaje(p), 'Viaje cancelado');
+      // Siempre abierta y sin título (Victor, 2026-11-07): solo la ven admins.
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _ocupado ? 0.5 : 1,
+          child: IgnorePointer(
+            ignoring: _ocupado,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Categoría', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                const SizedBox(height: 6),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'auto', label: Text('Auto')),
+                    ButtonSegment(value: 'quinde', label: Text('Quindes')),
+                    ButtonSegment(value: 'mirlxs', label: Text('Mirlxs')),
+                  ],
+                  selected: {p.tierModo},
+                  onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría actualizada'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: const ['Activx', 'Ausente', 'Técnico', 'Lesionadx'].contains(p.estado) ? p.estado : null,
+                  decoration: const InputDecoration(labelText: 'Estado'),
+                  items: const [
+                    DropdownMenuItem(value: 'Activx', child: Text('Activx')),
+                    DropdownMenuItem(value: 'Ausente', child: Text('Ausente')),
+                    DropdownMenuItem(value: 'Técnico', child: Text('Técnico')),
+                    DropdownMenuItem(value: 'Lesionadx', child: Text('Lesionadx')),
+                  ],
+                  onChanged: (v) => v == null ? null : _hacer(() => repo.cambiarEstado(p, v), 'Estado actualizado'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Paga cuota'),
+                  value: !p.exentaCuota,
+                  onChanged: (v) => _hacer(() => repo.cambiarPagaCuota(p, v), v ? 'Ahora paga cuota' : 'Ya no paga cuota'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Acceso admin'),
+                  value: p.esAdminMiembro,
+                  onChanged: p.email.isEmpty
+                      ? null
+                      : (v) async {
+                          if (!await _confirmar(
+                            v ? '¿Dar acceso admin?' : '¿Quitar acceso admin?',
+                            v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
+                            v ? 'Dar acceso' : 'Quitar acceso',
+                          )) {
+                            return;
+                          }
+                          _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso admin otorgado' : 'Acceso admin quitado');
                         },
-                        child: const Text('Cancelar'),
-                      ),
-                    )
-                  else
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
-                      title: const Text('Marcar viaje'),
-                      subtitle: const Text('Mientras esté de viaje no cuenta como inactividad.'),
-                      onTap: _marcarViaje,
-                    ),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.link_rounded),
+                  title: const Text('Copiar link de activación de cuenta'),
+                  onTap: () => _hacer(() async {
+                    final link = await repo.linkActivacion(p);
+                    await Clipboard.setData(ClipboardData(text: link));
+                  }, 'Link copiado'),
+                ),
+                // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
+                if (p.deViaje)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.add_task_rounded, color: pal.marcaTexto),
-                    title: const Text('Registrar asistencia externa'),
-                    subtitle: const Text('Un entrenamiento fuera de la liga. Suma puntos de asistencia.'),
-                    onTap: _asistenciaExterna,
-                  ),
-                  // Archivar solo con inactividad (Victor, 2026-11-07); el
-                  // servidor además lo impide con reservas o cuotas activas.
-                  if (p.inactivx)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.archive_outlined, color: pal.marcaTexto),
-                      title: Text('Archivar a ${p.nombreMostrar}', style: TextStyle(color: pal.marcaTexto)),
-                      subtitle: const Text('Deja de aparecer en Equipo y no puede iniciar sesión. Su historial se conserva.'),
-                      onTap: () async {
-                        final nav = Navigator.of(context);
-                        if (!await _confirmar('¿Archivar?', 'No se puede archivar si tiene reservas activas o cuotas pendientes.', 'Archivar')) return;
-                        await _hacer(() => repo.archivar(p), 'Archivadx');
-                        if (repo.persona(p.username) == null) nav.pop();
+                    leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
+                    title: Text(_textoViaje(p)),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        if (!await _confirmar('¿Cancelar el viaje?', '${p.nombreMostrar} vuelve a quedar Activx.', 'Cancelar viaje')) return;
+                        await _hacer(() => repo.cancelarViaje(p), 'Viaje cancelado');
                       },
+                      child: const Text('Cancelar'),
                     ),
-                ],
-              ),
+                  )
+                else
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
+                    title: const Text('Marcar viaje'),
+                    subtitle: const Text('Mientras esté de viaje no cuenta como inactividad.'),
+                    onTap: _marcarViaje,
+                  ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.add_task_rounded, color: pal.marcaTexto),
+                  title: const Text('Registrar asistencia externa'),
+                  subtitle: const Text('Un entrenamiento fuera de la liga. Suma puntos de asistencia.'),
+                  onTap: _asistenciaExterna,
+                ),
+                // Archivar solo con inactividad (Victor, 2026-11-07); el
+                // servidor además lo impide con reservas o cuotas activas.
+                if (p.inactivx)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.archive_outlined, color: pal.marcaTexto),
+                    title: Text('Archivar a ${p.nombreMostrar}', style: TextStyle(color: pal.marcaTexto)),
+                    subtitle: const Text('Deja de aparecer en Equipo y no puede iniciar sesión. Su historial se conserva.'),
+                    onTap: () async {
+                      final nav = Navigator.of(context);
+                      if (!await _confirmar('¿Archivar?', 'No se puede archivar si tiene reservas activas o cuotas pendientes.', 'Archivar')) return;
+                      await _hacer(() => repo.archivar(p), 'Archivadx');
+                      if (repo.persona(p.username) == null) nav.pop();
+                    },
+                  ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
