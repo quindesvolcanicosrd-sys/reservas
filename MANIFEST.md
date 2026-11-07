@@ -13,6 +13,11 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Sin pronombres femeninos ni en la app ni en los chats: todo neutro, de preferencia sin pronombres (por ejemplo "admins", no "las admins").
 - Español neutro (sin voseo); se corrigieron textos con "debés", "podés", "tenés", "querés", "dejalo", "Escribilo", "elegí".
 
+## Próxima etapa: Equipo, Perfil, Ajustes, Tareas y Mi Liga (2026-11-07)
+- Plan y propuestas en el Claude Doc "Pivot app — Equipo, Tareas, Ajustes y Mi Liga" (https://claude.ai/artifact/By31d6hmu8L488LiFv3vtE); se construye cuando Victor responda las preguntas del final. Orden propuesto: Equipo (con botón de emergencia solo para admins y buscador inteligente), Mi perfil, Ajustes, Tareas, Mi Liga y al final Finanzas.
+- Pedidos de Victor ya fijados: archivar solo en Inactivxs; el corazón de favoritos solo en la ficha (no en la home de Equipo); tocar un avatar en el detalle de un evento abre la ficha de esa persona en Equipo; el botón de emergencia muestra primero el número del seguro o el de salud pública según el país.
+- Hallazgos: las tareas recurrentes (plantillas) no se pueden editar ni pausar; el buscador de la web no encuentra por mes porque `getEquipo` no trae fechas de nacimiento (la app usará los cumpleaños públicos del timeline); no hay acción del servidor para que admins lean la ficha de emergencia de otra persona (hay que crearla, con registro de accesos).
+
 ## Pendientes app Android (anotados 2026-11-07)
 - **Confirmación automática de DeUna (descartada por ahora, Victor 2026-11-07):** se deja el enlace actual. Si algún día se retoma, necesita DeUna Empresas (API de solicitudes de pago + webhook de pago exitoso). Requisitos: cuenta en Banco Pichincha, RUC activo, cédula del representante legal y formulario firmado. El enlace actual (`Pagos.deuna`) es personal, sin monto ni aviso. Con las credenciales: generar el cobro con monto desde el servidor, recibir el webhook en la Edge Function y pasar la reserva a 'Confirmada'; las transferencias siguen con revisión manual.
 - **Equipo (siguiente etapa):** en el detalle de un evento, tocar el avatar de una persona debe abrir su vista detallada en Equipo.
