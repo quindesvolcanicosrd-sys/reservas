@@ -625,7 +625,6 @@ var _EQ_TOUR_PASOS = [
   { selector: '#eq-search-header .app-nav-search', titulo: 'Busca rápido', texto: 'Busca a cualquier persona del equipo por nombre, correo o rol.' },
   { selector: '#eq-filtros-toggle-btn', titulo: 'Filtra', texto: 'Filtra por puntos según períodos y por rol en el equipo.' },
   { selector: '.eq-grupo-header', titulo: 'Colapsa secciones', texto: 'Colapsa las secciones que te interesan de las personas que te interesan.' },
-  { selector: '.eq-fav-btn', titulo: 'Favoritos', texto: 'Agrega miembros del equipo a favoritos para tenerlos siempre visibles.' },
   { selector: '.eq-miembro-fila', titulo: 'Detalle de cada persona', texto: 'Toca donde se encuentra alguien del equipo para consultar información adicional.' }
 ];
 function _eqTourIniciarSiCorresponde() {
@@ -814,7 +813,7 @@ function _eqStatsInlineHtml(p) {
 // (`adminEliminarUsuario()`) igual la bloquea aparte, por si este camino
 // cambiara.
 function _eqFilaHtml(p, mostrarEliminar) {
-  var fav = _eqEsFavorito(p.id);
+  // (favorito: ya no se muestra en la fila)
   var statsHtml = _eqStatsInlineHtml(p);
   var idJs = _eqEscId(p.id); // seguro dentro de un argumento de onclick de comillas simples
   var idAttr = _eqEsc(p.id); // seguro dentro de un atributo HTML de comillas dobles (data-eq-fav)
@@ -828,10 +827,9 @@ function _eqFilaHtml(p, mostrarEliminar) {
   // corazón -- nunca aparece en Favoritos, marcarse a una misma no haría nada.
   var esYo = _eqEsUsuarioActual(p);
   var tuHtml = esYo ? ' <span class="eq-tu-pill">Tú</span>' : '';
-  var favHtml = esYo ? '' :
-      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
-        '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
-      '</button>';
+  // Sin corazón en la fila (Victor, 2026-11-07): los favoritos se marcan solo
+  // en la ficha de la persona (`_eqNavHtml()`).
+  var favHtml = '';
   // Ícono de eliminar (admin, SOLO fila de "Inactivxs" -- ver comentario de
   // cabecera de esta función).
   var eliminarHtml = '';

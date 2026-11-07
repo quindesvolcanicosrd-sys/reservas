@@ -4195,7 +4195,22 @@ async function adminEliminarUsuario(params: Record<string, any>): Promise<Record
   const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
   const ultima = _ultimaAsistenciaDe(ultimaPorUsuario, nombre);
   const dias = ultima ? Math.floor((Date.now() - new Date(ultima).getTime()) / 86400000) : Infinity;
-  if (dias < 30) return { exito: false, error: 'Solo se pueden eliminar usuarios inactivos.' };
+    if (dias < 30) return { exito: false, error: 'Solo se pueden eliminar usuarios inactivos.' };
+
+  // Sin reservas activas ni cuotas pendientes (Victor, 2026-11-07): primero se resuelven.
+  const hoyIso = new Date().toISOString().substring(0, 10);
+  const { data: activas } = await supabase.from('reservas').select('tipo, estado, id_evento, validez_hasta')
+    .eq('nombre_usuario', nombre).in('estado', ['Pendiente', 'Confirmada', 'Reagendar']);
+  const idsClase = (activas ?? []).filter((r: any) => r.tipo === 'clase' && r.id_evento).map((r: any) => r.id_evento);
+  const { data: evFuturos } = idsClase.length
+    ? await supabase.from('asistencias').select('id_evento').in('id_evento', idsClase).gte('fecha', hoyIso)
+    : { data: [] as any[] };
+  const futuros = new Set((evFuturos ?? []).map((e: any) => e.id_evento));
+  const motivos: string[] = [];
+  if ((activas ?? []).some((r: any) => r.tipo === 'clase' && (futuros.has(r.id_evento) || r.estado === 'Reagendar'))) motivos.push('tiene reservas de clase activas');
+  if ((activas ?? []).some((r: any) => r.tipo === 'mensual' && r.estado === 'Pendiente')) motivos.push('tiene cuotas pendientes de revisión');
+  if ((activas ?? []).some((r: any) => r.tipo === 'mensual' && r.estado === 'Confirmada' && (!r.validez_hasta || r.validez_hasta >= hoyIso))) motivos.push('tiene una cuota mensual vigente');
+  if (motivos.length) return { exito: false, error: `No se puede archivar: ${motivos.join(' y ')}. Resuélvelo primero desde Mi Liga.`, motivos };
 
   const { error } = await supabase.from('equipo')
     .update({ eliminado_en: new Date().toISOString(), eliminado_por: 'admin' })
