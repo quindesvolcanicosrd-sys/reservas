@@ -2508,7 +2508,9 @@ function _evCardEventoHtml(e, sufijo) {
   // js/home.js -- NO existen 'Aprobada'/'Rechazada' en ningún lado del
   // proyecto, ese vocabulario no es el real).
   var miReserva = null;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento') {
+    // Cualquier persona con una clase reservada (no solo Mirlxs): una Mirlxs que
+  // sube a Quindes conserva sus clases y las tiene que poder cancelar (2026-11-07).
+  if (e.tipo === 'Entrenamiento') {
     miReserva = (_todasReservas || []).filter(function(r) { return r.fecha === e.id && r.estado !== 'Cancelada'; })[0] || null;
   }
   // Chip de estado -- mismo componente/labels/colores que ya usa

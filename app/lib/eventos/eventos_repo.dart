@@ -77,10 +77,10 @@ class EventosRepo extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reserva activa de esta clase (Mirlxs, entrenamientos; web:
-  /// `_evCardEventoHtml()`).
+    /// Reserva activa de esta clase (entrenamientos; web: `_evCardEventoHtml()`).
+  /// Para cualquier persona: una Mirlxs que sube a Quindes conserva sus clases.
   Map<String, dynamic>? reservaDe(Evento ev) {
-    if (_modo != 'mirlxs' || ev.tipo != 'Entrenamiento') return null;
+    if (ev.tipo != 'Entrenamiento') return null;
     for (final r in _cuota?.reservas ?? const <Map<String, dynamic>>[]) {
       if (r['fecha'] == ev.id && r['estado'] != 'Cancelada' && r['estado'] != 'Crédito usado') return r;
     }
