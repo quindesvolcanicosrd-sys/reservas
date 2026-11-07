@@ -64,8 +64,28 @@ class EventosRepo extends ChangeNotifier {
     Cuota? _cuota;
   bool _cargandoCuota = false;
 
-  @visibleForTesting
+    @visibleForTesting
   set cuotaParaPruebas(Cuota c) => _cuota = c;
+
+  /// Reservas, cuotas y créditos de la persona (null mientras carga).
+  Cuota? get cuota => _cuota;
+
+  /// Vuelve a pedir reservas y cuota (después de reservar, cancelar o reagendar).
+  Future<void> recargarCuota() async {
+    _cuota = null;
+    await _cargarCuota();
+    notifyListeners();
+  }
+
+  /// Reserva activa de esta clase (Mirlxs, entrenamientos; web:
+  /// `_evCardEventoHtml()`).
+  Map<String, dynamic>? reservaDe(Evento ev) {
+    if (_modo != 'mirlxs' || ev.tipo != 'Entrenamiento') return null;
+    for (final r in _cuota?.reservas ?? const <Map<String, dynamic>>[]) {
+      if (r['fecha'] == ev.id && r['estado'] != 'Cancelada' && r['estado'] != 'Crédito usado') return r;
+    }
+    return null;
+  }
 
   Future<void> _cargarCuota() async {
     if (_cuota != null || _cargandoCuota || !sesion.activa) return;

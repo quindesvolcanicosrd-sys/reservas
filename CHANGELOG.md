@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Cancelar o reagendar reservas (app: tarjeta, detalle y "Mis reservas"); "Reservar esta clase" / "Reservar <mes>" en el detalle; aviso a las admins de pago pendiente de revisión. Fix servidor: cancelar o cambiar una cuota mensual ahora funciona (antes no encontraba la reserva) y ambas acciones validan la sesión.
+
+
+
 2026-11-07 — App Android (Fase 3): reserva por clase o por mes desde el "+", con clases a favor, cupón, pago con DeUna o transferencia y comprobante por WhatsApp. Servidor: la clase a favor y el cupón se aplican solo cuando se piden.
 
 

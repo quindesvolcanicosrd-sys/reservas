@@ -4,6 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../reservas/gestionar_reserva.dart';
+import '../reservas/reserva_screen.dart';
+import '../reservas/reservas_repo.dart';
 import 'editar_evento_screen.dart';
 import 'eventos_repo.dart';
 import 'tomar_asistencia_screen.dart';
@@ -213,7 +216,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
                     ),
                   ),
                 ),
-              _tuAsistencia(context, ev),
+                            _tuAsistencia(context, ev),
+              _tuReserva(context, ev),
               _equipo(context, ev),
             ],
           ),
@@ -368,6 +372,90 @@ class _DetalleScreenState extends State<DetalleScreen> {
           Text(motivo ?? 'Puedes cambiarla hasta 10 minutos antes de que empiece.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
         ],
       ),
+    );
+  }
+
+    /// Reserva de esta clase: su estado y "Cancelar o reagendar"; sin reserva,
+  /// "Reservar esta clase" (Mirlxs) y "Reservar (mes)" si ese mes no está
+  /// pagado y no usa equipamiento del club (web: `_evDetalleAccionesHtml()`).
+  Widget _tuReserva(BuildContext context, Evento ev) {
+    final p = context.pivot;
+    final fila = repo.reservaDe(ev);
+    final reserva = fila == null ? null : ReservaActiva.desde(fila);
+    final Widget contenido;
+    if (reserva != null) {
+      contenido = Column(
+        key: const ValueKey('reserva'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Tu reserva', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
+              const Spacer(),
+              EstadoReserva(estado: reserva.estado),
+            ],
+          ),
+          if (reserva.estado != 'Confirmada' && reserva.estado != 'Reagendar') ...[
+            const SizedBox(height: 8),
+            Text('Queda pendiente hasta que el equipo revise tu pago.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+          ],
+          if (reserva.gestionable && !ev.yaEmpezo) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+              onPressed: () => gestionarReserva(context, repo, reserva),
+              icon: const Icon(Icons.edit_calendar_outlined),
+              label: const Text('Cancelar o reagendar'),
+            ),
+          ],
+        ],
+      );
+    } else {
+      final hoy = Fechas.hoy();
+      final futuro = ev.tipo == 'Entrenamiento' && !ev.cancelado && !ev.yaEmpezo && !ev.fecha.isBefore(hoy);
+      final opciones = _esAdmin || !futuro ? const <TipoReserva>[] : ReservasRepo(repo.sesion).opciones;
+      final cuota = repo.cuota;
+      final mesLibre = opciones.contains(TipoReserva.mes) && cuota != null && !cuota.mesPagado(ev.fecha.month, ev.fecha.year);
+      if (!opciones.contains(TipoReserva.clase) && !mesLibre) return const SizedBox.shrink(key: ValueKey('nada'));
+      contenido = Column(
+        key: const ValueKey('reservar'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (opciones.contains(TipoReserva.clase))
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ReservaScreen(repo: repo, tipo: TipoReserva.clase, claseInicial: ev.id)),
+              ),
+              icon: const Icon(Icons.confirmation_number_outlined),
+              label: const Text('Reservar esta clase'),
+            ),
+          if (opciones.contains(TipoReserva.clase) && mesLibre) const SizedBox(height: 10),
+          if (mesLibre)
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ReservaScreen(repo: repo, tipo: TipoReserva.mes, mesInicial: DateTime(ev.fecha.year, ev.fecha.month)),
+                ),
+              ),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text('Reservar ${Fechas.mes(ev.fecha)}'),
+            ),
+        ],
+      );
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 240),
+      child: contenido is SizedBox
+          ? contenido
+          : Container(
+              key: contenido.key,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
+              child: contenido,
+            ),
     );
   }
 

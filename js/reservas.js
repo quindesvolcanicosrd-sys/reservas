@@ -1225,7 +1225,13 @@ function confirmarReserva(btn) {
       }
     }
 
-    var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
+        var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
+    // Aviso a las admins: pago pendiente de revisión (2026-11-07). Sin
+    // contar como "secundario": si falla, la reserva igual quedó guardada.
+    if ((E.totalPago || 0) > 0) {
+      var _nPago = E.tipoPago === 'mensual' ? mesesExitosos.length : fechasExitosas.length;
+      api({ action: 'avisarPagoPendiente', nombre: E.nombre, monto: (E.totalPago || 0).toFixed(2), detalle: _nPago + (E.tipoPago === 'mensual' ? (_nPago === 1 ? ' mes' : ' meses') : (_nPago === 1 ? ' clase' : ' clases')) }, function() {}, function() {});
+    }
     api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('nota de pago'); secundarioTerminado(); });
     if (E.creditosUsados > 0) {
       // Solo se marca como consumido el crédito de una fecha que realmente

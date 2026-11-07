@@ -19,9 +19,13 @@ enum _Paso { elegir, pago }
 ///    queda registrada como pendiente, igual que en la web;
 /// después, pantalla de éxito con el botón para mandar el comprobante.
 class ReservaScreen extends StatefulWidget {
-  const ReservaScreen({super.key, required this.repo, required this.tipo, this.datosPrueba});
+  const ReservaScreen({super.key, required this.repo, required this.tipo, this.claseInicial, this.mesInicial, this.datosPrueba});
   final EventosRepo repo;
   final TipoReserva tipo;
+
+  /// Desde el detalle de un evento: esa clase o ese mes ya elegidos.
+  final String? claseInicial;
+  final DateTime? mesInicial;
 
   /// Solo pruebas: precios, cuota, cupón y clases sin pasar por el servidor.
   @visibleForTesting
@@ -72,8 +76,19 @@ class _ReservaScreenState extends State<ReservaScreen> {
         if (_esMes) {
           _meses = _r.meses(_cuota!);
           _mesesSel = _r.preseleccion(_meses!);
+          // Desde un evento: solo ese mes (web: `_evFabReservaParaEvento()`).
+          final mi = widget.mesInicial;
+          if (mi != null && _meses!.any((m) => m.mes == mi && !m.pagado)) _mesesSel = {mi};
         } else {
           _clases = res[3] as List<FechaClase>;
+          final ci = widget.claseInicial;
+          final c = _clases!.where((c) => c.id == ci).firstOrNull;
+          if (c != null && c.disponible) _clasesSel.add(c.id);
+          if (ci != null && c != null && !c.elegible) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(c.razon)));
+            });
+          }
         }
       });
     } catch (e) {

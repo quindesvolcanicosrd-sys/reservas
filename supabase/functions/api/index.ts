@@ -2766,10 +2766,47 @@ async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: st
   });
 }
 
+// Aviso a las admins: alguien registró un pago (DeUna o transferencia) que
+// queda pendiente de revisión (pedido 2026-11-07). Lo llaman la web y la app
+// una sola vez por pago, después de guardar las reservas.
+async function avisarPagoPendiente(params: Record<string, any>): Promise<Record<string, any>> {
+  const nombre = await _validarToken(params.token);
+  if (!nombre || nombre !== params.nombre) return { exito: false, error: 'Sesión inválida.' };
+  const monto = Number(params.monto) || 0;
+  if (monto <= 0) return { exito: true };
+  const detalle = String(params.detalle ?? '').trim();
+  await sendPush({
+    tipo: 'avisos_admin',
+    include_external_user_ids: await _adminDestinatariosPush(),
+    headings: { es: 'Pago pendiente de revisión' },
+    contents: { es: `${nombre} registró un pago de $${monto.toFixed(2)}${detalle ? ` (${detalle})` : ''}. Revísalo para aprobar la reserva.` },
+    url: APP_URL + '/?tab=miliga',
+  });
+  return { exito: true };
+}
+
+// Busca la reserva activa de una persona: por evento (clase) o, para una
+// cuota mensual, por nombre del mes (+ año opcional vía `validez_hasta`).
+// Antes solo buscaba por `id_evento`, y las mensuales lo tienen en null:
+// cancelar o reagendar un mes nunca encontraba la reserva (2026-11-07).
+async function _reservaActiva(nombre: string, fecha: string, anio: number | null, columnas = '*'): Promise<any | null> {
+  if (String(fecha ?? '').startsWith('ev_')) {
+    const { data } = await supabase.from('reservas').select(columnas).eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').limit(1);
+    return data?.[0] ?? null;
+  }
+  const { data } = await supabase.from('reservas').select(columnas).eq('nombre_usuario', nombre).eq('tipo', 'mensual').ilike('mes_texto', String(fecha ?? '').trim()).neq('estado', 'Cancelada');
+  const filas = data ?? [];
+  if (anio) return filas.find((r: any) => String(r.validez_hasta ?? '').startsWith(String(anio))) ?? null;
+  // Sin año: la del mes vigente o futuro más próximo.
+  const hoy = new Date().toISOString().substring(0, 10);
+  return filas.filter((r: any) => !r.validez_hasta || r.validez_hasta >= hoy).sort((a: any, b: any) => String(a.validez_hasta).localeCompare(String(b.validez_hasta)))[0] ?? filas[0] ?? null;
+}
+
 async function cancelarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fecha } = params;
-  const { data } = await supabase.from('reservas').select('*').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').limit(1);
-  const r = data?.[0];
+  // Solo la propia persona cancela sus reservas.
+  if ((await _validarToken(params.token)) !== nombre) return { exito: false, error: 'Sesión inválida.' };
+  const r = await _reservaActiva(nombre, fecha, Number(params.anio) || null);
   if (!r) return { exito: false, error: 'Reserva no encontrada.' };
   await supabase.from('reservas').update({ estado: 'Cancelada' }).eq('id', r.id);
   // Restaurar cupón si la reserva estaba Confirmada
@@ -2784,10 +2821,18 @@ async function cancelarReserva(params: Record<string, any>): Promise<Record<stri
 
 async function reagendarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fechaAnterior, fechaNueva } = params;
-  const { data } = await supabase.from('reservas').select('id, tipo').eq('nombre_usuario', nombre).eq('id_evento', fechaAnterior).neq('estado', 'Cancelada').limit(1);
-  const reserva = data?.[0];
+  if ((await _validarToken(params.token)) !== nombre) return { exito: false, error: 'Sesión inválida.' };
+  const reserva = await _reservaActiva(nombre, fechaAnterior, Number(params.anioAnterior) || null, 'id, tipo');
   if (!reserva) return { exito: false, error: 'Reserva no encontrada.' };
-  const { error } = await supabase.from('reservas').update({ id_evento: fechaNueva, estado: 'Pendiente' }).eq('id', reserva.id);
+  // Mensual: cambia el mes (y su vencimiento); clase: cambia el evento.
+  const cambio = reserva.tipo === 'mensual'
+    ? { mes_texto: fechaNueva, validez_hasta: _vigenciaMensualISO(fechaNueva, new Date().toISOString().substring(0, 10), Number(params.anioNuevo) || null), estado: 'Pendiente' }
+    : { id_evento: fechaNueva, estado: 'Pendiente' };
+  if (reserva.tipo !== 'mensual') {
+    const { data: dup } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fechaNueva).neq('estado', 'Cancelada').limit(1);
+    if (dup?.length) return { exito: false, error: 'Ya tienes una reserva para esa fecha.' };
+  }
+  const { error } = await supabase.from('reservas').update(cambio).eq('id', reserva.id);
   if (error) return { exito: false, error: error.message };
   await _notificarReservaMensualCambio(reserva, nombre, 'reagendar');
   return { exito: true };
@@ -6479,7 +6524,8 @@ Deno.serve(async (req: Request) => {
       // Reservas
       case 'getProximosEntrenamientos':       return json(await getProximosEntrenamientos());
       case 'getFechasDisponibles':            return json(await getFechasDisponibles(params));
-      case 'guardarReserva':                  return json(await guardarReserva(params));
+            case 'guardarReserva':                  return json(await guardarReserva(params));
+      case 'avisarPagoPendiente':             return json(await avisarPagoPendiente(params));
       case 'getReservasPersona':              return json(await getReservasPersona(params));
       case 'cancelarReserva':                 return json(await cancelarReserva(params));
       case 'reagendarReserva':                return json(await reagendarReserva(params));

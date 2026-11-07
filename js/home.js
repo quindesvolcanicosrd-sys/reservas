@@ -1549,13 +1549,17 @@ function selFechaGestionar(el, fecha) {
 function _cargarMesesGestionar() {
   var lista = document.getElementById('sg-lista-fechas');
   var actual = (_sgFechaActual || '').toLowerCase().trim();
-  var html = '<div class="meses-grid-pills">';
-  for (var i = 0; i < NOMBRES_MESES.length; i++) {
-    var nombre = NOMBRES_MESES[i];
+    var html = '<div class="meses-grid-pills">';
+  // 12 meses desde el actual, con su año (2026-11-07); ya no enero-diciembre.
+  var _hoyG = new Date();
+  for (var i = 0; i < 12; i++) {
+    var _dG = new Date(_hoyG.getFullYear(), _hoyG.getMonth() + i, 1);
+    var nombre = NOMBRES_MESES[_dG.getMonth()];
+    var anioG = _dG.getFullYear();
     var esActual = nombre.toLowerCase() === actual;
     html += '<label class="mes-item">' +
-      '<input type="radio" name="sg-mes" value="' + nombre + '"' + (esActual ? ' checked' : '') + ' onchange="selMesGestionar(\'' + nombre + '\')">' +
-      '<span class="mes-nombre">' + nombre + '</span>' +
+      '<input type="radio" name="sg-mes" value="' + nombre + '"' + (esActual ? ' checked' : '') + ' onchange="selMesGestionar(\'' + nombre + '\',' + anioG + ')">' +
+      '<span class="mes-nombre">' + _etiquetaMes(nombre, anioG) + '</span>' +
       '</label>';
   }
   html += '</div>';
@@ -1566,7 +1570,9 @@ function _cargarMesesGestionar() {
   _sgOcultarBtnConfirmar();
 }
 
-function selMesGestionar(mes) {
+var _sgAnioSeleccionado = null;
+function selMesGestionar(mes, anio) {
+  _sgAnioSeleccionado = anio || null;
   var actual = (_sgFechaActual || '').toLowerCase().trim();
   if (mes.toLowerCase().trim() === actual) {
     _sgFechaSeleccionada = '';
@@ -1624,7 +1630,7 @@ function ejecutarReagendamiento(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...'; }
   var btnVolver = document.getElementById('mcr-btn-volver');
   if (btnVolver) btnVolver.disabled = true;
-  api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada }, function() {
+    api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada, anioNuevo: _sgEsMensual ? (_sgAnioSeleccionado || '') : '' }, function() {
     _sgAccionEnCurso = false;
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (btnVolver) btnVolver.disabled = false;

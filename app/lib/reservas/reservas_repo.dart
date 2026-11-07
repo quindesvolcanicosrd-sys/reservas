@@ -64,6 +64,58 @@ class ResultadoReserva {
   final String mensajeWhatsapp;
 }
 
+/// Una reserva activa (clase o mes) para "Mis reservas" y "Cancelar o
+/// reagendar". `clave` es lo que espera el servidor: el id del evento o el
+/// nombre del mes.
+class ReservaActiva {
+  const ReservaActiva({required this.clave, required this.mensual, required this.estado, this.dia, this.mes, this.hora = '', this.lugar = ''});
+  final String clave;
+  final bool mensual;
+  final String estado;
+  final DateTime? dia; // clase
+  final DateTime? mes; // mensual: primer día del mes
+  final String hora;
+  final String lugar;
+
+  String get titulo => mensual
+      ? 'Cuota de ${ReglaAnticipada.nombreMes(mes!)}'
+      : dia == null
+      ? clave
+      : '${Fechas.dia(dia!)[0].toUpperCase()}${Fechas.dia(dia!).substring(1)} ${Fechas.corta(dia!)}';
+
+  String get detalle => mensual ? 'Mensualidad' : [if (hora.isNotEmpty) hora, if (lugar.isNotEmpty) lugar].join(' · ');
+
+  /// "Reserva confirmada" / "Clase a favor" / "Reserva pendiente" (web).
+  String get textoEstado => estado == 'Confirmada' ? 'Reserva confirmada' : (estado == 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente');
+
+  /// Una clase a favor ya no se cancela ni se reagenda (web: sin botón).
+  bool get gestionable => estado != 'Reagendar';
+
+  static ReservaActiva? desde(Map<String, dynamic> r) {
+    final estado = (r['estado'] ?? '').toString();
+    if (estado == 'Cancelada' || estado == 'Crédito usado') return null;
+    final hoy = Fechas.hoy();
+    if (r['tipo'] == 'mensual') {
+      final v = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch('${r['validezHasta'] ?? ''}');
+      final nombre = (r['fecha'] ?? r['mes_texto'] ?? '').toString();
+      if (v == null || nombre.isEmpty) return null;
+      final fin = DateTime(int.parse(v[3]!), int.parse(v[2]!), int.parse(v[1]!));
+      if (fin.isBefore(hoy)) return null;
+      return ReservaActiva(clave: nombre, mensual: true, estado: estado, mes: DateTime(fin.year, fin.month));
+    }
+    final dia = Fechas.desdeIso(r['fechaCalendario']);
+    if (dia != null && dia.isBefore(hoy)) return null;
+    return ReservaActiva(
+      clave: '${r['fecha']}',
+      mensual: false,
+      estado: estado,
+      dia: dia,
+      hora: (r['horaInicio'] ?? '').toString(),
+      lugar: (r['donde'] ?? '').toString(),
+    );
+  }
+}
+
 class ReservasRepo {
   ReservasRepo(this.sesion);
   final Sesion sesion;
@@ -207,6 +259,30 @@ class ReservasRepo {
 
   static String dinero(double v) => '\$${v.toStringAsFixed(2)}';
 
+  /// Reservas activas (clases que no pasaron y cuotas sin vencer), las más próximas primero.
+  static List<ReservaActiva> activas(Cuota c) {
+    final lista = [for (final r in c.reservas) ?ReservaActiva.desde(r)];
+    lista.sort((a, b) => (a.dia ?? a.mes ?? DateTime(9999)).compareTo(b.dia ?? b.mes ?? DateTime(9999)));
+    return lista;
+  }
+
+  Future<void> cancelar(ReservaActiva r) async {
+    final res = await _api.post('cancelarReserva', {'nombre': sesion.nombre, 'fecha': r.clave, if (r.mensual) 'anio': '${r.mes!.year}'});
+    if (res['exito'] != true) throw ApiException('${res['error'] ?? 'No se pudo cancelar.'}');
+  }
+
+  /// Cambia una clase por otra fecha (id de evento) o un mes por otro.
+  Future<void> reagendar(ReservaActiva r, {String? evento, DateTime? mes}) async {
+    final res = await _api.post('reagendarReserva', {
+      'nombre': sesion.nombre,
+      'fechaAnterior': r.clave,
+      'fechaNueva': mes != null ? Fechas.mesNombre(mes) : evento,
+      if (r.mensual) 'anioAnterior': '${r.mes!.year}',
+      if (mes != null) 'anioNuevo': '${mes.year}',
+    });
+    if (res['exito'] != true) throw ApiException('${res['error'] ?? 'No se pudo cambiar la fecha.'}');
+  }
+
   /// Guarda cada clase o mes (`guardarReserva`), la nota de pago y el
   /// resumen por correo, y marca "Asistiré" en las clases reservadas.
   Future<ResultadoReserva> confirmar({
@@ -275,6 +351,17 @@ class ReservasRepo {
 
     if (guardados.isNotEmpty) {
       final tipoPago = tipo == TipoReserva.mes ? 'mensual' : 'clase';
+      // Aviso a las admins: pago pendiente de revisión.
+      if (total.monto > 0) {
+        final n = guardados.length;
+        _api
+            .post('avisarPagoPendiente', {
+              'nombre': sesion.nombre,
+              'monto': total.monto.toStringAsFixed(2),
+              'detalle': tipo == TipoReserva.mes ? '$n ${n == 1 ? 'mes' : 'meses'}' : '$n ${n == 1 ? 'clase' : 'clases'}',
+            })
+            .catchError((_) => <String, dynamic>{});
+      }
       _api
           .post('guardarNotaPago', {
             'nombre': sesion.nombre,
@@ -303,7 +390,7 @@ class ReservasRepo {
 
   static String _etiquetaClase(FechaClase c) {
     final f = c.fecha;
-        final dia = f == null ? c.id : '${Fechas.dia(f)[0].toUpperCase()}${Fechas.dia(f).substring(1)} ${Fechas.corta(f)}';
+    final dia = f == null ? c.id : '${Fechas.dia(f)[0].toUpperCase()}${Fechas.dia(f).substring(1)} ${Fechas.corta(f)}';
     return [dia, if (c.hora.isNotEmpty) c.hora, if (c.lugar.isNotEmpty) c.lugar].join(' - ');
   }
 

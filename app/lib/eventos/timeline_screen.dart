@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../core/tour.dart';
+import '../reservas/gestionar_reserva.dart';
 import '../reservas/reserva_screen.dart';
 import '../reservas/reservas_repo.dart';
 import 'anticipada_screen.dart';
@@ -1136,7 +1137,10 @@ class _TarjetaEvento extends StatelessWidget {
     final reales = ev.yaEmpezo && ev.asistentes.isNotEmpty;
     final asisten = reales ? ev.asistentes.map((a) => a.persona).toList() : ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
     final esAdmin = repo.sesion.esAdmin && repo.sesion.adminToken != null;
-    final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
+        final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
+    // Reserva de esta clase (Mirlxs): estado y "Cancelar o reagendar", como la web.
+    final filaReserva = repo.reservaDe(ev);
+    final reserva = filaReserva == null ? null : ReservaActiva.desde(filaReserva);
     final tarjeta = Material(
       color: apagado ? p.apagadoFondo : p.tarjeta,
       borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
@@ -1199,6 +1203,22 @@ class _TarjetaEvento extends StatelessWidget {
                   ],
                 ),
               ],
+                            if (reserva != null && !apagado)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Row(
+                    children: [
+                      EstadoReserva(estado: reserva.estado),
+                      const Spacer(),
+                      if (reserva.gestionable && !ev.yaEmpezo)
+                        TextButton(
+                          style: TextButton.styleFrom(visualDensity: VisualDensity.compact, foregroundColor: p.marcaTexto),
+                          onPressed: () => gestionarReserva(context, repo, reserva),
+                          child: const Text('Cancelar o reagendar'),
+                        ),
+                    ],
+                  ),
+                ),
               AnimatedSize(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOut,

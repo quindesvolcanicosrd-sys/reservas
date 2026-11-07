@@ -7,6 +7,7 @@ import 'core/tema.dart';
 import 'core/tour.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
+import 'reservas/gestionar_reserva.dart';
 import 'sesion/sesion.dart';
 
 /// Estructura principal con la barra de navegación inferior. En esta
@@ -62,7 +63,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         const _EnLaWeb(titulo: 'Equipo', ruta: '/'),
       ),
       (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), const _EnLaWeb(titulo: 'Tareas', ruta: '/')),
-      (const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mi perfil'), _MiPerfil(sesion: widget.sesion)),
+      (const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mi perfil'), _MiPerfil(sesion: widget.sesion, repo: widget.repo)),
       if (widget.sesion.esAdmin)
         (
           const NavigationDestination(icon: Icon(Icons.shield_outlined), selectedIcon: Icon(Icons.shield), label: 'Mi Liga'),
@@ -170,8 +171,9 @@ class _EnLaWeb extends StatelessWidget {
 }
 
 class _MiPerfil extends StatelessWidget {
-  const _MiPerfil({required this.sesion});
+    const _MiPerfil({required this.sesion, required this.repo});
   final Sesion sesion;
+  final EventosRepo repo;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +189,14 @@ class _MiPerfil extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             title: Text(sesion.nombreMostrar, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             subtitle: Text(sesion.nombre ?? ''),
+          ),
+                    const SizedBox(height: 8),
+          // Clases y cuotas activas, con cancelar o reagendar.
+          FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MisReservasScreen(repo: repo))),
+            icon: const Icon(Icons.confirmation_number_outlined),
+            label: const Text('Mis reservas'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
