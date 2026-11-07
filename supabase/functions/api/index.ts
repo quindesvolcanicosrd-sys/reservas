@@ -5992,6 +5992,100 @@ async function pushOffseasonCreado(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// ─── Temporadas de descanso (2026-11-06, pedido explícito) ────────────────────
+// Crear (o editar) una temporada ELIMINA los eventos de esas fechas (desde hoy
+// en adelante; lo que ya pasó no se toca), con el mismo soft-delete de
+// adminBorrarEvento() (estado 'Eliminado' + es_excepcion, así el cron de
+// regeneración no los revive) y marcados con la temporada que los eliminó
+// (`eliminado_por_descanso`) + su estado previo, para devolverlos tal cual si
+// la temporada se borra o se acorta. Mientras exista, la regeneración tampoco
+// crea eventos nuevos en esas fechas (ya lo hacía, ver 20260828).
+const _COLS_DESCANSO = 'id_evento, estado, es_excepcion';
+
+async function _restaurarEventosDescanso(idTemporada: string, soloFuera?: { desde: string; hasta: string }): Promise<number> {
+  const { data } = await supabase.from('asistencias')
+    .select('id_evento, fecha, estado_antes_descanso, excepcion_antes_descanso')
+    .eq('eliminado_por_descanso', idTemporada);
+  let n = 0;
+  for (const r of (data ?? []) as any[]) {
+    if (soloFuera && r.fecha >= soloFuera.desde && r.fecha <= soloFuera.hasta) continue;
+    const { error } = await supabase.from('asistencias').update({
+      estado: r.estado_antes_descanso ?? 'Próximo',
+      es_excepcion: r.excepcion_antes_descanso ?? false,
+      eliminado_por_descanso: null,
+      estado_antes_descanso: null,
+      excepcion_antes_descanso: null,
+    }).eq('id_evento', r.id_evento);
+    if (!error) n++;
+  }
+  return n;
+}
+
+async function _eliminarEventosDescanso(idTemporada: string, desde: string, hasta: string): Promise<number> {
+  const inicio = desde > _hoyEcuadorISO() ? desde : _hoyEcuadorISO();
+  if (inicio > hasta) return 0;
+  const { data } = await supabase.from('asistencias').select(_COLS_DESCANSO)
+    .gte('fecha', inicio).lte('fecha', hasta).neq('estado', 'Eliminado');
+  let n = 0;
+  for (const r of (data ?? []) as any[]) {
+    const { error } = await supabase.from('asistencias').update({
+      estado: 'Eliminado',
+      es_excepcion: true,
+      eliminado_por_descanso: idTemporada,
+      estado_antes_descanso: r.estado,
+      excepcion_antes_descanso: r.es_excepcion ?? false,
+    }).eq('id_evento', r.id_evento);
+    if (!error) n++;
+  }
+  return n;
+}
+
+async function adminGuardarTemporadaDescanso(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const nombre = String(params.nombre ?? '').trim() || 'Temporada de descanso';
+  const desde = String(params.desde ?? '').slice(0, 10);
+  const hasta = String(params.hasta ?? '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) {
+    return { exito: false, error: 'Fechas inválidas.' };
+  }
+  let id = params.id ? String(params.id) : '';
+  if (id) {
+    const { error } = await supabase.from('temporadas_descanso').update({ nombre, fecha_inicio: desde, fecha_fin: hasta }).eq('id', id);
+    if (error) return { exito: false, error: error.message };
+    // Lo que quedó fuera del rango nuevo vuelve a estar como antes.
+    await _restaurarEventosDescanso(id, { desde, hasta });
+  } else {
+    const { data, error } = await supabase.from('temporadas_descanso').insert({ nombre, fecha_inicio: desde, fecha_fin: hasta }).select('id').single();
+    if (error || !data) return { exito: false, error: error?.message ?? 'No se pudo crear la temporada.' };
+    id = (data as any).id;
+  }
+  const eliminados = await _eliminarEventosDescanso(id, desde, hasta);
+  if (!params.id && hasta >= _hoyEcuadorISO()) {
+    await sendPush({
+      tipo: 'descanso_programado',
+      broadcastEquipo: true,
+      headings: { es: 'Período de descanso programado' },
+      contents: { es: `${nombre}: sin entrenamientos del ${_fechaEs(desde)} al ${_fechaEs(hasta)}.` },
+      url: APP_URL + '/?tab=eventos',
+    }).catch(() => {});
+  }
+  return { exito: true, id, eliminados };
+}
+
+async function adminEliminarTemporadaDescanso(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const id = String(params.id ?? '');
+  if (!id) return { exito: false, error: 'Falta la temporada.' };
+  const { error } = await supabase.from('temporadas_descanso').delete().eq('id', id);
+  if (error) return { exito: false, error: error.message };
+  const restaurados = await _restaurarEventosDescanso(id);
+  // Fechas del período sin eventos generados (por la temporada) se completan ahora.
+  await supabase.rpc('regenerar_ventana_asistencias');
+  return { exito: true, restaurados };
+}
+
 // ─── Acciones: cron diario de notificaciones ──────────────────────────────────
 // Disparado por pg_cron todos los días a las 8am hora de Ecuador (ver
 // supabase/migrations/*_cron_notificaciones_diarias.sql) vía net.http_post
@@ -6407,7 +6501,9 @@ Deno.serve(async (req: Request) => {
       case 'pushEventoCreado':              return json(await pushEventoCreado(params));
       case 'pushEventoCancelado':           return json(await pushEventoCancelado(params));
       case 'pushEventoEditado':             return json(await pushEventoEditado(params));
-      case 'pushOffseasonCreado':           return json(await pushOffseasonCreado(params));
+            case 'pushOffseasonCreado':           return json(await pushOffseasonCreado(params));
+      case 'adminGuardarTemporadaDescanso': return json(await adminGuardarTemporadaDescanso(params));
+      case 'adminEliminarTemporadaDescanso': return json(await adminEliminarTemporadaDescanso(params));
       case 'cronDiario': {
         const secretHeader = req.headers.get('x-cron-secret') ?? '';
         if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);

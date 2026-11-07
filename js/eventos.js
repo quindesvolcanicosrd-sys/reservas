@@ -10475,6 +10475,10 @@ function _evCrearLugarValido() {
    calendario de fecha única (ver _evCrearActualizarPasoFecha()) en vez del
    de fecha de referencia. ──── */
 function _evCrearSetTipo(tipo) {
+  // "Temporada de descanso" (2026-11-06): abre la pantalla completa que sí
+  // guarda (nombre + fechas, `_evCrearDescansoGuardar()`), en vez del paso
+  // de este asistente que solo decía "disponible próximamente".
+  if (tipo === 'descanso') { irEvCrearDescanso(); return; }
   _evCrearData.tipoEvento = tipo;
   // Si cambia el tipo, resetear tipoEventoCategoria (no aplica a "descanso")
   // y cualquier sub-elección de recurrencia ya hecha -- evita arrastrar un
@@ -11631,54 +11635,34 @@ function _evCrearDescansoGuardar() {
   if (!_evCrearDescansoValido()) return;
   var d = _evCrearDescansoData;
   var editando = _evDescansoEditandoId;
-  var url = SUPABASE_URL + '/rest/v1/temporadas_descanso' + (editando ? ('?id=eq.' + editando) : '');
+  // 2026-11-06 (pedido explícito): guardar una temporada ELIMINA los eventos
+  // de esas fechas (desde hoy) y avisa al equipo -- todo en el backend
+  // (`adminGuardarTemporadaDescanso`, mismo que usa la app Android). Si la
+  // temporada se acorta o se borra, los eventos vuelven tal como estaban.
   mostrarCargando(editando ? 'Guardando cambios...' : 'Creando temporada...');
-  fetch(url, {
-    method: editando ? 'PATCH' : 'POST',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ nombre: d.nombre.trim(), fecha_inicio: d.fechaDesde, fecha_fin: d.fechaHasta })
-  }).then(function(r) {
-    if (r.ok) {
-      ocultarCargando();
-      mostrarToast(editando ? 'Temporada actualizada' : 'Temporada creada', 'ok', true);
-      // Push notification a todo el equipo -- solo en la creación, no en
-      // cada edición posterior (mismo criterio que el resto de esta tanda:
-      // avisar de novedades reales, no de cada ajuste de un descanso ya
-      // anunciado).
-      if (!editando) {
-        api({ action: 'pushOffseasonCreado', adminToken: _adminToken, desde: d.fechaDesde, hasta: d.fechaHasta }, function(){}, function(){});
-      }
-      _evDescansoEditandoId = null;
-      ir('s-eventos');
-      _evCargarDatosReales(function() { _evRenderTimeline(true); });
-      return;
-    }
-    return r.json().catch(function() { return null; }).then(function(body) {
-      throw new Error((body && body.message) || ('No se pudo guardar la temporada (HTTP ' + r.status + ').'));
-    });
-  }).catch(function(e) {
+  apiPost({ action: 'adminGuardarTemporadaDescanso', adminToken: _adminToken, id: editando || '', nombre: d.nombre.trim(), desde: d.fechaDesde, hasta: d.fechaHasta }, function(res) {
+    ocultarCargando();
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo guardar la temporada.', 'error'); return; }
+    var n = res.eliminados || 0;
+    mostrarToast((editando ? 'Temporada actualizada' : 'Temporada creada') + (n ? ' · ' + n + (n === 1 ? ' evento eliminado' : ' eventos eliminados') : ''), 'ok', true);
+    _evDescansoEditandoId = null;
+    ir('s-eventos');
+    _evCargarDatosReales(function() { _evRenderTimeline(true); });
+  }, function(e) {
     ocultarCargando();
     mostrarToast((e && e.message) || 'No se pudo guardar la temporada.', 'error');
   });
 }
 
-// Eliminar (ver "Cambios recientes" -- ícono borrar de la card de offseason
-// en el timeline, `_evCardOffseasonHtml()`) -- mismo `confirm()` nativo que
-// `_evAntEliminar()`, DELETE directo a Supabase (mismo mecanismo que el
-// guardado de arriba, sin `Prefer` -- no hace falta el registro borrado de
-// vuelta, PostgREST responde 204 por default).
 function _evOffseasonEliminar(id) {
-  if (!confirm('¿Eliminar esta temporada de descanso? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Eliminar esta temporada de descanso? Los entrenamientos de esas fechas vuelven a aparecer.')) return;
   mostrarCargando('Eliminando...');
-  fetch(SUPABASE_URL + '/rest/v1/temporadas_descanso?id=eq.' + id, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
-  }).then(function(r) {
+  apiPost({ action: 'adminEliminarTemporadaDescanso', adminToken: _adminToken, id: id }, function(res) {
     ocultarCargando();
-    if (!r.ok) { mostrarToast('No se pudo eliminar la temporada.', 'error'); return; }
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo eliminar la temporada.', 'error'); return; }
     mostrarToast('Temporada eliminada', 'ok', true);
     _evCargarDatosReales(function() { _evRenderTimeline(true); });
-  }).catch(function() {
+  }, function() {
     ocultarCargando();
     mostrarToast('No se pudo eliminar la temporada.', 'error');
   });

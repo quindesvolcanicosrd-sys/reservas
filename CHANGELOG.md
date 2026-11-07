@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — Temporadas de descanso: al crearlas se eliminan los eventos de esas fechas (y vuelven si la temporada se acorta o se borra), con aviso al equipo. Web: "Temporada de descanso" del asistente ya guarda (abre la pantalla con nombre + fechas).
+
 2026-11-06 — App Android: evento en curso resaltado con brillo animado, "Tomar asistencia" para admins (equipo completo, A horario/Tarde, inactivxs aparte) y arrastre del calendario sin tirones.
 
 2026-11-06 — App Android: calendario fluido al abrir/cerrar con el dedo (se mueve en vez de cambiar de tamaño), sin leyenda, más aire, globo de cumpleaños sin cortes y fix de la pill de mes que volvía al mes anterior.
