@@ -1226,7 +1226,7 @@ function confirmarReserva(btn) {
     }
 
         var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-    // Aviso a las admins: pago pendiente de revisión (2026-11-07). Sin
+    // Aviso a admins: pago pendiente de revisión (2026-11-07). Sin
     // contar como "secundario": si falla, la reserva igual quedó guardada.
     if ((E.totalPago || 0) > 0) {
       var _nPago = E.tipoPago === 'mensual' ? mesesExitosos.length : fechasExitosas.length;

@@ -354,7 +354,7 @@ class ReservasRepo {
 
     if (guardados.isNotEmpty) {
       final tipoPago = tipo == TipoReserva.mes ? 'mensual' : 'clase';
-      // Aviso a las admins: pago pendiente de revisión.
+      // Aviso a admins: pago pendiente de revisión.
       if (total.monto > 0) {
         final n = guardados.length;
         _api

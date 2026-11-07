@@ -4155,7 +4155,7 @@ async function adminEliminarUsuario(params: Record<string, any>): Promise<Record
   if (!fila) return { exito: false, error: 'Usuario no encontrado.' };
   if (_estaArchivado(fila)) return { exito: false, error: 'Esta cuenta ya está eliminada.' };
   if (String(fila.email ?? '').toLowerCase() === adminEmail.toLowerCase()) {
-    return { exito: false, error: 'No podés eliminar tu propia cuenta.' };
+    return { exito: false, error: 'No puedes eliminar tu propia cuenta.' };
   }
 
   const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
@@ -5071,8 +5071,8 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumples otro año en el equipo.', categoria: 'Equipo' },
   { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
   { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
-  { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debés la cuota.', categoria: 'Cuenta' },
-  { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando un admin cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
+  { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debes la cuota.', categoria: 'Cuenta' },
+  { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
   { clave: 'avisos_admin', nombre: 'Avisos para admins', descripcion: 'Resumen antes del entrenamiento, bajas de última hora, solicitudes pendientes y cambios de reservas.', categoria: 'Administración', soloAdmin: true },
 ];
 const CATALOGO_CLAVES = new Set(CATALOGO_NOTIFICACIONES.map((c) => c.clave));
@@ -6369,6 +6369,18 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
         .in('origen', ['Usuario', 'AsistenciaAnticipada']);
       await _agregarFilaLogAsistencia(reservaAntes.id_evento, reservaAntes.nombre_usuario, 'Usuario', 'Asistiré');
     }
+  }
+
+    // "Clase a favor" (Mi Liga, 2026-11-07): avisar a la persona que su
+  // próxima clase reservada no tendrá costo.
+  if (estado === 'Reagendar' && reservaAntes?.nombre_usuario) {
+    await sendPush({
+      tipo: 'evento_cancelado',
+      include_external_user_ids: [reservaAntes.nombre_usuario],
+      headings: { es: 'Tienes una clase a favor' },
+      contents: { es: 'Tu próxima clase reservada no tendrá costo: se descuenta sola al reservar.' },
+      url: APP_URL + '/?tab=eventos',
+    });
   }
 
   return { exito: true };

@@ -4325,7 +4325,7 @@ function _evAbrirSheetCuotaPendiente(opts) {
   // para limitarlo por modo.
   if (acc) {
     acc.innerHTML = '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="_evCuotaPagarAhora()">Pagar ahora</button>' +
-      '<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin:0 0 4px;">¿No podés pagar la cuota?</p>' +
+      '<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin:0 0 4px;">¿No puedes pagar la cuota?</p>' +
       '<button type="button" style="display:block;width:100%;background:none;border:none;color:var(--brand);font-size:0.85rem;font-weight:700;font-family:inherit;text-align:center;cursor:pointer;padding:4px;" onclick="_evCuotaSolicitarAyuda()">Pedir una excepción de cuota</button>';
   }
   var msgEl = document.getElementById('sheet-cuota-msg');

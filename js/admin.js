@@ -848,7 +848,8 @@ function adminRenderReservas() {
         html += '<div style="font-size:0.78rem;color:var(--dk-text-muted);font-weight:600;padding:0 4px 10px;">' + fechaExtra + '</div>';
       }
       grupos[fecha].forEach(function(r) {
-        var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
+        var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : r.estado === 'Reagendar' ? 'badge-reagendar' : 'badge-pendiente';
+        var estadoTxt = r.estado === 'Reagendar' ? 'Clase a favor' : (r.estado === 'Crédito usado' ? 'Clase a favor usada' : r.estado);
         // Mismo componente que ya usa js/home.js para patines/protecciones
         // (.fi-pill/.fi-pill-patines, ver MANIFEST.md "Cambios recientes")
         // en vez de emojis sueltos en texto plano.
@@ -875,15 +876,20 @@ function adminRenderReservas() {
         var detalleMonto = ' · <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">payments</span> Pagó: $' + montoNum;
         var marcaEliminada = r.cuentaEliminada ? ' <span class="badge badge-cancelada">Cuenta eliminada</span>' : '';
         html += '<div class="reserva-card" style="margin-bottom:8px;">' +
-          '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + marcaEliminada + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
+          '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + marcaEliminada + '</span><span class="badge ' + badgeClass + '">' + estadoTxt + '</span></div>' +
           '<div class="reserva-detalle">' + detalleEquip + detalleMonto + '</div>';
         if (r.estado === 'Pendiente') {
           html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
             '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Confirmada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">check</span> Aprobar</button>' +
             '<button class="btn-cancelar" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' +
             '</div>';
-        } else if (r.estado === 'Confirmada') {
+                } else if (r.estado === 'Confirmada') {
           html += '<button class="btn-cancelar" style="display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar esta reserva</button>';
+          // "Clase a favor" (2026-11-07): solo se da desde acá, a mano. La
+          // próxima clase que reserve la persona no tiene costo.
+          if (r.tipo === 'clase') {
+            html += '<button class="btn btn-outline" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Reagendar\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">swap_horiz</span> Pasar a clase a favor</button>';
+          }
         }
         html += '</div>';
       });
@@ -912,7 +918,8 @@ function toggleGrupoReserva(id, header) {
 }
 
 function adminCambiarEstado(fila, estado, btn) {
-  if (!confirm('¿Marcar esta reserva como "' + estado + '"? Se notificará a la persona.')) return;
+    var _estadoTexto = estado === 'Reagendar' ? 'clase a favor (su próxima clase reservada no tendrá costo)' : estado;
+  if (!confirm('¿Marcar esta reserva como "' + _estadoTexto + '"? Se notificará a la persona.')) return;
   btn.disabled = true;
   adminApi({ action: 'adminSetEstadoReserva', id: fila, estado: estado }, function(res) {
     if (res.exito) {
@@ -1106,7 +1113,7 @@ function _admCuotaExcGuardar(idMiembro, tipo, monto) {
 }
 
 function adminCuotaExcMarcarPago(idMiembro) {
-  var texto = prompt('¿Cuánto pagó? (dejalo vacío si no querés registrar un monto)');
+  var texto = prompt('¿Cuánto pagó? (déjalo vacío si no quieres registrar un monto)');
   if (texto === null) return; // canceló el prompt
   var textoLimpio = texto.trim();
   var monto = textoLimpio === '' ? null : Number(textoLimpio.replace(',', '.'));
@@ -1504,7 +1511,7 @@ function adminIrUsuarios() {
 // pantalla) -- mismo mecanismo de escribir-para-confirmar que ya usaba esta
 // pantalla (sin cambios ahí, fuera del alcance de este pedido).
 function adminEliminarUsuarioClick(nombre) {
-  var escrito = prompt('Vas a archivar a "' + nombre + '": deja de aparecer en Equipo, eventos y notificaciones, y no podrá volver a iniciar sesión. Su historial de pagos, asistencias y puntos se conserva, y podés restaurar la cuenta después.\n\nPara confirmar, escribe el nombre exactamente:');
+  var escrito = prompt('Vas a archivar a "' + nombre + '": deja de aparecer en Equipo, eventos y notificaciones, y no podrá volver a iniciar sesión. Su historial de pagos, asistencias y puntos se conserva, y puedes restaurar la cuenta después.\n\nPara confirmar, escribe el nombre exactamente:');
   if (escrito === null) return;
   if (escrito.trim() !== nombre) { mostrarToast('El nombre no coincide. No se archivó nada.', 'error'); return; }
   mostrarCargando('Archivando...');

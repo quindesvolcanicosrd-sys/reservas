@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Mi Liga: "Pasar a clase a favor" en reservas de clase confirmadas (con aviso a la persona) y el estado se muestra como "Clase a favor". Textos con voseo corregidos a español neutro.
+
+
+
 2026-11-07 — Cupón: si una reserva pagada con cupón se cancela con al menos 1 hora de anticipación, el cupón vuelve (antes se devolvía a cualquiera que cancelara una reserva confirmada); al reagendar se mantiene. Reservas de clase visibles para cualquier persona, no solo Mirlxs.
 
 
