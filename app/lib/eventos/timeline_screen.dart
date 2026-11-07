@@ -505,13 +505,23 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                                 top: 0,
                                 child: Transform.translate(
                                   offset: Offset(0, -alto * (1 - v)),
-                                  child: Opacity(opacity: (v / 0.5).clamp(0.0, 1.0), child: panel),
+                                  // Sin fundido (como Google Calendar): solo se desliza bajo la barra.
+                                  child: panel,
                                 ),
                               ),
                           ],
                         );
                       },
-                      child: RepaintBoundary(child: _cuerpo(context)),
+                      // Con el calendario abierto, arrastrar el timeline mueve
+                      // todo junto (acordeón) en vez de desplazarlo por dentro.
+                      child: _calMontado
+                          ? GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
+                              onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
+                              child: RepaintBoundary(child: _cuerpo(context)),
+                            )
+                          : RepaintBoundary(child: _cuerpo(context)),
                     ),
                   ),
                 ),
@@ -792,40 +802,32 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         ),
       );
     }
-    return NotificationListener<ScrollNotification>(
+    // Con el calendario abierto el timeline NO se desplaza por dentro: el
+    // arrastre mueve todo junto (calendario + timeline pegado debajo), como
+    // un acordeón, igual que Google Calendar. Cerrado, scrollea normal.
+    final lista = NotificationListener<ScrollNotification>(
       onNotification: _alScrollearTimeline,
       child: RefreshIndicator(
         onRefresh: () => repo.cargar(forzar: true),
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: _calMontado ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,
           itemBuilder: (context, i) => _fila(context, _filas[i]),
         ),
       ),
     );
+    return lista;
   }
 
   /// Con el calendario abierto, scrollear el timeline lo va cerrando junto
   /// con el dedo; al soltar termina de cerrarse o vuelve a abrirse.
-  bool _colapsandoPorScroll = false;
+  final bool _colapsandoPorScroll = false;
   bool _alScrollearTimeline(ScrollNotification n) {
     if (n is ScrollStartNotification) _scrollDelUsuario = n.dragDetails != null;
     if (n is ScrollEndNotification) _scrollDelUsuario = false;
-    if (!_calMontado) return false;
-    if (n is ScrollUpdateNotification && n.dragDetails != null && (n.scrollDelta ?? 0) != 0) {
-      _colapsandoPorScroll = true;
-      _calCtrl.value = (_calCtrl.value - n.scrollDelta!.abs() / (_altoPanel * 0.7)).clamp(0.0, 1.0);
-      if (_calCtrl.value == 0) {
-        _colapsandoPorScroll = false;
-        _cerrarCalendario();
-      }
-    } else if (n is ScrollEndNotification && _colapsandoPorScroll) {
-      _colapsandoPorScroll = false;
-      _soltar(0);
-    }
     return false;
   }
 
@@ -1139,7 +1141,8 @@ class _TarjetaEvento extends StatelessWidget {
         ),
       ),
     );
-    return ev.enCurso ? _BrilloEnCurso(child: tarjeta) : tarjeta;
+    // RepaintBoundary: el latido se repinta solo, sin arrastrar al resto de la lista.
+    return ev.enCurso ? RepaintBoundary(child: _BrilloEnCurso(child: tarjeta)) : tarjeta;
   }
 
   void _abrirTomarAsistencia(BuildContext context) {

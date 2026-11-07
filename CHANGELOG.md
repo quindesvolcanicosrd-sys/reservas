@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: con el calendario abierto, arrastrar el timeline mueve todo junto como un acordeón (como Google Calendar) y el cierre es más fluido.
+
 2026-11-06 — App Android: asistentes con un solo diseño (progreso, transición deslizante de Material, botón fijo), "+" como menú de acciones (Nuevo evento / Asistencia anticipada), temporada de descanso y nuevo lugar desde la app, temporadas visibles en el timeline y asistencia anticipada por pasos.
 
 2026-11-06 — Temporadas de descanso: al crearlas se eliminan los eventos de esas fechas (y vuelven si la temporada se acorta o se borra), con aviso al equipo. Web: "Temporada de descanso" del asistente ya guarda (abre la pantalla con nombre + fechas).
