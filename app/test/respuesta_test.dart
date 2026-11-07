@@ -56,4 +56,14 @@ void main() {
     expect(c.cubre(_ev(DateTime(futuro.year, futuro.month + 2, 5))), isFalse);
     expect(Cuota(datos: const {'exenta_cuota': true}, esAdmin: false, nombre: 'X', excepciones: const [], reservas: const []).asistireHabilitado, isTrue);
   });
+  test('Meses de asistencia anticipada con año (aaaamm) y reglas viejas', () {
+    final hoy = Fechas.hoy();
+    final prox = DateTime(hoy.year, hoy.month + 11);
+    expect(ReglaAnticipada.ventana().length, 12);
+    expect(ReglaAnticipada.ventana().last, prox);
+    expect(ReglaAnticipada.coincide(ReglaAnticipada.clave(prox), DateTime(prox.year, prox.month, 15)), isTrue);
+    expect(ReglaAnticipada.coincide(ReglaAnticipada.clave(prox), DateTime(prox.year + 1, prox.month, 15)), isFalse);
+    expect(ReglaAnticipada.coincide(prox.month, DateTime(prox.year + 1, prox.month, 15)), isTrue);
+    expect(ReglaAnticipada.mesDe(202609), DateTime(2026, 9));
+  });
 }

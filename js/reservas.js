@@ -470,8 +470,12 @@ function actualizarTotalS4() {
   var bannerCred = document.getElementById('s4-credito-banner');
 
   if (E.tipoPago === 'mensual') {
-    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses-unificada input:checked:not(:disabled)')).map(function(cb) { return cb.value; });
+        var _cbMeses = Array.from(document.querySelectorAll('#lista-meses-unificada input:checked:not(:disabled)'));
+    var mesesSeleccionados = _cbMeses.map(function(cb) { return cb.value; });
     E.meses = mesesSeleccionados;
+    // Año de cada mes (12 meses desde el actual, 2026-11-07) y su etiqueta ("Enero 2027").
+    E.mesesAnio = _cbMeses.map(function(cb) { return parseInt(cb.getAttribute('data-anio'), 10) || new Date().getFullYear(); });
+    E.mesesEtiquetas = _cbMeses.map(function(cb, i) { return _etiquetaMes(cb.value, E.mesesAnio[i]); });
     total = mesesSeleccionados.length * E.precioMensual;
     document.getElementById('s4-meses-wrapper').style.display = 'block';
     if (bannerCred) bannerCred.style.display = 'none';
@@ -1038,13 +1042,13 @@ function _pagoArmarResumen() {
     if (cobradasDet > 0) partesDet.push(cobradasDet + (cobradasDet === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2));
     detalleTexto = partesDet.join(' + ');
   } else {
-    detalleTexto = E.meses.join(', ');
+        detalleTexto = (E.mesesEtiquetas || E.meses).join(', ');
   }
   var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + (_fechaInfoDisponible[f] || f); }).join('<br>') : '';
   _pagoTotalActualizar('Total: $' + (E.totalPago || 0).toFixed(2), detalleTexto, fechasHtml, esClase);
   var chkPagoTexto = document.getElementById('chk-pago-texto');
   if (chkPagoTexto) chkPagoTexto.textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
-  var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
+  var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + (E.mesesEtiquetas || E.meses).join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevaré mi propio equipamiento.';
   // Formato de mensaje nuevo para "por clase" Y "por mes" (pedido explícito,
@@ -1057,7 +1061,7 @@ function _pagoArmarResumen() {
   var fechaHoyTxt = _hoyWp.getDate() + ' de ' + NOMBRES_MESES[_hoyWp.getMonth()] + ' de ' + _hoyWp.getFullYear();
   var _bloqueReservado = esClase
     ? '*Clases reservadas*\n' + lineasFechas
-    : (E.meses.length === 1 ? '*Mes reservado*\n' : '*Meses reservados*\n') + E.meses.map(function(m) { return '- ' + m; }).join('\n');
+    : (E.meses.length === 1 ? '*Mes reservado*\n' : '*Meses reservados*\n') + (E.mesesEtiquetas || E.meses).map(function(m) { return '- ' + m; }).join('\n');
   var msgWp = '¡Hola! Mi nombre de usuario es *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '* el día ' + fechaHoyTxt + '.\n' + _bloqueReservado + '\n' + equipLinea + '\n*Mi mail es: ' + (d.email || '') + '*\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítalo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp); // usado por #btn-wp-exito en s6 (finalizar())
 }
@@ -1411,8 +1415,9 @@ function confirmarReserva(btn) {
   }
 
   if (E.tipoPago === 'mensual') {
-    var pendientesMeses = E.meses.slice();
-    function guardarMesSiguiente() { if (pendientesMeses.length === 0) { finalizar(); return; } var mes = pendientesMeses.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' }, function() { guardarMesSiguiente(); }, function() { itemsFallidos.push(mes); guardarMesSiguiente(); }); }
+        var pendientesMeses = E.meses.slice();
+    var pendientesAnios = (E.mesesAnio || []).slice();
+    function guardarMesSiguiente() { if (pendientesMeses.length === 0) { finalizar(); return; } var mes = pendientesMeses.shift(); var anioMes = pendientesAnios.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, anio: anioMes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' }, function() { guardarMesSiguiente(); }, function() { itemsFallidos.push(mes); guardarMesSiguiente(); }); }
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();

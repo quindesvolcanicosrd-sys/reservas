@@ -3190,9 +3190,11 @@ function _evFabReservaClase() {
 function _evFabReserva() {
   E.mirlxsPreselMes = _evNavMesActual.month;
   E.origenSeccionS4 = 's-eventos';
-  var mesActual = new Date().getMonth();
+  // Preselección como aaaamm (12 meses con año, 2026-11-07): de hoy al mes navegado.
+  var hoy = new Date();
+  var c = new Date(hoy.getFullYear(), hoy.getMonth(), 1), fin = new Date(_evNavMesActual.year, _evNavMesActual.month, 1);
   var rango = [];
-  for (var m = mesActual; m <= E.mirlxsPreselMes; m++) rango.push(m);
+  for (var g = 0; c <= fin && g < 12; g++) { rango.push(c.getFullYear() * 100 + c.getMonth() + 1); c = new Date(c.getFullYear(), c.getMonth() + 1, 1); }
   E.mirlxsMesesPresel = rango;
   irNuevaReserva(false, null);
   // E.viaEventosInline (mismo mecanismo que _evFabReservaClase(), ver esa
@@ -3240,8 +3242,8 @@ function _evFabReservaMesActual() {
   // representar aparte de enero del año actual (ya pasado a esa altura,
   // marcado `mes-past`). Limitación preexistente de generarMeses(), no
   // introducida acá -- fuera de alcance de este pedido arreglarla.
-  E.mirlxsPreselMes = mes;
-  E.mirlxsMesesPresel = [mes];
+    E.mirlxsPreselMes = mes;
+  E.mirlxsMesesPresel = [anio * 100 + mes + 1];
   irNuevaReserva(false, null);
   E.viaEventosInline = true;
   setTimeout(function() { selTipoPago('mensual'); }, 80);
@@ -3270,8 +3272,8 @@ function _evFabReservaParaEvento(idEvento) {
   var mes = parseInt(fp[1], 10) - 1;
   _evNavMesActual = { year: parseInt(fp[0], 10), month: mes };
   E.mirlxsPreselMes = mes;
-  E.origenSeccionS4 = 's-eventos';
-  E.mirlxsMesesPresel = [mes];
+    E.origenSeccionS4 = 's-eventos';
+  E.mirlxsMesesPresel = [parseInt(fp[0], 10) * 100 + mes + 1];
   irNuevaReserva(false, null);
   E.viaEventosInline = true;
   setTimeout(function() { selTipoPago('mensual'); }, 80);
@@ -4428,10 +4430,8 @@ function _evCuotaPagarAhora() {
   // sin importar quién la debe. El total ya queda visible solo: s4 lo
   // recalcula en vivo (actualizarTotalS4()) apenas los checkboxes
   // preseleccionados quedan marcados.
-  var anioActual = new Date().getFullYear();
-  E.mirlxsMesesPresel = _evMesesAdeudados()
-    .filter(function(m) { return m.anio === anioActual; })
-    .map(function(m) { return m.mesIdx; });
+    // Con año (aaaamm): la grilla de meses ya muestra meses de otro año.
+  E.mirlxsMesesPresel = _evMesesAdeudados().map(function(m) { return m.anio * 100 + m.mesIdx + 1; });
   E.origenSeccionS4 = 's-eventos';
   irNuevaReserva(false, null);
   E.viaEventosInline = true;
@@ -7514,7 +7514,10 @@ function _evAntReconciliarConReglas(reglas) {
   }
   function matchFecha(r, ev) {
     if (r.tipoRango === 'indefinido') return !!r.fechaDesde && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0;
-    if (r.tipoRango === 'meses') return (r.meses || []).indexOf(parseInt(ev.fecha.split('-')[1], 10)) !== -1;
+        if (r.tipoRango === 'meses') {
+      var _p = ev.fecha.split('-'), _a = parseInt(_p[0], 10), _m = parseInt(_p[1], 10);
+      return (r.meses || []).some(function(v) { return _evAntMesCoincide(v, _a, _m); });
+    }
     if (r.tipoRango === 'periodo') return !!r.fechaDesde && !!r.fechaHasta && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0 && _evFechaCmp(ev.fecha, r.fechaHasta) <= 0;
     return false;
   }
@@ -7735,9 +7738,7 @@ function _evAntRenderLista() {
 
 function _evAntResumenRango(r) {
   if (r.tipoRango === 'meses') {
-    var anio = new Date().getFullYear();
-    var nombres = (r.meses || []).map(function(m) { return NOMBRES_MESES[m - 1]; });
-    return 'Meses: ' + nombres.join(', ') + ' ' + anio;
+        return 'Meses: ' + _evAntOrdenMeses(r.meses || []).map(_evAntNombreMes).join(', ');
   }
   if (r.tipoRango === 'periodo') {
     return 'Del ' + _evAntFechaLegible(r.fechaDesde) + ' al ' + _evAntFechaLegible(r.fechaHasta);
@@ -7843,7 +7844,8 @@ function _evAntBack() {
 function _evAntIniciarWizard(regla) {
   _evAntData = {
     tipoRango: regla ? regla.tipoRango : null,
-    meses: (regla && regla.meses) ? regla.meses.slice() : [],
+        // Las reglas viejas (solo número de mes) pasan a aaaamm al editarlas.
+    meses: (regla && regla.meses) ? regla.meses.map(function(v) { var x = _evAntMesInfo(v); return _evAntMesClave(x.anio, x.mes); }) : [],
     fechaDesde: regla ? (regla.fechaDesde || null) : null,
     fechaHasta: regla ? (regla.fechaHasta || null) : null,
     estado: regla ? regla.estado : null,
@@ -8162,7 +8164,7 @@ function _evAntAjustarFrecuenciaACuota() {
   var ajusto = false;
   var anio = new Date().getFullYear();
   if (_evAntData.tipoRango === 'meses') {
-    var validos = _evAntData.meses.filter(function(m) { return _evAntMesPermitido(m, anio); });
+        var validos = _evAntData.meses.filter(function(v) { var x = _evAntMesInfo(v); return _evAntMesPermitido(x.mes, x.anio); });
     if (validos.length !== _evAntData.meses.length) { _evAntData.meses = validos; ajusto = true; _evAntRenderMesesGrid(); }
   } else if (_evAntData.tipoRango === 'periodo') {
     var lim = _evAntLimiteCuota();
@@ -8350,26 +8352,58 @@ function _evAntHoyISO() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
+// Meses de "Por meses" (2026-11-07): 12 meses desde el actual (noviembre
+// 2026 a octubre 2027), cada uno con su año. Se guardan como aaaamm
+// (202611); un valor 1..12 es una regla vieja (solo mes, cualquier año) y
+// se sigue leyendo igual.
+function _evAntMesClave(anio, mes) { return anio * 100 + mes; }
+function _evAntMesInfo(v) {
+  v = Number(v);
+  if (v > 12) return { anio: Math.floor(v / 100), mes: v % 100 };
+  var hoy = new Date();
+  return { anio: hoy.getFullYear() + (v < hoy.getMonth() + 1 ? 1 : 0), mes: v };
+}
+function _evAntMesCoincide(v, anio, mes) {
+  v = Number(v);
+  return v > 12 ? v === _evAntMesClave(anio, mes) : v === mes;
+}
+function _evAntMesesVentana() {
+  var hoy = new Date(), res = [];
+  for (var i = 0; i < 12; i++) {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+    res.push({ anio: d.getFullYear(), mes: d.getMonth() + 1 });
+  }
+  return res;
+}
+// "Noviembre, Enero 2027": el año solo cuando no es el actual.
+function _evAntNombreMes(v) {
+  var x = _evAntMesInfo(v);
+  return NOMBRES_MESES[x.mes - 1] + (x.anio !== new Date().getFullYear() ? ' ' + x.anio : '');
+}
+function _evAntOrdenMeses(lista) {
+  return lista.slice().sort(function(a, b) {
+    var x = _evAntMesInfo(a), y = _evAntMesInfo(b);
+    return _evAntMesClave(x.anio, x.mes) - _evAntMesClave(y.anio, y.mes);
+  });
+}
+
 function _evAntRenderMesesGrid() {
   var cont = document.getElementById('ev-ant-meses-grid'); if (!cont) return;
   cont.innerHTML = '';
-  var mesActual = new Date().getMonth(); // 0-indexado
-  var anio = new Date().getFullYear();
   // Con "Asistiré" y cuota mensual, solo meses pagados
-  // (`_evAntMesPermitido()`, ver `_evAntRestringePorCuota()`); con "No
-  // asistiré"/"No jugador" o sin cuota, el único criterio es "mes ya pasado".
-  NOMBRES_MESES.forEach(function(nombre, idx) {
-    var mesNum = idx + 1;
+  // (`_evAntMesPermitido()`, ver `_evAntRestringePorCuota()`).
+  _evAntMesesVentana().forEach(function(m) {
+    var clave = _evAntMesClave(m.anio, m.mes);
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'ev-ant-mes-cell' + (_evAntData.meses.indexOf(mesNum) !== -1 ? ' activo' : '');
-    btn.textContent = nombre;
-    var _antMesDeshabilitado = idx < mesActual || !_evAntMesPermitido(mesNum, anio);
-    if (_antMesDeshabilitado) {
+    btn.className = 'ev-ant-mes-cell' + (_evAntData.meses.indexOf(clave) !== -1 ? ' activo' : '');
+        // Año en una segunda línea chica en todas las celdas (misma altura).
+    btn.innerHTML = NOMBRES_MESES[m.mes - 1] + '<span class="ev-ant-mes-anio">' + m.anio + '</span>';
+    if (!_evAntMesPermitido(m.mes, m.anio)) {
       btn.classList.add('deshabilitado');
       btn.disabled = true;
     } else {
-      btn.onclick = function() { _evAntToggleMes(mesNum, btn); };
+      btn.onclick = function() { _evAntToggleMes(clave, btn); };
     }
     cont.appendChild(btn);
   });
@@ -8649,8 +8683,7 @@ function _evAntSetBotonRestablecerVisible(cual, mostrar) {
 function _evAntResumenFrecuenciaTexto() {
   if (_evAntData.tipoRango === 'meses') {
     if (!_evAntData.meses.length) return '';
-    var nombres = _evAntData.meses.slice().sort(function(a, b) { return a - b; }).map(function(m) { return NOMBRES_MESES[m - 1]; });
-    return nombres.join(', ');
+        return _evAntOrdenMeses(_evAntData.meses).map(_evAntNombreMes).join(', ');
   }
   if (_evAntData.tipoRango === 'periodo') {
     if (!_evAntData.fechaDesde || !_evAntData.fechaHasta) return '';
@@ -8861,14 +8894,13 @@ function _evAntAplicar() {
 function _evAntRangoViaje(regla) {
   if (regla.tipo_rango === 'periodo') return { desde: regla.fecha_desde, hasta: regla.fecha_hasta };
   if (regla.tipo_rango === 'indefinido') return { desde: regla.fecha_desde, hasta: null };
-  var meses = (regla.meses || []).map(Number).filter(function(m) { return m >= 1 && m <= 12; });
+    var meses = _evAntOrdenMeses((regla.meses || []).map(Number).filter(function(m) { return m >= 1; }));
   if (!meses.length) return { desde: null, hasta: null };
-  var anio = new Date().getFullYear();
-  var min = Math.min.apply(null, meses), max = Math.max.apply(null, meses);
-  var desde = anio + '-' + ('0' + min).slice(-2) + '-01';
+  var ini = _evAntMesInfo(meses[0]), fin = _evAntMesInfo(meses[meses.length - 1]);
+  var desde = ini.anio + '-' + ('0' + ini.mes).slice(-2) + '-01';
   var hoy = _evHoyISO();
   if (_evFechaCmp(desde, hoy) < 0) desde = hoy;
-  var hasta = _evToISO(new Date(anio, max, 0)); // día 0 del mes siguiente = último día de `max`
+  var hasta = _evToISO(new Date(fin.anio, fin.mes, 0)); // día 0 del mes siguiente = último día de ese mes
   return { desde: desde, hasta: hasta };
 }
 

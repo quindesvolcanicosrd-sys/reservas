@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Meses: asistencia anticipada (web y app) y reserva mensual (web) muestran 12 meses desde el actual con su año, en vez de enero a diciembre del año en curso.
+
+
+
 2026-11-07 — App Android: tour guiado de primera vez en Eventos; asistencia anticipada oculta las reglas que ya terminaron; textos más cortos en buscador, grupo vacío y ejemplo de información adicional.
 
 

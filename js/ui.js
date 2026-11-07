@@ -1046,9 +1046,7 @@ function generarMeses() {
   var lista = document.getElementById('lista-meses-unificada');
   if (!lista) return;
 
-  var mesesConfirmados = (_todasReservas || [])
-    .filter(function(r) { return r.estado === 'Confirmada' || r.estado === 'Pendiente'; })
-    .map(function(r) { return r.fecha.toLowerCase().trim(); });
+  
 
   // Preselección de rango del FAB mensual (mirlxs y quindes, ver
   // _evFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
@@ -1062,21 +1060,35 @@ function generarMeses() {
   // sí es un punto real donde ya no hace falta seguir preseleccionando.
   var mesesPresel = E.mirlxsMesesPresel || [];
 
-  var html = '';
+    // 12 meses desde el actual, cada uno con su año (2026-11-07; antes era
+  // enero-diciembre del año en curso). Si se preseleccionaron meses
+  // adeudados anteriores al actual, van primero (atenuados, como antes).
+  // `mesesPresel` = aaaamm.
+  var claveHoy = hoy.getFullYear() * 100 + mesActual + 1;
+  var meses = [];
+  mesesPresel.filter(function(k) { return k < claveHoy; }).sort().forEach(function(k) {
+    meses.push({ anio: Math.floor(k / 100), mes: (k % 100) - 1, pasado: true });
+  });
   for (var i = 0; i < 12; i++) {
-    if (i === mesActual && mesActual > 0) {
-      html += '<div class="meses-divider"></div>';
-    }
-    var nombre = NOMBRES_MESES[i];
-    var esPasado = i < mesActual;
-    var confirmado = mesesConfirmados.indexOf(nombre.toLowerCase()) !== -1;
-    var preseleccionado = !confirmado && mesesPresel.indexOf(i) !== -1;
-    html += crearMesItem(nombre, esPasado, confirmado, preseleccionado);
+    var d = new Date(hoy.getFullYear(), mesActual + i, 1);
+    meses.push({ anio: d.getFullYear(), mes: d.getMonth(), pasado: false });
   }
+  var html = '';
+  meses.forEach(function(m, j) {
+    if (j > 0 && meses[j - 1].pasado && !m.pasado) html += '<div class="meses-divider"></div>';
+    var confirmado = _evMesPagado(m.mes, m.anio);
+    var preseleccionado = !confirmado && mesesPresel.indexOf(m.anio * 100 + m.mes + 1) !== -1;
+    html += crearMesItem(NOMBRES_MESES[m.mes], m.pasado, confirmado, preseleccionado, m.anio);
+  });
   lista.innerHTML = html;
 }
 
-function crearMesItem(nombre, esPasado, confirmado, preseleccionado) {
+// "Enero 2027": el año solo cuando no es el actual.
+function _etiquetaMes(nombre, anio) {
+  return nombre + (anio && anio !== new Date().getFullYear() ? ' ' + anio : '');
+}
+
+function crearMesItem(nombre, esPasado, confirmado, preseleccionado, anio) {
   var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '');
   var badge = confirmado
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
@@ -1090,8 +1102,8 @@ function crearMesItem(nombre, esPasado, confirmado, preseleccionado) {
   // generarMeses() ocurran después.
   var onchange = confirmado ? '' : ' onchange="E.mirlxsPreselMes=undefined;E.mirlxsMesesPresel=null;this.checked ? _autoencadenarMeses(this) : _autodesencadenarMeses(this);actualizarTotalS4()"';
   return '<label class="' + clases + '">' +
-    '<input type="checkbox" value="' + nombre + '"' + attrs + onchange + '>' +
-    '<span class="mes-nombre">' + nombre + '</span>' +
+        '<input type="checkbox" value="' + nombre + '" data-anio="' + anio + '"' + attrs + onchange + '>' +
+    '<span class="mes-nombre">' + _etiquetaMes(nombre, anio) + '</span>' +
     badge +
     '</label>';
 }

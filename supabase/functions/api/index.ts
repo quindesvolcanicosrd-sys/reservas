@@ -2657,8 +2657,11 @@ async function getFechasDisponibles(params: Record<string, any>): Promise<any[]>
 }
 
 async function guardarReserva(params: Record<string, any>): Promise<Record<string, any>> {
-  const { nombre, fecha, talla, protecciones, email } = params;
+    const { nombre, fecha, talla, protecciones, email } = params;
   const esMensual = !fecha.startsWith('ev_');
+  // Año del mes (los meses se eligen en una ventana de 12 desde el actual,
+  // 2026-11-07): si viene, la vigencia es el fin de ESE mes; si no, se deduce.
+  const anioMes = Number(params.anio) || null;
 
   // Check duplicate
   const { data: dup } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').maybeSingle();
@@ -2669,7 +2672,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   if (esMensual) {
         // Mismo mes Y mismo año (validez_hasta = fin de ese mes, ver migración
     // 20261107160000_reservas_vigencia_mensual.sql) -- Octubre 2027 no choca con Octubre 2026.
-    const vigencia = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10));
+        const vigencia = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10), anioMes);
     const { data: dupsMes } = await supabase.from('reservas').select('id, validez_hasta').eq('nombre_usuario', nombre).eq('mes_texto', fecha).neq('estado', 'Cancelada');
     const dupMensual = (dupsMes ?? []).some((r: any) => !r.validez_hasta || r.validez_hasta === vigencia);
     if (dupMensual) return { exito: false, mensaje: 'Ya tienes una reserva pendiente para ese mes. Espera a que sea revisada.' };
@@ -2695,7 +2698,8 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   await supabase.from('reservas').insert({
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
-    estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null,
+        estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null,
+    validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
   });
   return { exito: true };
 }
@@ -2703,12 +2707,12 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
 // Fin del mes que cubre una reserva mensual (mismo cálculo que
 // public.fn_vigencia_mensual en la BD): mes_texto no trae año, se toma el de
 // la fecha de referencia corrigiendo el cruce de año.
-function _vigenciaMensualISO(mesTexto: string, refISO: string): string | null {
+function _vigenciaMensualISO(mesTexto: string, refISO: string, anioFijo: number | null = null): string | null {
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const n = meses.indexOf((mesTexto ?? '').toLowerCase().trim()) + 1;
   if (!n) return null;
   const [y, m] = refISO.split('-').map(Number);
-  const anio = y + (n < m - 6 ? 1 : n > m + 6 ? -1 : 0);
+  const anio = anioFijo ?? (y + (n < m - 6 ? 1 : n > m + 6 ? -1 : 0));
   const fin = new Date(Date.UTC(anio, n, 0));
   return fin.toISOString().substring(0, 10);
 }
@@ -3118,10 +3122,12 @@ async function _cerrarReglasNoAsistireVigentes(nombre: string): Promise<void> {
       if (!r.fecha_desde || r.fecha_desde > hoy) continue;
       desde = r.fecha_desde;
     } else if (r.tipo_rango === 'meses') {
-      const meses = (Array.isArray(r.meses) ? r.meses : []).map((m: any) => Number(m));
-      if (!meses.includes(mesHoy)) continue;
-      const primero = Math.min(...meses.filter((m: number) => m <= mesHoy));
-      desde = `${anio}-${String(primero).padStart(2, '0')}-01`;
+            // Meses como aaaamm (2026-11-07); 1..12 = regla vieja, mes de cualquier año.
+      const claveHoy = Number(anio) * 100 + mesHoy;
+      const meses = (Array.isArray(r.meses) ? r.meses : []).map((m: any) => Number(m)).map((m: number) => (m > 12 ? m : Number(anio) * 100 + m));
+      if (!meses.includes(claveHoy)) continue;
+      const primero = Math.min(...meses.filter((m: number) => m <= claveHoy));
+      desde = `${Math.floor(primero / 100)}-${String(primero % 100).padStart(2, '0')}-01`;
     } else continue;
     await supabase.from('reglas_asistencia')
       .update({ tipo_rango: 'periodo', fecha_desde: desde, fecha_hasta: hoy, meses: null }).eq('id', r.id);

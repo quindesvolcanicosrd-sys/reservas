@@ -67,8 +67,36 @@ class ReglaAnticipada {
   final String? motivo;
   final DateTime? desde;
   final DateTime? hasta;
+    /// Meses como aaaamm (202611), 12 meses desde el actual (2026-11-07).
+  /// Un valor 1..12 es una regla vieja: ese mes de cualquier año.
   final List<int> meses;
   final List<String> tiposEvento;
+
+  static int clave(DateTime d) => d.year * 100 + d.month;
+
+  /// Primer día del mes que representa [v] (una regla vieja toma el próximo).
+  static DateTime mesDe(int v) {
+    if (v > 12) return DateTime(v ~/ 100, v % 100);
+    final hoy = Fechas.hoy();
+    return DateTime(hoy.year + (v < hoy.month ? 1 : 0), v);
+  }
+
+  static bool coincide(int v, DateTime f) => v > 12 ? v == clave(f) : v == f.month;
+
+  /// Los 12 meses elegibles: del actual a 11 meses después.
+  static List<DateTime> ventana() {
+    final hoy = Fechas.hoy();
+    return [for (var i = 0; i < 12; i++) DateTime(hoy.year, hoy.month + i)];
+  }
+
+  /// "Noviembre" / "Enero 2027" (el año solo si no es el actual).
+  static String nombreMes(DateTime d, {bool corto = false}) {
+    final n = corto ? Fechas.mes(d) : Fechas.mesNombre(d);
+    return d.year == Fechas.hoy().year ? n : '$n ${d.year}';
+  }
+
+  List<DateTime> get mesesOrdenados => meses.map(mesDe).toList()..sort();
+
 
   static ReglaAnticipada? desdeFila(Map<String, dynamic> f) {
     final tipo = TipoRango.desde(f['tipo_rango']?.toString());
@@ -84,7 +112,7 @@ class ReglaAnticipada {
       motivo: f['motivo']?.toString(),
       desde: Fechas.desdeIso(f['fecha_desde']),
       hasta: Fechas.desdeIso(f['fecha_hasta']),
-      meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => m >= 1 && m <= 12).toList() : const [],
+            meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => (m >= 1 && m <= 12) || m > 190001).toList() : const [],
       tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
     );
   }
@@ -95,7 +123,7 @@ class ReglaAnticipada {
       case TipoRango.indefinido:
         return desde != null && !ev.fecha.isBefore(desde!);
       case TipoRango.meses:
-        return meses.contains(ev.fecha.month);
+                return meses.any((v) => coincide(v, ev.fecha));
       case TipoRango.periodo:
         return desde != null && hasta != null && !ev.fecha.isBefore(desde!) && !ev.fecha.isAfter(hasta!);
     }
@@ -106,8 +134,7 @@ class ReglaAnticipada {
     String num(DateTime d) => '${d.day}/${d.month}/${d.year}';
     switch (tipo) {
       case TipoRango.meses:
-        final ord = [...meses]..sort();
-        return 'Meses: ${ord.map((m) => Fechas.mes(DateTime(2000, m))).join(', ')} ${Fechas.hoy().year}';
+                return 'Meses: ${mesesOrdenados.map((d) => nombreMes(d, corto: true)).join(', ')}';
       case TipoRango.periodo:
         return 'Del ${desde == null ? '' : num(desde!)} al ${hasta == null ? '' : num(hasta!)}';
       case TipoRango.indefinido:
@@ -136,12 +163,11 @@ class ReglaAnticipada {
       case TipoRango.indefinido:
         return (desde, null);
       case TipoRango.meses:
-        if (meses.isEmpty) return (null, null);
-        final anio = Fechas.hoy().year;
-        final ord = [...meses]..sort();
-        var d = DateTime(anio, ord.first, 1);
+                if (meses.isEmpty) return (null, null);
+        final ord = mesesOrdenados;
+        var d = ord.first;
         if (d.isBefore(Fechas.hoy())) d = Fechas.hoy();
-        return (d, DateTime(anio, ord.last + 1, 0));
+        return (d, DateTime(ord.last.year, ord.last.month + 1, 0));
     }
   }
 }

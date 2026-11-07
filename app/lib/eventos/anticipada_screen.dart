@@ -99,8 +99,10 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       case TipoRango.indefinido:
         return r.desde != null && r.desde!.isAfter(hoy) ? VigenciaRegla.proxima : VigenciaRegla.activa;
       case TipoRango.meses:
-        if (r.meses.contains(hoy.month)) return VigenciaRegla.activa;
-        return r.meses.any((m) => m > hoy.month) ? VigenciaRegla.proxima : VigenciaRegla.termino;
+                final actual = DateTime(hoy.year, hoy.month);
+        final ms = r.mesesOrdenados;
+        if (ms.contains(actual)) return VigenciaRegla.activa;
+        return ms.any((m) => m.isAfter(actual)) ? VigenciaRegla.proxima : VigenciaRegla.termino;
     }
   }
 
@@ -201,7 +203,8 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   late EstadoRsvp? _estado = widget.editando?.estado;
   late String? _motivo = widget.editando?.estado == EstadoRsvp.noAsistire ? widget.editando?.motivo : null;
   late TipoRango? _tipo = widget.editando?.tipo;
-  late final Set<int> _meses = {...?widget.editando?.meses};
+    // aaaamm; una regla vieja (solo el mes) pasa a tener año al editarla.
+  late final Set<int> _meses = {for (final v in widget.editando?.meses ?? const <int>[]) ReglaAnticipada.clave(ReglaAnticipada.mesDe(v))};
   late DateTime? _desde = widget.editando?.desde;
   late DateTime? _hasta = widget.editando?.hasta;
 
@@ -232,9 +235,9 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     });
   }
 
-  bool _mesHabilitado(int mes) {
-    final hoy = Fechas.hoy();
-    return mes >= hoy.month && (_cuota?.mesPermitido(_estado, mes, hoy.year) ?? true);
+    bool _mesHabilitado(int clave) {
+    final d = ReglaAnticipada.mesDe(clave);
+    return !d.isBefore(DateTime(Fechas.hoy().year, Fechas.hoy().month)) && (_cuota?.mesPermitido(_estado, d.month, d.year) ?? true);
   }
 
   bool _diaDeshabilitado(DateTime d) {
@@ -414,7 +417,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         OpcionAsistente(
           icono: Icons.calendar_view_month_rounded,
           titulo: 'Por meses',
-          texto: 'Uno o varios meses de este año',
+                    texto: 'Uno o varios de los próximos 12 meses',
           activa: _tipo == TipoRango.meses,
           alTocar: () => elegir(TipoRango.meses),
         ),
@@ -447,19 +450,28 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
             crossAxisCount: 3,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 2.4,
+                        childAspectRatio: 1.8,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
             children: [
-              for (var m = 1; m <= 12; m++)
+                            // 12 meses desde el actual, cada uno con su año abajo.
+              for (final d in ReglaAnticipada.ventana())
                 FilterChip(
                   showCheckmark: false,
                   label: SizedBox(
                     width: double.infinity,
-                    child: Text(Fechas.mesNombre(DateTime(2000, m)), textAlign: TextAlign.center),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(Fechas.mesNombre(d), textAlign: TextAlign.center),
+                        Text('${d.year}', style: TextStyle(fontSize: 11, color: p.textoSecundario)),
+                      ],
+                    ),
                   ),
-                  selected: _meses.contains(m),
-                  onSelected: _mesHabilitado(m) ? (v) => setState(() => v ? _meses.add(m) : _meses.remove(m)) : null,
+                  selected: _meses.contains(ReglaAnticipada.clave(d)),
+                  onSelected: _mesHabilitado(ReglaAnticipada.clave(d))
+                      ? (v) => setState(() => v ? _meses.add(ReglaAnticipada.clave(d)) : _meses.remove(ReglaAnticipada.clave(d)))
+                      : null,
                 ),
             ],
           ),
@@ -517,10 +529,8 @@ class TarjetaRegla extends StatelessWidget {
     final r = regla;
     switch (r.tipo) {
       case TipoRango.meses:
-                // En orden desde el mes actual (diciembre antes que enero).
-        final actual = Fechas.hoy().month;
-        final orden = [...r.meses]..sort((a, b) => ((a - actual) % 12).compareTo((b - actual) % 12));
-        final ms = [for (final (i, m) in orden.indexed) i == 0 ? Fechas.mesNombre(DateTime(2000, m)) : Fechas.mes(DateTime(2000, m))];
+                        // En orden de calendario, con el año cuando no es el actual.
+        final ms = [for (final (i, d) in r.mesesOrdenados.indexed) ReglaAnticipada.nombreMes(d, corto: i > 0)];
         return ms.length == 1 ? ms.first : '${ms.sublist(0, ms.length - 1).join(', ')} y ${ms.last}';
       case TipoRango.periodo:
         return 'Del ${Fechas.corta(r.desde!)} al ${Fechas.corta(r.hasta!)}';

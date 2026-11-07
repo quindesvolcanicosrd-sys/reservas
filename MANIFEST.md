@@ -18,6 +18,11 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - `getReservasPersona` devuelve `validezHasta` ("d/m/aaaa") en cada mensual (helper `_vigenciaMensualISO`, mismo cálculo que la BD). `guardarReserva` solo choca con una mensual del mismo mes **y año**.
 - Web y app: cuota al día = alguna mensual sin vencer; `_evVencimientoCuota()` toma el vencimiento más lejano; mes pagado = mes y año.
 
+## Meses: 12 desde el actual, con año (2026-11-07)
+- Donde se eligen meses ya no se usa el año calendario: se muestran 12 meses desde el actual (noviembre 2026 a octubre 2027), cada uno con su año.
+- **Asistencia anticipada "Por meses":** `reglas_asistencia.meses` (jsonb) guarda aaaamm (202611). Un valor 1..12 es una regla vieja (ese mes de cualquier año) y se sigue leyendo; las existentes se convirtieron (migración `20261107170000_reglas_meses_con_anio.sql`). Web: `_evAntMesClave()/_evAntMesInfo()/_evAntMesCoincide()/_evAntMesesVentana()/_evAntNombreMes()`; app: `ReglaAnticipada.clave/mesDe/coincide/ventana/nombreMes`; backend `_cerrarReglasNoAsistireVigentes()` entiende ambos formatos.
+- **Reserva mensual (web):** `generarMeses()` (js/ui.js) arma la ventana de 12 meses (más los meses adeudados anteriores, atenuados); cada checkbox lleva `data-anio`, "Pagado" usa `_evMesPagado(mes, año)`. La preselección `E.mirlxsMesesPresel` ahora es aaaamm. `E.mesesAnio`/`E.mesesEtiquetas` ("Enero 2027") van a los textos y `guardarReserva` recibe `anio`, que fija `validez_hasta` al fin de ese mes (sin `anio` se deduce como antes).
+
 ## Asistencia anticipada: reglas (Victor, 2026-11-07)
 - **Quién la ve:** Quindes o Mirlxs con equipamiento completo propio (ni patines ni protecciones del club). Web `_evAntDisponible()` (botón de la barra); app `AnticipadaRepo.disponible` (menú "+").
 - **"Asistiré" solo en fechas pagadas:** mes con cuota de ese año, excepción del admin o clase reservada (exentas/Técnico/Lesionadx, libres). Sin nada pagado de hoy en adelante, "Asistiré" queda atenuado y al tocarlo explica el motivo; "No asistiré" y "No jugador" siempre disponibles. Web `_evAntAsistireHabilitado()`/`_evAntEventoCubierto()`; app `Cuota.asistireHabilitado`/`Cuota.cubre()`.
