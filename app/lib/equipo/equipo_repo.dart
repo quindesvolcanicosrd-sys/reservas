@@ -176,11 +176,4 @@ class EquipoRepo extends ChangeNotifier {
   }
 
   Future<void> cancelarViaje(Integrante p) => _admin('adminCancelarViaje', {'idJugadora': p.username});
-
-  /// Link de activación de cuenta (web `_eqGenerarInviteLink()`).
-  Future<String> linkActivacion(Integrante p) async {
-    final r = await _api.post('generarInviteToken', {'adminToken': sesion.adminToken, 'username': p.username});
-    if (r['exito'] != true) throw ApiException('${r['error'] ?? 'No se pudo generar el link.'}');
-    return 'https://app.quindesvolcanicos.com/activar/?token=${Uri.encodeComponent('${r['token']}')}';
-  }
 }

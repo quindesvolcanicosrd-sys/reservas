@@ -3149,19 +3149,15 @@ function _eqAdminBloqueHtml(p) {
     onclick: "_eqToggleAdminFila('" + idJs + "')",
     derecha: _eqToggleHtml('eq-tog-admin-' + idAttr, !!p.esAdminMiembro, sinEmail, "_eqToggleAdminFila('" + idJs + "')")
   });
-  // Solo si todavía no tiene email vinculado: una cuenta con email ya pasó
-  // por inscripcion/ o ya se activó, el link no aplica.
-  var filaActivar = sinEmail ? _eqAjFilaHtml({
-    icono: 'link', color: 'aj-icon-amber', titulo: 'Activar cuenta',
-    valor: 'Genera un link de un solo uso', onclick: "_eqGenerarInviteLink('" + idJs + "')"
-  }) : '';
+  // ("Activar cuenta" con link de un solo uso se quitó el 2026-11-07: todas las
+  // cuentas ya están migradas.)
   var filaExterna = _eqAjFilaHtml({
     icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Asistencias externas',
     valor: _eqEsc(_eqExtValorTexto(_eqExtCache[p.id])), valorId: 'eq-admin-val-ext-' + idAttr,
     onclick: "_eqAbrirSubPerfil('" + idJs + "','externas')"
   });
   return '<div class="aj-group eq-perfil-grupo">' +
-      filaCategoria + filaCuota + filaAdmin + filaActivar + filaExterna +
+      filaCategoria + filaCuota + filaAdmin + filaExterna +
     '</div>';
 }
 
@@ -3379,22 +3375,6 @@ function _eqAplicarTierUI(persona, modo) {
 // función). Sin confirmación previa -- generar un link de más no tiene
 // costo real (el anterior, si existía, sigue siendo válido hasta que se
 // use o expire; no hay límite de 1 vigente por persona).
-function _eqGenerarInviteLink(id) {
-  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible generar el link en este momento.', 'error'); return; }
-  apiPost({ action: 'generarInviteToken', adminToken: _adminToken, username: id }, function(res) {
-    if (!res.exito) { mostrarToast(res.error || 'No se pudo generar el link.', 'error'); return; }
-    var url = 'https://app.quindesvolcanicos.com/activar/?token=' + encodeURIComponent(res.token);
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(function() { mostrarToast('¡Link copiado!', 'ok', true); }).catch(function() {
-        mostrarToast('No se pudo copiar el link automáticamente: ' + url, 'error');
-      });
-    } else {
-      mostrarToast('No se pudo copiar el link automáticamente: ' + url, 'error');
-    }
-  }, function(e) {
-    mostrarToast(e && e.message ? e.message : 'No se pudo generar el link.', 'error');
-  });
-}
 
 // ── Asistencias externas (subsección `externas` de `#eq-perfil-sub`) ──────
 // Lista por persona vía `adminGetAsistenciasExternas` (más reciente

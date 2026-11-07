@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/fechas.dart';
@@ -500,15 +499,7 @@ class _AdministracionState extends State<_Administracion> {
                           _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso admin otorgado' : 'Acceso admin quitado');
                         },
                 ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.link_rounded),
-                  title: const Text('Copiar link de activación de cuenta'),
-                  onTap: () => _hacer(() async {
-                    final link = await repo.linkActivacion(p);
-                    await Clipboard.setData(ClipboardData(text: link));
-                  }, 'Link copiado'),
-                ),
+
                 // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
                 if (p.deViaje)
                   ListTile(
