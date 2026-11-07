@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android, Equipo: secciones como acordeón (siempre una abierta; abrir otra cierra la anterior con transición suave), encabezados más claros y archivar inactivxs desde la lista (admins).
+
 2026-11-07 — App Android, Equipo: la lista de Inactivxs ahora se calcula como en la web (30+ días sin asistir); emergencia solo para quien fue marcado hoy a tiempo o tarde, con pill roja junto al avatar en la ficha; animación del avatar corregida (sin línea amarilla ni salto de letras). Servidor: `getEquipo` devuelve `presenteHoy`.
 
 2026-11-07 — App Android: sección Equipo nativa (favoritos, grupos, dato relevante que rota, buscador inteligente, ficha con stats y administración, botón de emergencia para admins con capturas bloqueadas); tocar a alguien en un evento abre su ficha. Servidor: roles guardados en la base, ficha de emergencia, archivar bloqueado con reservas o cuotas pendientes.

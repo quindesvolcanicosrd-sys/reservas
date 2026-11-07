@@ -13,9 +13,10 @@ import 'persona_screen.dart';
 
 /// Pestaña Equipo (Victor, 2026-11-07; plan en el Claude Doc "Pivot app —
 /// Equipo, Tareas, Ajustes y Mi Liga"): favoritos en una fila de avatares,
-/// Quindes, Mirlxs e Inactivxs (plegado) con tu fila primero, un dato
-/// relevante por persona que rota con fundido, buscador inteligente y, para
-/// admins, el botón de emergencia en cada fila.
+/// Quindes, Mirlxs e Inactivxs como acordeón (siempre una sección abierta:
+/// abrir otra cierra la anterior, Victor 2026-11-07) con tu fila primero, un
+/// dato relevante por persona que rota con fundido, buscador inteligente y,
+/// para admins, emergencia (marcadx hoy) y archivar (en Inactivxs).
 class EquipoScreen extends StatefulWidget {
   const EquipoScreen({super.key, required this.repo});
   final EquipoRepo repo;
@@ -29,7 +30,9 @@ class _EquipoScreenState extends State<EquipoScreen> {
   final _busqueda = TextEditingController();
   final _focoBusqueda = FocusNode();
   bool _buscando = false;
-  bool _inactivosAbiertos = false;
+
+  /// Sección abierta del acordeón; null = la tuya (o la primera con gente).
+  String? _abierto;
 
   /// Reloj común de las filas: todas cambian de dato a la vez.
   final _tick = ValueNotifier<int>(0);
@@ -153,7 +156,15 @@ class _EquipoScreenState extends State<EquipoScreen> {
     }
 
     final favoritos = personas.where((x) => repo.favoritos.contains(x.username)).toList();
-    final inactivos = grupo('Inactivxs');
+    const secciones = ['Quindes', 'Mirlxs', 'Inactivxs'];
+    final grupos = {for (final g in secciones) g: grupo(g)};
+    final conGente = [
+      for (final g in secciones)
+        if (grupos[g]!.isNotEmpty) g,
+    ];
+    final mio = personas.where(repo.esYo).map((x) => x.grupo).firstOrNull;
+    final abierto = conGente.contains(_abierto) ? _abierto : (conGente.contains(mio) ? mio : conGente.firstOrNull);
+
     return _envolverScroll(
       CustomScrollView(
         key: const ValueKey('lista'),
@@ -194,24 +205,14 @@ class _EquipoScreenState extends State<EquipoScreen> {
               ),
             ),
           ],
-          for (final g in ['Quindes', 'Mirlxs'])
-            if (grupo(g).isNotEmpty)
-              SliverMainAxisGroup(
-                slivers: [
-                  _encabezado(p, g, grupo(g).length),
-                  SliverList.builder(itemCount: grupo(g).length, itemBuilder: (context, i) => _fila(context, grupo(g)[i], hoy)),
-                ],
-              ),
-          if (inactivos.isNotEmpty)
+          for (final g in conGente)
             SliverMainAxisGroup(
               slivers: [
-                _encabezado(p, 'Inactivxs', inactivos.length, plegable: true),
+                _seccion(p, g, grupos[g]!.length, abierta: g == abierto),
                 SliverToBoxAdapter(
-                  child: AnimatedSize(
-                    duration: const Duration(milliseconds: 260),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: !_inactivosAbiertos ? const SizedBox(width: double.infinity) : Column(children: [for (final x in inactivos) _fila(context, x, hoy)]),
+                  child: _Plegable(
+                    abierto: g == abierto,
+                    child: Column(children: [for (final x in grupos[g]!) _fila(context, x, hoy)]),
                   ),
                 ),
               ],
@@ -222,7 +223,74 @@ class _EquipoScreenState extends State<EquipoScreen> {
     );
   }
 
-  Widget _encabezado(PivotPaleta p, String titulo, int n, {bool plegable = false}) {
+  static const _iconos = {'Quindes': Icons.groups_rounded, 'Mirlxs': Icons.school_rounded, 'Inactivxs': Icons.bedtime_outlined};
+
+  /// Encabezado del acordeón: tarjeta con ícono, nombre, cantidad y flecha.
+  /// Tocar la abierta no hace nada (siempre queda una abierta).
+  Widget _seccion(PivotPaleta p, String titulo, int n, {required bool abierta}) {
+    const dur = Duration(milliseconds: 300);
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _Encabezado(
+        Container(
+          color: p.fondo,
+          padding: const EdgeInsets.fromLTRB(12, 5, 12, 5),
+          child: AnimatedContainer(
+            duration: dur,
+            curve: Curves.easeInOutCubic,
+            decoration: BoxDecoration(
+              color: abierta ? p.tarjeta : p.fondo,
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              border: Border.all(color: abierta ? p.tarjeta : p.suave),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                onTap: () {
+                  if (!abierta) setState(() => _abierto = titulo);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      Icon(_iconos[titulo], size: 20, color: abierta ? p.marcaTexto : p.textoSecundario),
+                      const SizedBox(width: 10),
+                      AnimatedDefaultTextStyle(
+                        duration: dur,
+                        style: Theme.of(context).textTheme.titleMedium!
+                            .copyWith(fontSize: 16, fontWeight: FontWeight.w800, color: abierta ? p.texto : p.textoSecundario),
+                        child: Text(titulo),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                        decoration: BoxDecoration(color: p.suave, borderRadius: BorderRadius.circular(PivotRadios.chip)),
+                        child: Text(
+                          '$n',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.sobreSuave),
+                        ),
+                      ),
+                      const Spacer(),
+                      AnimatedRotation(
+                        turns: abierta ? 0.5 : 0,
+                        duration: dur,
+                        curve: Curves.easeInOutCubic,
+                        child: Icon(Icons.expand_more_rounded, color: p.textoSecundario),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        alto: 58,
+      ),
+    );
+  }
+
+  Widget _encabezado(PivotPaleta p, String titulo, int n) {
     final contenido = Container(
       color: p.fondo,
       padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
@@ -234,20 +302,10 @@ class _EquipoScreenState extends State<EquipoScreen> {
           ),
           const SizedBox(width: 6),
           Text('$n', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-          const Spacer(),
-          if (plegable)
-            AnimatedRotation(
-              turns: _inactivosAbiertos ? 0.5 : 0,
-              duration: const Duration(milliseconds: 220),
-              child: Icon(Icons.expand_more_rounded, color: p.textoSecundario),
-            ),
         ],
       ),
     );
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _Encabezado(plegable ? InkWell(onTap: () => setState(() => _inactivosAbiertos = !_inactivosAbiertos), child: contenido) : contenido),
-    );
+    return SliverPersistentHeader(pinned: true, delegate: _Encabezado(contenido));
   }
 
   Widget _fila(BuildContext context, Integrante x, DateTime hoy, {List<String>? motivos}) {
@@ -262,7 +320,34 @@ class _EquipoScreenState extends State<EquipoScreen> {
       alTocar: () => _abrir(x),
       // Emergencia solo para quien fue marcadx hoy a tiempo o tarde (Victor, 2026-11-07).
       emergencia: repo.esAdmin && x.presenteHoy ? () => EmergenciaScreen.abrir(context, repo, x) : null,
+      archivar: repo.esAdmin && x.inactivx && !repo.esYo(x) ? () => _archivar(x) : null,
     );
+  }
+
+  /// Archivar desde la lista de Inactivxs (el servidor lo impide con reservas
+  /// activas o cuotas pendientes y explica por qué).
+  Future<void> _archivar(Integrante x) async {
+    final m = ScaffoldMessenger.of(context);
+    final si = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('¿Archivar a ${x.nombreMostrar}?'),
+        content: const Text(
+          'Deja de aparecer en Equipo y no puede iniciar sesión. Su historial se conserva. No se puede archivar si tiene reservas activas o cuotas pendientes.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Archivar')),
+        ],
+      ),
+    );
+    if (si != true) return;
+    try {
+      await repo.archivar(x);
+      m.showSnackBar(SnackBar(content: Text('${x.nombreMostrar} quedó archivadx')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   Widget _resultados(BuildContext context, PivotPaleta p, List<Integrante> personas) {
@@ -310,13 +395,14 @@ class _EquipoScreenState extends State<EquipoScreen> {
 }
 
 class _Encabezado extends SliverPersistentHeaderDelegate {
-  _Encabezado(this.hijo);
+  _Encabezado(this.hijo, {this.alto = 42});
   final Widget hijo;
+  final double alto;
 
   @override
-  double get minExtent => 42;
+  double get minExtent => alto;
   @override
-  double get maxExtent => 42;
+  double get maxExtent => alto;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => SizedBox.expand(child: hijo);
@@ -358,6 +444,7 @@ class _FilaIntegrante extends StatelessWidget {
     required this.alTocar,
     this.motivos,
     this.emergencia,
+    this.archivar,
   });
   final Integrante p;
   final bool yo;
@@ -366,6 +453,7 @@ class _FilaIntegrante extends StatelessWidget {
   final ValueNotifier<int> tick;
   final VoidCallback alTocar;
   final VoidCallback? emergencia;
+  final VoidCallback? archivar;
 
   @override
   Widget build(BuildContext context) {
@@ -463,9 +551,72 @@ class _FilaIntegrante extends StatelessWidget {
                 onPressed: emergencia,
                 icon: Icon(Icons.emergency_outlined, color: pal.marcaTexto),
               ),
+            if (archivar != null)
+              IconButton(
+                tooltip: 'Archivar',
+                onPressed: archivar,
+                icon: Icon(Icons.archive_outlined, color: pal.textoSecundario),
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Contenido de una sección del acordeón: se abre y cierra deslizando la
+/// altura (desde arriba) con fundido; la que se cierra y la que se abre usan
+/// la misma curva y duración, así el resto de la lista no da saltos.
+class _Plegable extends StatefulWidget {
+  const _Plegable({required this.abierto, required this.child});
+  final bool abierto;
+  final Widget child;
+
+  @override
+  State<_Plegable> createState() => _PlegableState();
+}
+
+class _PlegableState extends State<_Plegable> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 340), value: widget.abierto ? 1 : 0);
+  late final _altura = CurvedAnimation(parent: _c, curve: Curves.easeInOutCubic);
+  late final _opacidad = CurvedAnimation(
+    parent: _c,
+    curve: const Interval(0.3, 1, curve: Curves.easeOut),
+    reverseCurve: const Interval(0.5, 1, curve: Curves.easeIn),
+  );
+
+  @override
+  void didUpdateWidget(_Plegable old) {
+    super.didUpdateWidget(old);
+    if (old.abierto == widget.abierto) return;
+    if (MediaQuery.of(context).disableAnimations) {
+      _c.value = widget.abierto ? 1 : 0;
+    } else {
+      widget.abierto ? _c.forward() : _c.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      // Cerrada del todo no se construye (ni rota su dato).
+      builder: (context, hijo) => _c.isDismissed
+          ? const SizedBox(width: double.infinity)
+          : ClipRect(
+              child: SizeTransition(
+                sizeFactor: _altura,
+                alignment: Alignment.topCenter,
+                child: FadeTransition(opacity: _opacidad, child: hijo),
+              ),
+            ),
+      child: widget.child,
     );
   }
 }
