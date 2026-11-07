@@ -660,12 +660,19 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
     emerg2Nombre: 'emerg2_nombre', emerg2Relacion: 'emerg2_relacion', emerg2Prefijo: 'emerg2_prefijo', emerg2Telefono: 'emerg2_telefono',
     enfermedad: 'enfermedad', alergias: 'alergias', alergiasDesc: 'alergias_desc',
     antecedentes: 'antecedentes', medicamentos: 'medicamentos', medicamentosDesc: 'medicamentos_desc',
-    atencionMedica: 'atencion_medica', seguro: 'seguro', seguroContacto: 'seguro_contacto',
+        atencionMedica: 'atencion_medica', seguro: 'seguro', seguroContacto: 'seguro_contacto',
+    roles: 'roles',
   };
   const update: Record<string, any> = {};
   for (const camel of Object.keys(datos ?? {})) { if (CAMPO_MAP[camel]) update[CAMPO_MAP[camel]] = datos[camel]; }
   // `fecha_nacimiento` es `date`: '' o un formato raro romperían el UPDATE entero.
-  if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
+    if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
+  // Roles: solo los del catálogo (web `_EQ_ROLES`).
+  if ('roles' in update) {
+    const validos = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
+    const lista = Array.isArray(update.roles) ? update.roles : String(update.roles ?? '').split(',');
+    update.roles = lista.map((x: any) => String(x).trim()).filter((x: string) => validos.includes(x));
+  }
   if (!Object.keys(update).length) return { exito: true };
   await supabase.from('equipo').update(update).eq('username', params.nombre);
   return { exito: true };
@@ -4291,7 +4298,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // (token de usuarix, o sin token) recibe el roster SIN esas claves.
   const vistaAdmin = params.adminToken ? !!(await _validarAdminToken(String(params.adminToken))) : false;
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, viaje_desde, viaje_hasta')
+        .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, viaje_desde, viaje_hasta, roles, fecha_nacimiento, fecha_publica')
     .is('eliminado_en', null)
     .order('username');
   const personas = filas ?? [];
@@ -4423,9 +4430,14 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     const actual = ultimaPorClaveAsistencia[clave];
     if (!actual || marca >= actual.marca) ultimaPorClaveAsistencia[clave] = { estado: l.estado, nombre_usuario: u, marca };
   });
-  const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
+    const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
+  // Asistencia del período (app, dato de la fila de Equipo, 2026-11-07):
+  // veces que vino (a tiempo o tarde) sobre los eventos con asistencia tomada.
+  const asistenciasPeriodoPorUsuario: Record<string, number> = {};
+  const eventosConAsistencia = new Set((logsAsistenciaPeriodo ?? []).map((l: any) => String(l.id_evento)));
   Object.keys(ultimaPorClaveAsistencia).forEach((clave) => {
     const l = ultimaPorClaveAsistencia[clave];
+    if (l.estado === 'A tiempo' || l.estado === 'Tarde') asistenciasPeriodoPorUsuario[l.nombre_usuario] = (asistenciasPeriodoPorUsuario[l.nombre_usuario] || 0) + 1;
     if (l.estado === 'A tiempo') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 1;
     else if (l.estado === 'Tarde') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 0.5;
   });
@@ -4672,6 +4684,11 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
       exentaCuota: r.exenta_cuota === true,
       esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
     } : {}),
+        // Roles en el equipo y cumpleaños (solo "mm-dd" y solo si es público).
+    roles: Array.isArray(r.roles) ? r.roles : [],
+    cumple: r.fecha_publica === 'Sí' && r.fecha_nacimiento ? String(r.fecha_nacimiento).substring(5, 10) : null,
+    asistenciasPeriodo: asistenciasPeriodoPorUsuario[r.username] || 0,
+    eventosPeriodo: eventosConAsistencia.size,
     horas_ano: Number(r.horas_ano) || 0,
     asistencias_ano: Number(r.asistencias_ano) || 0,
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
@@ -6412,6 +6429,19 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   return { exito: true };
 }
 
+// Ficha de emergencia (botón de emergencia, solo admins, Victor 2026-11-07):
+// datos sensibles de UNA persona, pedidos cada vez y nunca guardados en el
+// teléfono. Sin registro de accesos ni aviso, por decisión explícita.
+async function adminFichaEmergencia(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Solo admins.' };
+  const { data: r } = await supabase.from('equipo')
+    .select('username, nombre_derby, numero_derby, foto_perfil, fecha_nacimiento, tipo_documento, pais_expedicion, numero_documento, nombre_legal, calle_principal, calle_secundaria, numeracion, sector, canton, emerg1_nombre, emerg1_relacion, emerg1_prefijo, emerg1_telefono, emerg2_nombre, emerg2_relacion, emerg2_prefijo, emerg2_telefono, enfermedad, alergias, dieta, alergias_desc, antecedentes, medicamentos, medicamentos_desc, atencion_medica, seguro, seguro_contacto')
+    .eq('username', String(params.username ?? '')).is('eliminado_en', null).maybeSingle();
+  if (!r) return { exito: false, error: 'Persona no encontrada.' };
+  const { data: pais } = await supabase.from('config_app').select('value').eq('key', 'pais_equipo').maybeSingle();
+  return { exito: true, paisEquipo: pais?.value ?? 'EC', ficha: r };
+}
+
 // ─── Parser de parámetros ─────────────────────────────────────────────────────
 
 async function parseParams(req: Request): Promise<Record<string, any>> {
@@ -6609,7 +6639,8 @@ Deno.serve(async (req: Request) => {
       case 'adminQuitarAdmin':               return json(await adminQuitarAdmin(params));
       case 'adminGetCandidatosAdmin':        return json(await adminGetCandidatosAdmin());
       case 'adminGetRosterEquipo':           return json(await adminGetRosterEquipo());
-      case 'getEquipo':                      return json(await getEquipo(params));
+            case 'getEquipo':                      return json(await getEquipo(params));
+      case 'adminFichaEmergencia':           return json(await adminFichaEmergencia(params));
       case 'getDesglosePuntos':              return json(await getDesglosePuntos(params));
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push

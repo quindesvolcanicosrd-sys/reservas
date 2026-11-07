@@ -68,8 +68,14 @@ var _EQ_EQUIPO_DEMO = [
 // dispositivo, no lo va a ver) -- documentado tal cual en MANIFEST.md, no
 // se inventó ningún endpoint real que no existe.
 var _EQ_ROLES = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
+// Roles (2026-11-07): vienen del servidor (`equipo.roles`, `getEquipo`) para
+// que todo el equipo vea los de todxs; antes vivían solo en el navegador de
+// cada persona. El localStorage queda como respaldo del propio rol y se sube
+// solo una vez si el servidor todavía no lo tiene (`_eqSubirRolesLocales()`).
 function _eqRolesDe(username) {
   if (!username) return [];
+  var p = (typeof _eqPersonas !== 'undefined') ? _eqPersonas.filter(function(x) { return x.username === username; })[0] : null;
+  if (p && Array.isArray(p.roles) && p.roles.length) return p.roles.slice();
   try {
     var raw = localStorage.getItem('eq_roles_' + username);
     return raw ? JSON.parse(raw) : [];
@@ -78,6 +84,19 @@ function _eqRolesDe(username) {
 function _eqSetRolesDe(username, roles) {
   if (!username) return;
   try { localStorage.setItem('eq_roles_' + username, JSON.stringify(roles)); } catch (ex) {}
+  var p = _eqPersonas.filter(function(x) { return x.username === username; })[0];
+  if (p) p.roles = roles.slice();
+  if (typeof E !== 'undefined' && username === E.nombre) {
+    api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ roles: roles }) }, function() {}, function() {});
+  }
+}
+function _eqSubirRolesLocales() {
+  if (typeof E === 'undefined' || !E.nombre) return;
+  var yo = _eqPersonas.filter(function(x) { return x.username === E.nombre; })[0];
+  if (!yo || (Array.isArray(yo.roles) && yo.roles.length)) return;
+  var locales = [];
+  try { locales = JSON.parse(localStorage.getItem('eq_roles_' + E.nombre) || '[]'); } catch (ex) {}
+  if (locales.length) _eqSetRolesDe(E.nombre, locales);
 }
 // Texto para mostrar (detalle de Equipo, tarjetas) -- roles reales
 // separados por coma, o el fallback pedido si está vacío o es
@@ -255,10 +274,11 @@ function _eqAsegurarCargado(cb) {
   _eqCallbacksEspera.push(cb);
   if (_eqCargando) return;
   _eqCargando = true;
-  api(_eqParamsGetEquipo({ action: 'getEquipo' }), function(res) {
+    api(_eqParamsGetEquipo({ action: 'getEquipo' }), function(res) {
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
     _eqCargando = false;
+    _eqSubirRolesLocales();
     // Sin los campos confidenciales de admin (ver `_eqParamsGetEquipo()`):
     // la caché offline queda en el dispositivo aunque se cierre la sesión.
     try {
