@@ -52,6 +52,7 @@ class PanelCalendarioState extends State<PanelCalendario> {
 
   late final PageController _paginas = PageController(initialPage: _indice(widget.mesInicial));
   late int _actual = _indice(widget.mesInicial);
+  final _clavesPills = <int, GlobalKey>{};
   bool _arrastreDelUsuario = false;
 
   static const _cabecera = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -61,7 +62,10 @@ class PanelCalendarioState extends State<PanelCalendario> {
     super.initState();
     // Después del primer cuadro: pedir datos notifica al repo y no puede pasar en medio de un build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _precargar();
+      if (mounted) {
+        _precargar();
+        _mostrarPill(animado: false);
+      }
     });
   }
 
@@ -74,6 +78,19 @@ class PanelCalendarioState extends State<PanelCalendario> {
   void _precargar() {
     final m = _mesDe(_actual);
     widget.repo.asegurarRango(DateTime(m.year, m.month - 1, 1), DateTime(m.year, m.month + 2, 0));
+  }
+
+  /// Mantiene a la vista (centrada) la pill del mes actual del panel.
+  void _mostrarPill({bool animado = true}) {
+    final ctx = _clavesPills[_actual]?.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(ctx, alignment: 0.5, duration: animado ? const Duration(milliseconds: 300) : Duration.zero, curve: Curves.easeOutCubic);
+  }
+
+  /// Tocar una pill: el panel y el timeline van a ese mes.
+  void _elegirPill(int i) {
+    irAMes(_mesDe(i));
+    widget.alMesElegido(_mesDe(i));
   }
 
   /// Lleva el panel a un mes con animación (botón "Hoy", desplazamiento del timeline).
@@ -130,8 +147,9 @@ class PanelCalendarioState extends State<PanelCalendario> {
                 child: PageView.builder(
                   controller: _paginas,
                   onPageChanged: (i) {
-                    _actual = i;
+                    setState(() => _actual = i);
                     widget.alCambiarMes(_mesDe(i));
+                    WidgetsBinding.instance.addPostFrameCallback((_) => _mostrarPill());
                   },
                   itemBuilder: (context, i) => ListenableBuilder(
                     listenable: widget.repo,
@@ -149,10 +167,76 @@ class PanelCalendarioState extends State<PanelCalendario> {
                 _leyenda(p, relleno: p.marca, borde: p.marca, texto: 'Asistirás'),
                 _leyenda(p, relleno: p.fondo, borde: p.marca, texto: 'Sin responder'),
                 _leyenda(p, relleno: p.apagadoPunto, borde: p.apagadoPunto, texto: 'Cancelado / no vas'),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('🎈', style: TextStyle(fontSize: 11)),
+                    const SizedBox(width: 4),
+                    Text('Cumpleaños', style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+                  ],
+                ),
               ],
             ),
+            const SizedBox(height: 10),
+            _filaPills(p),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Pills de meses (como la web y Google Calendar): un año atrás y año y
+  /// medio adelante, con el número de año antes de cada enero.
+  Widget _filaPills(PivotPaleta p) {
+    final hoy = Fechas.hoy();
+    final desde = _indice(DateTime(hoy.year - 1, hoy.month));
+    final hasta = _indice(DateTime(hoy.year + 1, hoy.month + 6));
+    final hijos = <Widget>[];
+    for (var i = desde; i <= hasta; i++) {
+      final m = _mesDe(i);
+      if (m.month == 1 || i == desde) {
+        hijos.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              child: Text(
+                '${m.year}',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.textoSecundario),
+              ),
+            ),
+          ),
+        );
+      }
+      final activo = i == _actual;
+      hijos.add(
+        Padding(
+          key: _clavesPills.putIfAbsent(i, GlobalKey.new),
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Material(
+            color: activo ? p.marca : p.tarjeta,
+            borderRadius: BorderRadius.circular(PivotRadios.boton),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(PivotRadios.boton),
+              onTap: () => _elegirPill(i),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Center(
+                  child: Text(
+                    Fechas.mes(m).substring(0, 3),
+                    style: TextStyle(fontSize: 14, fontWeight: activo ? FontWeight.w700 : FontWeight.w500, color: activo ? p.sobreMarca : p.texto),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 36,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: hijos),
       ),
     );
   }
@@ -277,23 +361,9 @@ class _Mes extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Cumpleaños: insignia en la esquina del número (más visible que
-                // una torta diminuta junto a los puntos).
-                if (cumple)
-                  Positioned(
-                    right: -5,
-                    top: -4,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: p.marca,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: p.fondo, width: 1.5),
-                      ),
-                      child: Icon(Icons.cake_rounded, size: 10, color: p.sobreMarca),
-                    ),
-                  ),
+                // Cumpleaños: globo a color en la esquina del número (un emoji
+                // se reconoce mucho mejor que un ícono de una línea a este tamaño).
+                if (cumple) const Positioned(right: -7, top: -6, child: Text('🎈', style: TextStyle(fontSize: 13, height: 1))),
               ],
             ),
             const SizedBox(height: 2),

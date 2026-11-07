@@ -50,10 +50,10 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
   final Color velo; // sombras/velos
   final List<Color> avatares;
 
-  static const _avatares = [
-    Color(0xFFE8000D), Color(0xFF775652), Color(0xFF3B6470),
-    Color(0xFF6B5778), Color(0xFF5D6230), Color(0xFF8A4F2A),
-  ];
+  static const _avatares = [Color(0xFFE8000D), Color(0xFF775652), Color(0xFF3B6470), Color(0xFF6B5778), Color(0xFF5D6230), Color(0xFF8A4F2A)];
+
+  /// Confeti de la tarjeta de cumpleaños (mismo en claro y oscuro).
+  static const confeti = [Color(0xFFE8000D), Color(0xFFFFB300), Color(0xFF43A047), Color(0xFF1E88E5), Color(0xFF8E24AA), Color(0xFFFF7043)];
 
   static const claro = PivotPaleta(
     marca: Color(0xFFE8000D),
@@ -120,7 +120,6 @@ class PivotRadios {
   static const boton = 20.0;
   static const grande = 20.0;
   static const contador = 12.0;
-  static const iconoHoy = 4.0; // ícono de Eventos con la fecha de hoy
 }
 
 ThemeData construirTema(Brightness brillo) {
@@ -145,8 +144,7 @@ ThemeData construirTema(Brightness brillo) {
   );
   final base = brillo == Brightness.dark ? ThemeData.dark() : ThemeData.light();
   final textos = GoogleFonts.beVietnamProTextTheme(base.textTheme).apply(bodyColor: p.texto, displayColor: p.texto);
-  TextStyle fuente(double tam, FontWeight peso, [Color? color]) =>
-      GoogleFonts.beVietnamPro(fontSize: tam, fontWeight: peso, color: color);
+  TextStyle fuente(double tam, FontWeight peso, [Color? color]) => GoogleFonts.beVietnamPro(fontSize: tam, fontWeight: peso, color: color);
   return ThemeData(
     useMaterial3: true,
     brightness: brillo,
@@ -158,12 +156,9 @@ ThemeData construirTema(Brightness brillo) {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: p.navegacion,
       indicatorColor: p.suave,
-      iconTheme: WidgetStateProperty.resolveWith(
-        (s) => IconThemeData(color: s.contains(WidgetState.selected) ? p.sobreSuave : p.textoSecundario),
-      ),
+      iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(color: s.contains(WidgetState.selected) ? p.sobreSuave : p.textoSecundario)),
       labelTextStyle: WidgetStateProperty.resolveWith(
-        (s) => fuente(12, s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
-            s.contains(WidgetState.selected) ? p.texto : p.textoSecundario),
+        (s) => fuente(12, s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500, s.contains(WidgetState.selected) ? p.texto : p.textoSecundario),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -184,7 +179,9 @@ ThemeData construirTema(Brightness brillo) {
         textStyle: fuente(13, FontWeight.w600),
       ),
     ),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(foregroundColor: p.marcaTexto, textStyle: fuente(14, FontWeight.w600))),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: p.marcaTexto, textStyle: fuente(14, FontWeight.w600)),
+    ),
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: p.suave,
@@ -214,8 +211,6 @@ ThemeData construirTema(Brightness brillo) {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(PivotRadios.boton), borderSide: BorderSide.none),
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
-    }),
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {TargetPlatform.android: PredictiveBackPageTransitionsBuilder()}),
   );
 }

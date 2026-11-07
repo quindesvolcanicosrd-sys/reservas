@@ -27,6 +27,12 @@ void main() {
     await t.drag(find.byType(PanelCalendario), const Offset(0, -400));
     await t.pumpAndSettle();
     expect(find.byType(PanelCalendario), findsNothing);
+    // Con el panel abierto, scrollear el timeline lo cierra.
+    await t.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    await t.pumpAndSettle();
+    expect(find.byType(PanelCalendario), findsOneWidget);
+    await t.drag(find.byType(Scrollable).last, const Offset(0, -600));
+    await t.pumpAndSettle();
     // El filtro guardado se cargó: la lupa tiene el punto.
     expect(find.byType(Badge), findsWidgets);
     senal.disparar();

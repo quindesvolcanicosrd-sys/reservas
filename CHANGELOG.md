@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: el calendario se cierra al scrollear el timeline, pills de meses con año (como Google Calendar), 🎈 para cumpleaños, tarjeta de cumpleaños con avatar y confeti si es hoy, ícono de Eventos con contorno de calendario y ícono "Event Upcoming" para asistencia anticipada.
+
 2026-11-06 — App Android: calendario como Google Calendar (sigue abierto al tocar un día, el timeline acompaña al mes y viceversa, se abre/cierra siguiendo el dedo), cumpleaños con insignia, ícono de Eventos con la fecha de hoy (tocarlo de nuevo lleva a hoy), botón destacado de asistencia anticipada, buscador con hoja de filtros y búsqueda/filtros guardados con indicador en la lupa.
 
 2026-11-06 — App Android: calendario más fluido (meses que siguen al dedo con altura fija, abrir/cerrar en una sola animación, precarga de meses vecinos y el timeline ya no salta al llegar datos).

@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -153,7 +156,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (d.month != _mesVisible.month || d.year != _mesVisible.year) {
       setState(() => _mesVisible = d);
       // Con el calendario abierto, el mes del panel acompaña al timeline.
-      if (_calAbierto && !_desplazandoProgramado) _panel.currentState?.irAMes(d);
+      if (_calAbierto && !_desplazandoProgramado && !_colapsandoPorScroll) _panel.currentState?.irAMes(d);
     }
   }
 
@@ -709,17 +712,41 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         ),
       );
     }
-    return RefreshIndicator(
-      onRefresh: () => repo.cargar(forzar: true),
-      child: ScrollablePositionedList.builder(
-        itemScrollController: _scroll,
-        itemPositionsListener: _posiciones,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(8, 4, 16, 96),
-        itemCount: _filas.length,
-        itemBuilder: (context, i) => _fila(context, _filas[i]),
+    return NotificationListener<ScrollNotification>(
+      onNotification: _alScrollearTimeline,
+      child: RefreshIndicator(
+        onRefresh: () => repo.cargar(forzar: true),
+        child: ScrollablePositionedList.builder(
+          itemScrollController: _scroll,
+          itemPositionsListener: _posiciones,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(8, 4, 16, 96),
+          itemCount: _filas.length,
+          itemBuilder: (context, i) => _fila(context, _filas[i]),
+        ),
       ),
     );
+  }
+
+  /// Con el calendario abierto, scrollear el timeline lo va cerrando junto
+  /// con el dedo; al soltar termina de cerrarse o vuelve a abrirse.
+  bool _colapsandoPorScroll = false;
+  bool _alScrollearTimeline(ScrollNotification n) {
+    if (!_calMontado) return false;
+    if (n is ScrollUpdateNotification && n.dragDetails != null && (n.scrollDelta ?? 0) != 0) {
+      _colapsandoPorScroll = true;
+      _calCtrl.value = (_calCtrl.value - n.scrollDelta!.abs() / (_altoPanel * 0.7)).clamp(0.0, 1.0);
+      final abierto = _calCtrl.value > 0.5;
+      if (abierto != _calAbierto) setState(() => _calAbierto = abierto);
+      if (_calCtrl.value == 0) {
+        _colapsandoPorScroll = false;
+        _cerrarCalendario();
+      }
+    } else if (n is ScrollEndNotification && _colapsandoPorScroll) {
+      _colapsandoPorScroll = false;
+      _soltar(0);
+    }
+    return false;
   }
 
   Widget _fila(BuildContext context, _Fila f) {
@@ -960,6 +987,8 @@ class _TarjetaEvento extends StatelessWidget {
   }
 }
 
+/// Tarjeta de cumpleaños: avatar de la persona y, si cumple hoy, confeti
+/// cayendo en loop dentro de la tarjeta.
 class _TarjetaCumple extends StatelessWidget {
   const _TarjetaCumple({required this.cumple});
   final Cumple cumple;
@@ -967,21 +996,12 @@ class _TarjetaCumple extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    return Container(
+    final esHoy = Fechas.soloDia(cumple.fecha) == Fechas.hoy();
+    final contenido = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: p.fondo,
-        border: Border.all(color: p.tarjetaBorde),
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-      ),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: p.suave, shape: BoxShape.circle),
-            child: Icon(Icons.cake_outlined, color: p.marcaTexto),
-          ),
+          AvatarPersona(nombre: cumple.nombre, foto: cumple.fotoPerfil, tamano: 44, borde: esHoy ? p.marca : null),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -996,10 +1016,94 @@ class _TarjetaCumple extends StatelessWidget {
               ],
             ),
           ),
+          const Text('🎈', style: TextStyle(fontSize: 20)),
         ],
       ),
     );
+    return Container(
+      decoration: BoxDecoration(
+        color: esHoy ? p.suave : p.fondo,
+        border: Border.all(color: esHoy ? p.marca : p.tarjetaBorde),
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: esHoy
+          ? Stack(
+              children: [
+                contenido,
+                const Positioned.fill(child: IgnorePointer(child: _Confeti())),
+              ],
+            )
+          : contenido,
+    );
   }
+}
+
+/// Confeti que cae sin parar (papelitos que giran y se mecen).
+class _Confeti extends StatefulWidget {
+  const _Confeti();
+
+  @override
+  State<_Confeti> createState() => _ConfetiState();
+}
+
+class _ConfetiState extends State<_Confeti> with SingleTickerProviderStateMixin {
+  late final AnimationController _reloj = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  late final List<_Papelito> _papelitos = List.generate(26, _Papelito.new);
+
+  @override
+  void dispose() {
+    _reloj.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(child: CustomPaint(painter: _PintorConfeti(_reloj, _papelitos)));
+}
+
+class _Papelito {
+  _Papelito(int i)
+    : x = _azar(i, 1),
+      fase = _azar(i, 2),
+      velocidad = (1 + (_azar(i, 3) * 2).floor()).toDouble(), // entero: el loop no salta
+      giro = (_azar(i, 4) - 0.5) * 12,
+      vaiven = 4 + _azar(i, 5) * 8,
+      ancho = 4 + _azar(i, 6) * 3,
+      color = PivotPaleta.confeti[i % PivotPaleta.confeti.length];
+  final double x, fase, velocidad, giro, vaiven, ancho;
+  final Color color;
+
+  // Pseudoazar fijo: cada papelito siempre igual, sin saltos entre cuadros.
+  static double _azar(int i, int k) {
+    final v = ((i + 1) * 9301 + k * 49297) % 233280;
+    return v / 233280;
+  }
+}
+
+class _PintorConfeti extends CustomPainter {
+  _PintorConfeti(this.reloj, this.papelitos) : super(repaint: reloj);
+  final Animation<double> reloj;
+  final List<_Papelito> papelitos;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final t = reloj.value;
+    final pincel = Paint();
+    for (final p in papelitos) {
+      final avance = (t * p.velocidad + p.fase) % 1.0;
+      final y = avance * (size.height + 20) - 10;
+      final x = p.x * size.width + math.sin((avance + p.fase) * math.pi * 4) * p.vaiven;
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(avance * p.giro);
+      pincel.color = p.color;
+      canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: p.ancho, height: p.ancho * 0.55), pincel);
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PintorConfeti viejo) => false;
 }
 
 /// Botón de asistencia anticipada: lleno con el color de marca para que
@@ -1072,7 +1176,7 @@ class _BotonAnticipadaState extends State<_BotonAnticipada> with SingleTickerPro
           IconButton.filled(
             tooltip: 'Asistencia anticipada',
             style: IconButton.styleFrom(backgroundColor: p.marca, foregroundColor: p.sobreMarca),
-            icon: const Icon(Icons.event_repeat_rounded),
+            icon: const Icon(Symbols.event_upcoming_rounded),
             onPressed: _tocar,
           ),
         ],

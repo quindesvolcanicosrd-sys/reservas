@@ -50,8 +50,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         // Ícono con la fecha de hoy (como Google Calendar); tocarlo estando
         // en Eventos lleva a hoy.
         NavigationDestination(
-          icon: _IconoHoy(dia: Fechas.hoy().day, lleno: false),
-          selectedIcon: _IconoHoy(dia: Fechas.hoy().day, lleno: true),
+          icon: _IconoHoy(dia: Fechas.hoy().day),
           label: 'Eventos',
           tooltip: 'Eventos · tócalo de nuevo para ir a hoy',
         ),
@@ -90,39 +89,35 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   }
 }
 
-/// Calendario pequeño con el número del día, del tamaño de un ícono.
+/// Ícono de calendario de Google (`calendar_today`, contorno) con el número
+/// del día adentro. Siempre en contorno: la selección ya la marca el fondo
+/// de la pestaña (un ícono lleno se veía como un cuadrado sin forma).
 class _IconoHoy extends StatelessWidget {
-  const _IconoHoy({required this.dia, required this.lleno});
+  const _IconoHoy({required this.dia});
   final int dia;
-  final bool lleno;
 
   @override
   Widget build(BuildContext context) {
-    final color = IconTheme.of(context).color ?? context.pivot.texto;
-    final fondo = context.pivot.suave; // indicador de la pestaña activa
+    final tema = IconTheme.of(context);
+    final color = tema.color ?? context.pivot.texto;
     return SizedBox(
       width: 24,
       height: 24,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 1.5),
-        decoration: BoxDecoration(
-          color: lleno ? color : null,
-          border: Border.all(color: color, width: 1.8),
-          borderRadius: BorderRadius.circular(PivotRadios.iconoHoy),
-        ),
-        child: Column(
-          children: [
-            Container(height: 3.5, color: color),
-            Expanded(
-              child: Center(
-                child: Text(
-                  '$dia',
-                  style: TextStyle(fontSize: 10.5, height: 1, fontWeight: FontWeight.w800, color: lleno ? fondo : color),
-                ),
-              ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(Icons.calendar_today_outlined, size: 24, color: color),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 10,
+            child: Text(
+              '$dia',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 9, height: 1, fontWeight: FontWeight.w800, color: color),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
