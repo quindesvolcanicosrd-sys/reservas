@@ -8,6 +8,15 @@ Referencia del estado actual de la arquitectura. El historial de cambios vive en
 
 App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mensualidades, calendario de eventos con asistencia (RSVP + rollcall real), sección Equipo (roster con favoritos/grupos por rol, perfil de detalle con stats y termómetro Quindes/Mirlxs), perfil/equipamiento de cada miembro, tareas del club y panel admin ("Mi Liga"). SPA en `index.html` sobre Supabase (Postgres + Edge Function), con 2 mini-SPA hermanas standalone (`inscripcion/`, `registro-express/`) para altas nuevas. Backend legado en Google Apps Script (Code.gs, fuera de este repo) en migración progresiva a una Edge Function de Supabase — lo no migrado todavía cae por proxy a GAS.
 
+## Pendientes app Android (anotados 2026-11-07)
+1. "Nuevo lugar": mapa y buscador de Google dentro de la app (falta que Victor cree la llave de Google para Android: Maps SDK for Android + Places API (New), restringida al paquete + SHA-1).
+2. "¿Vas a ir?": copiar las restricciones de la web (`_evRsvpBarraHtml`): Mirlxs sin cuota o sin el mes pagado, equipo del club en entrenamientos, eventos con reserva, 10 minutos antes del inicio.
+3. Fase 3 (reservas y pagos en el "+"): primero el mapa de variantes para validar.
+4. Detalle: al cambiar de grupo en "Asistencias del equipo" los avatares se traban; fade out/in limpio.
+5. "Ver video" del evento: reproducir dentro de la app, sin salir de Pivot.
+6. Selectores de fecha y hora en inglés: localizar la app según el idioma del dispositivo (español por defecto).
+7. El "+" gira al abrir el menú pero no al cerrarlo.
+
 ## Temporadas de descanso (2026-11-06)
 - **Crear o editar una temporada ELIMINA los eventos de esas fechas** (desde hoy; lo que ya pasó no se toca) y avisa al equipo. Todo en el backend: `adminGuardarTemporadaDescanso` (`adminToken`, `id` opcional para editar, `nombre`, `desde`, `hasta`) y `adminEliminarTemporadaDescanso` (`adminToken`, `id`). Mismo soft-delete que `adminBorrarEvento()` (`estado='Eliminado'`, `es_excepcion=true`, así la regeneración no los revive) más `asistencias.eliminado_por_descanso` (id de la temporada), `estado_antes_descanso` y `excepcion_antes_descanso` (migraciones `20261107031341`/`20261107031358`). Al acortar o borrar la temporada, los eventos que quedan fuera vuelven exactamente como estaban (`_restaurarEventosDescanso()`); el trigger `fn_proteger_asistencia_excepcion()` permite bajar `es_excepcion` solo en ese caso (cuando se limpia `eliminado_por_descanso`). Al borrar se llama `regenerar_ventana_asistencias()` para completar las fechas liberadas. Mientras exista, la regeneración no crea eventos en esas fechas (ya lo hacía desde 20260828).
 - **Web:** la card "Temporada de descanso" del asistente "Crear evento" abre la pantalla completa `#s-eventos-crear-descanso` (nombre + rango, la que antes estaba sin uso) en vez del paso que decía "disponible próximamente"; `_evCrearDescansoGuardar()` y `_evOffseasonEliminar()` usan las acciones nuevas (antes `fetch` directo a `temporadas_descanso`, que no tocaba los eventos).
