@@ -266,9 +266,12 @@ class ReservasRepo {
     return lista;
   }
 
-  Future<void> cancelar(ReservaActiva r) async {
+    /// Devuelve true si el cupón volvió a quedar disponible (la reserva lo
+  /// usó y se canceló con al menos 1 hora de anticipación).
+  Future<bool> cancelar(ReservaActiva r) async {
     final res = await _api.post('cancelarReserva', {'nombre': sesion.nombre, 'fecha': r.clave, if (r.mensual) 'anio': '${r.mes!.year}'});
     if (res['exito'] != true) throw ApiException('${res['error'] ?? 'No se pudo cancelar.'}');
+    return res['cuponRestaurado'] == true;
   }
 
   /// Cambia una clase por otra fecha (id de evento) o un mes por otro.

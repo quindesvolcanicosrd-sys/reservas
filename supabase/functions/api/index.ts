@@ -2687,6 +2687,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   // la persona no hubiera elegido el cupón o fuera una cuota mensual.
   const pideGratis = params.monto === undefined || Number(params.monto) === 0;
   const credito = pideGratis ? await _consumirCreditoReal(nombre) : false;
+  let usoCupon = false;
   if (credito) {
     montoFinal = 0;
   } else if (pideGratis) {
@@ -2694,6 +2695,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
     if (eq?.cupon_disponible) {
       await supabase.from('equipo').update({ cupon_disponible: false }).eq('username', nombre);
       montoFinal = 0;
+      usoCupon = true;
     }
   }
 
@@ -2702,7 +2704,8 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
         estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null,
-    validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
+        validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
+    uso_cupon: usoCupon,
   });
   return { exito: true };
 }
@@ -2802,16 +2805,27 @@ async function _reservaActiva(nombre: string, fecha: string, anio: number | null
   return filas.filter((r: any) => !r.validez_hasta || r.validez_hasta >= hoy).sort((a: any, b: any) => String(a.validez_hasta).localeCompare(String(b.validez_hasta)))[0] ?? filas[0] ?? null;
 }
 
+// ¿Faltan al menos `minutos` para que empiece el evento? (hora de Ecuador, UTC-5).
+async function _faltaAlMenos(idEvento: string, minutos: number): Promise<boolean> {
+  const { data: ev } = await supabase.from('asistencias').select('fecha, inicia').eq('id_evento', idEvento).limit(1).maybeSingle();
+  if (!ev?.fecha) return false;
+  const inicio = Date.parse(`${String(ev.fecha).substring(0, 10)}T${String(ev.inicia ?? '00:00').substring(0, 5)}:00-05:00`);
+  return Number.isFinite(inicio) && inicio - Date.now() >= minutos * 60 * 1000;
+}
+
 async function cancelarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fecha } = params;
   // Solo la propia persona cancela sus reservas.
   if ((await _validarToken(params.token)) !== nombre) return { exito: false, error: 'Sesión inválida.' };
   const r = await _reservaActiva(nombre, fecha, Number(params.anio) || null);
   if (!r) return { exito: false, error: 'Reserva no encontrada.' };
-  await supabase.from('reservas').update({ estado: 'Cancelada' }).eq('id', r.id);
-  // Restaurar cupón si la reserva estaba Confirmada
+    await supabase.from('reservas').update({ estado: 'Cancelada' }).eq('id', r.id);
+  // El cupón vuelve solo si ESTA reserva lo usó y se cancela con al menos 1
+  // hora de anticipación (Victor, 2026-11-07). Antes se devolvía a
+  // cualquiera que cancelara una reserva confirmada, la hubiera pagado con
+  // cupón o no. Al reagendar, el cupón viaja con la reserva.
   let cuponRestaurado = false;
-  if (r.estado === 'Confirmada' && nombre) {
+  if (r.uso_cupon && r.id_evento && (await _faltaAlMenos(r.id_evento, 60))) {
     await supabase.from('equipo').update({ cupon_disponible: true }).eq('username', nombre);
     cuponRestaurado = true;
   }

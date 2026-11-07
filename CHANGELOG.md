@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Cupón: si una reserva pagada con cupón se cancela con al menos 1 hora de anticipación, el cupón vuelve (antes se devolvía a cualquiera que cancelara una reserva confirmada); al reagendar se mantiene. Reservas de clase visibles para cualquier persona, no solo Mirlxs.
+
+
+
 2026-11-07 — App Android: tour con animaciones más fluidas (recorte que viaja con la tarjeta, anillo que late, flecha), el último paso resalta la línea de tiempo, y "Ver el tour de nuevo" en Mi perfil.
 
 

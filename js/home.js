@@ -1661,13 +1661,15 @@ function ejecutarCancelacion(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Cancelando...'; }
   var btnVolver = document.getElementById('sg-cancelar-btn-volver');
   if (btnVolver) btnVolver.disabled = true;
-  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: _sgFechaActual }, function() {
+    api({ action: 'cancelarReserva', nombre: E.nombre, fecha: _sgFechaActual }, function(res) {
     _sgAccionEnCurso = false;
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (btnVolver) btnVolver.disabled = false;
     cerrarSheetGestionar();
     ir('s-home');
-    setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('Reserva cancelada', 'ok'); }); }, 100);
+    var _msjCancel = (res && res.cuponRestaurado) ? 'Reserva cancelada. Tu cupón vuelve a estar disponible.' : 'Reserva cancelada';
+    if (res && res.cuponRestaurado) { localStorage.removeItem('cupon_' + E.nombre); if (E.datos) E.datos.cuponDisponible = true; }
+    setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast(_msjCancel, 'ok'); }); }, 100);
   }, function(e) {
     _sgAccionEnCurso = false;
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
