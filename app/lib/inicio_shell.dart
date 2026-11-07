@@ -89,8 +89,8 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   }
 }
 
-/// Ícono de calendario de Google (`calendar_today`, contorno) con el número
-/// del día adentro. Siempre en contorno: la selección ya la marca el fondo
+/// Ícono de Eventos: cuadrado redondeado con el número del día adentro
+/// (como el de Google Calendar). Siempre en contorno: la selección ya la marca el fondo
 /// de la pestaña (un ícono lleno se veía como un cuadrado sin forma).
 class _IconoHoy extends StatelessWidget {
   const _IconoHoy({required this.dia});
@@ -106,16 +106,19 @@ class _IconoHoy extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Icon(Icons.calendar_today_outlined, size: 24, color: color),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 10,
-            child: Text(
-              '$dia',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 9, height: 1, fontWeight: FontWeight.w800, color: color),
+                    // Cuadrado redondeado simple (sin las anillas del ícono de Material,
+          // que apretaban el número) y el día en Nunito Black.
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              border: Border.all(color: color, width: 2),
+              borderRadius: BorderRadius.circular(PivotRadios.iconoDia),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Text('$dia', textAlign: TextAlign.center, style: PivotTexto.numeroIcono(color, tam: dia > 9 ? 11.5 : 12.5)),
           ),
         ],
       ),

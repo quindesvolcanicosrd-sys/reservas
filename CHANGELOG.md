@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: ícono de Eventos más legible (cuadrado redondeado simple con el día en Nunito Black).
+
 2026-11-06 — App Android: fix — el gesto o botón atrás cierra primero el buscador o el calendario en vez de salir de la app.
 
 2026-11-06 — App Android: fix — al cerrar el calendario ya no cambia el mes, y el timeline vuelve a desplazarse hacia arriba (antes saltaba el "tirar para actualizar").

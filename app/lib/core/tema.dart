@@ -114,7 +114,15 @@ extension PivotContexto on BuildContext {
   PivotPaleta get pivot => Theme.of(this).extension<PivotPaleta>() ?? PivotPaleta.claro;
 }
 
+/// Números dentro de íconos (el día en el ícono de Eventos): Nunito Black,
+/// redondeada y muy gruesa para que se lea a 11-12 px.
+class PivotTexto {
+  static TextStyle numeroIcono(Color color, {double tam = 12}) =>
+      GoogleFonts.nunito(fontSize: tam, height: 1, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.4);
+}
+
 class PivotRadios {
+  static const iconoDia = 7.0; // ícono de Eventos con el día
   static const tarjeta = 16.0;
   static const chip = 8.0;
   static const boton = 20.0;
