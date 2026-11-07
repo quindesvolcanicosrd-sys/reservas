@@ -10,6 +10,7 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 
 ## Pendientes app Android (anotados 2026-11-07)
 - Fase 3 (reservas y pagos en el "+"): mapa de variantes entregado para validar (Claude Doc "Pivot app — Fase 3", https://claude.ai/artifact/NhrTMuCVb4JiPxZdJyLfo7); construir cuando Victor lo apruebe.
+- **Equipo (siguiente etapa):** en el detalle de un evento, tocar el avatar de una persona debe abrir su vista detallada en Equipo.
 - Revisar si el buscador de "Nuevo lugar" de la WEB funciona: la llave de Google Maps del proyecto responde "permiso denegado" porque la facturación de Google Cloud está pausada (prepago de 30 USD pendiente). Existe una llave Android (`com.pivotapp.coach` + SHA-1) sin usar.
 
 ## Cuota mensual: vencimiento (2026-11-07)
@@ -24,6 +25,10 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Las reservas son personales: las admins no reservan por otras personas (definido para la Fase 3).
 
 ## App Android — ronda 2026-11-07 (resueltos)
+- **Tour guiado de primera vez** (`core/tour.dart`, reutilizable): velo oscuro (`PivotPaleta.veloTour`) con recorte que se desliza entre pasos, tarjeta con puntos de progreso, "Omitir"/"Siguiente"/"Listo". Pasos de Eventos (`_tourSiCorresponde()` en `timeline_screen.dart`): "+" (texto según lo que tenga el menú), mes/calendario, buscar, primera tarjeta de hoy en adelante, pestaña Eventos para volver a hoy (`ClavesTour.navegacion` + `primeraPestana`), línea de tiempo sin recorte. Un paso sin objetivo en pantalla se salta. Se guarda en `tour.eventos.visto` al terminar u omitir.
+- **Asistencia anticipada:** las reglas que ya terminaron (período pasado o meses ya pasados) no se muestran en la lista.
+- Textos: grupo vacío en el detalle → "Vacío por el momento."; ejemplo de información adicional → "Ej.: Traer botella de agua"; buscador del timeline → "Buscar...".
+
 - **Idioma:** `flutter_localizations` + `localeResolutionCallback` en `main.dart`: selectores de fecha/hora y textos del sistema en el idioma del teléfono; si no está soportado, español.
 - **"+":** el menú usa la animación de su propia ruta (`ModalRoute.of(context).animation`), así el botón también gira de vuelta al cerrar.
 - **Detalle — Asistencia del equipo:** cambiar de grupo usa `FadeThroughTransition` (paquete `animations`) + `AnimatedSize`; ya no se encimen las dos listas.

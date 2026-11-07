@@ -195,7 +195,7 @@ class _EditarEventoScreenState extends State<EditarEventoScreen> {
           minLines: 2,
           maxLines: 5,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(hintText: 'Ej.: trae protecciones completas'),
+          decoration: const InputDecoration(hintText: 'Ej.: Traer botella de agua'),
         ),
       ],
     );

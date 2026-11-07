@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: tour guiado de primera vez en Eventos; asistencia anticipada oculta las reglas que ya terminaron; textos más cortos en buscador, grupo vacío y ejemplo de información adicional.
+
+
+
 2026-11-07 — Fix: la cuota mensual vence al final de su mes (antes contaba como al día para siempre), en web y app. Asistencia anticipada: la ven Quindes y Mirlxs con equipamiento propio; "Asistiré" solo en fechas pagadas.
 
 

@@ -448,7 +448,7 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
           controller: _descripcion,
           maxLength: 150,
           maxLines: null,
-          decoration: const InputDecoration(hintText: 'Ej.: trae protecciones completas'),
+          decoration: const InputDecoration(hintText: 'Ej.: Traer botella de agua'),
         ),
       ],
     );

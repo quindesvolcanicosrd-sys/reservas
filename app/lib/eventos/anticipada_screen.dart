@@ -44,7 +44,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
         _reglas = res[0] as List<ReglaAnticipada>;
         if (res.length > 1) _cuota = res[1] as Cuota;
       });
-      if (abrirSiVacio && _reglas!.isEmpty) _abrirAsistente(null);
+      if (abrirSiVacio && _reglas!.every((r) => _vigencia(r) == VigenciaRegla.termino)) _abrirAsistente(null);
     } catch (_) {
       if (mounted) setState(() => _error = 'No se pudieron cargar tus asistencias anticipadas.');
     }
@@ -106,8 +106,10 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.pivot;
+        final p = context.pivot;
     final Widget cuerpo;
+    // Las reglas que ya terminaron (p. ej. de un mes pasado) no se muestran.
+    final visibles = _reglas?.where((r) => _vigencia(r) != VigenciaRegla.termino).toList();
     if (_error != null) {
       cuerpo = Center(
         key: const ValueKey('error'),
@@ -122,7 +124,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       );
     } else if (_reglas == null) {
       cuerpo = const Center(key: ValueKey('cargando'), child: CircularProgressIndicator());
-    } else if (_reglas!.isEmpty) {
+        } else if (visibles!.isEmpty) {
       cuerpo = Center(
         key: const ValueKey('vacio'),
         child: Padding(
@@ -146,8 +148,8 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
         ),
       );
     } else {
-      // Activas primero, después las próximas y al final las que terminaron.
-      final orden = [..._reglas!]..sort((x, y) => _vigencia(x).index.compareTo(_vigencia(y).index));
+            // Activas primero, después las próximas.
+      final orden = visibles..sort((x, y) => _vigencia(x).index.compareTo(_vigencia(y).index));
       cuerpo = ListView(
         key: const ValueKey('lista'),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
@@ -167,7 +169,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Asistencia anticipada')),
       body: AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: cuerpo),
-      floatingActionButton: (_reglas?.isNotEmpty ?? false)
+            floatingActionButton: (visibles?.isNotEmpty ?? false)
           ? FloatingActionButton.extended(onPressed: () => _abrirAsistente(null), icon: const Icon(Icons.add_rounded), label: const Text('Nueva'))
           : null,
     );

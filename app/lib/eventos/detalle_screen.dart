@@ -433,7 +433,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
                     : personas.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Text('Nadie en este grupo por ahora.', style: TextStyle(color: p.textoSecundario)),
+                        child: Text('Vacío por el momento.', style: TextStyle(color: p.textoSecundario)),
                       )
                     : Column(
                         children: [

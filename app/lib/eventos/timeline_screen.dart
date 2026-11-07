@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../core/tour.dart';
 import 'anticipada_screen.dart';
 import 'calendario_panel.dart';
 import 'crear_evento_screen.dart';
@@ -93,8 +94,16 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   int? _claveFilas;
   bool _saltoInicialHecho = false;
 
-  static const _anchoFecha = 52.0;
+    static const _anchoFecha = 52.0;
   static const _anchoRiel = 28.0;
+
+  // Tour guiado de primera vez (como el de la web, `_EV_TOUR_PASOS_*`).
+  final _kMes = GlobalKey(debugLabel: 'tour-mes');
+  final _kBuscar = GlobalKey(debugLabel: 'tour-buscar');
+  final _kMas = GlobalKey(debugLabel: 'tour-mas');
+  final _kTarjeta = GlobalKey(debugLabel: 'tour-tarjeta');
+  final _kLista = GlobalKey(debugLabel: 'tour-lista');
+  String? _idTarjetaTour;
 
   EventosRepo get repo => widget.repo;
 
@@ -454,16 +463,22 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           ahora.hour,
           ahora.minute,
         );
-        if (claveFilas != _claveFilas) {
+                if (claveFilas != _claveFilas) {
           _filas = _armarFilas();
           _claveFilas = claveFilas;
+          // La tarjeta que señala el tour: el primer evento de hoy en adelante.
+          final hoy = Fechas.hoy();
+          _idTarjetaTour = _filas.where((f) => f.item?.evento != null && !f.dia.isBefore(hoy)).map((f) => f.item!.evento!.id).firstOrNull;
         }
         final firma = Object.hash(identityHashCode(repo.eventos), identityHashCode(repo.cumples));
         if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
         _firmaDatos = firma;
         if (!_saltoInicialHecho && repo.eventos.isNotEmpty) {
-          _saltoInicialHecho = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
+                    _saltoInicialHecho = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _irA(Fechas.hoy(), animado: false);
+            Future.delayed(const Duration(milliseconds: 900), _tourSiCorresponde);
+          });
         }
         final panel = _calMontado ? RepaintBoundary(child: _panelCalendario(context)) : null;
         return PopScope(
@@ -479,9 +494,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             }
           },
           child: Scaffold(
-            floatingActionButton: _acciones.isEmpty || _buscando
+                        floatingActionButton: _acciones.isEmpty || _buscando
                 ? null
-                : FloatingActionButton(tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
+                : FloatingActionButton(key: _kMas, tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
             body: SafeArea(
               bottom: false,
               child: Column(
@@ -573,7 +588,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           GestureDetector(
             onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
             onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
-            child: TextButton(
+                        child: TextButton(
+              key: _kMes,
               style: TextButton.styleFrom(foregroundColor: p.texto, padding: const EdgeInsets.symmetric(horizontal: 12)),
               onPressed: _alternarCalendario,
               child: Row(
@@ -606,7 +622,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           ),
           const Spacer(),
-          IconButton(
+                    IconButton(
+            key: _kBuscar,
             tooltip: _hayFiltros ? 'Buscar (hay filtros activos)' : 'Buscar',
             // Punto rojo: quedó una búsqueda o un filtro activo.
             icon: Badge(isLabelVisible: _hayFiltros, smallSize: 9, backgroundColor: p.marca, child: const Icon(Icons.search_rounded)),
@@ -650,7 +667,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                   textInputAction: TextInputAction.search,
                   onChanged: (v) => _cambiarFiltros(() => _consulta = v),
                   decoration: InputDecoration(
-                    hintText: 'Busca por lugar, tipo, mes o persona',
+                    hintText: 'Buscar...',
                     isDense: true,
                     suffixIcon: _consulta.isEmpty
                         ? null
@@ -835,7 +852,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     // un acordeón, igual que Google Calendar. Cerrado, scrollea normal.
     final lista = NotificationListener<ScrollNotification>(
       onNotification: _alScrollearTimeline,
-      child: RefreshIndicator(
+            child: RefreshIndicator(
+        key: _kLista,
         onRefresh: () => repo.cargar(forzar: true),
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
@@ -890,6 +908,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           ? _TarjetaDescanso(temporada: f.item!.temporada!, repo: repo)
           : f.item!.cumple != null
           ? _TarjetaCumple(cumple: f.item!.cumple!)
+                    : f.item!.evento!.id == _idTarjetaTour
+          ? KeyedSubtree(
+              key: _kTarjeta,
+              child: _TarjetaEvento(evento: f.item!.evento!, repo: repo, alAbrir: () => _abrirDetalle(f.item!.evento!)),
+            )
           : _TarjetaEvento(evento: f.item!.evento!, repo: repo, alAbrir: () => _abrirDetalle(f.item!.evento!));
     }
     return IntrinsicHeight(
@@ -914,7 +937,39 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     );
   }
 
-  bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
+    bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
+
+  Future<void> _tourSiCorresponde() async {
+    if (!mounted || _buscando || _calMontado || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+    final anticipada = repo.anticipada.disponible;
+    final (String tituloMas, String textoMas) = _esAdmin && anticipada
+        ? ('Crea y responde', 'Toca aquí para crear un evento o para marcar tu asistencia a varios entrenamientos de una sola vez.')
+        : _esAdmin
+        ? ('Crea eventos', 'Toca aquí para crear un nuevo evento.')
+        : ('Asistencia anticipada', 'Toca aquí para marcar tu asistencia a varios entrenamientos de una sola vez.');
+    await Tour.mostrarSiCorresponde(
+      context,
+      preferencia: 'tour.eventos.visto',
+      pasos: [
+        PasoTour(clave: _kMas, titulo: tituloMas, texto: textoMas),
+        PasoTour(clave: _kMes, titulo: 'Navega por mes', texto: 'Toca el mes o desliza hacia abajo para abrir el calendario y saltar a cualquier fecha.'),
+        PasoTour(clave: _kBuscar, titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares, o filtra por lugar y tipo.'),
+        PasoTour(clave: _kTarjeta, titulo: 'Detalle del evento', texto: 'Toca un evento para ver quiénes van, cambiar tu respuesta y ver cómo llegar.'),
+        PasoTour(
+          clave: ClavesTour.navegacion,
+          ajuste: ClavesTour.primeraPestana,
+          titulo: 'Vuelve a hoy',
+          texto: 'El ícono de Eventos muestra la fecha de hoy. Tócalo de nuevo estando aquí para volver a hoy.',
+        ),
+        PasoTour(
+          clave: _kLista,
+          sinHalo: true,
+          titulo: 'Explora la línea de tiempo',
+          texto: 'Desliza para ver los eventos pasados y los próximos: programados, cancelados, cumpleaños y temporadas de descanso.',
+        ),
+      ],
+    );
+  }
 
   // ─── Botón "+": menú de acciones (pedido 2026-11-06, como la web) ───────
 

@@ -26,6 +26,7 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     required this.apagadoEtiqueta,
     required this.sobreMarca,
     required this.velo,
+    required this.veloTour,
     required this.fondoVideo,
     required this.textoSobreVideo,
     required this.avatares,
@@ -50,6 +51,7 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
   final Color apagadoEtiqueta;
   final Color sobreMarca; // texto/íconos sobre el rojo de marca
   final Color velo; // sombras/velos
+  final Color veloTour; // fondo oscuro del tour guiado
   final Color fondoVideo; // reproductor de video (negro en ambos temas)
   final Color textoSobreVideo;
   final List<Color> avatares;
@@ -79,6 +81,7 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     apagadoEtiqueta: Color(0xFFE9DEDC),
     sobreMarca: Color(0xFFFFFFFF),
     velo: Color(0x2E231918),
+    veloTour: Color(0xB3000000),
     fondoVideo: Color(0xFF000000),
     textoSobreVideo: Color(0xFFFFFFFF),
     avatares: _avatares,
@@ -106,6 +109,7 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     apagadoEtiqueta: Color(0xFF2A2625),
     sobreMarca: Color(0xFFFFFFFF),
     velo: Color(0x66000000),
+    veloTour: Color(0xC7000000),
     fondoVideo: Color(0xFF000000),
     textoSobreVideo: Color(0xFFFFFFFF),
     avatares: _avatares,

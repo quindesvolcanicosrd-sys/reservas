@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/api.dart';
 import 'core/fechas.dart';
 import 'core/tema.dart';
+import 'core/tour.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
 import 'sesion/sesion.dart';
@@ -68,13 +69,15 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
           const _EnLaWeb(titulo: 'Mi Liga', ruta: '/'),
         ),
     ];
-    final indice = _indice.clamp(0, destinos.length - 1);
+        final indice = _indice.clamp(0, destinos.length - 1);
+    ClavesTour.destinos = destinos.length;
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
       ),
-      bottomNavigationBar: NavigationBar(
+            bottomNavigationBar: NavigationBar(
+        key: ClavesTour.navegacion,
         selectedIndex: indice,
         onDestinationSelected: (i) {
           if (i == 0 && indice == 0) {
