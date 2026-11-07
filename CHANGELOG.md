@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: sección Equipo nativa (favoritos, grupos, dato relevante que rota, buscador inteligente, ficha con stats y administración, botón de emergencia para admins con capturas bloqueadas); tocar a alguien en un evento abre su ficha. Servidor: roles guardados en la base, ficha de emergencia, archivar bloqueado con reservas o cuotas pendientes.
+
+
+
 2026-11-07 — App Android: aniversario propio en el equipo en la línea de tiempo, buscador "Buscar en la línea de tiempo" y recordatorio al abrir de datos del perfil incompletos (salud, contacto de emergencia, identidad, dirección, privacidad), posponible 30 días.
 
 

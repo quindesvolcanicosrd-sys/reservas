@@ -3472,7 +3472,9 @@ async function adminSetExentaCuota(params: Record<string, any>): Promise<Record<
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre } = params;
   if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
-  const { error } = await supabase.from('equipo').update({ exenta_cuota: !!params.valor }).eq('username', nombre);
+    // Booleano robusto: la app manda form-urlencoded ('true'/'false' como texto).
+  const valor = params.valor === true || params.valor === 'true';
+  const { error } = await supabase.from('equipo').update({ exenta_cuota: valor }).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }

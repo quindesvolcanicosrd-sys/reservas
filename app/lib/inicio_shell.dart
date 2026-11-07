@@ -7,6 +7,8 @@ import 'core/fechas.dart';
 import 'core/tema.dart';
 import 'core/datos_pendientes.dart';
 import 'core/tour.dart';
+import 'equipo/equipo_repo.dart';
+import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
 import 'reservas/gestionar_reserva.dart';
@@ -31,7 +33,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-        WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     // Datos del perfil pendientes: al entrar, sin tapar el tour de primera vez.
     Future.delayed(const Duration(milliseconds: 2500), _recordarDatos);
   }
@@ -71,24 +73,27 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
       ),
       (
         const NavigationDestination(icon: Icon(Icons.group_outlined), selectedIcon: Icon(Icons.group), label: 'Equipo'),
-        const _EnLaWeb(titulo: 'Equipo', ruta: '/'),
+        EquipoScreen(repo: EquipoRepo.de(widget.sesion)),
       ),
       (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), const _EnLaWeb(titulo: 'Tareas', ruta: '/')),
-      (const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mi perfil'), _MiPerfil(sesion: widget.sesion, repo: widget.repo)),
+      (
+        const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mi perfil'),
+        _MiPerfil(sesion: widget.sesion, repo: widget.repo),
+      ),
       if (widget.sesion.esAdmin)
         (
           const NavigationDestination(icon: Icon(Icons.shield_outlined), selectedIcon: Icon(Icons.shield), label: 'Mi Liga'),
           const _EnLaWeb(titulo: 'Mi Liga', ruta: '/'),
         ),
     ];
-        final indice = _indice.clamp(0, destinos.length - 1);
+    final indice = _indice.clamp(0, destinos.length - 1);
     ClavesTour.destinos = destinos.length;
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
       ),
-            bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: NavigationBar(
         key: ClavesTour.navegacion,
         selectedIndex: indice,
         onDestinationSelected: (i) {
@@ -121,7 +126,7 @@ class _IconoHoy extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-                    // Cuadrado redondeado simple (sin las anillas del ícono de Material,
+          // Cuadrado redondeado simple (sin las anillas del ícono de Material,
           // que apretaban el número) y el día en Nunito Black.
           Container(
             width: 24,
@@ -133,7 +138,11 @@ class _IconoHoy extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: Text('$dia', textAlign: TextAlign.center, style: PivotTexto.numeroIcono(color, tam: dia > 9 ? 11.5 : 12.5)),
+            child: Text(
+              '$dia',
+              textAlign: TextAlign.center,
+              style: PivotTexto.numeroIcono(color, tam: dia > 9 ? 11.5 : 12.5),
+            ),
           ),
         ],
       ),
@@ -182,7 +191,7 @@ class _EnLaWeb extends StatelessWidget {
 }
 
 class _MiPerfil extends StatelessWidget {
-    const _MiPerfil({required this.sesion, required this.repo});
+  const _MiPerfil({required this.sesion, required this.repo});
   final Sesion sesion;
   final EventosRepo repo;
 
@@ -201,7 +210,7 @@ class _MiPerfil extends StatelessWidget {
             title: Text(sesion.nombreMostrar, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             subtitle: Text(sesion.nombre ?? ''),
           ),
-                    const SizedBox(height: 8),
+          const SizedBox(height: 8),
           // Clases y cuotas activas, con cancelar o reagendar.
           FilledButton.tonalIcon(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
@@ -215,7 +224,7 @@ class _MiPerfil extends StatelessWidget {
             icon: const Icon(Icons.open_in_new_rounded),
             label: const Text('Editar mis datos en la web'),
           ),
-                    const SizedBox(height: 8),
+          const SizedBox(height: 8),
           // El tour vuelve a aparecer al entrar de nuevo a Eventos.
           TextButton.icon(
             onPressed: () async {

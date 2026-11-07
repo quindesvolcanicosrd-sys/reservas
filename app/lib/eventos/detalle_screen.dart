@@ -7,6 +7,8 @@ import '../core/tema.dart';
 import '../reservas/gestionar_reserva.dart';
 import '../reservas/reserva_screen.dart';
 import '../reservas/reservas_repo.dart';
+import '../equipo/equipo_repo.dart';
+import '../equipo/persona_screen.dart';
 import 'editar_evento_screen.dart';
 import 'eventos_repo.dart';
 import 'tomar_asistencia_screen.dart';
@@ -216,7 +218,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
                     ),
                   ),
                 ),
-                            _tuAsistencia(context, ev),
+              _tuAsistencia(context, ev),
               _tuReserva(context, ev),
               _equipo(context, ev),
             ],
@@ -375,7 +377,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
     );
   }
 
-    /// Reserva de esta clase: su estado y "Cancelar o reagendar"; sin reserva,
+  /// Reserva de esta clase: su estado y "Cancelar o reagendar"; sin reserva,
   /// "Reservar esta clase" (Mirlxs) y "Reservar (mes)" si ese mes no está
   /// pagado y no usa equipamiento del club (web: `_evDetalleAccionesHtml()`).
   Widget _tuReserva(BuildContext context, Evento ev) {
@@ -390,7 +392,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
         children: [
           Row(
             children: [
-              Text('Tu reserva', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
+              Text(
+                'Tu reserva',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
+              ),
               const Spacer(),
               EstadoReserva(estado: reserva.estado),
             ],
@@ -425,7 +430,9 @@ class _DetalleScreenState extends State<DetalleScreen> {
             FilledButton.tonalIcon(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ReservaScreen(repo: repo, tipo: TipoReserva.clase, claseInicial: ev.id)),
+                MaterialPageRoute(
+                  builder: (_) => ReservaScreen(repo: repo, tipo: TipoReserva.clase, claseInicial: ev.id),
+                ),
               ),
               icon: const Icon(Icons.confirmation_number_outlined),
               label: const Text('Reservar esta clase'),
@@ -525,20 +532,29 @@ class _DetalleScreenState extends State<DetalleScreen> {
                       )
                     : Column(
                         children: [
+                          // Tocar a alguien abre su ficha en Equipo (Victor, 2026-11-07).
                           for (final per in personas)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              child: Row(
-                                children: [
-                                  AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      per.nombreMostrar,
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                              onTap: () => PersonaScreen.abrir(context, EquipoRepo.de(repo.sesion), per.username),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: Row(
+                                  children: [
+                                    Hero(
+                                      tag: 'avatar-${per.username}',
+                                      child: AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(
+                                        per.nombreMostrar,
+                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                                      ),
+                                    ),
+                                    Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                                  ],
+                                ),
                               ),
                             ),
                         ],
