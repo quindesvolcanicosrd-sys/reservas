@@ -2682,11 +2682,14 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   const precios = await getPreciosClases();
   let montoFinal = esMensual ? Number(precios.precioMensual ?? 0) : Number(precios.precioPorClase ?? 0);
 
-  // Consumir crédito o cupón
-  const credito = await _consumirCreditoReal(nombre);
+    // Consumir crédito o cupón -- solo cuando el cliente pidió esa clase gratis
+  // (manda monto 0, web y app, 2026-11-07); antes se aplicaba siempre, aunque
+  // la persona no hubiera elegido el cupón o fuera una cuota mensual.
+  const pideGratis = params.monto === undefined || Number(params.monto) === 0;
+  const credito = pideGratis ? await _consumirCreditoReal(nombre) : false;
   if (credito) {
     montoFinal = 0;
-  } else {
+  } else if (pideGratis) {
     const { data: eq } = await supabase.from('equipo').select('cupon_disponible').eq('username', nombre).maybeSingle();
     if (eq?.cupon_disponible) {
       await supabase.from('equipo').update({ cupon_disponible: false }).eq('username', nombre);

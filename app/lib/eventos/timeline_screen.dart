@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../core/tour.dart';
+import '../reservas/reserva_screen.dart';
+import '../reservas/reservas_repo.dart';
 import 'anticipada_screen.dart';
 import 'calendario_panel.dart';
 import 'crear_evento_screen.dart';
@@ -939,14 +941,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
     bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
 
+    void _reservar(TipoReserva t) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReservaScreen(repo: repo, tipo: t)));
+  }
+
   Future<void> _tourSiCorresponde() async {
     if (!mounted || _buscando || _calMontado || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
-    final anticipada = repo.anticipada.disponible;
-    final (String tituloMas, String textoMas) = _esAdmin && anticipada
-        ? ('Crea y responde', 'Toca aquí para crear un evento o para marcar tu asistencia a varios entrenamientos de una sola vez.')
-        : _esAdmin
-        ? ('Crea eventos', 'Toca aquí para crear un nuevo evento.')
-        : ('Asistencia anticipada', 'Toca aquí para marcar tu asistencia a varios entrenamientos de una sola vez.');
+        // El texto del "+" nombra lo que tiene el menú de esta persona.
+    final nombres = _acciones.map((a) => a.texto.toLowerCase()).toList();
+    final lista = nombres.length <= 1 ? nombres.join() : '${nombres.sublist(0, nombres.length - 1).join(', ')} o ${nombres.last}';
+    final reserva = ReservasRepo(repo.sesion).opciones.isNotEmpty;
+    final tituloMas = reserva ? 'Reserva tu lugar' : (_esAdmin ? 'Crea eventos' : 'Asistencia anticipada');
+    final textoMas = 'Toca aquí para: $lista.';
     await Tour.mostrarSiCorresponde(
       context,
       preferencia: 'tour.eventos.visto',
@@ -973,7 +979,12 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   // ─── Botón "+": menú de acciones (pedido 2026-11-06, como la web) ───────
 
-  List<_Accion> get _acciones => [
+    List<_Accion> get _acciones => [
+    // Fase 3: reservas según el tipo de persona (`ReservasRepo.opciones`).
+    for (final t in ReservasRepo(repo.sesion).opciones)
+      t == TipoReserva.clase
+          ? _Accion(Icons.event_available_outlined, 'Reserva por clase', () => _reservar(t))
+          : _Accion(Icons.calendar_month_outlined, 'Reserva por mes', () => _reservar(t)),
     if (_esAdmin) _Accion(Icons.edit_calendar_outlined, 'Nuevo evento', _nuevoEvento),
     if (repo.anticipada.disponible)
       _Accion(

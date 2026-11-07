@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android (Fase 3): reserva por clase o por mes desde el "+", con clases a favor, cupón, pago con DeUna o transferencia y comprobante por WhatsApp. Servidor: la clase a favor y el cupón se aplican solo cuando se piden.
+
+
+
 2026-11-07 — Meses: asistencia anticipada (web y app) y reserva mensual (web) muestran 12 meses desde el actual con su año, en vez de enero a diciembre del año en curso.
 
 
