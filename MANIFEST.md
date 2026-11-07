@@ -9,7 +9,7 @@ Referencia del estado actual de la arquitectura. El historial de cambios vive en
 App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mensualidades, calendario de eventos con asistencia (RSVP + rollcall real), sección Equipo (roster con favoritos/grupos por rol, perfil de detalle con stats y termómetro Quindes/Mirlxs), perfil/equipamiento de cada miembro, tareas del club y panel admin ("Mi Liga"). SPA en `index.html` sobre Supabase (Postgres + Edge Function), con 2 mini-SPA hermanas standalone (`inscripcion/`, `registro-express/`) para altas nuevas. Backend legado en Google Apps Script (Code.gs, fuera de este repo) en migración progresiva a una Edge Function de Supabase — lo no migrado todavía cae por proxy a GAS.
 
 ## Pendientes app Android (anotados 2026-11-07)
-- Fase 3 (reservas y pagos en el "+"): mapa de variantes entregado para validar (Claude Doc "Pivot app — Fase 3"); construir cuando Victor lo apruebe.
+- Fase 3 (reservas y pagos en el "+"): mapa de variantes entregado para validar (Claude Doc "Pivot app — Fase 3", https://claude.ai/artifact/NhrTMuCVb4JiPxZdJyLfo7); construir cuando Victor lo apruebe.
 - Revisar si el buscador de "Nuevo lugar" de la WEB funciona: la llave de Google Maps del proyecto responde "permiso denegado" porque la facturación de Google Cloud está pausada (prepago de 30 USD pendiente). Existe una llave Android (`com.pivotapp.coach` + SHA-1) sin usar.
 
 ## App Android — ronda 2026-11-07 (resueltos)
