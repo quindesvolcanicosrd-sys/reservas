@@ -466,81 +466,94 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
         }
         final panel = _calMontado ? RepaintBoundary(child: _panelCalendario(context)) : null;
-        return Scaffold(
-          floatingActionButton: _acciones.isEmpty || _buscando
-              ? null
-              : FloatingActionButton(tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (c, a) => FadeTransition(
-                    opacity: a,
-                    child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
+        return PopScope(
+          // Atrás (botón o gesto) primero cierra el buscador o el calendario;
+          // recién sin nada abierto sale de la app.
+          canPop: !_buscando && !_calMontado,
+          onPopInvokedWithResult: (hecho, _) {
+            if (hecho) return;
+            if (_buscando) {
+              _cerrarBusqueda();
+            } else {
+              _cerrarCalendario();
+            }
+          },
+          child: Scaffold(
+            floatingActionButton: _acciones.isEmpty || _buscando
+                ? null
+                : FloatingActionButton(tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
+            body: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (c, a) => FadeTransition(
+                      opacity: a,
+                      child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
+                    ),
+                    child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
                   ),
-                  child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
-                ),
-                // Calendario sobre el timeline. Para que abrir/cerrar (también
-                // con el dedo) sea fluido, nada cambia de tamaño mientras se
-                // mueve: el panel baja desde la barra y el timeline se corre
-                // hacia abajo con transformaciones (solo se repinta, no se
-                // vuelve a medir cada fila en cada cuadro).
-                Expanded(
-                  child: ClipRect(
-                    child: AnimatedBuilder(
-                      // El panel se arma una sola vez por build: en cada cuadro
-                      // solo cambian las transformaciones (instancia idéntica =
-                      // Flutter no lo reconstruye).
-                      animation: _calCtrl,
-                      builder: (context, hijo) {
-                        final alto = _altoPanel;
-                        final v = _calCtrl.value;
-                        return Stack(
+                  // Calendario sobre el timeline. Para que abrir/cerrar (también
+                  // con el dedo) sea fluido, nada cambia de tamaño mientras se
+                  // mueve: el panel baja desde la barra y el timeline se corre
+                  // hacia abajo con transformaciones (solo se repinta, no se
+                  // vuelve a medir cada fila en cada cuadro).
+                  Expanded(
+                    child: ClipRect(
+                      child: AnimatedBuilder(
+                        // El panel se arma una sola vez por build: en cada cuadro
+                        // solo cambian las transformaciones (instancia idéntica =
+                        // Flutter no lo reconstruye).
+                        animation: _calCtrl,
+                        builder: (context, hijo) {
+                          final alto = _altoPanel;
+                          final v = _calCtrl.value;
+                          return Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Transform.translate(offset: Offset(0, alto * v), child: hijo),
+                              ),
+                              if (panel != null)
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  top: 0,
+                                  child: Transform.translate(
+                                    offset: Offset(0, -alto * (1 - v)),
+                                    // Sin fundido (como Google Calendar): solo se desliza bajo la barra.
+                                    child: panel,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                        // Con el calendario abierto, arrastrar el timeline mueve
+                        // todo junto (acordeón) en vez de desplazarlo por dentro.
+                        // Una capa transparente encima del timeline se queda con los
+                        // arrastres verticales (gana antes que la lista) y deja
+                        // pasar los toques a las tarjetas. Así la lista nunca
+                        // cambia de física (bug real 1.0.15: al cambiarla, después
+                        // no se podía volver hacia arriba y saltaba el "tirar para
+                        // actualizar").
+                        child: Stack(
                           children: [
-                            Positioned.fill(
-                              child: Transform.translate(offset: Offset(0, alto * v), child: hijo),
-                            ),
-                            if (panel != null)
-                              Positioned(
-                                left: 0,
-                                right: 0,
-                                top: 0,
-                                child: Transform.translate(
-                                  offset: Offset(0, -alto * (1 - v)),
-                                  // Sin fundido (como Google Calendar): solo se desliza bajo la barra.
-                                  child: panel,
+                            RepaintBoundary(child: _cuerpo(context)),
+                            if (_calMontado)
+                              Positioned.fill(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
+                                  onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
                                 ),
                               ),
                           ],
-                        );
-                      },
-                      // Con el calendario abierto, arrastrar el timeline mueve
-                      // todo junto (acordeón) en vez de desplazarlo por dentro.
-                      // Una capa transparente encima del timeline se queda con los
-                      // arrastres verticales (gana antes que la lista) y deja
-                      // pasar los toques a las tarjetas. Así la lista nunca
-                      // cambia de física (bug real 1.0.15: al cambiarla, después
-                      // no se podía volver hacia arriba y saltaba el "tirar para
-                      // actualizar").
-                      child: Stack(
-                        children: [
-                          RepaintBoundary(child: _cuerpo(context)),
-                          if (_calMontado)
-                            Positioned.fill(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
-                                onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
