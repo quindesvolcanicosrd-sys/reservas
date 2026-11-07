@@ -968,9 +968,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           titulo: 'Vuelve a hoy',
           texto: 'El ícono de Eventos muestra la fecha de hoy. Tócalo de nuevo estando aquí para volver a hoy.',
         ),
+                // Se resalta la parte de arriba de la línea de tiempo (toda la lista
+        // no dejaría lugar para la tarjeta y el recorte no se notaría).
         PasoTour(
           clave: _kLista,
-          sinHalo: true,
+                    ajuste: (r) => Rect.fromLTWH(r.left + 10, r.top + 6, r.width - 20, r.height * 0.5),
           titulo: 'Explora la línea de tiempo',
           texto: 'Desliza para ver los eventos pasados y los próximos: programados, cancelados, cumpleaños y temporadas de descanso.',
         ),

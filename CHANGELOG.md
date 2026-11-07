@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: tour con animaciones más fluidas (recorte que viaja con la tarjeta, anillo que late, flecha), el último paso resalta la línea de tiempo, y "Ver el tour de nuevo" en Mi perfil.
+
+
+
 2026-11-07 — Cancelar o reagendar reservas (app: tarjeta, detalle y "Mis reservas"); "Reservar esta clase" / "Reservar <mes>" en el detalle; aviso a las admins de pago pendiente de revisión. Fix servidor: cancelar o cambiar una cuota mensual ahora funciona (antes no encontraba la reserva) y ambas acciones validan la sesión.
 
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'core/api.dart';
@@ -204,7 +205,20 @@ class _MiPerfil extends StatelessWidget {
             icon: const Icon(Icons.open_in_new_rounded),
             label: const Text('Editar mis datos en la web'),
           ),
-          const SizedBox(height: 12),
+                    const SizedBox(height: 8),
+          // El tour vuelve a aparecer al entrar de nuevo a Eventos.
+          TextButton.icon(
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('tour.eventos.visto');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listo: verás el tour al volver a Eventos.')));
+              }
+            },
+            icon: const Icon(Icons.tour_outlined),
+            label: const Text('Ver el tour de nuevo'),
+          ),
+          const SizedBox(height: 4),
           TextButton.icon(onPressed: () => sesion.cerrar(), icon: const Icon(Icons.logout_rounded), label: const Text('Cerrar sesión')),
         ],
       ),
