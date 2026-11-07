@@ -257,8 +257,8 @@ function confirmarCrop() {
 }
 
 /* ── Subida al backend ────────────────────────────────────────────────
-   Dos acciones distintas según contexto (backend Apps Script, fuera de
-   este repo, no se toca desde acá) — ambas POST (el base64 es muy largo
+   Dos acciones distintas según contexto (Edge Function de Supabase) —
+   ambas POST (el base64 es muy largo
    para una URL de GET) y devuelven { exito:true, url } o { exito:false,
    error }:
    - app (perfil propio de Equipo): `subirFotoPerfil`, params `token` (sesión real, `_token`,
@@ -288,8 +288,8 @@ function _subirFotoRecortada(base64) {
       if (url) url += (url.indexOf('?') === -1 ? '?' : '&') + 'cb=' + Date.now();
       _fotoAplicarResultado(url, 'subida');
       // BUG REAL corregido (causa principal, ver MANIFEST.md "Cambios
-      // recientes"): `subirFotoPerfil` vive entero en GAS (Apps Script,
-      // fuera de este repo, no editable desde acá) y no siempre persistía
+      // recientes"): `subirFotoPerfil` (antes en un backend viejo, hoy en la Edge
+      // Function) no siempre persistía
       // la URL nueva en `equipo.foto_perfil` -- la actualización visual
       // inmediata de arriba es optimista (usa el `url` que devuelve la
       // respuesta), no una confirmación de que quedó guardada; recargar la

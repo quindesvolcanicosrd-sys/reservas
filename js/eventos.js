@@ -4,7 +4,7 @@
    pantalla: _evGenerarDemo()/_EV_EVENTOS_DEMO/_EV_CUMPLEANOS_DEMO/
    _EV_EQUIPO_DEMO). getEventosRango()/getCumpleañosRango()/
    marcarAsistenciaUsuario()/adminMarcarAsistencia()/
-   adminBuscarPersonasParaEvento() (Apps Script, documentadas en
+   adminBuscarPersonasParaEvento() (Edge Function, documentadas en
    MANIFEST.md) ya están desplegadas y confirmadas en vivo -- ver
    _evCargarDatosReales()/_evMapEventoBackend() más abajo para el adaptador
    entre la forma real del backend y la que espera el resto de este
@@ -6234,8 +6234,7 @@ function _evCancelarEvento(idEvento, btn) {
 // con esa marca para siempre, tanto en el historial (`log_asistencias`)
 // como en el fallback CSV que lee `adminMarcarAsistencia()`
 // (`asistencias.a_horario`/`.tarde`, ver ese handler en
-// supabase/functions/api/index.ts). `adminCancelarEvento` (la acción real,
-// todavía en Google Apps Script -- `forwardToGAS()`, fuera de este repo) no
+// supabase/functions/api/index.ts). `adminCancelarEvento` (Edge Function) no
 // hace esta limpieza. Se agrega acá como fetch directo a la REST API de
 // Supabase -- mismo mecanismo que ya usa este archivo para `venues`/
 // `temporadas_descanso` cuando la Edge Function todavía no tiene una acción
@@ -10954,9 +10953,7 @@ function _evCrearFrecActualizarPreview() {
 // _evCrearRecurrenciaValidaWizard()/_evCrearGuardar() más abajo -- sin
 // tocar esas 2 funciones, siguen validando/armando el payload igual).
 // `diasSemana` del bottom sheet NO viaja al payload de guardado -- el
-// backend de `crearVenue` (nunca visto desplegado en `supabase/functions/
-// api/index.ts`, cualquier acción no listada ahí cae a `forwardToGAS()`
-// hacia Apps Script) no tiene manejo conocido de días de semana combinados
+// backend de lugares no tiene manejo conocido de días de semana combinados
 // con "cada_tantos"; se captura solo para el texto de resumen (acá y en el
 // paso "Detalles") hasta que se confirme soporte real del lado backend --
 // señalado por honestidad, no resuelto en silencio.

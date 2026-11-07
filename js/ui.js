@@ -668,7 +668,7 @@ var APP_BOTTOM_NAV_ITEMS = [
   { id: 'equipo', icono: 'groups', texto: 'Equipo', pantalla: 's-equipo',
     entrar: function() { irEquipo(); },
     visible: function() { return true; } },
-  // 'tareas' -- sección Tareas (backend Apps Script ya desplegado): tablero
+  // 'tareas' -- sección Tareas (backend en la Edge Function): tablero
   // de tareas con cupos + "Mis tareas" + wizard de creación/validación
   // admin. Mismo criterio que 'eventos': visible para todo tipo de cuenta
   // (admin y usuarix normal pueden tomar/gestionar tareas por igual), con

@@ -1,4 +1,4 @@
-// Sección Tareas — backend Apps Script ya desplegado (getTareasDisponibles/
+// Sección Tareas — backend en la Edge Function de Supabase (getTareasDisponibles/
 // getMisTareas/getConfigTareas/tomarTarea/soltarTarea/rescatarTarea/
 // enviarRevisionTarea/adminCrearTarea/adminGetTareasPendientesValidacion/
 // adminValidarTarea/getTareasArchivadas/adminEliminarTareaArchivada). Reusa
