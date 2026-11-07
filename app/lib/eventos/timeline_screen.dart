@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'crear_evento_screen.dart';
 import 'detalle_screen.dart';
 import 'eventos_repo.dart';
 import 'modelos.dart';
+import 'tomar_asistencia_screen.dart';
 import 'widgets_comunes.dart';
 
 /// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
@@ -67,6 +69,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   String? _filtroLugar;
   String? _filtroTipo;
   DateTime _mesVisible = Fechas.hoy();
+  // Título de la barra ("Noviembre"): se actualiza solo, sin reconstruir la
+  // pantalla (antes cada cambio de mes al scrollear o deslizar redibujaba
+  // todo el timeline y daba tirones).
+  final _tituloMes = ValueNotifier<DateTime>(Fechas.hoy());
   bool _calAbierto = false;
   bool _calMontado = false;
   DateTime _mesPanel = Fechas.hoy();
@@ -80,7 +86,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   // Se guarda qué fila estaba arriba y se vuelve a ella sin animación.
   Object? _firmaDatos;
   bool _desplazandoProgramado = false;
+  Timer? _reloj;
   List<_Fila> _filas = const [];
+  int? _claveFilas;
   bool _saltoInicialHecho = false;
 
   static const _anchoFecha = 52.0;
@@ -95,6 +103,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     _posiciones.itemPositions.addListener(_alDesplazar);
     widget.irAHoy?.addListener(_irAHoy);
     _cargarFiltros();
+    // Cada minuto: mueve la línea de "ahora" y el resaltado de "En curso".
+    _reloj = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
@@ -130,7 +142,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   void _irAHoy() {
     final hoy = Fechas.hoy();
-    if (_calAbierto) {
+    if (_calMontado) {
       setState(() => _diaSel = hoy);
       _panel.currentState?.irAMes(hoy);
     }
@@ -141,13 +153,15 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void dispose() {
     _posiciones.itemPositions.removeListener(_alDesplazar);
     widget.irAHoy?.removeListener(_irAHoy);
+    _reloj?.cancel();
     _calCtrl.dispose();
+    _tituloMes.dispose();
     _textoBusqueda.dispose();
     _focoBusqueda.dispose();
     super.dispose();
   }
 
-    // Solo un scroll hecho con el dedo mueve el mes del calendario (bug real:
+  // Solo un scroll hecho con el dedo mueve el mes del calendario (bug real:
   // al tocar "jul", el timeline llegaba al final de lo cargado, quedaba
   // mostrando junio y el panel "volvía" a junio un segundo después).
   bool _scrollDelUsuario = false;
@@ -159,7 +173,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final i = pos.first.index.clamp(0, _filas.length - 1);
     final d = _filas[i].dia;
     if (d.month != _mesVisible.month || d.year != _mesVisible.year) {
-      setState(() => _mesVisible = d);
+      _mesVisible = d;
+      if (!_calAbierto) _tituloMes.value = d;
       // Con el calendario abierto, el mes del panel acompaña al timeline.
       if (_calAbierto && _scrollDelUsuario && !_desplazandoProgramado && !_colapsandoPorScroll) _panel.currentState?.irAMes(d);
     }
@@ -283,19 +298,22 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   void _alternarCalendario() => _calAbierto ? _cerrarCalendario() : _abrirCalendario();
 
+  // `_calAbierto` NO se cambia con setState: nada del build depende de él
+  // (la flecha y el título siguen al controlador / al ValueNotifier), así el
+  // arrastre nunca reconstruye la pantalla a mitad de camino.
   void _abrirCalendario() {
-    setState(() {
-      _calAbierto = true;
-      _calMontado = true;
-      _mesPanel = _mesVisible;
-    });
+    _calAbierto = true;
+    _mesPanel = _mesVisible;
+    _tituloMes.value = _mesPanel;
+    if (!_calMontado) setState(() => _calMontado = true);
     _remedirPanel();
     _calCtrl.animateTo(1, curve: Curves.easeOutCubic);
   }
 
   void _cerrarCalendario() {
     if (!_calMontado) return;
-    setState(() => _calAbierto = false);
+    _calAbierto = false;
+    _tituloMes.value = _mesVisible;
     _calCtrl.animateBack(0, curve: Curves.easeOutCubic).whenComplete(() {
       if (mounted && !_calAbierto) setState(() => _calMontado = false);
     });
@@ -311,7 +329,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         key: _panel,
         repo: repo,
         mesInicial: _mesPanel,
-        alCambiarMes: (m) => setState(() => _mesPanel = m),
+        alCambiarMes: (m) {
+          _mesPanel = m;
+          if (_calAbierto) _tituloMes.value = m;
+        },
         alElegirDia: _elegirDia,
         alMesElegido: _mesElegido,
         alArrastrar: _arrastrar,
@@ -327,7 +348,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void _remedirPanel() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final h = _panel.currentContext?.size?.height;
-      if (mounted && h != null && h > 100 && h != _altoMedido) setState(() => _altoMedido = h);
+      if (mounted && h != null && h > 100) _altoMedido = h;
     });
   }
 
@@ -339,23 +360,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (_buscando) return;
     if (!_calMontado) {
       if (dy <= 0) return;
-      setState(() {
-        _calMontado = true;
-        _mesPanel = _mesVisible;
-      });
+      _mesPanel = _mesVisible;
+      setState(() => _calMontado = true);
       _remedirPanel();
     }
     _calCtrl.value = (_calCtrl.value + dy / _altoPanel).clamp(0.0, 1.0);
-    final abierto = _calCtrl.value > 0.5;
-    if (abierto != _calAbierto) setState(() => _calAbierto = abierto);
   }
 
   void _soltar(double velocidad) {
     if (!_calMontado) return;
     final abrir = velocidad.abs() > 300 ? velocidad > 0 : _calCtrl.value > 0.5;
     if (abrir) {
-      setState(() => _calAbierto = true);
-      _calCtrl.animateTo(1, curve: Curves.easeOutCubic);
+      _abrirCalendario();
     } else {
       _cerrarCalendario();
     }
@@ -411,7 +427,23 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       listenable: repo,
       builder: (context, _) {
         final antes = _filas;
-        _filas = _armarFilas();
+        // Las filas solo se recalculan si cambió algo que las afecta.
+        final ahora = Fechas.ahoraEcuador();
+        final claveFilas = Object.hash(
+          identityHashCode(repo.eventos),
+          identityHashCode(repo.cumples),
+          repo.eventos.length,
+          _consulta,
+          _filtroLugar,
+          _filtroTipo,
+          ahora.day,
+          ahora.hour,
+          ahora.minute,
+        );
+        if (claveFilas != _claveFilas) {
+          _filas = _armarFilas();
+          _claveFilas = claveFilas;
+        }
         final firma = Object.hash(identityHashCode(repo.eventos), identityHashCode(repo.cumples));
         if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
         _firmaDatos = firma;
@@ -484,7 +516,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   Widget _barraNormal(BuildContext context) {
     final p = context.pivot;
     final t = Theme.of(context).textTheme;
-    final mesTitulo = _calAbierto ? _mesPanel : _mesVisible;
+
     return Padding(
       key: const ValueKey('normal'),
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 4),
@@ -499,29 +531,28 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (c, a) => FadeTransition(
-                      opacity: a,
-                      child: SlideTransition(
-                        position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
-                        child: c,
+                  ValueListenableBuilder<DateTime>(
+                    valueListenable: _tituloMes,
+                    builder: (context, mesTitulo, _) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (c, a) => FadeTransition(
+                        opacity: a,
+                        child: SlideTransition(
+                          position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
+                          child: c,
+                        ),
                       ),
-                    ),
-                    layoutBuilder: (actual, previos) => Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]),
-                    child: Text(
-                      mesTitulo.year == Fechas.hoy().year ? Fechas.mesNombre(mesTitulo) : Fechas.mesAnio(mesTitulo),
-                      key: ValueKey('${mesTitulo.year}-${mesTitulo.month}'),
-                      style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                      layoutBuilder: (actual, previos) => Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]),
+                      child: Text(
+                        mesTitulo.year == Fechas.hoy().year ? Fechas.mesNombre(mesTitulo) : Fechas.mesAnio(mesTitulo),
+                        key: ValueKey('${mesTitulo.year}-${mesTitulo.month}'),
+                        style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  AnimatedRotation(
-                    turns: _calAbierto ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeOutCubic,
-                    child: const Icon(Icons.keyboard_arrow_down_rounded),
-                  ),
+                  // La flecha gira siguiendo al calendario (también con el dedo).
+                  RotationTransition(turns: Tween(begin: 0.0, end: 0.5).animate(_calCtrl), child: const Icon(Icons.keyboard_arrow_down_rounded)),
                 ],
               ),
             ),
@@ -776,15 +807,13 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   /// Con el calendario abierto, scrollear el timeline lo va cerrando junto
   /// con el dedo; al soltar termina de cerrarse o vuelve a abrirse.
   bool _colapsandoPorScroll = false;
-    bool _alScrollearTimeline(ScrollNotification n) {
+  bool _alScrollearTimeline(ScrollNotification n) {
     if (n is ScrollStartNotification) _scrollDelUsuario = n.dragDetails != null;
     if (n is ScrollEndNotification) _scrollDelUsuario = false;
     if (!_calMontado) return false;
     if (n is ScrollUpdateNotification && n.dragDetails != null && (n.scrollDelta ?? 0) != 0) {
       _colapsandoPorScroll = true;
       _calCtrl.value = (_calCtrl.value - n.scrollDelta!.abs() / (_altoPanel * 0.7)).clamp(0.0, 1.0);
-      final abierto = _calCtrl.value > 0.5;
-      if (abierto != _calAbierto) setState(() => _calAbierto = abierto);
       if (_calCtrl.value == 0) {
         _colapsandoPorScroll = false;
         _cerrarCalendario();
@@ -959,8 +988,12 @@ class _TarjetaEvento extends StatelessWidget {
     final ev = evento;
     final apagado = ev.cancelado;
     final pedirRespuesta = !apagado && ev.miEstado == null && !ev.yaEmpezo;
-    final asisten = ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
-    return Material(
+    // Después de empezar se muestran quienes asistieron de verdad (si ya se tomó asistencia).
+    final reales = ev.yaEmpezo && ev.asistentes.isNotEmpty;
+    final asisten = reales ? ev.asistentes.map((a) => a.persona).toList() : ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
+    final esAdmin = repo.sesion.esAdmin && repo.sesion.adminToken != null;
+    final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
+    final tarjeta = Material(
       color: apagado ? p.apagadoFondo : p.tarjeta,
       borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
       child: InkWell(
@@ -978,9 +1011,14 @@ class _TarjetaEvento extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          ev.rangoHorario,
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: apagado ? p.apagado : p.marcaTexto),
+                        Row(
+                          children: [
+                            if (ev.enCurso) ...[const _PuntoEnVivo(), const SizedBox(width: 6)],
+                            Text(
+                              ev.enCurso ? 'En curso · ${ev.rangoHorario}' : ev.rangoHorario,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: apagado ? p.apagado : p.marcaTexto),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 3),
                         Text(
@@ -1008,7 +1046,12 @@ class _TarjetaEvento extends StatelessWidget {
                 Row(
                   children: [
                     PilaAvatares(personas: asisten),
-                    Text('${asisten.length} ${asisten.length == 1 ? 'asistirá' : 'asistirán'}', style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+                    Text(
+                      reales
+                          ? '${asisten.length} ${asisten.length == 1 ? 'asistió' : 'asistieron'}'
+                          : '${asisten.length} ${asisten.length == 1 ? 'asistirá' : 'asistirán'}',
+                      style: TextStyle(fontSize: 12, color: p.textoSecundario),
+                    ),
                   ],
                 ),
               ],
@@ -1026,9 +1069,111 @@ class _TarjetaEvento extends StatelessWidget {
                       )
                     : const SizedBox(width: double.infinity),
               ),
+              if (tomarAsistencia)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: ev.enCurso
+                      ? FilledButton.icon(
+                          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
+                          onPressed: () => _abrirTomarAsistencia(context),
+                          icon: const Icon(Icons.how_to_reg_rounded, size: 20),
+                          label: const Text('Tomar asistencia'),
+                        )
+                      : OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(40)),
+                          onPressed: () => _abrirTomarAsistencia(context),
+                          icon: const Icon(Icons.how_to_reg_outlined, size: 20),
+                          label: Text(ev.asistentes.isEmpty ? 'Tomar asistencia' : 'Editar asistencia'),
+                        ),
+                ),
             ],
           ),
         ),
+      ),
+    );
+    return ev.enCurso ? _BrilloEnCurso(child: tarjeta) : tarjeta;
+  }
+
+  void _abrirTomarAsistencia(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => TomarAsistenciaScreen(repo: repo, eventoId: evento.id),
+      ),
+    );
+  }
+}
+
+/// Borde con un brillo suave que late: el evento está pasando ahora.
+class _BrilloEnCurso extends StatefulWidget {
+  const _BrilloEnCurso({required this.child});
+  final Widget child;
+
+  @override
+  State<_BrilloEnCurso> createState() => _BrilloEnCursoState();
+}
+
+class _BrilloEnCursoState extends State<_BrilloEnCurso> with SingleTickerProviderStateMixin {
+  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _latido.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return AnimatedBuilder(
+      animation: _latido,
+      builder: (context, hijo) {
+        final v = Curves.easeInOut.transform(_latido.value);
+        return DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            border: Border.all(color: p.marca.withValues(alpha: 0.45 + 0.55 * v), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: p.marca.withValues(alpha: 0.10 + 0.22 * v),
+                blurRadius: 10 + 8 * v,
+                spreadRadius: 0.5,
+              ),
+            ],
+          ),
+          child: hijo,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+/// Punto rojo "en vivo" que late junto a "En curso".
+class _PuntoEnVivo extends StatefulWidget {
+  const _PuntoEnVivo();
+
+  @override
+  State<_PuntoEnVivo> createState() => _PuntoEnVivoState();
+}
+
+class _PuntoEnVivoState extends State<_PuntoEnVivo> with SingleTickerProviderStateMixin {
+  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _latido.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.35, end: 1.0).animate(_latido),
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: context.pivot.marca, shape: BoxShape.circle),
       ),
     );
   }

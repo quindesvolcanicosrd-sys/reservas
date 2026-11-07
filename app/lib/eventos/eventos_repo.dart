@@ -18,6 +18,13 @@ class SinRespuesta {
 
 /// Datos de la sección Eventos. Carga por rango (inicio: 30 días atrás y 120
 /// adelante) y amplía el rango cuando el calendario pide otro mes.
+/// Persona del equipo en la lista de "Tomar asistencia".
+class MiembroRoster {
+  const MiembroRoster({required this.persona, required this.inactivo});
+  final Persona persona;
+  final bool inactivo;
+}
+
 class EventosRepo extends ChangeNotifier {
   EventosRepo(this.sesion);
 
@@ -251,6 +258,60 @@ class EventosRepo extends ChangeNotifier {
         })
         .catchError((_) => <String, dynamic>{});
     await cargar(forzar: true);
+  }
+
+  // ─── Tomar asistencia (admins) ──────────────────────────────────────────
+
+  List<MiembroRoster>? _roster;
+
+  /// Equipo completo para tomar asistencia (`adminGetRosterEquipo`, igual
+  /// que la web): activos e inactivos (30+ días sin asistencia real).
+  Future<List<MiembroRoster>> roster({bool forzar = false}) async {
+    if (_roster != null && !forzar) return _roster!;
+    final res = await _api.get('adminGetRosterEquipo', {'adminToken': _adminToken});
+    final hoy = DateTime.now();
+    _roster = [
+      for (final p in (res['personas'] as List? ?? const []))
+        if (p is Map<String, dynamic>)
+          MiembroRoster(
+            persona: Persona(
+              username: (p['nombre'] ?? '').toString(),
+              nombreDerby: (p['nombreDerby'] ?? '').toString(),
+              fotoPerfil: (p['fotoPerfil'] ?? '').toString(),
+            ),
+            inactivo: () {
+              final u = DateTime.tryParse((p['ultimaAsistencia'] ?? '').toString());
+              return u != null && hoy.difference(u).inDays >= 30;
+            }(),
+          ),
+    ]..sort((a, b) => a.persona.nombreMostrar.toLowerCase().compareTo(b.persona.nombreMostrar.toLowerCase()));
+    return _roster!;
+  }
+
+  /// Marca (o quita, con null) la asistencia real de una persona. Optimista:
+  /// si el servidor falla, vuelve atrás y lanza (`_evMarcarAsistenciaAdmin()`).
+  Future<void> marcarReal(Evento ev, Persona persona, EstadoReal? estado) async {
+    final token = _adminToken;
+    final clave = persona.username.trim().toUpperCase();
+    final anterior = List<AsistenciaReal>.of(ev.asistentes);
+    ev.asistentes.removeWhere((a) => a.persona.username.trim().toUpperCase() == clave);
+    if (estado != null) ev.asistentes.add(AsistenciaReal(persona: persona, estado: estado));
+    notifyListeners();
+    try {
+      final res = await _api.post('adminMarcarAsistencia', {
+        'adminToken': token,
+        'idEvento': ev.id,
+        'nombre': persona.username,
+        'estado': estado?.valor ?? 'Ninguno',
+      });
+      if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo guardar la asistencia.').toString());
+    } catch (e) {
+      ev.asistentes
+        ..clear()
+        ..addAll(anterior);
+      notifyListeners();
+      rethrow;
+    }
   }
 
   /// Venues completos (para crear eventos: se copian nombre, mapa, etc.).

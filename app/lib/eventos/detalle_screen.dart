@@ -5,6 +5,7 @@ import '../core/fechas.dart';
 import '../core/tema.dart';
 import 'editar_evento_screen.dart';
 import 'eventos_repo.dart';
+import 'tomar_asistencia_screen.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 
@@ -190,7 +191,29 @@ class _DetalleScreenState extends State<DetalleScreen> {
               : null,
           body: ListView(
             padding: const EdgeInsets.only(top: 8, bottom: 96),
-            children: [_resumen(context, ev), _tuAsistencia(context, ev), _equipo(context, ev)],
+            children: [
+              _resumen(context, ev),
+              if (_esAdmin && ev.sePuedeTomarAsistencia)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TomarAsistenciaScreen(repo: repo, eventoId: ev.id),
+                      ),
+                    ),
+                    icon: const Icon(Icons.how_to_reg_rounded),
+                    label: Text(
+                      ev.asistentes.isEmpty
+                          ? 'Tomar asistencia'
+                          : 'Tomar asistencia · ${ev.asistentes.length} ${ev.asistentes.length == 1 ? 'presente' : 'presentes'}',
+                    ),
+                  ),
+                ),
+              _tuAsistencia(context, ev),
+              _equipo(context, ev),
+            ],
           ),
         );
       },

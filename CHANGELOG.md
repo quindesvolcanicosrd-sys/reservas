@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: evento en curso resaltado con brillo animado, "Tomar asistencia" para admins (equipo completo, A horario/Tarde, inactivxs aparte) y arrastre del calendario sin tirones.
+
 2026-11-06 — App Android: calendario fluido al abrir/cerrar con el dedo (se mueve en vez de cambiar de tamaño), sin leyenda, más aire, globo de cumpleaños sin cortes y fix de la pill de mes que volvía al mes anterior.
 
 2026-11-06 — App Android: el calendario se cierra al scrollear el timeline, pills de meses con año (como Google Calendar), 🎈 para cumpleaños, tarjeta de cumpleaños con avatar y confeti si es hoy, ícono de Eventos con contorno de calendario y ícono "Event Upcoming" para asistencia anticipada.
