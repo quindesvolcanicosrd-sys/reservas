@@ -169,7 +169,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   bool _scrollDelUsuario = false;
 
   void _alDesplazar() {
-    final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0).toList();
+    // La fila de arriba cuenta solo si se ve de verdad (no un borde de la
+    // anterior que asoma): si no, al ir al día 1 el título quedaba en el mes previo.
+    final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0.06).toList();
     if (pos.isEmpty || _filas.isEmpty) return;
     pos.sort((a, b) => a.index.compareTo(b.index));
     final i = pos.first.index.clamp(0, _filas.length - 1);
@@ -323,7 +325,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void _cerrarCalendario() {
     if (!_calMontado) return;
     _calAbierto = false;
-    _tituloMes.value = _mesVisible;
+    // Al cerrar queda el mes que se estaba viendo en el calendario (como Google Calendar).
+    _mesVisible = _mesPanel;
+    _tituloMes.value = _mesPanel;
     _calCtrl.animateBack(0, curve: Curves.easeOutCubic).whenComplete(() {
       if (mounted && !_calAbierto) setState(() => _calMontado = false);
     });
@@ -514,14 +518,25 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                       },
                       // Con el calendario abierto, arrastrar el timeline mueve
                       // todo junto (acordeón) en vez de desplazarlo por dentro.
-                      child: _calMontado
-                          ? GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
-                              onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
-                              child: RepaintBoundary(child: _cuerpo(context)),
-                            )
-                          : RepaintBoundary(child: _cuerpo(context)),
+                      // Una capa transparente encima del timeline se queda con los
+                      // arrastres verticales (gana antes que la lista) y deja
+                      // pasar los toques a las tarjetas. Así la lista nunca
+                      // cambia de física (bug real 1.0.15: al cambiarla, después
+                      // no se podía volver hacia arriba y saltaba el "tirar para
+                      // actualizar").
+                      child: Stack(
+                        children: [
+                          RepaintBoundary(child: _cuerpo(context)),
+                          if (_calMontado)
+                            Positioned.fill(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
+                                onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -812,7 +827,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
-          physics: _calMontado ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,
           itemBuilder: (context, i) => _fila(context, _filas[i]),

@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: fix — al cerrar el calendario ya no cambia el mes, y el timeline vuelve a desplazarse hacia arriba (antes saltaba el "tirar para actualizar").
+
 2026-11-06 — App Android: con el calendario abierto, arrastrar el timeline mueve todo junto como un acordeón (como Google Calendar) y el cierre es más fluido.
 
 2026-11-06 — App Android: asistentes con un solo diseño (progreso, transición deslizante de Material, botón fijo), "+" como menú de acciones (Nuevo evento / Asistencia anticipada), temporada de descanso y nuevo lugar desde la app, temporadas visibles en el timeline y asistencia anticipada por pasos.
