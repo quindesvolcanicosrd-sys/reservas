@@ -55,28 +55,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(PivotRadios.grande),
-                      child: Image.asset('assets/logo.png', width: 88, height: 88),
-                    ),
+                    child: ClipRRect(borderRadius: BorderRadius.circular(PivotRadios.grande), child: Image.asset('assets/logo.png', width: 88, height: 88)),
                   ),
                   const SizedBox(height: 24),
-                  Text('Bienvenidx a Pivot', textAlign: TextAlign.center, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                  Text('Entrena, confirma tu asistencia y sigue al equipo.',
-                      textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: context.pivot.textoSecundario)),
-                  const SizedBox(height: 32),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: _modoPin ? _formPin(t) : _botonesInicio(),
+                  Text(
+                    'Bienvenidx a Pivot',
+                    textAlign: TextAlign.center,
+                    style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Entrena, confirma tu asistencia y sigue al equipo.',
+                    textAlign: TextAlign.center,
+                    style: t.bodyMedium?.copyWith(color: context.pivot.textoSecundario),
+                  ),
+                  const SizedBox(height: 32),
+                  AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: _modoPin ? _formPin(t) : _botonesInicio()),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 200),
                     child: _error == null
                         ? const SizedBox.shrink()
                         : Padding(
                             padding: const EdgeInsets.only(top: 16),
-                            child: Text(_error!, textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: context.pivot.marcaTexto)),
+                            child: Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: t.bodyMedium?.copyWith(color: context.pivot.marcaTexto),
+                            ),
                           ),
                   ),
                 ],
@@ -101,10 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
               : const Text('Entrar con Google'),
         ),
         const SizedBox(height: 12),
-        TextButton(
-          onPressed: _ocupado ? null : () => setState(() => _modoPin = true),
-          child: const Text('Entrar con mi PIN'),
-        ),
+        TextButton(onPressed: _ocupado ? null : () => setState(() => _modoPin = true), child: const Text('Entrar con mi PIN')),
       ],
     );
   }
@@ -135,10 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: context.pivot.sobreMarca))
               : const Text('Entrar'),
         ),
-        TextButton(
-          onPressed: _ocupado ? null : () => setState(() => _modoPin = false),
-          child: const Text('Volver'),
-        ),
+        TextButton(onPressed: _ocupado ? null : () => setState(() => _modoPin = false), child: const Text('Volver')),
       ],
     );
   }

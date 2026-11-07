@@ -31,13 +31,19 @@ class DatosPendientes {
       if (algunoVacio(['emerg1Nombre', 'emerg1Telefono']))
         const DatoPendiente(Icons.contact_phone_outlined, 'Contacto de emergencia', 'A quién avisar si te pasa algo en un entrenamiento.'),
       if (algunoVacio(['seguro', 'alergias', 'enfermedad', 'medicamentos', 'atencionMedica']))
-        const DatoPendiente(Icons.medical_information_outlined, 'Ficha de salud', 'Tu seguro, alergias, enfermedades y medicamentos, por si necesitas atención.'),
-      if (_vacio(d['fechaNacimiento'])) const DatoPendiente(Icons.cake_outlined, 'Fecha de nacimiento', 'Para tu ficha y, si quieres, para saludarte en tu cumpleaños.'),
+        const DatoPendiente(
+          Icons.medical_information_outlined,
+          'Ficha de salud',
+          'Tu seguro, alergias, enfermedades y medicamentos, por si necesitas atención.',
+        ),
+      if (_vacio(d['fechaNacimiento']))
+        const DatoPendiente(Icons.cake_outlined, 'Fecha de nacimiento', 'Para tu ficha y, si quieres, para saludarte en tu cumpleaños.'),
       if (d['permisosConfigurados'] != true)
         const DatoPendiente(Icons.lock_outline_rounded, 'Opciones de privacidad', 'Qué datos tuyos ve el resto del equipo.'),
       if (algunoVacio(['nombreLegal', 'tipoDocumento', 'numeroDocumento']))
         const DatoPendiente(Icons.badge_outlined, 'Identidad legal', 'Nombre y documento, necesarios para un seguro o una emergencia.'),
-      if (algunoVacio(['callePrincipal', 'sector', 'canton'])) const DatoPendiente(Icons.home_outlined, 'Dirección', 'Dónde vives, por si hay que acompañarte o avisar.'),
+      if (algunoVacio(['callePrincipal', 'sector', 'canton']))
+        const DatoPendiente(Icons.home_outlined, 'Dirección', 'Dónde vives, por si hay que acompañarte o avisar.'),
     ];
   }
 
@@ -78,7 +84,11 @@ class _HojaDatos extends StatelessWidget {
           children: [
             Icon(Icons.health_and_safety_outlined, size: 44, color: p.marcaTexto),
             const SizedBox(height: 10),
-            Text('Completa tu ficha', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              'Completa tu ficha',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
             const SizedBox(height: 6),
             Text(
               'Por tu seguridad en los entrenamientos: si sufres un accidente, el equipo necesita saber a quién avisar y qué seguro de salud usas.',
@@ -100,7 +110,10 @@ class _HojaDatos extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(f.titulo, style: TextStyle(fontWeight: FontWeight.w700, color: p.texto)),
+                            Text(
+                              f.titulo,
+                              style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                            ),
                             Text(f.porQue, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
                           ],
                         ),

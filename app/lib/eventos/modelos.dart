@@ -227,7 +227,6 @@ class Cumple {
   final int? aniosEquipo;
   bool get esAniversario => aniosEquipo != null;
 
-
   factory Cumple.desdeJson(Map<String, dynamic> raw) => Cumple(
     nombre: (raw['nombre'] ?? '').toString(),
     fecha: DateTime.parse((raw['fecha'] as String).substring(0, 10)),

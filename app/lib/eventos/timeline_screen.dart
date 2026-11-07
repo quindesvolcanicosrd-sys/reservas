@@ -97,7 +97,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   int? _claveFilas;
   bool _saltoInicialHecho = false;
 
-    static const _anchoFecha = 52.0;
+  static const _anchoFecha = 52.0;
   static const _anchoRiel = 28.0;
 
   // Tour guiado de primera vez (como el de la web, `_EV_TOUR_PASOS_*`).
@@ -204,8 +204,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final ev = it.evento;
     final texto = ev != null
         ? '${ev.tipo} ${ev.lugar} ${ev.descripcion} ${textoEstadoEvento(ev)} ${Fechas.encabezado(ev.fecha)} ${Fechas.mes(ev.fecha)}'
-                : it.cumple != null
-        ? (it.cumple!.esAniversario ? 'aniversario en el equipo ${Fechas.mes(it.cumple!.fecha)}' : 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}')
+        : it.cumple != null
+        ? (it.cumple!.esAniversario
+              ? 'aniversario en el equipo ${Fechas.mes(it.cumple!.fecha)}'
+              : 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}')
         : 'descanso temporada ${it.temporada!.nombre} ${Fechas.mes(it.temporada!.desde)} ${Fechas.mes(it.temporada!.hasta)}';
     return q.split(RegExp(r'\s+')).every((palabra) => texto.toLowerCase().contains(palabra));
   }
@@ -226,7 +228,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   List<_Item> _todos() => [
     for (final e in repo.eventos) _Item.evento(e),
-        for (final c in repo.cumples) _Item.cumple(c),
+    for (final c in repo.cumples) _Item.cumple(c),
     for (final a in repo.aniversarios) _Item.cumple(a),
     for (final t in repo.temporadas) _Item.temporada(t),
   ];
@@ -467,7 +469,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           ahora.hour,
           ahora.minute,
         );
-                if (claveFilas != _claveFilas) {
+        if (claveFilas != _claveFilas) {
           _filas = _armarFilas();
           _claveFilas = claveFilas;
           // La tarjeta que señala el tour: el primer evento de hoy en adelante.
@@ -478,7 +480,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
         _firmaDatos = firma;
         if (!_saltoInicialHecho && repo.eventos.isNotEmpty) {
-                    _saltoInicialHecho = true;
+          _saltoInicialHecho = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _irA(Fechas.hoy(), animado: false);
             Future.delayed(const Duration(milliseconds: 900), _tourSiCorresponde);
@@ -498,7 +500,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             }
           },
           child: Scaffold(
-                        floatingActionButton: _acciones.isEmpty || _buscando
+            floatingActionButton: _acciones.isEmpty || _buscando
                 ? null
                 : FloatingActionButton(key: _kMas, tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
             body: SafeArea(
@@ -592,7 +594,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           GestureDetector(
             onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
             onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
-                        child: TextButton(
+            child: TextButton(
               key: _kMes,
               style: TextButton.styleFrom(foregroundColor: p.texto, padding: const EdgeInsets.symmetric(horizontal: 12)),
               onPressed: _alternarCalendario,
@@ -626,7 +628,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           ),
           const Spacer(),
-                    IconButton(
+          IconButton(
             key: _kBuscar,
             tooltip: _hayFiltros ? 'Buscar (hay filtros activos)' : 'Buscar',
             // Punto rojo: quedó una búsqueda o un filtro activo.
@@ -856,7 +858,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     // un acordeón, igual que Google Calendar. Cerrado, scrollea normal.
     final lista = NotificationListener<ScrollNotification>(
       onNotification: _alScrollearTimeline,
-            child: RefreshIndicator(
+      child: RefreshIndicator(
         key: _kLista,
         onRefresh: () => repo.cargar(forzar: true),
         child: ScrollablePositionedList.builder(
@@ -912,7 +914,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           ? _TarjetaDescanso(temporada: f.item!.temporada!, repo: repo)
           : f.item!.cumple != null
           ? _TarjetaCumple(cumple: f.item!.cumple!)
-                    : f.item!.evento!.id == _idTarjetaTour
+          : f.item!.evento!.id == _idTarjetaTour
           ? KeyedSubtree(
               key: _kTarjeta,
               child: _TarjetaEvento(evento: f.item!.evento!, repo: repo, alAbrir: () => _abrirDetalle(f.item!.evento!)),
@@ -941,16 +943,20 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     );
   }
 
-    bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
+  bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
 
-    void _reservar(TipoReserva t) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ReservaScreen(repo: repo, tipo: t)));
+  void _reservar(TipoReserva t) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReservaScreen(repo: repo, tipo: t),
+      ),
+    );
   }
 
   Future<void> _tourSiCorresponde() async {
     if (!mounted || _buscando || _calMontado || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
-        // El texto del "+" nombra lo que tiene el menú de esta persona.
-        // Frase natural según el menú: "Toca aquí para reservar tus clases o crear eventos."
+    // El texto del "+" nombra lo que tiene el menú de esta persona.
+    // Frase natural según el menú: "Toca aquí para reservar tus clases o crear eventos."
     const verbos = {
       'Reserva por clase': 'reservar tus clases',
       'Reserva por mes': 'pagar tu mensualidad',
@@ -976,11 +982,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           titulo: 'Vuelve a hoy',
           texto: 'El ícono de Eventos muestra la fecha de hoy. Tócalo de nuevo estando aquí para volver a hoy.',
         ),
-                // Se resalta la parte de arriba de la línea de tiempo (toda la lista
+        // Se resalta la parte de arriba de la línea de tiempo (toda la lista
         // no dejaría lugar para la tarjeta y el recorte no se notaría).
         PasoTour(
           clave: _kLista,
-                    ajuste: (r) => Rect.fromLTWH(r.left + 10, r.top + 6, r.width - 20, r.height * 0.5),
+          ajuste: (r) => Rect.fromLTWH(r.left + 10, r.top + 6, r.width - 20, r.height * 0.5),
           titulo: 'Explora la línea de tiempo',
           texto: 'Desliza para ver los eventos pasados y los próximos: programados, cancelados, cumpleaños y temporadas de descanso.',
         ),
@@ -990,7 +996,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   // ─── Botón "+": menú de acciones (pedido 2026-11-06, como la web) ───────
 
-    List<_Accion> get _acciones => [
+  List<_Accion> get _acciones => [
     // Fase 3: reservas según el tipo de persona (`ReservasRepo.opciones`).
     for (final t in ReservasRepo(repo.sesion).opciones)
       t == TipoReserva.clase
@@ -1147,7 +1153,7 @@ class _TarjetaEvento extends StatelessWidget {
     final reales = ev.yaEmpezo && ev.asistentes.isNotEmpty;
     final asisten = reales ? ev.asistentes.map((a) => a.persona).toList() : ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
     final esAdmin = repo.sesion.esAdmin && repo.sesion.adminToken != null;
-        final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
+    final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
     // Reserva de esta clase (Mirlxs): estado y "Cancelar o reagendar", como la web.
     final filaReserva = repo.reservaDe(ev);
     final reserva = filaReserva == null ? null : ReservaActiva.desde(filaReserva);
@@ -1213,7 +1219,7 @@ class _TarjetaEvento extends StatelessWidget {
                   ],
                 ),
               ],
-                            if (reserva != null && !apagado)
+              if (reserva != null && !apagado)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Row(
@@ -1466,7 +1472,7 @@ class _TarjetaCumple extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-        final esHoy = Fechas.soloDia(cumple.fecha) == Fechas.hoy();
+    final esHoy = Fechas.soloDia(cumple.fecha) == Fechas.hoy();
     final anios = cumple.aniosEquipo;
     final titulo = anios != null ? 'Aniversario en el equipo' : 'Cumpleaños de ${cumple.nombre}';
     final detalle = anios == null
@@ -1482,7 +1488,7 @@ class _TarjetaCumple extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                                Text(
+                Text(
                   titulo,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.texto),
                 ),
@@ -1491,7 +1497,7 @@ class _TarjetaCumple extends StatelessWidget {
               ],
             ),
           ),
-                    Text(anios != null ? '🎉' : '🎈', style: const TextStyle(fontSize: 20)),
+          Text(anios != null ? '🎉' : '🎈', style: const TextStyle(fontSize: 20)),
         ],
       ),
     );

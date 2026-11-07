@@ -56,7 +56,18 @@ class Integrante {
   bool get esAdminMiembro => m['esAdminMiembro'] == true;
   bool get solicitudLesionPendiente => m['solicitudLesionPendiente'] == true;
 
-  bool get inactivx => estado == 'Inactivx';
+  /// Inactivx = 30+ días sin una asistencia real (o ninguna), salvo de viaje
+  /// o lesionadx (mismo criterio que la web `_eqEsInactivo()`; el servidor no
+  /// guarda un estado "Inactivx").
+  bool get inactivx {
+    if (deViaje || lesionadx) return false;
+    if (estado == 'Inactivx') return true;
+    final u = ultimaAsistencia;
+    return u == null || Fechas.diasEntre(u, Fechas.hoy()) >= 30;
+  }
+
+  /// Marcada hoy "A tiempo" o "Tarde" (habilita el botón de emergencia).
+  bool get presenteHoy => m['presenteHoy'] == true;
   bool get deViaje => estado == 'De viaje';
   bool get lesionadx => estado == 'Lesionadx';
 

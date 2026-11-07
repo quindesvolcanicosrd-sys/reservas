@@ -38,7 +38,7 @@ class PivotApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: construirTema(Brightness.light),
       darkTheme: construirTema(Brightness.dark),
-            themeMode: ThemeMode.system,
+      themeMode: ThemeMode.system,
       // Textos del sistema (selectores de fecha y hora, menús) en el idioma
       // del teléfono; si no está entre los soportados, español.
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
@@ -104,9 +104,11 @@ class _RaizState extends State<_Raiz> {
     if (a == null || !widget.sesion.activa) return;
     _pendiente = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _navegador.currentState?.push(MaterialPageRoute(
-        builder: (_) => DetalleScreen(repo: _repo, eventoId: a.eventoId, abrirCancelar: a.accion == 'cancelar'),
-      ));
+      _navegador.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => DetalleScreen(repo: _repo, eventoId: a.eventoId, abrirCancelar: a.accion == 'cancelar'),
+        ),
+      );
     });
   }
 
@@ -118,7 +120,10 @@ class _RaizState extends State<_Raiz> {
         final s = widget.sesion;
         final Widget pantalla;
         if (s.cargando) {
-          pantalla = const Scaffold(key: ValueKey('cargando'), body: Center(child: CircularProgressIndicator()));
+          pantalla = const Scaffold(
+            key: ValueKey('cargando'),
+            body: Center(child: CircularProgressIndicator()),
+          );
         } else if (!s.activa) {
           pantalla = LoginScreen(key: const ValueKey('login'), sesion: s);
         } else {

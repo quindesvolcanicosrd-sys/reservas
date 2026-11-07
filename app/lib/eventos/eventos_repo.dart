@@ -45,7 +45,7 @@ class EventosRepo extends ChangeNotifier {
   static const diasAtras = 30;
   static const diasAdelante = 120;
 
-    DateTime? get desdeCargado => _desde;
+  DateTime? get desdeCargado => _desde;
 
   /// Aniversarios propios de entrada al equipo dentro del rango cargado
   /// (web: `_evComputarAniversariosIngreso()`; no el año de ingreso).
@@ -56,9 +56,16 @@ class EventosRepo extends ChangeNotifier {
     return [
       for (var y = d.year; y <= h.year; y++)
         if (y > ingreso.year && !DateTime(y, ingreso.month, ingreso.day).isBefore(d) && !DateTime(y, ingreso.month, ingreso.day).isAfter(h))
-          Cumple(nombre: sesion.nombreMostrar, fecha: DateTime(y, ingreso.month, ingreso.day), edad: null, fotoPerfil: sesion.fotoPerfil, aniosEquipo: y - ingreso.year),
+          Cumple(
+            nombre: sesion.nombreMostrar,
+            fecha: DateTime(y, ingreso.month, ingreso.day),
+            edad: null,
+            fotoPerfil: sesion.fotoPerfil,
+            aniosEquipo: y - ingreso.year,
+          ),
     ];
   }
+
   DateTime? get hastaCargado => _hasta;
 
   Future<void> cargar({bool forzar = false}) async {
@@ -74,10 +81,10 @@ class EventosRepo extends ChangeNotifier {
 
   // ─── ¿Puede responder "¿Vas a ir?"? (mismas reglas que la web) ─────────
 
-    Cuota? _cuota;
+  Cuota? _cuota;
   bool _cargandoCuota = false;
 
-    @visibleForTesting
+  @visibleForTesting
   set cuotaParaPruebas(Cuota c) => _cuota = c;
 
   /// Reservas, cuotas y créditos de la persona (null mientras carga).
@@ -90,7 +97,7 @@ class EventosRepo extends ChangeNotifier {
     notifyListeners();
   }
 
-    /// Reserva activa de esta clase (entrenamientos; web: `_evCardEventoHtml()`).
+  /// Reserva activa de esta clase (entrenamientos; web: `_evCardEventoHtml()`).
   /// Para cualquier persona: una Mirlxs que sube a Quindes conserva sus clases.
   Map<String, dynamic>? reservaDe(Evento ev) {
     if (ev.tipo != 'Entrenamiento') return null;

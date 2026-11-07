@@ -13,7 +13,12 @@ void main() {
     SharedPreferences.setMockInitialValues({'eventos.filtroTipo': 'Partido'});
     final repo = EventosRepo(Sesion(Api()));
     final senal = SenalHoy();
-    await t.pumpWidget(MaterialApp(theme: construirTema(Brightness.light), home: TimelineScreen(repo: repo, irAHoy: senal)));
+    await t.pumpWidget(
+      MaterialApp(
+        theme: construirTema(Brightness.light),
+        home: TimelineScreen(repo: repo, irAHoy: senal),
+      ),
+    );
     await t.pump(const Duration(seconds: 1));
     // Abrir tocando el mes.
     await t.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));

@@ -2,7 +2,18 @@ import 'package:coach/equipo/buscador_equipo.dart';
 import 'package:coach/equipo/equipo_modelos.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Integrante _p(String u, {List<String> roles = const [], String? cumple, String cat = 'Quindes', String estado = 'Activx', String num = '', String? ingreso, int asis = 0, int ev = 0, double pts = 0}) => Integrante({
+Integrante _p(
+  String u, {
+  List<String> roles = const [],
+  String? cumple,
+  String cat = 'Quindes',
+  String estado = 'Activx',
+  String num = '',
+  String? ingreso,
+  int asis = 0,
+  int ev = 0,
+  double pts = 0,
+}) => Integrante({
   'username': u,
   'nombreDerby': u[0].toUpperCase() + u.substring(1),
   'rol': cat,
@@ -14,9 +25,19 @@ Integrante _p(String u, {List<String> roles = const [], String? cumple, String c
   'asistenciasPeriodo': asis,
   'eventosPeriodo': ev,
   'puntosTotal': pts,
+  'ultimaAsistencia': DateTime.now().toIso8601String().substring(0, 10),
 });
 
 void main() {
+  test('Inactivx: 30+ días sin asistir, salvo de viaje o lesionadx', () {
+    String hace(int d) => DateTime.now().subtract(Duration(days: d)).toIso8601String().substring(0, 10);
+    expect(Integrante({'estado': 'Activx', 'ultimaAsistencia': hace(5)}).inactivx, isFalse);
+    expect(Integrante({'estado': 'Activx', 'ultimaAsistencia': hace(31)}).inactivx, isTrue);
+    expect(Integrante({'estado': 'Activx'}).inactivx, isTrue);
+    expect(Integrante({'estado': 'De viaje', 'ultimaAsistencia': hace(60)}).inactivx, isFalse);
+    expect(Integrante({'estado': 'Activx', 'ultimaAsistencia': hace(40)}).grupo, 'Inactivxs');
+  });
+
   final hoy = DateTime(2026, 11, 7);
   final equipo = [
     _p('lola', roles: ['Jammer', 'Blocker'], cumple: '12-14', num: '12'),

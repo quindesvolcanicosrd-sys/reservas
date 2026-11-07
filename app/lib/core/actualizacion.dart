@@ -76,9 +76,7 @@ class _ControlActualizacionState extends State<ControlActualizacion> with Widget
         return;
       }
       final instalada = int.tryParse((await PackageInfo.fromPlatform()).buildNumber) ?? 0;
-      final resp = await http
-          .get(Uri.parse('${Actualizacion.urlVersion}?t=${DateTime.now().millisecondsSinceEpoch}'))
-          .timeout(const Duration(seconds: 15));
+      final resp = await http.get(Uri.parse('${Actualizacion.urlVersion}?t=${DateTime.now().millisecondsSinceEpoch}')).timeout(const Duration(seconds: 15));
       if (resp.statusCode != 200) return;
       final j = jsonDecode(utf8.decode(resp.bodyBytes)) as Map<String, dynamic>;
       final remota = VersionRemota(
@@ -96,13 +94,15 @@ class _ControlActualizacionState extends State<ControlActualizacion> with Widget
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      widget.child,
-      AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _pendiente == null ? const SizedBox.shrink() : PantallaActualizar(version: _pendiente!),
-      ),
-    ]);
+    return Stack(
+      children: [
+        widget.child,
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _pendiente == null ? const SizedBox.shrink() : PantallaActualizar(version: _pendiente!),
+        ),
+      ],
+    );
   }
 }
 
@@ -180,62 +180,74 @@ class _PantallaActualizarState extends State<PantallaActualizar> {
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(28),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(PivotRadios.grande),
-                  child: Image.asset('assets/logo.png', width: 88, height: 88),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: ClipRRect(borderRadius: BorderRadius.circular(PivotRadios.grande), child: Image.asset('assets/logo.png', width: 88, height: 88)),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text('Hay una nueva versión de Pivot', textAlign: TextAlign.center, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(
-                'Para seguir usando la app, actualiza a la versión ${widget.version.nombre}.',
-                textAlign: TextAlign.center,
-                style: t.bodyMedium?.copyWith(color: p.textoSecundario),
-              ),
-              if (widget.version.novedades.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
-                  child: Text('Novedades: ${widget.version.novedades}', style: t.bodyMedium?.copyWith(color: p.texto)),
-                ),
-              ],
-              const SizedBox(height: 28),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: descargando
-                    ? Column(key: const ValueKey('progreso'), children: [
-                        LinearProgressIndicator(value: _progreso == 0 ? null : _progreso, minHeight: 8, borderRadius: BorderRadius.circular(8)),
-                        const SizedBox(height: 10),
-                        Text('Descargando… ${((_progreso ?? 0) * 100).round()} %', style: TextStyle(color: p.textoSecundario)),
-                      ])
-                    : FilledButton(
-                        key: const ValueKey('boton'),
-                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                        onPressed: _actualizar,
-                        child: Text(_instalando ? 'Abrir el instalador de nuevo' : 'Actualizar ahora'),
-                      ),
-              ),
-              if (_instalando) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
                 Text(
-                  'Confirma la instalación en la ventana de Android. Si te pide permitir instalar apps de Pivot, actívalo.',
+                  'Hay una nueva versión de Pivot',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                  style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
-              ],
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: p.marcaTexto)),
-                TextButton(
-                  onPressed: () => launchUrl(Uri.parse(Actualizacion.urlApk), mode: LaunchMode.externalApplication),
-                  child: const Text('Descargarla desde el navegador'),
+                const SizedBox(height: 8),
+                Text(
+                  'Para seguir usando la app, actualiza a la versión ${widget.version.nombre}.',
+                  textAlign: TextAlign.center,
+                  style: t.bodyMedium?.copyWith(color: p.textoSecundario),
                 ),
+                if (widget.version.novedades.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+                    child: Text('Novedades: ${widget.version.novedades}', style: t.bodyMedium?.copyWith(color: p.texto)),
+                  ),
+                ],
+                const SizedBox(height: 28),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: descargando
+                      ? Column(
+                          key: const ValueKey('progreso'),
+                          children: [
+                            LinearProgressIndicator(value: _progreso == 0 ? null : _progreso, minHeight: 8, borderRadius: BorderRadius.circular(8)),
+                            const SizedBox(height: 10),
+                            Text('Descargando… ${((_progreso ?? 0) * 100).round()} %', style: TextStyle(color: p.textoSecundario)),
+                          ],
+                        )
+                      : FilledButton(
+                          key: const ValueKey('boton'),
+                          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                          onPressed: _actualizar,
+                          child: Text(_instalando ? 'Abrir el instalador de nuevo' : 'Actualizar ahora'),
+                        ),
+                ),
+                if (_instalando) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Confirma la instalación en la ventana de Android. Si te pide permitir instalar apps de Pivot, actívalo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                  ),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: p.marcaTexto),
+                  ),
+                  TextButton(
+                    onPressed: () => launchUrl(Uri.parse(Actualizacion.urlApk), mode: LaunchMode.externalApplication),
+                    child: const Text('Descargarla desde el navegador'),
+                  ),
+                ],
               ],
-            ]),
+            ),
           ),
         ),
       ),

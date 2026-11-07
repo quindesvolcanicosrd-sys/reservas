@@ -67,9 +67,7 @@ class Push {
       onDidReceiveNotificationResponse: _alTocar,
       onDidReceiveBackgroundNotificationResponse: respuestaEnSegundoPlano,
     );
-    await _notis
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_canal);
+    await _notis.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(_canal);
     _pluginListo = true;
   }
 
@@ -192,11 +190,7 @@ class Push {
     try {
       await http.post(
         Uri.parse(ApiConfig.recordAttendance),
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': ApiConfig.anonKey,
-          'Authorization': 'Bearer ${ApiConfig.anonKey}',
-        },
+        headers: {'Content-Type': 'application/json', 'apikey': ApiConfig.anonKey, 'Authorization': 'Bearer ${ApiConfig.anonKey}'},
         body: jsonEncode({'token': token, 'action': accion == 'asistire' ? 'asistire' : 'no_asistire', 'evento_id': eventoId}),
       );
     } catch (_) {

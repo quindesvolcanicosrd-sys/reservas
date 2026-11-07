@@ -4447,7 +4447,22 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     const actual = ultimaPorClaveAsistencia[clave];
     if (!actual || marca >= actual.marca) ultimaPorClaveAsistencia[clave] = { estado: l.estado, nombre_usuario: u, marca };
   });
-    const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
+      // Presentes hoy (botón de emergencia, Victor 2026-11-07): última marca de
+  // hoy (hora de Ecuador) "A tiempo" o "Tarde" en algún evento.
+  const hoyEcuador = new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10);
+  const { data: logsHoy } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, id_evento, estado, marca_temporal')
+    .in('origen', ['Admin', 'Externa']).eq('fecha_entrenamiento', hoyEcuador);
+  const ultimaHoy: Record<string, { estado: string; marca: number }> = {};
+  (logsHoy ?? []).forEach((l: any) => {
+    const u = String(l.nombre_usuario ?? '').trim();
+    if (!u) return;
+    const clave = l.id_evento + '|' + u;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    if (!ultimaHoy[clave] || marca >= ultimaHoy[clave].marca) ultimaHoy[clave] = { estado: l.estado, marca };
+  });
+  const presentesHoy = new Set(Object.keys(ultimaHoy).filter((k) => ultimaHoy[k].estado === 'A tiempo' || ultimaHoy[k].estado === 'Tarde').map((k) => k.split('|').slice(1).join('|')));
+  const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
   // Asistencia del período (app, dato de la fila de Equipo, 2026-11-07):
   // veces que vino (a tiempo o tarde) sobre los eventos con asistencia tomada.
   const asistenciasPeriodoPorUsuario: Record<string, number> = {};
@@ -4704,7 +4719,8 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
         // Roles en el equipo y cumpleaños (solo "mm-dd" y solo si es público).
     roles: Array.isArray(r.roles) ? r.roles : [],
     cumple: r.fecha_publica === 'Sí' && r.fecha_nacimiento ? String(r.fecha_nacimiento).substring(5, 10) : null,
-    asistenciasPeriodo: asistenciasPeriodoPorUsuario[r.username] || 0,
+        asistenciasPeriodo: asistenciasPeriodoPorUsuario[r.username] || 0,
+    presenteHoy: presentesHoy.has(r.username),
     eventosPeriodo: eventosConAsistencia.size,
     horas_ano: Number(r.horas_ano) || 0,
     asistencias_ano: Number(r.asistencias_ano) || 0,

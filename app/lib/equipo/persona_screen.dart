@@ -89,11 +89,15 @@ class _Ficha extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
           children: [
-            Center(
-              child: Hero(
-                tag: 'avatar-${p.username}',
-                child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                HeroAvatar(
+                  tag: 'avatar-${p.username}',
+                  child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
+                ),
+                if (repo.esAdmin) ...[const SizedBox(width: 14), _PildoraEmergencia(repo: repo, p: p)],
+              ],
             ),
             const SizedBox(height: 14),
             Text.rich(
@@ -165,7 +169,6 @@ class _Ficha extends StatelessWidget {
           alTocar: () => launchUrl(Uri.parse('https://wa.me/${completo.substring(1)}'), mode: LaunchMode.externalApplication),
         ),
       if (!yo && tel.isNotEmpty) _Accion(icono: Icons.call_rounded, texto: 'Llamar', alTocar: () => launchUrl(Uri.parse('tel:$completo'))),
-      if (repo.esAdmin) _Accion(icono: Icons.emergency_rounded, texto: 'Emergencia', fuerte: true, alTocar: () => EmergenciaScreen.abrir(context, repo, p)),
     ];
     if (botones.isEmpty) return const SizedBox.shrink();
     return Row(
@@ -282,11 +285,10 @@ class _Ficha extends StatelessWidget {
 }
 
 class _Accion extends StatelessWidget {
-  const _Accion({required this.icono, required this.texto, required this.alTocar, this.fuerte = false});
+  const _Accion({required this.icono, required this.texto, required this.alTocar});
   final IconData icono;
   final String texto;
   final VoidCallback alTocar;
-  final bool fuerte;
 
   @override
   Widget build(BuildContext context) {
@@ -294,18 +296,18 @@ class _Accion extends StatelessWidget {
     return Column(
       children: [
         Material(
-          color: fuerte ? p.marca : p.suave,
+          color: p.suave,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: alTocar,
-            child: SizedBox(width: 56, height: 56, child: Icon(icono, color: fuerte ? p.sobreMarca : p.sobreSuave)),
+            child: SizedBox(width: 56, height: 56, child: Icon(icono, color: p.sobreSuave)),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           texto,
-          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fuerte ? p.marcaTexto : p.texto),
+          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.texto),
         ),
       ],
     );
@@ -489,6 +491,50 @@ class _AdministracionState extends State<_Administracion> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Pill roja "Emergencia" junto al avatar (solo admins). Se habilita solo si
+/// la persona fue marcada hoy "A tiempo" o "Tarde" (Victor, 2026-11-07).
+class _PildoraEmergencia extends StatelessWidget {
+  const _PildoraEmergencia({required this.repo, required this.p});
+  final EquipoRepo repo;
+  final Integrante p;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pivot;
+    final activa = p.presenteHoy;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 220),
+      opacity: activa ? 1 : 0.4,
+      child: Material(
+        color: pal.marca,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: activa
+              ? () => EmergenciaScreen.abrir(context, repo, p)
+              : () => ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(const SnackBar(content: Text('Se activa cuando la persona está marcada hoy a tiempo o tarde.'))),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.emergency_rounded, size: 18, color: pal.sobreMarca),
+                const SizedBox(width: 6),
+                Text(
+                  'Emergencia',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: pal.sobreMarca),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

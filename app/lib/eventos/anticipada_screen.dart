@@ -99,7 +99,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       case TipoRango.indefinido:
         return r.desde != null && r.desde!.isAfter(hoy) ? VigenciaRegla.proxima : VigenciaRegla.activa;
       case TipoRango.meses:
-                final actual = DateTime(hoy.year, hoy.month);
+        final actual = DateTime(hoy.year, hoy.month);
         final ms = r.mesesOrdenados;
         if (ms.contains(actual)) return VigenciaRegla.activa;
         return ms.any((m) => m.isAfter(actual)) ? VigenciaRegla.proxima : VigenciaRegla.termino;
@@ -108,7 +108,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
 
   @override
   Widget build(BuildContext context) {
-        final p = context.pivot;
+    final p = context.pivot;
     final Widget cuerpo;
     // Las reglas que ya terminaron (p. ej. de un mes pasado) no se muestran.
     final visibles = _reglas?.where((r) => _vigencia(r) != VigenciaRegla.termino).toList();
@@ -126,7 +126,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       );
     } else if (_reglas == null) {
       cuerpo = const Center(key: ValueKey('cargando'), child: CircularProgressIndicator());
-        } else if (visibles!.isEmpty) {
+    } else if (visibles!.isEmpty) {
       cuerpo = Center(
         key: const ValueKey('vacio'),
         child: Padding(
@@ -150,7 +150,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
         ),
       );
     } else {
-            // Activas primero, después las próximas.
+      // Activas primero, después las próximas.
       final orden = visibles..sort((x, y) => _vigencia(x).index.compareTo(_vigencia(y).index));
       cuerpo = ListView(
         key: const ValueKey('lista'),
@@ -171,7 +171,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Asistencia anticipada')),
       body: AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: cuerpo),
-            floatingActionButton: (visibles?.isNotEmpty ?? false)
+      floatingActionButton: (visibles?.isNotEmpty ?? false)
           ? FloatingActionButton.extended(onPressed: () => _abrirAsistente(null), icon: const Icon(Icons.add_rounded), label: const Text('Nueva'))
           : null,
     );
@@ -203,7 +203,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   late EstadoRsvp? _estado = widget.editando?.estado;
   late String? _motivo = widget.editando?.estado == EstadoRsvp.noAsistire ? widget.editando?.motivo : null;
   late TipoRango? _tipo = widget.editando?.tipo;
-    // aaaamm; una regla vieja (solo el mes) pasa a tener año al editarla.
+  // aaaamm; una regla vieja (solo el mes) pasa a tener año al editarla.
   late final Set<int> _meses = {for (final v in widget.editando?.meses ?? const <int>[]) ReglaAnticipada.clave(ReglaAnticipada.mesDe(v))};
   late DateTime? _desde = widget.editando?.desde;
   late DateTime? _hasta = widget.editando?.hasta;
@@ -235,7 +235,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     });
   }
 
-    bool _mesHabilitado(int clave) {
+  bool _mesHabilitado(int clave) {
     final d = ReglaAnticipada.mesDe(clave);
     return !d.isBefore(DateTime(Fechas.hoy().year, Fechas.hoy().month)) && (_cuota?.mesPermitido(_estado, d.month, d.year) ?? true);
   }
@@ -356,7 +356,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     void elegir(EstadoRsvp e) => _elegirYSeguir(() {
       _estado = e;
       if (e != EstadoRsvp.noAsistire) _motivo = null;
-            _ajustarACuota();
+      _ajustarACuota();
     });
     final puedeAsistir = _cuota?.asistireHabilitado ?? true;
     return ListView(
@@ -365,14 +365,18 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         OpcionAsistente(
           icono: Icons.check_circle_outline_rounded,
           titulo: 'Asistiré',
-                    texto: puedeAsistir ? 'Voy a ir a los entrenamientos' : 'Necesitas tu cuota al día o una clase reservada',
+          texto: puedeAsistir ? 'Voy a ir a los entrenamientos' : 'Necesitas tu cuota al día o una clase reservada',
           activa: _estado == EstadoRsvp.asistire,
           habilitada: puedeAsistir,
           alTocar: () {
             if (puedeAsistir) return elegir(EstadoRsvp.asistire);
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(const SnackBar(content: Text('Para marcar Asistiré necesitas tener tu cuota al día o una clase reservada. No asistiré y No jugador siguen disponibles.')));
+              ..showSnackBar(
+                const SnackBar(
+                  content: Text('Para marcar Asistiré necesitas tener tu cuota al día o una clase reservada. No asistiré y No jugador siguen disponibles.'),
+                ),
+              );
           },
         ),
         OpcionAsistente(
@@ -417,7 +421,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         OpcionAsistente(
           icono: Icons.calendar_view_month_rounded,
           titulo: 'Por meses',
-                    texto: 'Uno o varios de los próximos 12 meses',
+          texto: 'Uno o varios de los próximos 12 meses',
           activa: _tipo == TipoRango.meses,
           alTocar: () => elegir(TipoRango.meses),
         ),
@@ -450,11 +454,11 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
             crossAxisCount: 3,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-                        childAspectRatio: 1.8,
+            childAspectRatio: 1.8,
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
             children: [
-                            // 12 meses desde el actual, cada uno con su año abajo.
+              // 12 meses desde el actual, cada uno con su año abajo.
               for (final d in ReglaAnticipada.ventana())
                 FilterChip(
                   showCheckmark: false,
@@ -529,7 +533,7 @@ class TarjetaRegla extends StatelessWidget {
     final r = regla;
     switch (r.tipo) {
       case TipoRango.meses:
-                        // En orden de calendario, con el año cuando no es el actual.
+        // En orden de calendario, con el año cuando no es el actual.
         final ms = [for (final (i, d) in r.mesesOrdenados.indexed) ReglaAnticipada.nombreMes(d, corto: i > 0)];
         return ms.length == 1 ? ms.first : '${ms.sublist(0, ms.length - 1).join(', ')} y ${ms.last}';
       case TipoRango.periodo:

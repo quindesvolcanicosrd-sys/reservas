@@ -12,10 +12,26 @@ void main() {
     DateTime? mes;
     DateTime? elegido;
     var arrastre = 0.0;
-    await t.pumpWidget(MaterialApp(
-      theme: construirTema(Brightness.light),
-      home: Scaffold(body: Column(children: [PanelCalendario(repo: repo, mesInicial: DateTime(2026, 11), alCambiarMes: (m) => mes = m, alElegirDia: (_) {}, alMesElegido: (m) => elegido = m, alArrastrar: (dy) => arrastre += dy, alSoltar: (_) {})])),
-    ));
+    await t.pumpWidget(
+      MaterialApp(
+        theme: construirTema(Brightness.light),
+        home: Scaffold(
+          body: Column(
+            children: [
+              PanelCalendario(
+                repo: repo,
+                mesInicial: DateTime(2026, 11),
+                alCambiarMes: (m) => mes = m,
+                alElegirDia: (_) {},
+                alMesElegido: (m) => elegido = m,
+                alArrastrar: (dy) => arrastre += dy,
+                alSoltar: (_) {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
     await t.pump(const Duration(seconds: 1));
     expect(find.text('30'), findsWidgets);
     await t.fling(find.byType(PageView), const Offset(-300, 0), 1000);

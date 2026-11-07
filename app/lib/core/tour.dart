@@ -109,7 +109,7 @@ class _VistaTourState extends State<_VistaTour> with TickerProviderStateMixin {
 
   Rect _hueco(PasoTour paso, Size pantalla) {
     final objetivo = Tour._rect(paso) ?? Rect.fromCenter(center: pantalla.center(Offset.zero), width: 0, height: 0);
-        if (paso.sinHalo) return Rect.fromCenter(center: objetivo.center, width: 0, height: 0);
+    if (paso.sinHalo) return Rect.fromCenter(center: objetivo.center, width: 0, height: 0);
     // Siempre dentro de la pantalla, para que el borde y el anillo se vean enteros.
     final limite = (Offset.zero & pantalla).deflate(6);
     final r = objetivo.inflate(6);

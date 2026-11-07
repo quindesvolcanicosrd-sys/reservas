@@ -44,11 +44,11 @@ class _HojaGestionarState extends State<_HojaGestionar> {
     final mensajero = ScaffoldMessenger.of(context);
     final nav = Navigator.of(context);
     try {
-            final cupon = await ReservasRepo(widget.repo.sesion).cancelar(widget.reserva);
+      final cupon = await ReservasRepo(widget.repo.sesion).cancelar(widget.reserva);
       await widget.repo.recargarCuota();
       widget.repo.cargar(forzar: true);
       nav.pop();
-            mensajero.showSnackBar(SnackBar(content: Text(cupon ? 'Reserva cancelada. Tu cupón vuelve a estar disponible.' : 'Reserva cancelada')));
+      mensajero.showSnackBar(SnackBar(content: Text(cupon ? 'Reserva cancelada. Tu cupón vuelve a estar disponible.' : 'Reserva cancelada')));
     } catch (e) {
       if (mounted) setState(() => _ocupado = false);
       mensajero.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -118,7 +118,11 @@ class _HojaGestionarState extends State<_HojaGestionar> {
                           style: TextStyle(height: 1.4, color: p.textoSecundario),
                         ),
                         const SizedBox(height: 14),
-                        _aviso(p, Icons.confirmation_number_outlined, 'No se puede deshacer. Si usaste tu cupón, vuelve a quedar disponible si cancelas con al menos 1 hora de anticipación. Si cambias de fecha, el cupón se mantiene.'),
+                        _aviso(
+                          p,
+                          Icons.confirmation_number_outlined,
+                          'No se puede deshacer. Si usaste tu cupón, vuelve a quedar disponible si cancelas con al menos 1 hora de anticipación. Si cambias de fecha, el cupón se mantiene.',
+                        ),
                         const SizedBox(height: 8),
                         _aviso(p, Icons.payments_outlined, 'Si ya pagaste, es posible que no se reembolse. Escríbele al equipo si necesitas más información.'),
                         const SizedBox(height: 20),

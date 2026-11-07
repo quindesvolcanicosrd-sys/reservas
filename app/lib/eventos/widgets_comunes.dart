@@ -147,3 +147,25 @@ String duracionEvento(Evento ev) {
   if (h == 0) return '$m min';
   return m == 0 ? '$h h' : '$h h $m min';
 }
+
+/// Avatar que "vuela" entre pantallas (lista o evento → ficha). Sin el
+/// Material de vuelo, el texto de la inicial se dibujaba con el subrayado
+/// amarillo de depuración y la letra saltaba de tamaño; acá el vuelo escala
+/// el avatar de destino entero con FittedBox, así letra y círculo crecen juntos.
+class HeroAvatar extends StatelessWidget {
+  const HeroAvatar({super.key, required this.tag, required this.child});
+  final String tag;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Hero(
+      tag: tag,
+      flightShuttleBuilder: (_, _, _, _, destino) => Material(
+        type: MaterialType.transparency,
+        child: FittedBox(child: (destino.widget as Hero).child),
+      ),
+      child: Material(type: MaterialType.transparency, child: child),
+    );
+  }
+}

@@ -541,7 +541,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                 child: Row(
                                   children: [
-                                    Hero(
+                                    HeroAvatar(
                                       tag: 'avatar-${per.username}',
                                       child: AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
                                     ),

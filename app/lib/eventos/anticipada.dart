@@ -67,7 +67,8 @@ class ReglaAnticipada {
   final String? motivo;
   final DateTime? desde;
   final DateTime? hasta;
-    /// Meses como aaaamm (202611), 12 meses desde el actual (2026-11-07).
+
+  /// Meses como aaaamm (202611), 12 meses desde el actual (2026-11-07).
   /// Un valor 1..12 es una regla vieja: ese mes de cualquier año.
   final List<int> meses;
   final List<String> tiposEvento;
@@ -97,7 +98,6 @@ class ReglaAnticipada {
 
   List<DateTime> get mesesOrdenados => meses.map(mesDe).toList()..sort();
 
-
   static ReglaAnticipada? desdeFila(Map<String, dynamic> f) {
     final tipo = TipoRango.desde(f['tipo_rango']?.toString());
     final estado = EstadoRsvp.desde(f['estado']?.toString());
@@ -112,7 +112,7 @@ class ReglaAnticipada {
       motivo: f['motivo']?.toString(),
       desde: Fechas.desdeIso(f['fecha_desde']),
       hasta: Fechas.desdeIso(f['fecha_hasta']),
-            meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => (m >= 1 && m <= 12) || m > 190001).toList() : const [],
+      meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => (m >= 1 && m <= 12) || m > 190001).toList() : const [],
       tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
     );
   }
@@ -123,7 +123,7 @@ class ReglaAnticipada {
       case TipoRango.indefinido:
         return desde != null && !ev.fecha.isBefore(desde!);
       case TipoRango.meses:
-                return meses.any((v) => coincide(v, ev.fecha));
+        return meses.any((v) => coincide(v, ev.fecha));
       case TipoRango.periodo:
         return desde != null && hasta != null && !ev.fecha.isBefore(desde!) && !ev.fecha.isAfter(hasta!);
     }
@@ -134,7 +134,7 @@ class ReglaAnticipada {
     String num(DateTime d) => '${d.day}/${d.month}/${d.year}';
     switch (tipo) {
       case TipoRango.meses:
-                return 'Meses: ${mesesOrdenados.map((d) => nombreMes(d, corto: true)).join(', ')}';
+        return 'Meses: ${mesesOrdenados.map((d) => nombreMes(d, corto: true)).join(', ')}';
       case TipoRango.periodo:
         return 'Del ${desde == null ? '' : num(desde!)} al ${hasta == null ? '' : num(hasta!)}';
       case TipoRango.indefinido:
@@ -163,7 +163,7 @@ class ReglaAnticipada {
       case TipoRango.indefinido:
         return (desde, null);
       case TipoRango.meses:
-                if (meses.isEmpty) return (null, null);
+        if (meses.isEmpty) return (null, null);
         final ord = mesesOrdenados;
         var d = ord.first;
         if (d.isBefore(Fechas.hoy())) d = Fechas.hoy();
@@ -193,7 +193,7 @@ class Cuota {
 
   String get _categoria => (datos['categoria'] ?? '').toString().toLowerCase();
 
-    Iterable<Map<String, dynamic>> get _mensuales => reservas.where((r) => r['tipo'] == 'mensual' && r['estado'] != 'Cancelada');
+  Iterable<Map<String, dynamic>> get _mensuales => reservas.where((r) => r['tipo'] == 'mensual' && r['estado'] != 'Cancelada');
 
   /// Vencimiento de una cuota mensual (`validezHasta`, "d/m/aaaa"): desde
   /// 2026-11-07 el servidor lo manda siempre = fin del mes pagado.
@@ -221,20 +221,20 @@ class Cuota {
   /// Reserva no cancelada para un evento puntual (`r.fecha === e.id` en la web).
   bool tieneReserva(String idEvento) => reservas.any((r) => r['fecha'] == idEvento && r['estado'] != 'Cancelada');
 
-    /// Mes pagado de ese año (`_evMesPagado()` de la web).
+  /// Mes pagado de ese año (`_evMesPagado()` de la web).
   bool mesPagado(int mes, int anio) => _mensuales.any((r) {
     if (_mesDe(r) != mes) return false;
     final v = _vence(r);
     return v == null || v.year == anio;
   });
 
-    /// Al día = alguna cuota sin vencer (vence el fin del mes pagado).
+  /// Al día = alguna cuota sin vencer (vence el fin del mes pagado).
   bool get alDia {
     final hoy = Fechas.hoy();
     if (_excepcion(hoy.month, hoy.year) || _especial) return true;
     return _mensuales.any((r) {
       final v = _vence(r);
-            return v != null && !hoy.isAfter(v);
+      return v != null && !hoy.isAfter(v);
     });
   }
 
@@ -274,7 +274,7 @@ class Cuota {
   /// Con "Asistiré" y cuota mensual: solo meses pagados.
   bool restringe(EstadoRsvp? estado) => estado == EstadoRsvp.asistire && pagaCuotaMensual;
 
-    bool mesPermitido(EstadoRsvp? estado, int mes, int anio) => !restringe(estado) || mesPagado(mes, anio) || _excepcion(mes, anio);
+  bool mesPermitido(EstadoRsvp? estado, int mes, int anio) => !restringe(estado) || mesPagado(mes, anio) || _excepcion(mes, anio);
 
   DateTime? limite(EstadoRsvp? estado) {
     if (!restringe(estado)) return null;
@@ -293,7 +293,7 @@ class AnticipadaRepo {
   Api get _api => sesion.api;
   final _enVuelo = <String>{};
 
-    /// Quién la ve (regla 2026-11-07, web `_evAntDisponible()`): Quindes o
+  /// Quién la ve (regla 2026-11-07, web `_evAntDisponible()`): Quindes o
   /// Mirlxs con equipamiento completo propio (ni patines ni protecciones del club).
   bool get disponible {
     final d = sesion.datos;
@@ -369,7 +369,7 @@ class AnticipadaRepo {
   /// Aplica las reglas a los eventos futuros sin respuesta real y guarda la
   /// respuesta en el servidor (`_evAntReconciliarConReglas()` de la web).
   /// Devuelve true si cambió algún evento.
-    Future<bool> reconciliar(List<Evento> eventos, {List<ReglaAnticipada>? precargadas}) async {
+  Future<bool> reconciliar(List<Evento> eventos, {List<ReglaAnticipada>? precargadas}) async {
     final List<ReglaAnticipada> lista;
     Cuota? c;
     try {
@@ -388,7 +388,7 @@ class AnticipadaRepo {
     for (final ev in eventos) {
       if (ev.fecha.isBefore(hoy) || ev.cancelado || ev.miEstado != null) continue;
       for (final r in lista) {
-                if (r.estado == EstadoRsvp.asistire && c != null && !c.cubre(ev)) continue;
+        if (r.estado == EstadoRsvp.asistire && c != null && !c.cubre(ev)) continue;
         if (r.aplicaA(ev)) resultado[ev] = r.estado;
       }
     }

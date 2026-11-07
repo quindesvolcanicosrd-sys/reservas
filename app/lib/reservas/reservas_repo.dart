@@ -266,7 +266,7 @@ class ReservasRepo {
     return lista;
   }
 
-    /// Devuelve true si el cupón volvió a quedar disponible (la reserva lo
+  /// Devuelve true si el cupón volvió a quedar disponible (la reserva lo
   /// usó y se canceló con al menos 1 hora de anticipación).
   Future<bool> cancelar(ReservaActiva r) async {
     final res = await _api.post('cancelarReserva', {'nombre': sesion.nombre, 'fecha': r.clave, if (r.mensual) 'anio': '${r.mes!.year}'});

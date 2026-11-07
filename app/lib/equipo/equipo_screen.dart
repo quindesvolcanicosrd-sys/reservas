@@ -260,7 +260,8 @@ class _EquipoScreenState extends State<EquipoScreen> {
       motivos: motivos,
       tick: _tick,
       alTocar: () => _abrir(x),
-      emergencia: repo.esAdmin ? () => EmergenciaScreen.abrir(context, repo, x) : null,
+      // Emergencia solo para quien fue marcadx hoy a tiempo o tarde (Victor, 2026-11-07).
+      emergencia: repo.esAdmin && x.presenteHoy ? () => EmergenciaScreen.abrir(context, repo, x) : null,
     );
   }
 
@@ -343,7 +344,7 @@ class _AvatarEstado extends StatelessWidget {
       ),
       child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: tamano),
     );
-    return hero ? Hero(tag: 'avatar-${p.username}', child: avatar) : avatar;
+    return hero ? HeroAvatar(tag: 'avatar-${p.username}', child: avatar) : avatar;
   }
 }
 
