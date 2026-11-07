@@ -39,7 +39,7 @@ class PanelCalendario extends StatefulWidget {
   final ValueChanged<double> alSoltar;
   final DateTime? diaSeleccionado;
 
-  static const altoCelda = 46.0;
+  static const altoCelda = 50.0;
 
   @override
   State<PanelCalendario> createState() => PanelCalendarioState();
@@ -112,7 +112,7 @@ class PanelCalendarioState extends State<PanelCalendario> {
       onVerticalDragUpdate: (d) => widget.alArrastrar(d.delta.dy),
       onVerticalDragEnd: (d) => widget.alSoltar(d.primaryVelocity ?? 0),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 18),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -157,25 +157,6 @@ class PanelCalendarioState extends State<PanelCalendario> {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 16,
-              runSpacing: 4,
-              alignment: WrapAlignment.center,
-              children: [
-                _leyenda(p, relleno: p.marca, borde: p.marca, texto: 'Asistirás'),
-                _leyenda(p, relleno: p.fondo, borde: p.marca, texto: 'Sin responder'),
-                _leyenda(p, relleno: p.apagadoPunto, borde: p.apagadoPunto, texto: 'Cancelado / no vas'),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🎈', style: TextStyle(fontSize: 11)),
-                    const SizedBox(width: 4),
-                    Text('Cumpleaños', style: TextStyle(fontSize: 12, color: p.textoSecundario)),
-                  ],
-                ),
-              ],
             ),
             const SizedBox(height: 10),
             _filaPills(p),
@@ -240,25 +221,6 @@ class PanelCalendarioState extends State<PanelCalendario> {
       ),
     );
   }
-
-  Widget _leyenda(PivotPaleta p, {required Color relleno, required Color borde, required String texto}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 9,
-          height: 9,
-          decoration: BoxDecoration(
-            color: relleno,
-            shape: BoxShape.circle,
-            border: Border.all(color: borde, width: 1.5),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(texto, style: TextStyle(fontSize: 12, color: p.textoSecundario)),
-      ],
-    );
-  }
 }
 
 /// Una página: 6 semanas fijas que empiezan el lunes de la semana del día 1.
@@ -300,8 +262,9 @@ class _Mes extends StatelessWidget {
 
   Widget _celda(PivotPaleta p, DateTime dia, Map<DateTime, List<Evento>> porDia, Set<DateTime> cumples, DateTime hoy) {
     final ajeno = dia.month != mes.month;
-    final eventos = porDia[dia] ?? const <Evento>[];
-    final cumple = cumples.contains(dia);
+    // Días de los meses vecinos: solo el número, tenue (sin puntos ni globos).
+    final eventos = ajeno ? const <Evento>[] : (porDia[dia] ?? const <Evento>[]);
+    final cumple = !ajeno && cumples.contains(dia);
     final esHoy = dia == hoy;
     final marcado = tocado == dia;
     final tieneAlgo = eventos.isNotEmpty || cumple;
@@ -332,7 +295,7 @@ class _Mes extends StatelessWidget {
 
     final firma = '${eventos.map((e) => '${e.id}${e.miEstado?.valor}${e.cancelado}').join()}$cumple';
     return Opacity(
-      opacity: ajeno ? 0.38 : 1,
+      opacity: ajeno ? 0.28 : 1,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: () => alTocar(dia),
@@ -363,7 +326,7 @@ class _Mes extends StatelessWidget {
                 ),
                 // Cumpleaños: globo a color en la esquina del número (un emoji
                 // se reconoce mucho mejor que un ícono de una línea a este tamaño).
-                if (cumple) const Positioned(right: -7, top: -6, child: Text('🎈', style: TextStyle(fontSize: 13, height: 1))),
+                if (cumple) const Positioned(right: -8, top: -4, child: Text('🎈', style: TextStyle(fontSize: 12, height: 1))),
               ],
             ),
             const SizedBox(height: 2),

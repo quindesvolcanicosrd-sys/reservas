@@ -165,9 +165,9 @@ class Cumple {
   final String fotoPerfil;
 
   factory Cumple.desdeJson(Map<String, dynamic> raw) => Cumple(
-        nombre: (raw['nombre'] ?? '').toString(),
-        fecha: DateTime.parse((raw['fecha'] as String).substring(0, 10)),
-        edad: raw['edad'] is num ? (raw['edad'] as num).toInt() : null,
-        fotoPerfil: (raw['fotoPerfil'] ?? '').toString(),
-      );
+    nombre: (raw['nombre'] ?? '').toString(),
+    fecha: DateTime.parse((raw['fecha'] as String).substring(0, 10)),
+    edad: raw['edad'] is num ? (raw['edad'] as num).toInt() : null,
+    fotoPerfil: (raw['fotoPerfil'] ?? '').toString(),
+  );
 }

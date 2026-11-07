@@ -22,7 +22,10 @@ class AvatarPersona extends StatelessWidget {
       height: tamano,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       alignment: Alignment.center,
-      child: Text(inicial, style: TextStyle(color: p.sobreMarca, fontWeight: FontWeight.w700, fontSize: tamano * 0.42)),
+      child: Text(
+        inicial,
+        style: TextStyle(color: p.sobreMarca, fontWeight: FontWeight.w700, fontSize: tamano * 0.42),
+      ),
     );
     final contenido = foto.isEmpty
         ? circulo
@@ -56,18 +59,24 @@ class PilaAvatares extends StatelessWidget {
     final p = context.pivot;
     final visibles = personas.take(3).toList();
     final resto = personas.length - visibles.length;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      for (final (i, per) in visibles.indexed)
-        Transform.translate(
-          offset: Offset(-8.0 * i, 0),
-          child: AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil, tamano: tamano, borde: p.tarjeta),
-        ),
-      if (resto > 0)
-        Transform.translate(
-          offset: Offset(-8.0 * visibles.length + 4, 0),
-          child: Text('+$resto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textoSecundario)),
-        ),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final (i, per) in visibles.indexed)
+          Transform.translate(
+            offset: Offset(-8.0 * i, 0),
+            child: AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil, tamano: tamano, borde: p.tarjeta),
+          ),
+        if (resto > 0)
+          Transform.translate(
+            offset: Offset(-8.0 * visibles.length + 4, 0),
+            child: Text(
+              '+$resto',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.textoSecundario),
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -86,25 +95,31 @@ class Etiqueta extends StatelessWidget {
       height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(color: apagada ? p.apagadoEtiqueta : p.suave, borderRadius: BorderRadius.circular(PivotRadios.chip)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icono != null) ...[Icon(icono, size: 15, color: c), const SizedBox(width: 4)],
-        Text(texto, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icono != null) ...[Icon(icono, size: 15, color: c), const SizedBox(width: 4)],
+          Text(
+            texto,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c),
+          ),
+        ],
+      ),
     );
   }
 }
 
 String textoMiEstado(EstadoRsvp e) => switch (e) {
-      EstadoRsvp.asistire => 'Asistirás',
-      EstadoRsvp.noAsistire => 'No asistirás',
-      EstadoRsvp.noJugador => 'No jugador',
-    };
+  EstadoRsvp.asistire => 'Asistirás',
+  EstadoRsvp.noAsistire => 'No asistirás',
+  EstadoRsvp.noJugador => 'No jugador',
+};
 
 IconData iconoMiEstado(EstadoRsvp e) => switch (e) {
-      EstadoRsvp.asistire => Icons.check_rounded,
-      EstadoRsvp.noAsistire => Icons.close_rounded,
-      EstadoRsvp.noJugador => Icons.visibility_outlined,
-    };
+  EstadoRsvp.asistire => Icons.check_rounded,
+  EstadoRsvp.noAsistire => Icons.close_rounded,
+  EstadoRsvp.noJugador => Icons.visibility_outlined,
+};
 
 String textoEstadoEvento(Evento ev) => ev.estado == EstadoEvento.sinEntrenamiento ? 'Sin entrenamiento' : 'Cancelado';
 

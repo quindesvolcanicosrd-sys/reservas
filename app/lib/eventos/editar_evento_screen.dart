@@ -31,11 +31,14 @@ class _EditarEventoScreenState extends State<EditarEventoScreen> {
   @override
   void initState() {
     super.initState();
-    widget.repo.lugares().then((l) {
-      if (mounted) setState(() => _lugares = l);
-    }).catchError((_) {
-      if (mounted) setState(() => _lugares = const []);
-    });
+    widget.repo
+        .lugares()
+        .then((l) {
+          if (mounted) setState(() => _lugares = l);
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _lugares = const []);
+        });
   }
 
   @override
@@ -109,72 +112,79 @@ class _EditarEventoScreenState extends State<EditarEventoScreen> {
     final opcionesLugar = {...?_lugares?.map((l) => l.nombre), ev.lugar}.where((l) => l.isNotEmpty).toList()..sort();
     return Scaffold(
       appBar: AppBar(title: const Text('Editar evento')),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 120), children: [
-        Text('${ev.tipo} · ${Fechas.encabezado(ev.fecha)}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.marcaTexto)),
-        const SizedBox(height: 20),
-        _titulo(p, 'Lugar'),
-        _lugares == null
-            ? const LinearProgressIndicator()
-            : DropdownButtonFormField<String>(
-                initialValue: _lugar,
-                items: [for (final l in opcionesLugar) DropdownMenuItem(value: l, child: Text(l))],
-                onChanged: (v) => setState(() => _lugar = v ?? _lugar),
-              ),
-        const SizedBox(height: 20),
-        _titulo(p, 'Horario'),
-        Row(children: [
-          Expanded(child: _campoHora(p, 'Empieza', _inicio, () => _elegirHora(true))),
-          const SizedBox(width: 12),
-          Expanded(child: _campoHora(p, 'Termina', _fin, () => _elegirHora(false))),
-        ]),
-        const SizedBox(height: 20),
-        _titulo(p, 'Información adicional'),
-        TextField(
-          controller: _descripcion,
-          minLines: 2,
-          maxLines: 5,
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(hintText: 'Ej.: trae protecciones completas'),
-        ),
-        const SizedBox(height: 24),
-        _titulo(p, '¿A qué eventos aplicar el cambio?'),
-        RadioGroup<AlcanceEdicion>(
-          groupValue: _alcance,
-          onChanged: (v) => setState(() => _alcance = v ?? _alcance),
-          child: Column(children: [
-            const RadioListTile(value: AlcanceEdicion.individual, title: Text('Solo este evento'), contentPadding: EdgeInsets.zero),
-            const RadioListTile(
-              value: AlcanceEdicion.periodo,
-              title: Text('Un período'),
-              subtitle: Text('Desde este evento hasta la fecha que elijas'),
-              contentPadding: EdgeInsets.zero,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        children: [
+          Text(
+            '${ev.tipo} · ${Fechas.encabezado(ev.fecha)}',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.marcaTexto),
+          ),
+          const SizedBox(height: 20),
+          _titulo(p, 'Lugar'),
+          _lugares == null
+              ? const LinearProgressIndicator()
+              : DropdownButtonFormField<String>(
+                  initialValue: _lugar,
+                  items: [for (final l in opcionesLugar) DropdownMenuItem(value: l, child: Text(l))],
+                  onChanged: (v) => setState(() => _lugar = v ?? _lugar),
+                ),
+          const SizedBox(height: 20),
+          _titulo(p, 'Horario'),
+          Row(
+            children: [
+              Expanded(child: _campoHora(p, 'Empieza', _inicio, () => _elegirHora(true))),
+              const SizedBox(width: 12),
+              Expanded(child: _campoHora(p, 'Termina', _fin, () => _elegirHora(false))),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _titulo(p, 'Información adicional'),
+          TextField(
+            controller: _descripcion,
+            minLines: 2,
+            maxLines: 5,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(hintText: 'Ej.: trae protecciones completas'),
+          ),
+          const SizedBox(height: 24),
+          _titulo(p, '¿A qué eventos aplicar el cambio?'),
+          RadioGroup<AlcanceEdicion>(
+            groupValue: _alcance,
+            onChanged: (v) => setState(() => _alcance = v ?? _alcance),
+            child: Column(
+              children: [
+                const RadioListTile(value: AlcanceEdicion.individual, title: Text('Solo este evento'), contentPadding: EdgeInsets.zero),
+                const RadioListTile(
+                  value: AlcanceEdicion.periodo,
+                  title: Text('Un período'),
+                  subtitle: Text('Desde este evento hasta la fecha que elijas'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const RadioListTile(
+                  value: AlcanceEdicion.desdeAqui,
+                  title: Text('Desde este en adelante'),
+                  subtitle: Text('Cambia también la regla del lugar para los próximos'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
             ),
-            const RadioListTile(
-              value: AlcanceEdicion.desdeAqui,
-              title: Text('Desde este en adelante'),
-              subtitle: Text('Cambia también la regla del lugar para los próximos'),
-              contentPadding: EdgeInsets.zero,
-            ),
-          ]),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          child: _alcance == AlcanceEdicion.periodo
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: OutlinedButton.icon(
-                    onPressed: _elegirHasta,
-                    icon: const Icon(Icons.event_outlined),
-                    label: Text(_hasta == null ? 'Elegir hasta qué fecha' : 'Hasta el ${Fechas.encabezado(_hasta!).toLowerCase()}'),
-                  ),
-                )
-              : const SizedBox(width: double.infinity),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          Text(_error!, style: TextStyle(color: p.marcaTexto)),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            child: _alcance == AlcanceEdicion.periodo
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: OutlinedButton.icon(
+                      onPressed: _elegirHasta,
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(_hasta == null ? 'Elegir hasta qué fecha' : 'Hasta el ${Fechas.encabezado(_hasta!).toLowerCase()}'),
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+          if (_error != null) ...[const SizedBox(height: 16), Text(_error!, style: TextStyle(color: p.marcaTexto))],
         ],
-      ]),
+      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -191,9 +201,12 @@ class _EditarEventoScreenState extends State<EditarEventoScreen> {
   }
 
   Widget _titulo(PivotPaleta p, String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(t, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.texto)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      t,
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.texto),
+    ),
+  );
 
   Widget _campoHora(PivotPaleta p, String etiqueta, String valor, VoidCallback alTocar) {
     return Material(
@@ -204,10 +217,16 @@ class _EditarEventoScreenState extends State<EditarEventoScreen> {
         onTap: alTocar,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(etiqueta, style: TextStyle(fontSize: 12, color: p.textoSecundario)),
-            Text(valor.isEmpty ? '—' : valor, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: p.texto)),
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(etiqueta, style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+              Text(
+                valor.isEmpty ? '—' : valor,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: p.texto),
+              ),
+            ],
+          ),
         ),
       ),
     );

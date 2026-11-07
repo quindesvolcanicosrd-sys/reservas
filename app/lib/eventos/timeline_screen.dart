@@ -73,7 +73,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   final _panel = GlobalKey<PanelCalendarioState>();
   late final AnimationController _calCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
   DateTime? _diaSel;
-  static const _altoPanelEstimado = 380.0;
+  static const _altoPanelEstimado = 400.0;
 
   // Ancla del timeline: al llegar datos nuevos (por ejemplo, un mes anterior
   // pedido desde el calendario) se agregan filas ARRIBA y la lista saltaría.
@@ -147,6 +147,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     super.dispose();
   }
 
+    // Solo un scroll hecho con el dedo mueve el mes del calendario (bug real:
+  // al tocar "jul", el timeline llegaba al final de lo cargado, quedaba
+  // mostrando junio y el panel "volvía" a junio un segundo después).
+  bool _scrollDelUsuario = false;
+
   void _alDesplazar() {
     final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0).toList();
     if (pos.isEmpty || _filas.isEmpty) return;
@@ -156,7 +161,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (d.month != _mesVisible.month || d.year != _mesVisible.year) {
       setState(() => _mesVisible = d);
       // Con el calendario abierto, el mes del panel acompaña al timeline.
-      if (_calAbierto && !_desplazandoProgramado && !_colapsandoPorScroll) _panel.currentState?.irAMes(d);
+      if (_calAbierto && _scrollDelUsuario && !_desplazandoProgramado && !_colapsandoPorScroll) _panel.currentState?.irAMes(d);
     }
   }
 
@@ -284,6 +289,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       _calMontado = true;
       _mesPanel = _mesVisible;
     });
+    _remedirPanel();
     _calCtrl.animateTo(1, curve: Curves.easeOutCubic);
   }
 
@@ -295,10 +301,37 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     });
   }
 
-  double get _altoPanel {
-    final h = _panel.currentContext?.size?.height;
-    return (h == null || h < 100) ? _altoPanelEstimado : h;
+  Widget _panelCalendario(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.pivot.fondo,
+        border: Border(bottom: BorderSide(color: context.pivot.tarjetaBorde)),
+      ),
+      child: PanelCalendario(
+        key: _panel,
+        repo: repo,
+        mesInicial: _mesPanel,
+        alCambiarMes: (m) => setState(() => _mesPanel = m),
+        alElegirDia: _elegirDia,
+        alMesElegido: _mesElegido,
+        alArrastrar: _arrastrar,
+        alSoltar: _soltar,
+        diaSeleccionado: _diaSel,
+      ),
+    );
   }
+
+  /// Alto real del panel: se mide después de dibujarlo (no se puede leer en
+  /// medio de un build); hasta entonces se usa uno estimado.
+  double? _altoMedido;
+  void _remedirPanel() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = _panel.currentContext?.size?.height;
+      if (mounted && h != null && h > 100 && h != _altoMedido) setState(() => _altoMedido = h);
+    });
+  }
+
+  double get _altoPanel => _altoMedido ?? _altoPanelEstimado;
 
   /// Arrastre vertical (sobre el panel o sobre el nombre del mes): el
   /// calendario sigue al dedo, como en Google Calendar.
@@ -310,6 +343,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         _calMontado = true;
         _mesPanel = _mesVisible;
       });
+      _remedirPanel();
     }
     _calCtrl.value = (_calCtrl.value + dy / _altoPanel).clamp(0.0, 1.0);
     final abierto = _calCtrl.value > 0.5;
@@ -385,6 +419,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           _saltoInicialHecho = true;
           WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
         }
+        final panel = _calMontado ? RepaintBoundary(child: _panelCalendario(context)) : null;
         return Scaffold(
           floatingActionButton: _esAdmin && !_buscando
               ? FloatingActionButton(tooltip: 'Nuevo evento', onPressed: _nuevoEvento, child: const Icon(Icons.add_rounded))
@@ -401,33 +436,43 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                   ),
                   child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
                 ),
-                // Calendario: se despliega desde la barra (tamaño + fundido con
-                // la misma curva) y sigue montado hasta terminar de cerrarse.
-                if (_calMontado)
-                  SizeTransition(
-                    sizeFactor: _calCtrl,
-                    alignment: Alignment.topCenter,
-                    child: FadeTransition(
-                      opacity: CurvedAnimation(parent: _calCtrl, curve: const Interval(0, 0.6)),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border(bottom: BorderSide(color: context.pivot.tarjetaBorde)),
-                        ),
-                        child: PanelCalendario(
-                          key: _panel,
-                          repo: repo,
-                          mesInicial: _mesPanel,
-                          alCambiarMes: (m) => setState(() => _mesPanel = m),
-                          alElegirDia: _elegirDia,
-                          alMesElegido: _mesElegido,
-                          alArrastrar: _arrastrar,
-                          alSoltar: _soltar,
-                          diaSeleccionado: _diaSel,
-                        ),
-                      ),
+                // Calendario sobre el timeline. Para que abrir/cerrar (también
+                // con el dedo) sea fluido, nada cambia de tamaño mientras se
+                // mueve: el panel baja desde la barra y el timeline se corre
+                // hacia abajo con transformaciones (solo se repinta, no se
+                // vuelve a medir cada fila en cada cuadro).
+                Expanded(
+                  child: ClipRect(
+                    child: AnimatedBuilder(
+                      // El panel se arma una sola vez por build: en cada cuadro
+                      // solo cambian las transformaciones (instancia idéntica =
+                      // Flutter no lo reconstruye).
+                      animation: _calCtrl,
+                      builder: (context, hijo) {
+                        final alto = _altoPanel;
+                        final v = _calCtrl.value;
+                        return Stack(
+                          children: [
+                            Positioned.fill(
+                              child: Transform.translate(offset: Offset(0, alto * v), child: hijo),
+                            ),
+                            if (panel != null)
+                              Positioned(
+                                left: 0,
+                                right: 0,
+                                top: 0,
+                                child: Transform.translate(
+                                  offset: Offset(0, -alto * (1 - v)),
+                                  child: Opacity(opacity: (v / 0.5).clamp(0.0, 1.0), child: panel),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                      child: RepaintBoundary(child: _cuerpo(context)),
                     ),
                   ),
-                Expanded(child: _cuerpo(context)),
+                ),
               ],
             ),
           ),
@@ -720,7 +765,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(8, 4, 16, 96),
+          padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,
           itemBuilder: (context, i) => _fila(context, _filas[i]),
         ),
@@ -731,7 +776,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   /// Con el calendario abierto, scrollear el timeline lo va cerrando junto
   /// con el dedo; al soltar termina de cerrarse o vuelve a abrirse.
   bool _colapsandoPorScroll = false;
-  bool _alScrollearTimeline(ScrollNotification n) {
+    bool _alScrollearTimeline(ScrollNotification n) {
+    if (n is ScrollStartNotification) _scrollDelUsuario = n.dragDetails != null;
+    if (n is ScrollEndNotification) _scrollDelUsuario = false;
     if (!_calMontado) return false;
     if (n is ScrollUpdateNotification && n.dragDetails != null && (n.scrollDelta ?? 0) != 0) {
       _colapsandoPorScroll = true;
