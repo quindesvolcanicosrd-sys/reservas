@@ -7,6 +7,8 @@ import '../core/tema.dart';
 import '../reservas/gestionar_reserva.dart';
 import '../reservas/reserva_screen.dart';
 import '../reservas/reservas_repo.dart';
+import '../equipo/emergencia_screen.dart';
+import '../equipo/equipo_modelos.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
 import 'editar_evento_screen.dart';
@@ -60,6 +62,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
     } finally {
       if (mounted) setState(() => _cargandoSinRespuesta = false);
     }
+  }
+
+  void _emergencia(Persona per) {
+    final eq = EquipoRepo.de(repo.sesion);
+    final x = eq.persona(per.username) ?? Integrante({'username': per.username, 'nombreDerby': per.nombreDerby});
+    EmergenciaScreen.abrir(context, eq, x);
   }
 
   void _avisar(String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
@@ -476,6 +484,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
     ];
     final elegido = grupos.firstWhere((g) => g.$1 == _grupo, orElse: () => grupos.first);
     final personas = elegido.$3;
+    // Admins: Emergencia junto a quien fue marcadx A tiempo o Tarde en este evento.
+    final marcadxs = {for (final a in ev.asistentes) a.persona.username.trim().toLowerCase()};
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
@@ -552,7 +562,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
                                       ),
                                     ),
-                                    Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                                    if (_esAdmin && marcadxs.contains(per.username.trim().toLowerCase()))
+                                      PildoraEmergencia(alTocar: () => _emergencia(per))
+                                    else
+                                      Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
                                   ],
                                 ),
                               ),

@@ -270,3 +270,37 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
     );
   }
 }
+
+/// Pill roja horizontal "Emergencia" (solo admins). En el detalle de un
+/// evento aparece junto a quien fue marcadx A tiempo o Tarde.
+class PildoraEmergencia extends StatelessWidget {
+  const PildoraEmergencia({super.key, required this.alTocar});
+  final VoidCallback alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pivot;
+    return Material(
+      color: pal.marca,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: alTocar,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.emergency_rounded, size: 16, color: pal.sobreMarca),
+              const SizedBox(width: 5),
+              Text(
+                'Emergencia',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: pal.sobreMarca),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

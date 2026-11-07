@@ -72,8 +72,6 @@ class _Ficha extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         actions: [
-          // Emergencia arriba a la derecha (Victor, 2026-11-07: junto al avatar se veía mal).
-          if (repo.esAdmin) Center(child: _PildoraEmergencia(repo: repo, p: p)),
           if (!yo)
             IconButton(
               tooltip: fav ? 'Quitar de favoritos' : 'Agregar a favoritos',
@@ -167,6 +165,8 @@ class _Ficha extends StatelessWidget {
           alTocar: () => launchUrl(Uri.parse('https://wa.me/${completo.substring(1)}'), mode: LaunchMode.externalApplication),
         ),
       if (!yo && tel.isNotEmpty) _Accion(icono: Icons.call_rounded, texto: 'Llamar', alTocar: () => launchUrl(Uri.parse('tel:$completo'))),
+      // En Equipo, Emergencia está siempre disponible para admins (Victor, 2026-11-07).
+      if (repo.esAdmin) _Accion(icono: Icons.emergency_rounded, texto: 'Emergencia', roja: true, alTocar: () => EmergenciaScreen.abrir(context, repo, p)),
     ];
     if (botones.isEmpty) return const SizedBox.shrink();
     return Row(
@@ -283,7 +283,8 @@ class _Ficha extends StatelessWidget {
 }
 
 class _Accion extends StatelessWidget {
-  const _Accion({required this.icono, required this.texto, required this.alTocar});
+  const _Accion({required this.icono, required this.texto, required this.alTocar, this.roja = false});
+  final bool roja;
   final IconData icono;
   final String texto;
   final VoidCallback alTocar;
@@ -294,12 +295,12 @@ class _Accion extends StatelessWidget {
     return Column(
       children: [
         Material(
-          color: p.suave,
+          color: roja ? p.marca : p.suave,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: alTocar,
-            child: SizedBox(width: 56, height: 56, child: Icon(icono, color: p.sobreSuave)),
+            child: SizedBox(width: 56, height: 56, child: Icon(icono, color: roja ? p.sobreMarca : p.sobreSuave)),
           ),
         ),
         const SizedBox(height: 6),
@@ -560,50 +561,6 @@ class _AdministracionState extends State<_Administracion> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Pill roja "Emergencia" en la barra de la ficha (solo admins). Se habilita solo si
-/// la persona fue marcada hoy "A tiempo" o "Tarde" (Victor, 2026-11-07).
-class _PildoraEmergencia extends StatelessWidget {
-  const _PildoraEmergencia({required this.repo, required this.p});
-  final EquipoRepo repo;
-  final Integrante p;
-
-  @override
-  Widget build(BuildContext context) {
-    final pal = context.pivot;
-    final activa = p.presenteHoy;
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 220),
-      opacity: activa ? 1 : 0.4,
-      child: Material(
-        color: pal.marca,
-        shape: const StadiumBorder(),
-        child: InkWell(
-          customBorder: const StadiumBorder(),
-          onTap: activa
-              ? () => EmergenciaScreen.abrir(context, repo, p)
-              : () => ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(const SnackBar(content: Text('Se activa cuando la persona está marcada hoy a tiempo o tarde.'))),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.emergency_rounded, size: 16, color: pal.sobreMarca),
-                const SizedBox(width: 5),
-                Text(
-                  'Emergencia',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: pal.sobreMarca),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
