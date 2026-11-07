@@ -45,7 +45,7 @@ class _Fila {
   final bool vacioHoy;
 }
 
-class _TimelineScreenState extends State<TimelineScreen> {
+class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProviderStateMixin {
   final _scroll = ItemScrollController();
   final _posiciones = ItemPositionsListener.create();
   final _textoBusqueda = TextEditingController();
@@ -57,7 +57,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
   String? _filtroTipo;
   DateTime _mesVisible = Fechas.hoy();
   bool _calAbierto = false;
+  bool _calMontado = false;
   DateTime _mesPanel = Fechas.hoy();
+  final _panel = GlobalKey<PanelCalendarioState>();
+  late final AnimationController _calCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+  late final Animation<double> _calCurva = CurvedAnimation(parent: _calCtrl, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+
+  // Ancla del timeline: al llegar datos nuevos (por ejemplo, un mes anterior
+  // pedido desde el calendario) se agregan filas ARRIBA y la lista saltaría.
+  // Se guarda qué fila estaba arriba y se vuelve a ella sin animación.
+  Object? _firmaDatos;
+  bool _desplazandoProgramado = false;
   List<_Fila> _filas = const [];
   bool _saltoInicialHecho = false;
 
@@ -76,6 +86,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void dispose() {
     _posiciones.itemPositions.removeListener(_alDesplazar);
+    _calCtrl.dispose();
     _textoBusqueda.dispose();
     _focoBusqueda.dispose();
     super.dispose();
@@ -197,28 +208,64 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (!_scroll.isAttached || _filas.isEmpty) return;
     final i = _indiceDeDia(dia);
     if (animado) {
-      _scroll.scrollTo(index: i, duration: const Duration(milliseconds: 450), curve: Curves.easeInOutCubic, alignment: 0.02);
+      _desplazandoProgramado = true;
+      _scroll
+          .scrollTo(index: i, duration: const Duration(milliseconds: 500), curve: Curves.easeInOutCubic, alignment: 0.02)
+          .whenComplete(() => _desplazandoProgramado = false);
     } else {
       _scroll.jumpTo(index: i, alignment: 0.02);
     }
   }
 
-  void _alternarCalendario() {
+  void _alternarCalendario() => _calAbierto ? _cerrarCalendario() : _abrirCalendario();
+
+  void _abrirCalendario() {
     setState(() {
-      _calAbierto = !_calAbierto;
-      if (_calAbierto) _mesPanel = _mesVisible;
+      _calAbierto = true;
+      _calMontado = true;
+      _mesPanel = _mesVisible;
+    });
+    _calCtrl.forward();
+  }
+
+  void _cerrarCalendario() {
+    if (!_calAbierto) return;
+    setState(() => _calAbierto = false);
+    _calCtrl.reverse().whenComplete(() {
+      if (mounted && !_calAbierto) setState(() => _calMontado = false);
     });
   }
 
   Future<void> _elegirDia(DateTime dia) async {
-    setState(() => _calAbierto = false);
+    _cerrarCalendario();
+    if (_hayFiltros || _buscando) {
+      setState(() {
+        _buscando = false;
+        _limpiarFiltros();
+      });
+    }
+    // Normalmente el mes ya está precargado: el desplazamiento arranca junto
+    // con el cierre del panel, sin esperas.
     await repo.asegurarMes(dia);
     if (!mounted) return;
-    setState(() {
-      _buscando = false;
-      _limpiarFiltros();
-    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _irA(dia));
+  }
+
+  /// Identidad estable de una fila entre cargas.
+  String _claveFila(_Fila f) =>
+      '${Fechas.iso(f.dia)}|${f.semana != null ? 's' : ''}|${f.ahora ? 'a' : ''}|${f.item?.evento?.id ?? f.item?.cumple?.nombre ?? ''}';
+
+  void _mantenerAncla(List<_Fila> antes, List<_Fila> despues) {
+    if (_desplazandoProgramado || !_scroll.isAttached || antes.isEmpty) return;
+    final vis = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0).toList()..sort((a, b) => a.index.compareTo(b.index));
+    if (vis.isEmpty || vis.first.index >= antes.length) return;
+    final clave = _claveFila(antes[vis.first.index]);
+    final nuevo = despues.indexWhere((f) => _claveFila(f) == clave);
+    if (nuevo < 0 || nuevo == vis.first.index) return;
+    final borde = vis.first.itemLeadingEdge;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.isAttached) _scroll.jumpTo(index: nuevo, alignment: borde);
+    });
   }
 
   void _limpiarFiltros() {
@@ -235,7 +282,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
     return ListenableBuilder(
       listenable: repo,
       builder: (context, _) {
+        final antes = _filas;
         _filas = _armarFilas();
+        final firma = Object.hash(identityHashCode(repo.eventos), identityHashCode(repo.cumples));
+        if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
+        _firmaDatos = firma;
         if (!_saltoInicialHecho && repo.eventos.isNotEmpty && !_hayFiltros) {
           _saltoInicialHecho = true;
           WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
@@ -256,24 +307,27 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                   child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
                 ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.topCenter,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: _calAbierto && !_buscando
-                        ? PanelCalendario(
-                            key: const ValueKey('panel'),
-                            repo: repo,
-                            mes: _mesPanel,
-                            alCambiarMes: (m) => setState(() => _mesPanel = m),
-                            alElegirDia: _elegirDia,
-                          )
-                        : const SizedBox(key: ValueKey('cerrado'), width: double.infinity),
+                // Calendario: se despliega desde la barra (tamaño + fundido con
+                // la misma curva) y sigue montado hasta terminar de cerrarse.
+                if (_calMontado)
+                  SizeTransition(
+                    sizeFactor: _calCurva,
+                    alignment: Alignment.topCenter,
+                    child: FadeTransition(
+                      opacity: _calCurva,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: context.pivot.tarjetaBorde))),
+                        child: PanelCalendario(
+                          key: _panel,
+                          repo: repo,
+                          mesInicial: _mesPanel,
+                          alCambiarMes: (m) => setState(() => _mesPanel = m),
+                          alElegirDia: _elegirDia,
+                          alCerrar: _cerrarCalendario,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                AnimatedContainer(duration: const Duration(milliseconds: 280), height: _calAbierto ? 1 : 0, color: context.pivot.tarjetaBorde),
                 Expanded(child: _cuerpo(context)),
               ],
             ),
@@ -299,7 +353,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (c, a) => FadeTransition(
+                    opacity: a,
+                    child: SlideTransition(position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a), child: c),
+                  ),
+                  layoutBuilder: (actual, previos) => Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]),
                   child: Text(
                     mesTitulo.year == Fechas.hoy().year ? Fechas.mesNombre(mesTitulo) : Fechas.mesAnio(mesTitulo),
                     key: ValueKey('${mesTitulo.year}-${mesTitulo.month}'),
@@ -309,7 +368,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 const SizedBox(width: 4),
                 AnimatedRotation(
                   turns: _calAbierto ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOutCubic,
                   child: const Icon(Icons.keyboard_arrow_down_rounded),
                 ),
               ],
@@ -320,10 +380,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
             tooltip: 'Buscar',
             icon: const Icon(Icons.search_rounded),
             onPressed: () {
-              setState(() {
-                _buscando = true;
-                _calAbierto = false;
-              });
+              _cerrarCalendario();
+              setState(() => _buscando = true);
               WidgetsBinding.instance.addPostFrameCallback((_) => _focoBusqueda.requestFocus());
             },
           ),
@@ -331,7 +389,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             tooltip: 'Ir a hoy',
             icon: const Icon(Icons.today_outlined),
             onPressed: () {
-              if (_calAbierto) setState(() => _mesPanel = Fechas.hoy());
+              if (_calAbierto) _panel.currentState?.irAMes(Fechas.hoy());
               _irA(Fechas.hoy());
             },
           ),
@@ -514,7 +572,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
 
   Future<void> _nuevoEvento() async {
-    setState(() => _calAbierto = false);
+    _cerrarCalendario();
     final r = await Navigator.of(context).push<Object>(MaterialPageRoute(builder: (_) => CrearEventoScreen(repo: repo)));
     if (r == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Evento creado. Se avisó al equipo.')));

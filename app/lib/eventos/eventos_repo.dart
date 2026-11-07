@@ -50,13 +50,33 @@ class EventosRepo extends ChangeNotifier {
   }
 
   /// Garantiza que el mes de [dia] esté cargado (navegación por calendario).
-  Future<void> asegurarMes(DateTime dia) async {
-    final inicio = DateTime(dia.year, dia.month, 1);
-    final fin = DateTime(dia.year, dia.month + 1, 0);
+  Future<void> asegurarMes(DateTime dia) => asegurarRango(DateTime(dia.year, dia.month, 1), DateTime(dia.year, dia.month + 1, 0));
+
+  Future<void>? _enCurso;
+  DateTime? _pendDesde, _pendHasta;
+
+  /// Amplía lo cargado para cubrir [inicio]–[fin]. Si ya hay una carga en
+  /// curso, el pedido se junta con los siguientes y se hace una sola carga
+  /// al terminar (así deslizar varios meses seguidos no dispara N cargas).
+  Future<void> asegurarRango(DateTime inicio, DateTime fin) async {
     if (_desde != null && _hasta != null && !inicio.isBefore(_desde!) && !fin.isAfter(_hasta!)) return;
+    if (_enCurso != null) {
+      _pendDesde = _pendDesde == null || inicio.isBefore(_pendDesde!) ? inicio : _pendDesde;
+      _pendHasta = _pendHasta == null || fin.isAfter(_pendHasta!) ? fin : _pendHasta;
+      await _enCurso;
+      final d = _pendDesde, h = _pendHasta;
+      if (d == null || h == null) return;
+      _pendDesde = _pendHasta = null;
+      return asegurarRango(d, h);
+    }
     final desde = _desde == null || inicio.isBefore(_desde!) ? inicio : _desde!;
     final hasta = _hasta == null || fin.isAfter(_hasta!) ? fin : _hasta!;
-    await _traer(desde, hasta, reemplazar: true);
+    _enCurso = _traer(desde, hasta, reemplazar: true);
+    try {
+      await _enCurso;
+    } finally {
+      _enCurso = null;
+    }
   }
 
   Future<void> _traer(DateTime desde, DateTime hasta, {required bool reemplazar}) async {

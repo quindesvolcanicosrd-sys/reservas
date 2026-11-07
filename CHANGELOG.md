@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: calendario más fluido (meses que siguen al dedo con altura fija, abrir/cerrar en una sola animación, precarga de meses vecinos y el timeline ya no salta al llegar datos).
+
 2026-11-06 — App Android: calendario desplegable desde la barra (como Google Calendar), botón "+" para crear eventos (admins), asistencia anticipada completa (crear, editar, eliminar y aplicación automática al cargar) y fecha + tipo fijos en la barra del detalle. Ver MANIFEST.md, "Eventos — ronda 2".
 
 2026-11-06 — Feature/fix: avisos de asistencia. Texto "Shusho cambió su asistencia del entrenamiento de este sábado a No asistiré" (hoy/mañana/este/próximo/fecha; sin "null →" en la primera respuesta), recordatorio "¿Vas al entrenamiento de mañana?" con botones una sola vez por persona (tabla `push_enviados`, también para eventos creados con menos de 24 h), aviso de 1 hora antes con la lista de asistentes para Asistiré y No jugador, resumen para admins con botón "Cancelar entrenamiento" (abre la confirmación, también con 0 asistentes), las respuestas desde los botones de la push ahora avisan a los admins, y tocar cualquiera de estas notificaciones abre el detalle del evento (`?evento=<id>`).
