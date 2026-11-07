@@ -1,5 +1,6 @@
-// Supabase Edge Function — reemplazo de Code.gs (Google Apps Script)
-// Mismo contrato action-based que js/api.js usa contra el backend GAS.
+// Supabase Edge Function — backend único de Pivot (web y app Android).
+// Contrato action-based (`action` + parámetros). Apps Script, Google Sheets y
+// Railway son sistemas obsoletos: no queda ninguna conexión con ellos (2026-11-07).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -7,7 +8,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 const ADMIN_PRINCIPAL  = 'victordbh@gmail.com';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbw40qNuCKh7_wDusEGRHmZttBKAt41__OcPTHYWCUk1f6e5ifvAUMznw6Xr_O5qQ5RJ/exec';
+
 
 const ONESIGNAL_APP_ID  = Deno.env.get('ONESIGNAL_APP_ID')  ?? '';
 const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_API_KEY') ?? '';
@@ -1092,6 +1093,32 @@ async function subirFotoInscripcion(params: Record<string, any>): Promise<Record
 }
 
 // ─── Acciones: config ─────────────────────────────────────────────────────────
+
+// Cancelar un evento (antes iba a Apps Script, obsoleto, 2026-11-07).
+// `es_excepcion=true` lo protege de la regeneración automática, igual que
+// `adminBorrarEvento()`. `getEventosRango()` lo muestra como cancelado.
+async function adminCancelarEvento(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(params.adminToken);
+  if (!email) return { exito: false, error: 'Sesión admin inválida.' };
+  if (!params.idEvento) return { exito: false, error: 'Falta el evento.' };
+  const { error } = await supabase.from('asistencias')
+    .update({ es_excepcion: true, estado: 'Evento Cancelado' })
+    .eq('id_evento', params.idEvento);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// Cambiar las protecciones del club de una reserva de clase (antes iba a
+// Apps Script, obsoleto, 2026-11-07). Solo la propia persona.
+async function actualizarProtecReserva(params: Record<string, any>): Promise<Record<string, any>> {
+  const { nombre, fecha, protecNueva } = params;
+  if ((await _validarToken(params.token)) !== nombre) return { exito: false, error: 'Sesión inválida.' };
+  const { data } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').limit(1);
+  if (!data?.[0]) return { exito: false, error: 'Reserva no encontrada.' };
+  const { error } = await supabase.from('reservas').update({ protecciones: protecNueva || 'No' }).eq('id', data[0].id);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
 
 async function adminBorrarEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const email = await _validarAdminToken(params.adminToken);
@@ -5933,9 +5960,8 @@ async function _notificarCambioAsistenciaCore(username: string, idEventoRaw: unk
 // (cualquier cuenta con sesión admin válida puede dispararlas, mismo
 // criterio que el resto de acciones `admin*` de este archivo), que reciben
 // los datos YA CONOCIDOS por el frontend en vez de volver a leerlos de la
-// base. `adminCancelarEvento` (todavía en GAS, ver comentario "Aún en GAS"
-// más abajo) también dispara `pushEventoCancelado` desde el mismo call site
-// del frontend -- el push no depende de dónde vive la mutación real.
+// base. `adminCancelarEvento` también dispara `pushEventoCancelado` desde el
+// mismo call site del frontend.
 // ─── Token firmado para RSVP-desde-push en background (sin abrir la app) ──────
 // Payload `{ u: username, e: idEvento, exp: epoch ms }`, HMAC-SHA256 con
 // PUSH_TOKEN_SECRET (arriba), formato `base64url(payload).base64url(firma)`.
@@ -6396,19 +6422,6 @@ async function parseParams(req: Request): Promise<Record<string, any>> {
   try { return Object.fromEntries(new URLSearchParams(text).entries()); } catch { return {}; }
 }
 
-// ─── Proxy a GAS para acciones que aún dependen de Sheets ────────────────────
-
-async function forwardToGAS(params: Record<string, any>): Promise<Response> {
-  try {
-    const qs = new URLSearchParams(params).toString();
-    const resp = await fetch(GAS_URL + '?' + qs, { method: 'GET', headers: { 'User-Agent': 'Mirlxs-EdgeFunction/1.0' } });
-    const text = await resp.text();
-    return new Response(text, { headers: { ...CORS, 'Content-Type': 'application/json' } });
-  } catch (e) {
-    return json({ error: 'Error al contactar GAS: ' + (e as Error).message }, 502);
-  }
-}
-
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -6550,7 +6563,9 @@ Deno.serve(async (req: Request) => {
       // Reservas
       case 'getProximosEntrenamientos':       return json(await getProximosEntrenamientos());
       case 'getFechasDisponibles':            return json(await getFechasDisponibles(params));
-            case 'guardarReserva':                  return json(await guardarReserva(params));
+                  case 'guardarReserva':                  return json(await guardarReserva(params));
+      case 'adminCancelarEvento':             return json(await adminCancelarEvento(params));
+      case 'actualizarProtecReserva':         return json(await actualizarProtecReserva(params));
       case 'avisarPagoPendiente':             return json(await avisarPagoPendiente(params));
       case 'getReservasPersona':              return json(await getReservasPersona(params));
       case 'cancelarReserva':                 return json(await cancelarReserva(params));
@@ -6741,9 +6756,8 @@ Deno.serve(async (req: Request) => {
         if (error) return json({ exito: false, error: error.message }, 500);
         return json({ exito: true });
       }
-      // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminCancelarEvento, guardarNotaPago
-      default:
-        return forwardToGAS(params);
+            default:
+        return json({ exito: false, error: 'Acción desconocida: ' + String(action ?? '') }, 400);
     }
   } catch (e) {
     return json({ error: (e as Error).message ?? 'Error interno.' }, 500);

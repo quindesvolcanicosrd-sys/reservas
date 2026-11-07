@@ -3641,10 +3641,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=0733b716"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=a8bf95f2"></script>
+<script src="js/equipo.js?v=bdff2a79"></script>
 <script src="js/home.js?v=af30171f"></script>
-<script src="js/reservas.js?v=bcc987df"></script>
-<script src="js/perfil.js?v=9ba956e9"></script>
+<script src="js/reservas.js?v=4dd03414"></script>
+<script src="js/perfil.js?v=2d43b23b"></script>
 <script src="js/admin.js?v=32e45d35"></script>
 <script src="js/pwa.js?v=f257413a"></script>
 <script src="js/auth.js?v=5b99eac4"></script>
@@ -4750,23 +4750,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="error-msg" id="aj-sheet-texto-error" style="margin-top:10px;"></div>
     <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
     <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
-  </div>
-</div>
-
-<!-- BOTTOM SHEET: Nombre de usuario (perfil propio de Equipo, fila "Nombre
-     de usuario"). Validación en vivo de formato y disponibilidad contra el
-     roster (`_ajUsernameInput()`, js/perfil.js). -->
-<div id="aj-sheet-username-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetUsername()"></div>
-<div id="aj-sheet-username" class="bsheet" style="z-index:9601;">
-  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
-  <div class="bsheet-handle"></div>
-  <div class="bsheet-title">Nombre de usuario</div>
-  <div class="aj-sheet-subtitulo">Sin espacios, mínimo 3 caracteres.</div>
-  <div class="bsheet-body">
-    <input type="text" id="aj-username-input" class="aj-sheet-input" oninput="_ajUsernameInput(this.value)" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Tu nombre de usuario">
-    <div class="aj-username-estado" id="aj-username-estado" style="display:none;"></div>
-    <button type="button" class="btn btn-outline" id="aj-username-guardar-btn" style="margin-top:10px;" disabled onclick="_ajUsernameGuardar()">Guardar</button>
-    <button type="button" class="aj-sheet-cancelar" onclick="ajCerrarSheetUsername()">Cancelar</button>
   </div>
 </div>
 

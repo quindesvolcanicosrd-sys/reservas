@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Se quitó por completo Apps Script: cancelar evento y cambiar protecciones de una reserva ahora funcionan en el servidor nuevo (antes dependían de Apps Script); se eliminaron la nota de pago y el resumen por correo de reservas, y la opción de cambiar el nombre de usuario (nunca funcionó).
+
+
+
 2026-11-07 — Mi Liga: "Pasar a clase a favor" en reservas de clase confirmadas (con aviso a la persona) y el estado se muestra como "Clase a favor". Textos con voseo corregidos a español neutro.
 
 

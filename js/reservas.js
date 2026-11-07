@@ -1232,7 +1232,8 @@ function confirmarReserva(btn) {
       var _nPago = E.tipoPago === 'mensual' ? mesesExitosos.length : fechasExitosas.length;
       api({ action: 'avisarPagoPendiente', nombre: E.nombre, monto: (E.totalPago || 0).toFixed(2), detalle: _nPago + (E.tipoPago === 'mensual' ? (_nPago === 1 ? ' mes' : ' meses') : (_nPago === 1 ? ' clase' : ' clases')) }, function() {}, function() {});
     }
-    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('nota de pago'); secundarioTerminado(); });
+        // (guardarNotaPago se quitó el 2026-11-07: iba a Apps Script, obsoleto.)
+    secundarioTerminado();
     if (E.creditosUsados > 0) {
       // Solo se marca como consumido el crédito de una fecha que realmente
       // se guardó (ver "Cambios recientes" — antes se marcaban los N créditos
@@ -1259,7 +1260,9 @@ function confirmarReserva(btn) {
       secundarioTerminado();
     }
     var fechasResumen = E.tipoPago === 'mensual' ? mesesExitosos : fechasExitosas;
-    api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('resumen por email'); secundarioTerminado(); });
+        // (enviarResumenReservas se quitó el 2026-11-07: iba a Apps Script, obsoleto.)
+    void fechasResumen;
+    secundarioTerminado();
 
     if (E.cuponAplicado) {
       marcarCuponUsadoLocal();

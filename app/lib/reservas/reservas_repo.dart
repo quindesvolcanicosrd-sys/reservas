@@ -353,7 +353,6 @@ class ReservasRepo {
     }
 
     if (guardados.isNotEmpty) {
-      final tipoPago = tipo == TipoReserva.mes ? 'mensual' : 'clase';
       // Aviso a admins: pago pendiente de revisión.
       if (total.monto > 0) {
         final n = guardados.length;
@@ -365,27 +364,6 @@ class ReservasRepo {
             })
             .catchError((_) => <String, dynamic>{});
       }
-      _api
-          .post('guardarNotaPago', {
-            'nombre': sesion.nombre,
-            'tipoPago': tipoPago,
-            'monto': total.monto.toStringAsFixed(2),
-            'nota': sesion.nombre,
-            'fechas': tipo == TipoReserva.mes ? 'mensual (sin clases seleccionadas)' : clases.map((c) => c.id).join(', '),
-            'talla': tallaBase,
-            'protecciones': protec,
-          })
-          .catchError((_) => <String, dynamic>{});
-      _api
-          .post('enviarResumenReservas', {
-            'nombre': sesion.nombre,
-            'fechas': '[${(tipo == TipoReserva.mes ? meses.map(Fechas.mesNombre) : clases.map((c) => c.id)).map((s) => '"$s"').join(',')}]',
-            'talla': tallaBase,
-            'protecciones': protec,
-            'email': email,
-            'montoTotal': total.monto.toStringAsFixed(2),
-          })
-          .catchError((_) => <String, dynamic>{});
     }
 
     return ResultadoReserva(guardados: guardados, fallidos: fallidos, mensajeWhatsapp: _mensaje(tipo, guardados, total.monto));

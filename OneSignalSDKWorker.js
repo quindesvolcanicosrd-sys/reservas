@@ -4,7 +4,7 @@
    responde en ese margen se sirve desde caché, sin dejar la navegación/el recurso
    colgado indefinidamente ante una red en estado ambiguo (ver "Cambios recientes"
    en MANIFEST.md, loader que quedaba indefinido al reabrir el navegador).
-   Las llamadas a la API de Apps Script (script.google.com) NUNCA se cachean.
+   
    js/config.js además se pide con cache:'no-store' (ver fetch handler) para que
    ni el caché HTTP local del navegador pueda servirlo sin ir a la red — ver
    "Cambios recientes" en MANIFEST.md, causa raíz real: Fastly (CDN de GitHub

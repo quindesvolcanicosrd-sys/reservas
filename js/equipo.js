@@ -4025,7 +4025,7 @@ function _eqMisDatosHtml(p) {
   var telefono = typeof _ajTelefonoConPrefijoTexto === 'function'
     ? _ajTelefonoConPrefijoTexto(d.prefijo || p.prefijo, d.telefono || p.telefono) : (d.telefono || p.telefono);
   return _eqAjFilaHtml({ icono: 'person', color: 'aj-icon-muted', titulo: 'Nombre de usuario',
-      valor: val(E.nombre || p.username, '—'), onclick: '_ajUsernameActivarEdicion()' }) +
+            valor: val(E.nombre || p.username, '—') }) +
     _eqAjFilaHtml({ icono: 'star', color: 'aj-icon-orange', titulo: 'Nombre derby', valorId: 'eq-mis-nombreDerby-val',
       valor: val(nombreDerby, '—'),
       onclick: "ajAbrirSheetTextoGenerico('Nombre derby','¿Cómo te conocen en la pista?','eq-mis-nombreDerby-val','nombreDerby','Ej: Roller Reina', null, 25)" }) +
