@@ -140,8 +140,19 @@ class Asistente extends StatelessWidget {
 
 /// Tarjeta de opción grande (ícono + título + texto) para los asistentes.
 class OpcionAsistente extends StatelessWidget {
-  const OpcionAsistente({super.key, required this.icono, required this.titulo, required this.texto, required this.activa, required this.alTocar});
+  const OpcionAsistente({
+    super.key,
+    required this.icono,
+    required this.titulo,
+    required this.texto,
+    required this.activa,
+    required this.alTocar,
+    this.habilitada = true,
+  });
   final IconData icono;
+
+  /// Deshabilitada se ve atenuada, pero el toque sigue llegando para explicar por qué.
+  final bool habilitada;
   final String titulo;
   final String texto;
   final bool activa;
@@ -152,39 +163,43 @@ class OpcionAsistente extends StatelessWidget {
     final p = context.pivot;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: AnimatedContainer(
+      child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: activa ? p.suave : p.tarjeta,
-          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-          border: Border.all(color: activa ? p.marca : p.tarjeta, width: 1.5),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
+        opacity: habilitada ? 1 : 0.45,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: activa ? p.suave : p.tarjeta,
             borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-            onTap: alTocar,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                children: [
-                  Icon(icono, size: 28, color: p.marcaTexto),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          titulo,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(texto, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                      ],
+            border: Border.all(color: activa ? p.marca : p.tarjeta, width: 1.5),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              onTap: alTocar,
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  children: [
+                    Icon(icono, size: 28, color: p.marcaTexto),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titulo,
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(texto, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                        ],
+                      ),
                     ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
-                ],
+                    Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                  ],
+                ),
               ),
             ),
           ),

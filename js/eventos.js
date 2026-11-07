@@ -3045,6 +3045,43 @@ function _evNecesitaEquipo() {
   return !!(E.datos && E.datos.necesitaPatines && E.datos.necesitaPatines.toLowerCase() !== 'no');
 }
 
+// Asistencia anticipada (regla 2026-11-07): solo Quindes o Mirlxs con
+// equipamiento completo propio -- ni patines ni protecciones del club
+// (mismo criterio que `_necesitaEquipoClub()` del backend).
+function _evAntDisponible() {
+  var d = (E && E.datos) || {};
+  var usa = function(v) { var t = String(v == null ? '' : v).trim().toLowerCase(); return t !== '' && t !== 'no'; };
+  var modo = _modoUsuario();
+  return (modo === 'quindes' || modo === 'mirlxs') && !usa(d.necesitaPatines) && !usa(d.necesitaProtecciones);
+}
+
+// "Asistiré" en asistencia anticipada (regla 2026-11-07): solo para fechas
+// pagadas -- mes con cuota (reserva mensual no cancelada de ese mes y año o
+// excepción del admin) o clase reservada. Exentas/Técnico/Lesionadx, libres.
+function _evAntExentoCuota() {
+  var d = (E && E.datos) || {};
+  return !!(d.exenta_cuota || d.estado_miembro === 'Técnico' || d.estado_miembro === 'Lesionadx');
+}
+function _evAntEventoCubierto(ev) {
+  if (_evAntExentoCuota()) return true;
+  var p = (ev.fecha || '').split('-'), mes = parseInt(p[1], 10) - 1, anio = parseInt(p[0], 10);
+  if (_evMesPagado(mes, anio) || _evAntExcepcionCuotaMes(mes, anio)) return true;
+  return (_todasReservas || []).some(function(r) { return r.fecha === ev.id && r.estado !== 'Cancelada'; });
+}
+// Habilitado si hay algo pagado de hoy en adelante (cuota vigente o futura,
+// excepción del mes, o una clase reservada que no pasó).
+function _evAntAsistireHabilitado() {
+  if (_evAntExentoCuota()) return true;
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  if (_evAntExcepcionCuotaMes(hoy.getMonth(), hoy.getFullYear())) return true;
+  var hoyIso = _evToISO(hoy);
+  return (_todasReservas || []).some(function(r) {
+    if (r.estado === 'Cancelada' || r.estado === 'Crédito usado') return false;
+    if (r.tipo === 'mensual') { var vh = _parseFechaSimple(r.validezHasta); return !!vh && hoy <= vh; }
+    return !!r.fechaCalendario && r.fechaCalendario >= hoyIso;
+  });
+}
+
 function _evActualizarTopBarModo() {
   var modo = _modoUsuario();
   var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
@@ -3064,7 +3101,9 @@ function _evActualizarTopBarModo() {
   // el flujo de reserva desde el FAB "+" unificado
   // (_evFabUnificadoActualizar(), más abajo). `necesitaEquipo` (equipo del
   // club) sigue ocultándolo también, sin cambios en ese criterio.
-  if (btnAnticipada) btnAnticipada.style.display = (necesitaEquipo || modo === 'mirlxs') ? 'none' : '';
+    // Regla 2026-11-07 (Victor): la ven Quindes y Mirlxs con equipamiento
+  // completo propio (patines Y protecciones), ver `_evAntDisponible()`.
+  if (btnAnticipada) btnAnticipada.style.display = _evAntDisponible() ? '' : 'none';
   _evFabUnificadoActualizar();
   // Tour guiado de bienvenida (ver "Cambios recientes" -- reemplaza el
   // banner rotativo `#ev-pill-banner`/`_evPillsInit()` de antes). Se
@@ -4560,8 +4599,9 @@ function _evTieneCuotaAlDia() {
   return (_todasReservas || []).some(function(r) {
     if (r.tipo !== 'mensual') return false;
     if (r.estado === 'Cancelada') return false;
-    var vh = _parseFechaSimple(r.validezHasta);
-    return !vh || hoy <= vh;
+        var vh = _parseFechaSimple(r.validezHasta);
+        // Vigente = no venció (fin del mes pagado). Antes, sin vencimiento, contaba para siempre.
+    return !!vh && hoy <= vh;
   });
 }
 
@@ -4621,7 +4661,9 @@ function _evVencimientoCuota() {
     // _evFechaCmp() (más abajo, único comparador de fechas de este archivo)
     // solo entiende ISO -- r.validezHasta viene en "d/m/aaaa" (ver comentario
     // en _evTieneCuotaAlDia()), hay que convertir antes de devolver.
-    if (vh && hoy <= vh) { res = _evToISO(vh); return true; }
+        // El vencimiento más lejano entre las cuotas vigentes (sin cortar en la
+    // primera: un mes pagado por adelantado extiende el rango).
+    if (vh && hoy <= vh) { if (!res || _evToISO(vh) > res) res = _evToISO(vh); return false; }
     if (vh) return false; // validezHasta existe pero ya expiró
     // Sin validezHasta: inferir fin de mes desde el nombre del mes (r.fecha)
     var mesNum = _MESES_MAP[(r.fecha || '').toLowerCase().trim()];
@@ -7501,7 +7543,10 @@ function _evAntReconciliarConReglas(reglas) {
   var tocados = {};
   reglas.forEach(function(r) {
     futuros.forEach(function(ev) {
-      if (eventosConRsvpReal.has(ev.id)) return;
+            if (eventosConRsvpReal.has(ev.id)) return;
+      // "Asistiré" solo en fechas pagadas; la regla queda guardada y se
+      // aplica sola cuando se paga ese mes o esa clase.
+      if (r.estado === 'Asistiré' && !_evAntEventoCubierto(ev)) return;
       if (tipoAplica(r, ev) && matchFecha(r, ev)) { ev.miEstado = r.estado; tocados[ev.id] = true; }
     });
   });
@@ -7833,7 +7878,11 @@ function _evAntIniciarWizard(regla) {
     var opt = estadoSeg.querySelector('.ev-rsvp-opt[data-estado="' + _evAntData.estado + '"]');
     if (opt) opt.classList.add('activa');
   }
-  if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
+    if (estadoSeg) {
+    var optAsis = estadoSeg.querySelector('.ev-rsvp-opt[data-estado="Asistiré"]');
+    if (optAsis) optAsis.classList.toggle('deshabilitado', !_evAntAsistireHabilitado());
+    _evPosicionarRsvpSlider(estadoSeg, false);
+  }
   _evAntRenderMotivos();
   _evAntMostrarMotivo(_evAntData.estado === 'No asistiré', false);
 
@@ -8003,6 +8052,10 @@ function _evAntSelUnica(el) {
 // automáticamente -- el usuario puede volver a tocar este header para
 // reabrirlo y cambiar su elección (_evAntToggleAcordeon()).
 function _evAntSelEstado(el) {
+  if (el.getAttribute('data-estado') === 'Asistiré' && !_evAntAsistireHabilitado()) {
+    mostrarToast('Para marcar Asistiré necesitas tener tu cuota al día o una clase reservada. No asistiré y No jugador siguen disponibles.', 'error');
+    return;
+  }
   var seg = el.parentElement;
   seg.querySelectorAll('.ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
   el.classList.add('activa');

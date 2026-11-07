@@ -23,7 +23,7 @@ void main() {
   });
   test('Mirlxs con el mes pagado sí puede', () {
     final r = _repo({'categoria': 'Mirlxs'}, reservas: [
-      {'tipo': 'mensual', 'estado': 'Confirmada', 'fecha': Fechas.mes(futuro)},
+            {'tipo': 'mensual', 'estado': 'Confirmada', 'fecha': Fechas.mes(futuro), 'validezHasta': '${DateTime(futuro.year, futuro.month + 1, 0).day}/${futuro.month}/${futuro.year}'},
     ]);
     expect(r.motivoSinRespuesta(_ev(futuro)), isNull);
   });
@@ -37,5 +37,23 @@ void main() {
       {'tipo': 'clase', 'estado': 'Confirmada', 'fecha': 'e1'},
     ]);
     expect(r.motivoSinRespuesta(_ev(futuro)), contains('reserva'));
+  });
+  test('Cuota vencida ya no cuenta como al día (bug de la web, 2026-11-07)', () {
+    final c = Cuota(datos: const {}, esAdmin: false, nombre: 'X', excepciones: const [], reservas: [
+      {'tipo': 'mensual', 'estado': 'Confirmada', 'fecha': 'octubre', 'validezHasta': '31/10/2025'},
+    ]);
+    expect(c.alDia, isFalse);
+    expect(c.asistireHabilitado, isFalse);
+    expect(c.mesPagado(10, 2025), isTrue);
+    expect(c.mesPagado(10, 2026), isFalse);
+  });
+  test('Asistiré anticipado solo en fechas pagadas', () {
+    final c = Cuota(datos: const {}, esAdmin: false, nombre: 'X', excepciones: const [], reservas: [
+      {'tipo': 'mensual', 'estado': 'Confirmada', 'fecha': Fechas.mes(futuro), 'validezHasta': '${DateTime(futuro.year, futuro.month + 1, 0).day}/${futuro.month}/${futuro.year}'},
+    ]);
+    expect(c.asistireHabilitado, isTrue);
+    expect(c.cubre(_ev(futuro)), isTrue);
+    expect(c.cubre(_ev(DateTime(futuro.year, futuro.month + 2, 5))), isFalse);
+    expect(Cuota(datos: const {'exenta_cuota': true}, esAdmin: false, nombre: 'X', excepciones: const [], reservas: const []).asistireHabilitado, isTrue);
   });
 }

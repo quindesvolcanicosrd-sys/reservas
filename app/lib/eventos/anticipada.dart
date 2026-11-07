@@ -167,9 +167,14 @@ class Cuota {
 
   String get _categoria => (datos['categoria'] ?? '').toString().toLowerCase();
 
-  // La web lee `validezHasta`, pero el backend devuelve `validez_hasta`: para
-  // la web ese dato nunca existe. Se replica igual para que ambas coincidan.
-  Iterable<Map<String, dynamic>> get _mensuales => reservas.where((r) => r['tipo'] == 'mensual' && r['estado'] != 'Cancelada');
+    Iterable<Map<String, dynamic>> get _mensuales => reservas.where((r) => r['tipo'] == 'mensual' && r['estado'] != 'Cancelada');
+
+  /// Vencimiento de una cuota mensual (`validezHasta`, "d/m/aaaa"): desde
+  /// 2026-11-07 el servidor lo manda siempre = fin del mes pagado.
+  static DateTime? _vence(Map<String, dynamic> r) {
+    final m = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch('${r['validezHasta'] ?? ''}'.trim());
+    return m == null ? null : DateTime(int.parse(m[3]!), int.parse(m[2]!), int.parse(m[1]!));
+  }
 
   int? _mesDe(Map<String, dynamic> r) {
     final i = _meses.indexOf((r['fecha'] ?? r['mes_texto'] ?? '').toString().toLowerCase().trim());
@@ -190,29 +195,60 @@ class Cuota {
   /// Reserva no cancelada para un evento puntual (`r.fecha === e.id` en la web).
   bool tieneReserva(String idEvento) => reservas.any((r) => r['fecha'] == idEvento && r['estado'] != 'Cancelada');
 
-  bool mesPagado(int mes) => _mensuales.any((r) => _mesDe(r) == mes);
+    /// Mes pagado de ese año (`_evMesPagado()` de la web).
+  bool mesPagado(int mes, int anio) => _mensuales.any((r) {
+    if (_mesDe(r) != mes) return false;
+    final v = _vence(r);
+    return v == null || v.year == anio;
+  });
 
+    /// Al día = alguna cuota sin vencer (vence el fin del mes pagado).
   bool get alDia {
     final hoy = Fechas.hoy();
     if (_excepcion(hoy.month, hoy.year) || _especial) return true;
-    return _mensuales.isNotEmpty;
+    return _mensuales.any((r) {
+      final v = _vence(r);
+            return v != null && !hoy.isAfter(v);
+    });
   }
 
+  /// El vencimiento más lejano entre las cuotas vigentes.
   DateTime? get _vencimiento {
     final hoy = Fechas.hoy();
+    DateTime? res;
     for (final r in _mensuales) {
-      final m = _mesDe(r);
-      if (m == null) continue;
-      final fin = DateTime(hoy.year, m + 1, 0);
-      if (!hoy.isAfter(fin)) return fin;
+      final v = _vence(r);
+      if (v != null && !hoy.isAfter(v) && (res == null || v.isAfter(res))) res = v;
     }
-    return null;
+    return res;
+  }
+
+  /// Exenta, Técnico o Lesionadx: sin restricción de pago.
+  bool get exenta => _especial;
+
+  /// "Asistiré" en asistencia anticipada solo para fechas pagadas (regla
+  /// 2026-11-07): mes con cuota de ese año, excepción del admin o clase reservada.
+  bool cubre(Evento ev) => _especial || mesPagado(ev.fecha.month, ev.fecha.year) || _excepcion(ev.fecha.month, ev.fecha.year) || tieneReserva(ev.id);
+
+  /// Hay algo pagado de hoy en adelante (si no, "Asistiré" queda deshabilitado).
+  bool get asistireHabilitado {
+    final hoy = Fechas.hoy();
+    if (_especial || _excepcion(hoy.month, hoy.year)) return true;
+    return reservas.any((r) {
+      if (r['estado'] == 'Cancelada' || r['estado'] == 'Crédito usado') return false;
+      if (r['tipo'] == 'mensual') {
+        final v = _vence(r);
+        return v != null && !hoy.isAfter(v);
+      }
+      final f = DateTime.tryParse('${r['fechaCalendario'] ?? ''}');
+      return f != null && !f.isBefore(hoy);
+    });
   }
 
   /// Con "Asistiré" y cuota mensual: solo meses pagados.
   bool restringe(EstadoRsvp? estado) => estado == EstadoRsvp.asistire && pagaCuotaMensual;
 
-  bool mesPermitido(EstadoRsvp? estado, int mes, int anio) => !restringe(estado) || mesPagado(mes) || _excepcion(mes, anio);
+    bool mesPermitido(EstadoRsvp? estado, int mes, int anio) => !restringe(estado) || mesPagado(mes, anio) || _excepcion(mes, anio);
 
   DateTime? limite(EstadoRsvp? estado) {
     if (!restringe(estado)) return null;
@@ -231,14 +267,17 @@ class AnticipadaRepo {
   Api get _api => sesion.api;
   final _enVuelo = <String>{};
 
-  /// Quién la ve (web: `_evActualizarTopBarModo()`): no Mirlxs y sin
-  /// equipo rentado del club.
+    /// Quién la ve (regla 2026-11-07, web `_evAntDisponible()`): Quindes o
+  /// Mirlxs con equipamiento completo propio (ni patines ni protecciones del club).
   bool get disponible {
     final d = sesion.datos;
     final cat = (d['categoria'] ?? '').toString().toLowerCase();
-    final necesita = (d['necesitaPatines'] ?? '').toString().toLowerCase();
-    final necesitaEquipo = necesita.isNotEmpty && necesita != 'no';
-    return cat.isNotEmpty && cat != 'mirlxs' && !necesitaEquipo;
+    bool usa(Object? v) {
+      final t = (v ?? '').toString().trim().toLowerCase();
+      return t.isNotEmpty && t != 'no';
+    }
+
+    return (cat == 'quindes' || cat == 'mirlxs') && !usa(d['necesitaPatines']) && !usa(d['necesitaProtecciones']);
   }
 
   Future<List<ReglaAnticipada>> reglas() async {
@@ -304,10 +343,13 @@ class AnticipadaRepo {
   /// Aplica las reglas a los eventos futuros sin respuesta real y guarda la
   /// respuesta en el servidor (`_evAntReconciliarConReglas()` de la web).
   /// Devuelve true si cambió algún evento.
-  Future<bool> reconciliar(List<Evento> eventos, {List<ReglaAnticipada>? precargadas}) async {
+    Future<bool> reconciliar(List<Evento> eventos, {List<ReglaAnticipada>? precargadas}) async {
     final List<ReglaAnticipada> lista;
+    Cuota? c;
     try {
       lista = precargadas ?? await reglas();
+      // "Asistiré" solo en fechas pagadas: la regla queda guardada y se aplica sola al pagar.
+      if (lista.any((r) => r.estado == EstadoRsvp.asistire)) c = await cuota();
     } catch (_) {
       return false;
     }
@@ -320,6 +362,7 @@ class AnticipadaRepo {
     for (final ev in eventos) {
       if (ev.fecha.isBefore(hoy) || ev.cancelado || ev.miEstado != null) continue;
       for (final r in lista) {
+                if (r.estado == EstadoRsvp.asistire && c != null && !c.cubre(ev)) continue;
         if (r.aplicaA(ev)) resultado[ev] = r.estado;
       }
     }

@@ -109,7 +109,7 @@ class EventosRepo extends ChangeNotifier {
         !exenta &&
         c != null &&
         ev.fecha.isAfter(Fechas.hoy()) &&
-        !c.mesPagado(ev.fecha.month)) {
+        !c.mesPagado(ev.fecha.month, ev.fecha.year)) {
       return 'Para responder necesitas tener pagado el mes de ${Fechas.mes(ev.fecha)}.';
     }
     if (ev.tipo == 'Entrenamiento' && (d['necesitaPatines'] == 'Sí' || d['necesitaProtecciones'] == 'Sí')) {

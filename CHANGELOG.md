@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Fix: la cuota mensual vence al final de su mes (antes contaba como al día para siempre), en web y app. Asistencia anticipada: la ven Quindes y Mirlxs con equipamiento propio; "Asistiré" solo en fechas pagadas.
+
+
+
 2026-11-07 — App Android: idioma del teléfono en selectores, "+" que gira al cerrar, cambio de grupo sin saltos en el detalle, videos dentro de la app, reglas de "¿Vas a ir?" iguales a la web, mapa y buscador (OpenStreetMap) en "Nuevo lugar", inicio de asistencia anticipada rediseñado y editar evento en 2 pasos.
 
 2026-11-07 — App Android: ícono de Eventos más legible (cuadrado redondeado simple con el día en Nunito Black).

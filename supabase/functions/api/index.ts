@@ -2667,7 +2667,11 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   // Check duplicate (reserva mensual pendiente/confirmada para el mismo mes -- id_evento
   // queda null en reservas mensuales, así que el check de arriba nunca las atrapa)
   if (esMensual) {
-    const { data: dupMensual } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('mes_texto', fecha).neq('estado', 'Cancelada').maybeSingle();
+        // Mismo mes Y mismo año (validez_hasta = fin de ese mes, ver migración
+    // 20261107160000_reservas_vigencia_mensual.sql) -- Octubre 2027 no choca con Octubre 2026.
+    const vigencia = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10));
+    const { data: dupsMes } = await supabase.from('reservas').select('id, validez_hasta').eq('nombre_usuario', nombre).eq('mes_texto', fecha).neq('estado', 'Cancelada');
+    const dupMensual = (dupsMes ?? []).some((r: any) => !r.validez_hasta || r.validez_hasta === vigencia);
     if (dupMensual) return { exito: false, mensaje: 'Ya tienes una reserva pendiente para ese mes. Espera a que sea revisada.' };
   }
 
@@ -2696,6 +2700,26 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   return { exito: true };
 }
 
+// Fin del mes que cubre una reserva mensual (mismo cálculo que
+// public.fn_vigencia_mensual en la BD): mes_texto no trae año, se toma el de
+// la fecha de referencia corrigiendo el cruce de año.
+function _vigenciaMensualISO(mesTexto: string, refISO: string): string | null {
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const n = meses.indexOf((mesTexto ?? '').toLowerCase().trim()) + 1;
+  if (!n) return null;
+  const [y, m] = refISO.split('-').map(Number);
+  const anio = y + (n < m - 6 ? 1 : n > m + 6 ? -1 : 0);
+  const fin = new Date(Date.UTC(anio, n, 0));
+  return fin.toISOString().substring(0, 10);
+}
+
+// "aaaa-mm-dd" -> "d/m/aaaa" (formato que la web y la app leen en `validezHasta`).
+function _fechaDMA(iso: string | null): string | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.substring(0, 10).split('-').map(Number);
+  return `${d}/${m}/${y}`;
+}
+
 async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
   const { nombre } = params;
   const { data: reservas } = await supabase.from('reservas').select('*').eq('nombre_usuario', nombre).order('fecha_pago', { ascending: false });
@@ -2713,7 +2737,10 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
       fechaCalendario: ev?.fecha ?? null,
       fechaEvento: ev?.fecha ?? null,
       donde: ev?.donde ?? null,
-      horaInicio: ev?.inicia?.substring(0, 5) ?? null,
+            horaInicio: ev?.inicia?.substring(0, 5) ?? null,
+      // Antes la web leía `validezHasta` pero solo llegaba `validez_hasta`: toda
+      // cuota mensual contaba como al día para siempre.
+      validezHasta: r.tipo === 'mensual' ? _fechaDMA(r.validez_hasta ?? _vigenciaMensualISO(r.mes_texto, r.fecha_pago ?? new Date().toISOString().substring(0, 10))) : null,
     };
   });
 }

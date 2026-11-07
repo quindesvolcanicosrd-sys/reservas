@@ -351,17 +351,24 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     void elegir(EstadoRsvp e) => _elegirYSeguir(() {
       _estado = e;
       if (e != EstadoRsvp.noAsistire) _motivo = null;
-      _ajustarACuota();
+            _ajustarACuota();
     });
+    final puedeAsistir = _cuota?.asistireHabilitado ?? true;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         OpcionAsistente(
           icono: Icons.check_circle_outline_rounded,
           titulo: 'Asistiré',
-          texto: 'Voy a ir a los entrenamientos',
+                    texto: puedeAsistir ? 'Voy a ir a los entrenamientos' : 'Necesitas tu cuota al día o una clase reservada',
           activa: _estado == EstadoRsvp.asistire,
-          alTocar: () => elegir(EstadoRsvp.asistire),
+          habilitada: puedeAsistir,
+          alTocar: () {
+            if (puedeAsistir) return elegir(EstadoRsvp.asistire);
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(const SnackBar(content: Text('Para marcar Asistiré necesitas tener tu cuota al día o una clase reservada. No asistiré y No jugador siguen disponibles.')));
+          },
         ),
         OpcionAsistente(
           icono: Icons.cancel_outlined,

@@ -1329,6 +1329,8 @@
 }
 .ev-ant-mes-cell.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
 .ev-ant-mes-cell.deshabilitado { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+/* "Asistiré" sin cuota al día (regla 2026-11-07): atenuado; el toque muestra el motivo. */
+#ev-ant-estado-seg .ev-rsvp-opt.deshabilitado { opacity: 0.4; cursor: not-allowed; }
 
 /* Paso "Frecuencia" -> "Por período"/"Indefinido": calendario inline
    (ev-ant-cal-*, ver _evAntCalRender()/js/eventos.js) -- reemplaza el modal
