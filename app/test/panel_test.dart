@@ -10,14 +10,20 @@ void main() {
   testWidgets('panel calendario sin desbordes y desliza meses', (t) async {
     final repo = EventosRepo(Sesion(Api()));
     DateTime? mes;
+    DateTime? elegido;
+    var arrastre = 0.0;
     await t.pumpWidget(MaterialApp(
       theme: construirTema(Brightness.light),
-      home: Scaffold(body: Column(children: [PanelCalendario(repo: repo, mesInicial: DateTime(2026, 11), alCambiarMes: (m) => mes = m, alElegirDia: (_) {}, alCerrar: () {})])),
+      home: Scaffold(body: Column(children: [PanelCalendario(repo: repo, mesInicial: DateTime(2026, 11), alCambiarMes: (m) => mes = m, alElegirDia: (_) {}, alMesElegido: (m) => elegido = m, alArrastrar: (dy) => arrastre += dy, alSoltar: (_) {})])),
     ));
     await t.pump(const Duration(seconds: 1));
     expect(find.text('30'), findsWidgets);
     await t.fling(find.byType(PageView), const Offset(-300, 0), 1000);
     await t.pumpAndSettle();
     expect(mes, DateTime(2026, 12));
+    expect(elegido, DateTime(2026, 12));
+    await t.drag(find.byType(PageView), const Offset(0, -120));
+    await t.pumpAndSettle();
+    expect(arrastre, lessThan(-50));
   });
 }

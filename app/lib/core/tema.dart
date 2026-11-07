@@ -120,6 +120,7 @@ class PivotRadios {
   static const boton = 20.0;
   static const grande = 20.0;
   static const contador = 12.0;
+  static const iconoHoy = 4.0; // ícono de Eventos con la fecha de hoy
 }
 
 ThemeData construirTema(Brightness brillo) {

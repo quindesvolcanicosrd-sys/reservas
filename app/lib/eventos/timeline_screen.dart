@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/fechas.dart';
 import '../core/tema.dart';
@@ -18,9 +19,16 @@ import 'widgets_comunes.dart';
 /// - Botón "+" (admins): nuevo evento.
 /// - Fecha a la izquierda, línea con un punto por evento, marca de "ahora",
 ///   separadores por semana.
+/// Aviso de "ir a hoy" que llega desde la barra inferior (volver a tocar
+/// Eventos estando en Eventos, como el ícono con la fecha de Google Calendar).
+class SenalHoy extends ChangeNotifier {
+  void disparar() => notifyListeners();
+}
+
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key, required this.repo});
+  const TimelineScreen({super.key, required this.repo, this.irAHoy});
   final EventosRepo repo;
+  final SenalHoy? irAHoy;
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -45,7 +53,7 @@ class _Fila {
   final bool vacioHoy;
 }
 
-class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProviderStateMixin {
+class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStateMixin {
   final _scroll = ItemScrollController();
   final _posiciones = ItemPositionsListener.create();
   final _textoBusqueda = TextEditingController();
@@ -61,7 +69,8 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
   DateTime _mesPanel = Fechas.hoy();
   final _panel = GlobalKey<PanelCalendarioState>();
   late final AnimationController _calCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
-  late final Animation<double> _calCurva = CurvedAnimation(parent: _calCtrl, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+  DateTime? _diaSel;
+  static const _altoPanelEstimado = 380.0;
 
   // Ancla del timeline: al llegar datos nuevos (por ejemplo, un mes anterior
   // pedido desde el calendario) se agregan filas ARRIBA y la lista saltaría.
@@ -81,11 +90,54 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
     super.initState();
     repo.cargar();
     _posiciones.itemPositions.addListener(_alDesplazar);
+    widget.irAHoy?.addListener(_irAHoy);
+    _cargarFiltros();
+  }
+
+  // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
+
+  static const _kTexto = 'eventos.busqueda', _kLugar = 'eventos.filtroLugar', _kTipo = 'eventos.filtroTipo';
+
+  Future<void> _cargarFiltros() async {
+    try {
+      final pr = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _consulta = pr.getString(_kTexto) ?? '';
+        _textoBusqueda.text = _consulta;
+        _filtroLugar = pr.getString(_kLugar);
+        _filtroTipo = pr.getString(_kTipo);
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _guardarFiltros() async {
+    try {
+      final pr = await SharedPreferences.getInstance();
+      _consulta.trim().isEmpty ? await pr.remove(_kTexto) : await pr.setString(_kTexto, _consulta);
+      _filtroLugar == null ? await pr.remove(_kLugar) : await pr.setString(_kLugar, _filtroLugar!);
+      _filtroTipo == null ? await pr.remove(_kTipo) : await pr.setString(_kTipo, _filtroTipo!);
+    } catch (_) {}
+  }
+
+  void _cambiarFiltros(VoidCallback cambio) {
+    setState(cambio);
+    _guardarFiltros();
+  }
+
+  void _irAHoy() {
+    final hoy = Fechas.hoy();
+    if (_calAbierto) {
+      setState(() => _diaSel = hoy);
+      _panel.currentState?.irAMes(hoy);
+    }
+    _irA(hoy);
   }
 
   @override
   void dispose() {
     _posiciones.itemPositions.removeListener(_alDesplazar);
+    widget.irAHoy?.removeListener(_irAHoy);
     _calCtrl.dispose();
     _textoBusqueda.dispose();
     _focoBusqueda.dispose();
@@ -98,7 +150,11 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
     pos.sort((a, b) => a.index.compareTo(b.index));
     final i = pos.first.index.clamp(0, _filas.length - 1);
     final d = _filas[i].dia;
-    if (d.month != _mesVisible.month || d.year != _mesVisible.year) setState(() => _mesVisible = d);
+    if (d.month != _mesVisible.month || d.year != _mesVisible.year) {
+      setState(() => _mesVisible = d);
+      // Con el calendario abierto, el mes del panel acompaña al timeline.
+      if (_calAbierto && !_desplazandoProgramado) _panel.currentState?.irAMes(d);
+    }
   }
 
   // ─── Filtros ────────────────────────────────────────────────────────────
@@ -225,30 +281,65 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
       _calMontado = true;
       _mesPanel = _mesVisible;
     });
-    _calCtrl.forward();
+    _calCtrl.animateTo(1, curve: Curves.easeOutCubic);
   }
 
   void _cerrarCalendario() {
-    if (!_calAbierto) return;
+    if (!_calMontado) return;
     setState(() => _calAbierto = false);
-    _calCtrl.reverse().whenComplete(() {
+    _calCtrl.animateBack(0, curve: Curves.easeOutCubic).whenComplete(() {
       if (mounted && !_calAbierto) setState(() => _calMontado = false);
     });
   }
 
-  Future<void> _elegirDia(DateTime dia) async {
-    _cerrarCalendario();
-    if (_hayFiltros || _buscando) {
+  double get _altoPanel {
+    final h = _panel.currentContext?.size?.height;
+    return (h == null || h < 100) ? _altoPanelEstimado : h;
+  }
+
+  /// Arrastre vertical (sobre el panel o sobre el nombre del mes): el
+  /// calendario sigue al dedo, como en Google Calendar.
+  void _arrastrar(double dy) {
+    if (_buscando) return;
+    if (!_calMontado) {
+      if (dy <= 0) return;
       setState(() {
-        _buscando = false;
-        _limpiarFiltros();
+        _calMontado = true;
+        _mesPanel = _mesVisible;
       });
     }
-    // Normalmente el mes ya está precargado: el desplazamiento arranca junto
-    // con el cierre del panel, sin esperas.
+    _calCtrl.value = (_calCtrl.value + dy / _altoPanel).clamp(0.0, 1.0);
+    final abierto = _calCtrl.value > 0.5;
+    if (abierto != _calAbierto) setState(() => _calAbierto = abierto);
+  }
+
+  void _soltar(double velocidad) {
+    if (!_calMontado) return;
+    final abrir = velocidad.abs() > 300 ? velocidad > 0 : _calCtrl.value > 0.5;
+    if (abrir) {
+      setState(() => _calAbierto = true);
+      _calCtrl.animateTo(1, curve: Curves.easeOutCubic);
+    } else {
+      _cerrarCalendario();
+    }
+  }
+
+  /// Tocar un día: el panel queda abierto y el timeline va a esa fecha.
+  Future<void> _elegirDia(DateTime dia) async {
+    setState(() => _diaSel = dia);
     await repo.asegurarMes(dia);
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) => _irA(dia));
+  }
+
+  /// Deslizar a otro mes en el panel lleva el timeline a ese mes (a hoy si
+  /// es el mes actual, si no al día 1).
+  Future<void> _mesElegido(DateTime mes) async {
+    final hoy = Fechas.hoy();
+    final destino = (mes.year == hoy.year && mes.month == hoy.month) ? hoy : DateTime(mes.year, mes.month, 1);
+    await repo.asegurarMes(destino);
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _irA(destino));
   }
 
   /// Identidad estable de una fila entre cargas.
@@ -287,7 +378,7 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
         final firma = Object.hash(identityHashCode(repo.eventos), identityHashCode(repo.cumples));
         if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
         _firmaDatos = firma;
-        if (!_saltoInicialHecho && repo.eventos.isNotEmpty && !_hayFiltros) {
+        if (!_saltoInicialHecho && repo.eventos.isNotEmpty) {
           _saltoInicialHecho = true;
           WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
         }
@@ -311,19 +402,24 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
                 // la misma curva) y sigue montado hasta terminar de cerrarse.
                 if (_calMontado)
                   SizeTransition(
-                    sizeFactor: _calCurva,
+                    sizeFactor: _calCtrl,
                     alignment: Alignment.topCenter,
                     child: FadeTransition(
-                      opacity: _calCurva,
+                      opacity: CurvedAnimation(parent: _calCtrl, curve: const Interval(0, 0.6)),
                       child: DecoratedBox(
-                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: context.pivot.tarjetaBorde))),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: context.pivot.tarjetaBorde)),
+                        ),
                         child: PanelCalendario(
                           key: _panel,
                           repo: repo,
                           mesInicial: _mesPanel,
                           alCambiarMes: (m) => setState(() => _mesPanel = m),
                           alElegirDia: _elegirDia,
-                          alCerrar: _cerrarCalendario,
+                          alMesElegido: _mesElegido,
+                          alArrastrar: _arrastrar,
+                          alSoltar: _soltar,
+                          diaSeleccionado: _diaSel,
                         ),
                       ),
                     ),
@@ -346,129 +442,232 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
       padding: const EdgeInsets.fromLTRB(12, 8, 8, 4),
       child: Row(
         children: [
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: p.texto, padding: const EdgeInsets.symmetric(horizontal: 12)),
-            onPressed: _alternarCalendario,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (c, a) => FadeTransition(
-                    opacity: a,
-                    child: SlideTransition(position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a), child: c),
+          GestureDetector(
+            onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
+            onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
+            child: TextButton(
+              style: TextButton.styleFrom(foregroundColor: p.texto, padding: const EdgeInsets.symmetric(horizontal: 12)),
+              onPressed: _alternarCalendario,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (c, a) => FadeTransition(
+                      opacity: a,
+                      child: SlideTransition(
+                        position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
+                        child: c,
+                      ),
+                    ),
+                    layoutBuilder: (actual, previos) => Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]),
+                    child: Text(
+                      mesTitulo.year == Fechas.hoy().year ? Fechas.mesNombre(mesTitulo) : Fechas.mesAnio(mesTitulo),
+                      key: ValueKey('${mesTitulo.year}-${mesTitulo.month}'),
+                      style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  layoutBuilder: (actual, previos) => Stack(alignment: Alignment.centerLeft, children: [...previos, ?actual]),
-                  child: Text(
-                    mesTitulo.year == Fechas.hoy().year ? Fechas.mesNombre(mesTitulo) : Fechas.mesAnio(mesTitulo),
-                    key: ValueKey('${mesTitulo.year}-${mesTitulo.month}'),
-                    style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                  const SizedBox(width: 4),
+                  AnimatedRotation(
+                    turns: _calAbierto ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded),
                   ),
-                ),
-                const SizedBox(width: 4),
-                AnimatedRotation(
-                  turns: _calAbierto ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeOutCubic,
-                  child: const Icon(Icons.keyboard_arrow_down_rounded),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Buscar',
-            icon: const Icon(Icons.search_rounded),
+            tooltip: _hayFiltros ? 'Buscar (hay filtros activos)' : 'Buscar',
+            // Punto rojo: quedó una búsqueda o un filtro activo.
+            icon: Badge(isLabelVisible: _hayFiltros, smallSize: 9, backgroundColor: p.marca, child: const Icon(Icons.search_rounded)),
             onPressed: () {
               _cerrarCalendario();
               setState(() => _buscando = true);
               WidgetsBinding.instance.addPostFrameCallback((_) => _focoBusqueda.requestFocus());
             },
           ),
-          IconButton(
-            tooltip: 'Ir a hoy',
-            icon: const Icon(Icons.today_outlined),
-            onPressed: () {
-              if (_calAbierto) _panel.currentState?.irAMes(Fechas.hoy());
-              _irA(Fechas.hoy());
-            },
-          ),
-          if (repo.anticipada.disponible)
-            IconButton(
-              tooltip: 'Asistencia anticipada',
-              icon: const Icon(Icons.event_repeat_outlined),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AnticipadaScreen(repo: repo))),
+          if (repo.anticipada.disponible) ...[
+            const SizedBox(width: 4),
+            _BotonAnticipada(
+              alTocar: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AnticipadaScreen(repo: repo))),
             ),
+          ],
+          const SizedBox(width: 4),
         ],
       ),
     );
   }
 
+  int get _cantidadFiltros => (_filtroLugar != null ? 1 : 0) + (_filtroTipo != null ? 1 : 0);
+
+  void _cerrarBusqueda() {
+    FocusScope.of(context).unfocus();
+    setState(() => _buscando = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
+  }
+
+  /// ← cierra (la búsqueda y los filtros quedan guardados), el campo al
+  /// centro con × para borrar el texto, y el botón de filtros a la derecha.
   Widget _barraBusqueda(BuildContext context) {
-    final lugares = _opcionesLugar();
-    final tipos = _opcionesTipo();
+    final p = context.pivot;
     return Padding(
       key: const ValueKey('busqueda'),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.fromLTRB(4, 8, 8, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            controller: _textoBusqueda,
-            focusNode: _focoBusqueda,
-            textInputAction: TextInputAction.search,
-            onChanged: (v) => setState(() => _consulta = v),
-            decoration: InputDecoration(
-              hintText: 'Busca por lugar, tipo, mes o persona',
-              prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: IconButton(
-                tooltip: 'Cerrar búsqueda',
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  setState(() {
-                    _buscando = false;
-                    _limpiarFiltros();
-                  });
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
-                },
+          Row(
+            children: [
+              IconButton(tooltip: 'Cerrar búsqueda', icon: const Icon(Icons.arrow_back_rounded), onPressed: _cerrarBusqueda),
+              Expanded(
+                child: TextField(
+                  controller: _textoBusqueda,
+                  focusNode: _focoBusqueda,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (v) => _cambiarFiltros(() => _consulta = v),
+                  decoration: InputDecoration(
+                    hintText: 'Busca por lugar, tipo, mes o persona',
+                    isDense: true,
+                    suffixIcon: _consulta.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Borrar texto',
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () => _cambiarFiltros(() {
+                              _consulta = '';
+                              _textoBusqueda.clear();
+                            }),
+                          ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Filtros',
+                onPressed: _abrirFiltros,
+                icon: Badge(
+                  isLabelVisible: _cantidadFiltros > 0,
+                  backgroundColor: p.marca,
+                  label: Text('$_cantidadFiltros'),
+                  child: const Icon(Icons.tune_rounded),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _chipFiltro(context, etiqueta: 'Lugar', valor: _filtroLugar, opciones: lugares, alElegir: (v) => setState(() => _filtroLugar = v)),
-                const SizedBox(width: 8),
-                _chipFiltro(context, etiqueta: 'Tipo', valor: _filtroTipo, opciones: tipos, alElegir: (v) => setState(() => _filtroTipo = v)),
-              ],
-            ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _cantidadFiltros == 0
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 6, 0, 0),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        if (_filtroLugar != null)
+                          InputChip(
+                            avatar: const Icon(Icons.place_outlined, size: 18),
+                            label: Text(_filtroLugar!),
+                            onDeleted: () => _cambiarFiltros(() => _filtroLugar = null),
+                          ),
+                        if (_filtroTipo != null)
+                          InputChip(
+                            avatar: const Icon(Icons.category_outlined, size: 18),
+                            label: Text(_filtroTipo!),
+                            onDeleted: () => _cambiarFiltros(() => _filtroTipo = null),
+                          ),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _chipFiltro(
-    BuildContext context, {
-    required String etiqueta,
-    required String? valor,
-    required List<String> opciones,
-    required ValueChanged<String?> alElegir,
-  }) {
-    return PopupMenuButton<String>(
-      tooltip: etiqueta,
-      onSelected: (v) => alElegir(v == '__todos' ? null : v),
-      itemBuilder: (_) => [
-        PopupMenuItem(value: '__todos', child: Text('Todos los ${etiqueta == 'Lugar' ? 'lugares' : 'tipos'}')),
-        for (final o in opciones) PopupMenuItem(value: o, child: Text(o)),
-      ],
-      child: Chip(
-        avatar: Icon(etiqueta == 'Lugar' ? Icons.place_outlined : Icons.category_outlined, size: 18),
-        label: Row(mainAxisSize: MainAxisSize.min, children: [Text(valor ?? etiqueta), const Icon(Icons.arrow_drop_down_rounded, size: 20)]),
-        backgroundColor: valor != null ? context.pivot.suave : null,
+  /// Hoja de filtros: opciones que existen en lo que ya coincide con el
+  /// texto buscado (y con el otro filtro), igual que la web. Se aplican al
+  /// instante.
+  Future<void> _abrirFiltros() async {
+    FocusScope.of(context).unfocus();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (hoja) => StatefulBuilder(
+        builder: (hoja, refrescar) {
+          final p = hoja.pivot;
+          void elegir(VoidCallback cambio) {
+            _cambiarFiltros(cambio);
+            refrescar(() {});
+          }
+
+          Widget grupo(String titulo, IconData icono, String? valor, List<String> opciones, void Function(String?) alElegir) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icono, size: 20, color: p.textoSecundario),
+                    const SizedBox(width: 8),
+                    Text(
+                      titulo,
+                      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(label: const Text('Todos'), selected: valor == null, onSelected: (_) => elegir(() => alElegir(null))),
+                    for (final o in opciones)
+                      ChoiceChip(label: Text(o), selected: valor == o, onSelected: (_) => elegir(() => alElegir(valor == o ? null : o))),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Filtros', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 16),
+                  grupo('Lugar', Icons.place_outlined, _filtroLugar, _opcionesLugar(), (v) => _filtroLugar = v),
+                  const SizedBox(height: 20),
+                  grupo('Tipo', Icons.category_outlined, _filtroTipo, _opcionesTipo(), (v) => _filtroTipo = v),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: _cantidadFiltros == 0
+                            ? null
+                            : () => elegir(() {
+                                _filtroLugar = null;
+                                _filtroTipo = null;
+                              }),
+                        child: const Text('Limpiar filtros'),
+                      ),
+                      const Spacer(),
+                      FilledButton(onPressed: () => Navigator.of(hoja).pop(), child: const Text('Listo')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -495,10 +694,17 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
-          child: Text(
-            'No hay eventos que coincidan con la búsqueda.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: p.textoSecundario),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'No hay eventos que coincidan con la búsqueda.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: p.textoSecundario),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(onPressed: () => _cambiarFiltros(_limpiarFiltros), child: const Text('Quitar búsqueda y filtros')),
+            ],
           ),
         ),
       );
@@ -577,7 +783,7 @@ class _TimelineScreenState extends State<TimelineScreen> with SingleTickerProvid
     if (r == null || !mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Evento creado. Se avisó al equipo.')));
     if (r is DateTime) {
-      setState(_limpiarFiltros);
+      _cambiarFiltros(_limpiarFiltros);
       WidgetsBinding.instance.addPostFrameCallback((_) => _irA(r));
     }
   }
@@ -789,6 +995,85 @@ class _TarjetaCumple extends StatelessWidget {
                 Text(textoCumple(cumple, Fechas.hoy()), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Botón de asistencia anticipada: lleno con el color de marca para que
+/// resalte e invite a tocarlo, con un halo que late suave hasta que la
+/// persona lo abre por primera vez (se recuerda en el teléfono).
+class _BotonAnticipada extends StatefulWidget {
+  const _BotonAnticipada({required this.alTocar});
+  final VoidCallback alTocar;
+
+  @override
+  State<_BotonAnticipada> createState() => _BotonAnticipadaState();
+}
+
+class _BotonAnticipadaState extends State<_BotonAnticipada> with SingleTickerProviderStateMixin {
+  static const _kVisto = 'eventos.anticipadaVista';
+  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+  bool _visto = true;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance()
+        .then((pr) {
+          if (!mounted || (pr.getBool(_kVisto) ?? false)) return;
+          setState(() => _visto = false);
+          _latido.repeat();
+        })
+        .catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _latido.dispose();
+    super.dispose();
+  }
+
+  void _tocar() {
+    if (!_visto) {
+      setState(() => _visto = true);
+      _latido.stop();
+      SharedPreferences.getInstance().then((pr) => pr.setBool(_kVisto, true)).catchError((_) => false);
+    }
+    widget.alTocar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (!_visto)
+            AnimatedBuilder(
+              animation: _latido,
+              builder: (context, _) {
+                final v = Curves.easeOut.transform(_latido.value);
+                return Container(
+                  width: 40 + 14 * v,
+                  height: 40 + 14 * v,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: p.marca.withValues(alpha: 0.35 * (1 - v)),
+                  ),
+                );
+              },
+            ),
+          IconButton.filled(
+            tooltip: 'Asistencia anticipada',
+            style: IconButton.styleFrom(backgroundColor: p.marca, foregroundColor: p.sobreMarca),
+            icon: const Icon(Icons.event_repeat_rounded),
+            onPressed: _tocar,
           ),
         ],
       ),

@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-06 — App Android: calendario como Google Calendar (sigue abierto al tocar un día, el timeline acompaña al mes y viceversa, se abre/cierra siguiendo el dedo), cumpleaños con insignia, ícono de Eventos con la fecha de hoy (tocarlo de nuevo lleva a hoy), botón destacado de asistencia anticipada, buscador con hoja de filtros y búsqueda/filtros guardados con indicador en la lupa.
+
 2026-11-06 — App Android: calendario más fluido (meses que siguen al dedo con altura fija, abrir/cerrar en una sola animación, precarga de meses vecinos y el timeline ya no salta al llegar datos).
 
 2026-11-06 — App Android: calendario desplegable desde la barra (como Google Calendar), botón "+" para crear eventos (admins), asistencia anticipada completa (crear, editar, eliminar y aplicación automática al cargar) y fecha + tipo fijos en la barra del detalle. Ver MANIFEST.md, "Eventos — ronda 2".
