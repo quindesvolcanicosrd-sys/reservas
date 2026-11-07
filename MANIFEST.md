@@ -29,6 +29,7 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 
 ## Pendientes app Android (anotados 2026-11-07)
 - **Confirmación automática de DeUna (descartada por ahora, Victor 2026-11-07):** se deja el enlace actual. Si algún día se retoma, necesita DeUna Empresas (API de solicitudes de pago + webhook de pago exitoso). Requisitos: cuenta en Banco Pichincha, RUC activo, cédula del representante legal y formulario firmado. El enlace actual (`Pagos.deuna`) es personal, sin monto ni aviso. Con las credenciales: generar el cobro con monto desde el servidor, recibir el webhook en la Edge Function y pasar la reserva a 'Confirmada'; las transferencias siguen con revisión manual.
+- **Para la próxima compilación grande (Victor, 2026-11-07):** quitar los íconos de los encabezados de sección del acordeón de Equipo (grupo, birrete, luna): `_iconos` y el `Icon` en `_seccion()` de `app/lib/equipo/equipo_screen.dart`.
 - **Equipo (siguiente etapa):** en el detalle de un evento, tocar el avatar de una persona debe abrir su vista detallada en Equipo.
 - Revisar si el buscador de "Nuevo lugar" de la WEB funciona: la llave de Google Maps del proyecto responde "permiso denegado" porque la facturación de Google Cloud está pausada (prepago de 30 USD pendiente). Existe una llave Android (`com.pivotapp.coach` + SHA-1) sin usar.
 
