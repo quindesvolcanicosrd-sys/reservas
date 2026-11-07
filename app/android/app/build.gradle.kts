@@ -52,6 +52,16 @@ android {
         }
     }
 
+    // Dos variantes (2026-11-06): "directa" = APK que se instala desde GitHub
+    // y se actualiza solo (actualizador propio, necesita el permiso de
+    // instalar paquetes); "play" = paquete para Google Play, SIN ese permiso
+    // (Play no lo permite) y con la actualización obligatoria oficial de Play.
+    flavorDimensions += "distribucion"
+    productFlavors {
+        create("directa") { dimension = "distribucion" }
+        create("play") { dimension = "distribucion" }
+    }
+
     buildTypes {
         release {
             signingConfig = if (conFirma) signingConfigs.getByName("subida") else signingConfigs.getByName("debug")

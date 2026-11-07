@@ -60,11 +60,14 @@ jobs:
           FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
         run: |
           VERSION_CODE=$((GITHUB_RUN_NUMBER + 1))
-          flutter build appbundle --release --build-number=$VERSION_CODE --build-name=1.0.$VERSION_CODE
-          flutter build apk --release --build-number=$VERSION_CODE --build-name=1.0.$VERSION_CODE
-          cp build/app/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/pivot.aab"
-          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/pivot.apk"
+          # "play" = paquete para Google Play; "directa" = APK que se instala
+          # desde GitHub y se actualiza solo (ver app/lib/core/actualizacion.dart).
+          flutter build appbundle --release --flavor play --build-number=$VERSION_CODE --build-name=1.0.$VERSION_CODE
+          flutter build apk --release --flavor directa --build-number=$VERSION_CODE --build-name=1.0.$VERSION_CODE
+          cp build/app/outputs/bundle/playRelease/app-play-release.aab "$RUNNER_TEMP/pivot.aab"
+          cp build/app/outputs/flutter-apk/app-directa-release.apk "$RUNNER_TEMP/pivot.apk"
           echo "VERSION_NAME=1.0.$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
       - name: Guardar los archivos
         uses: actions/upload-artifact@v4
@@ -81,5 +84,11 @@ jobs:
           MENSAJE: ${{ github.event.head_commit.message }}
         run: |
           gh release view app-android >/dev/null 2>&1 || gh release create app-android --title "App Android" --notes "Última compilación de la app Android de Pivot." --prerelease
+          # version.json: la app lo lee para exigir la actualización (variante "directa").
+          NOVEDADES=$(printf '%s' "$MENSAJE" | head -n 1)
+          jq -n --argjson codigo "$VERSION_CODE" --arg nombre "$VERSION_NAME" --arg novedades "$NOVEDADES" \
+            '{versionCode: $codigo, versionName: $nombre, novedades: $novedades}' > "$RUNNER_TEMP/version.json"
+          # Primero el APK y después version.json: así nadie ve la versión nueva antes de que el APK esté disponible.
           gh release upload app-android "$RUNNER_TEMP/pivot.apk" "$RUNNER_TEMP/pivot.aab" --clobber
+          gh release upload app-android "$RUNNER_TEMP/version.json" --clobber
           gh release edit app-android --notes "Versión $VERSION_NAME — $(printf '%s' "$MENSAJE" | head -n 1)"

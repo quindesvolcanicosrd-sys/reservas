@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'core/actualizacion.dart';
 import 'core/api.dart';
 import 'core/tema.dart';
 import 'eventos/detalle_screen.dart';
@@ -37,6 +38,8 @@ class PivotApp extends StatelessWidget {
       theme: construirTema(Brightness.light),
       darkTheme: construirTema(Brightness.dark),
       themeMode: ThemeMode.system,
+      // Actualización obligatoria: tapa toda la app si hay versión nueva.
+      builder: (context, child) => ControlActualizacion(child: child ?? const SizedBox.shrink()),
       home: _Raiz(sesion: sesion),
     );
   }

@@ -454,6 +454,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## General
 
+2026-11-06 — App Android: actualización obligatoria (APK directo: pantalla que descarga e instala la versión nueva; Google Play: actualización inmediata oficial) y variantes de compilación `directa`/`play`.
+
 2026-11-06 — App Android: Eventos pulido (calendario desplegable del mes, buscador con filtros, botón Hoy, avatares en las tarjetas, detalle compacto con video instructivo y contadores que filtran, Sin respuesta para admins, FAB de admin con editar/cancelar/eliminar), modo oscuro automático y logo de Pivot como ícono.
 
 2026-11-06 — Feature: base de la app Android nativa en `app/` (Flutter): login con Google o PIN, Eventos (timeline, detalle, asistencia, cancelar para admins) y notificaciones nativas; compilación firmada en GitHub Actions.
