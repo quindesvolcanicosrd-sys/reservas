@@ -26,6 +26,8 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     required this.apagadoEtiqueta,
     required this.sobreMarca,
     required this.velo,
+    required this.fondoVideo,
+    required this.textoSobreVideo,
     required this.avatares,
   });
 
@@ -48,6 +50,8 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
   final Color apagadoEtiqueta;
   final Color sobreMarca; // texto/íconos sobre el rojo de marca
   final Color velo; // sombras/velos
+  final Color fondoVideo; // reproductor de video (negro en ambos temas)
+  final Color textoSobreVideo;
   final List<Color> avatares;
 
   static const _avatares = [Color(0xFFE8000D), Color(0xFF775652), Color(0xFF3B6470), Color(0xFF6B5778), Color(0xFF5D6230), Color(0xFF8A4F2A)];
@@ -75,6 +79,8 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     apagadoEtiqueta: Color(0xFFE9DEDC),
     sobreMarca: Color(0xFFFFFFFF),
     velo: Color(0x2E231918),
+    fondoVideo: Color(0xFF000000),
+    textoSobreVideo: Color(0xFFFFFFFF),
     avatares: _avatares,
   );
 
@@ -100,6 +106,8 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
     apagadoEtiqueta: Color(0xFF2A2625),
     sobreMarca: Color(0xFFFFFFFF),
     velo: Color(0x66000000),
+    fondoVideo: Color(0xFF000000),
+    textoSobreVideo: Color(0xFFFFFFFF),
     avatares: _avatares,
   );
 

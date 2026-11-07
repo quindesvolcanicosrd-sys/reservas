@@ -89,6 +89,21 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
     }
   }
 
+  VigenciaRegla _vigencia(ReglaAnticipada r) {
+    final hoy = Fechas.hoy();
+    switch (r.tipo) {
+      case TipoRango.periodo:
+        if (r.hasta != null && r.hasta!.isBefore(hoy)) return VigenciaRegla.termino;
+        if (r.desde != null && r.desde!.isAfter(hoy)) return VigenciaRegla.proxima;
+        return VigenciaRegla.activa;
+      case TipoRango.indefinido:
+        return r.desde != null && r.desde!.isAfter(hoy) ? VigenciaRegla.proxima : VigenciaRegla.activa;
+      case TipoRango.meses:
+        if (r.meses.contains(hoy.month)) return VigenciaRegla.activa;
+        return r.meses.any((m) => m > hoy.month) ? VigenciaRegla.proxima : VigenciaRegla.termino;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
@@ -131,37 +146,21 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
         ),
       );
     } else {
+      // Activas primero, después las próximas y al final las que terminaron.
+      final orden = [..._reglas!]..sort((x, y) => _vigencia(x).index.compareTo(_vigencia(y).index));
       cuerpo = ListView(
         key: const ValueKey('lista'),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
         children: [
-          for (final r in _reglas!)
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-              decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
-              child: Row(
-                children: [
-                  Icon(MotivoAusencia.de(r.motivo)?.icono ?? Icons.event_available_outlined, color: p.marcaTexto),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          r.resumenRango,
-                          style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(r.resumenEstado, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                      ],
-                    ),
-                  ),
-                  IconButton(tooltip: 'Editar', icon: const Icon(Icons.edit_outlined), onPressed: _ocupado ? null : () => _abrirAsistente(r)),
-                  IconButton(tooltip: 'Eliminar', icon: const Icon(Icons.delete_outline_rounded), onPressed: _ocupado ? null : () => _eliminar(r)),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+            child: Text(
+              'Se aplican solas a tus entrenamientos; nunca cambian una respuesta que marcaste a mano.',
+              style: TextStyle(fontSize: 13, height: 1.4, color: p.textoSecundario),
             ),
+          ),
+          for (final r in orden)
+            TarjetaRegla(regla: r, vigencia: _vigencia(r), ocupado: _ocupado, alEditar: () => _abrirAsistente(r), alEliminar: () => _eliminar(r)),
         ],
       );
     }
@@ -489,6 +488,139 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
           ),
         ),
       ],
+    );
+  }
+}
+
+enum VigenciaRegla { activa, proxima, termino }
+
+/// Una regla: el estado grande y con color, el período en lenguaje simple y
+/// si está activa. Editar/eliminar van en el menú ⋮ (tocar la tarjeta edita).
+class TarjetaRegla extends StatelessWidget {
+  const TarjetaRegla({super.key, required this.regla, required this.vigencia, required this.ocupado, required this.alEditar, required this.alEliminar});
+  final ReglaAnticipada regla;
+  final VigenciaRegla vigencia;
+  final bool ocupado;
+  final VoidCallback alEditar;
+  final VoidCallback alEliminar;
+
+  String get _periodo {
+    final r = regla;
+    switch (r.tipo) {
+      case TipoRango.meses:
+                // En orden desde el mes actual (diciembre antes que enero).
+        final actual = Fechas.hoy().month;
+        final orden = [...r.meses]..sort((a, b) => ((a - actual) % 12).compareTo((b - actual) % 12));
+        final ms = [for (final (i, m) in orden.indexed) i == 0 ? Fechas.mesNombre(DateTime(2000, m)) : Fechas.mes(DateTime(2000, m))];
+        return ms.length == 1 ? ms.first : '${ms.sublist(0, ms.length - 1).join(', ')} y ${ms.last}';
+      case TipoRango.periodo:
+        return 'Del ${Fechas.corta(r.desde!)} al ${Fechas.corta(r.hasta!)}';
+      case TipoRango.indefinido:
+        return 'Desde el ${Fechas.corta(r.desde!)} · sin fecha de fin';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final terminada = vigencia == VigenciaRegla.termino;
+    final (IconData icono, Color fondo, Color frente) = switch (regla.estado) {
+      EstadoRsvp.asistire => (Icons.check_circle_rounded, p.suave, p.sobreSuave),
+      EstadoRsvp.noAsistire => (MotivoAusencia.de(regla.motivo)?.icono ?? Icons.cancel_rounded, p.apagadoFondo, p.texto),
+      EstadoRsvp.noJugador => (Icons.radio_button_checked_rounded, p.apagadoFondo, p.texto),
+    };
+    final (String textoVig, Color colorVig) = switch (vigencia) {
+      VigenciaRegla.activa => ('Activa', p.marcaTexto),
+      VigenciaRegla.proxima => ('Próxima', p.textoSecundario),
+      VigenciaRegla.termino => ('Terminó', p.apagado),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Opacity(
+        opacity: terminada ? 0.6 : 1,
+        child: Material(
+          color: p.tarjeta,
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            onTap: ocupado ? null : alEditar,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 4, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(PivotRadios.chip)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icono, size: 20, color: frente),
+                            const SizedBox(width: 8),
+                            Text(
+                              regla.estado.valor,
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: frente),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (regla.estado == EstadoRsvp.noAsistire && regla.motivo != null) ...[
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            regla.motivo!,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.textoSecundario),
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      PopupMenuButton<String>(
+                        tooltip: 'Opciones',
+                        enabled: !ocupado,
+                        icon: Icon(Icons.more_vert_rounded, color: p.textoSecundario),
+                        onSelected: (v) => v == 'editar' ? alEditar() : alEliminar(),
+                        itemBuilder: (c) => const [
+                          PopupMenuItem(
+                            value: 'editar',
+                            child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar'), contentPadding: EdgeInsets.zero),
+                          ),
+                          PopupMenuItem(
+                            value: 'eliminar',
+                            child: ListTile(leading: Icon(Icons.delete_outline_rounded), title: Text('Eliminar'), contentPadding: EdgeInsets.zero),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _periodo,
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: p.texto),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: colorVig, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$textoVig · ${regla.tiposEvento.isEmpty ? 'Todos los eventos' : regla.tiposEvento.join(', ')}',
+                        style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

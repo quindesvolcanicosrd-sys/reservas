@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/actualizacion.dart';
 import 'core/api.dart';
@@ -37,7 +38,17 @@ class PivotApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: construirTema(Brightness.light),
       darkTheme: construirTema(Brightness.dark),
-      themeMode: ThemeMode.system,
+            themeMode: ThemeMode.system,
+      // Textos del sistema (selectores de fecha y hora, menús) en el idioma
+      // del teléfono; si no está entre los soportados, español.
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('es'), Locale('es', 'EC'), Locale('en'), Locale('pt')],
+      localeResolutionCallback: (locale, soportados) {
+        for (final s in soportados) {
+          if (locale != null && s.languageCode == locale.languageCode) return s;
+        }
+        return const Locale('es');
+      },
       // Actualización obligatoria: tapa toda la app si hay versión nueva.
       builder: (context, child) => ControlActualizacion(child: child ?? const SizedBox.shrink()),
       home: _Raiz(sesion: sesion),

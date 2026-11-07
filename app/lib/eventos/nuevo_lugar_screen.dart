@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+import 'package:latlong2/latlong.dart';
 
 import '../core/asistente.dart';
-import '../core/tema.dart';
+import '../core/selector_ubicacion.dart';
 import 'eventos_repo.dart';
 
 enum _Paso { ubicacion, tipo, video }
@@ -11,9 +11,9 @@ enum _Paso { ubicacion, tipo, video }
 /// "Agregar lugar" (solo admins), con el mismo marco que el resto de los
 /// asistentes. Mismos datos que el formulario de la web (`_evLugarGuardar()`):
 /// nombre (20 caracteres), enlace de Google Maps, tipo de evento y video
-/// instructivo opcional. La web busca con Google Places dentro del mapa; esa
-/// llave solo sirve en el sitio web, así que acá se abre Google Maps para
-/// buscar el lugar y se pega el enlace ("Compartir" → "Copiar enlace").
+/// instructivo opcional. La ubicación se elige dentro de la app con buscador y
+/// mapa (OpenStreetMap, `SelectorUbicacion`) y se guarda como enlace de
+/// Google Maps armado con las coordenadas del pin.
 class NuevoLugarScreen extends StatefulWidget {
   const NuevoLugarScreen({super.key, required this.repo});
   final EventosRepo repo;
@@ -26,26 +26,23 @@ class _NuevoLugarScreenState extends State<NuevoLugarScreen> {
   _Paso _paso = _Paso.ubicacion;
   bool _adelante = true;
   final _nombre = TextEditingController();
-  final _mapa = TextEditingController();
+  LatLng? _pin;
   final _video = TextEditingController();
   String? _tipo;
   bool _guardando = false;
 
   static const _tipos = ['Entrenamiento', 'Torneo', 'Partido', 'Asamblea', 'Evento social', 'Otro'];
-  static final _enlaceMaps = RegExp(r'^https?://(maps\.app\.goo\.gl|goo\.gl/maps|(www\.)?google\.[a-z.]+/maps|maps\.google\.[a-z.]+)', caseSensitive: false);
 
   @override
   void dispose() {
     _nombre.dispose();
-    _mapa.dispose();
+
     _video.dispose();
     super.dispose();
   }
 
-  bool get _enlaceValido => _enlaceMaps.hasMatch(_mapa.text.trim());
-
   bool get _valido => switch (_paso) {
-    _Paso.ubicacion => _nombre.text.trim().isNotEmpty && _enlaceValido,
+    _Paso.ubicacion => _nombre.text.trim().isNotEmpty && _pin != null,
     _Paso.tipo => _tipo != null,
     _Paso.video => _video.text.trim().isEmpty || Uri.tryParse(_video.text.trim())?.hasScheme == true,
   };
@@ -64,23 +61,10 @@ class _NuevoLugarScreenState extends State<NuevoLugarScreen> {
     });
   }
 
-  Future<void> _buscarEnMaps() async {
-    final q = _nombre.text.trim().isEmpty ? 'Quito' : '${_nombre.text.trim()} Quito';
-    await launchUrl(Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(q)}'), mode: LaunchMode.externalApplication);
-  }
-
-  Future<void> _pegar() async {
-    final datos = await Clipboard.getData(Clipboard.kTextPlain);
-    final texto = (datos?.text ?? '').trim();
-    // Google Maps comparte "Nombre del lugar https://maps.app.goo.gl/…": se toma solo el enlace.
-    final m = RegExp(r'https?://\S+').firstMatch(texto);
-    setState(() => _mapa.text = m?.group(0) ?? texto);
-  }
-
   Future<void> _guardar() async {
     setState(() => _guardando = true);
     try {
-      final fila = await widget.repo.crearLugar(nombre: _nombre.text, mapsUrl: _mapa.text, tipo: _tipo!, video: _video.text);
+      final fila = await widget.repo.crearLugar(nombre: _nombre.text, mapsUrl: SelectorUbicacion.enlaceGoogleMaps(_pin!), tipo: _tipo!, video: _video.text);
       if (mounted) Navigator.of(context).pop(fila);
     } catch (e) {
       if (mounted) {
@@ -103,7 +87,7 @@ class _NuevoLugarScreenState extends State<NuevoLugarScreen> {
         _Paso.video => 'Video instructivo',
       },
       ayuda: switch (_paso) {
-        _Paso.ubicacion => 'Busca el lugar en Google Maps, toca "Compartir" → "Copiar enlace" y pégalo aquí.',
+        _Paso.ubicacion => 'Búscalo o mueve el mapa hasta dejar el pin en el lugar.',
         _Paso.tipo => 'Se usa como tipo de evento por defecto en este lugar.',
         _Paso.video => 'Opcional: un video de cómo llegar o entrar.',
       },
@@ -122,45 +106,24 @@ class _NuevoLugarScreenState extends State<NuevoLugarScreen> {
   }
 
   Widget _pasoUbicacion(BuildContext context) {
-    final p = context.pivot;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        TextField(
-          controller: _nombre,
-          maxLength: 20,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Nombre del lugar', hintText: 'Ej.: Cumandá'),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 4),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-          onPressed: _buscarEnMaps,
-          icon: const Icon(Icons.map_outlined),
-          label: const Text('Buscar en Google Maps'),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _mapa,
-          keyboardType: TextInputType.url,
-          decoration: InputDecoration(
-            labelText: 'Enlace de Google Maps',
-            hintText: 'https://maps.app.goo.gl/…',
-            suffixIcon: IconButton(tooltip: 'Pegar', icon: const Icon(Icons.content_paste_rounded), onPressed: _pegar),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _nombre,
+            maxLength: 20,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(labelText: 'Nombre del lugar', hintText: 'Ej.: Cumandá', counterText: ''),
+            onChanged: (_) => setState(() {}),
           ),
-          onChanged: (_) => setState(() {}),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          child: _mapa.text.trim().isEmpty || _enlaceValido
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text('Ese enlace no parece de Google Maps.', style: TextStyle(fontSize: 13, color: p.marcaTexto)),
-                ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          Expanded(
+            child: SelectorUbicacion(inicial: _pin, alCambiar: (p) => setState(() => _pin = p)),
+          ),
+        ],
+      ),
     );
   }
 

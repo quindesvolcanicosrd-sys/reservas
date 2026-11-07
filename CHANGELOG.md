@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: idioma del teléfono en selectores, "+" que gira al cerrar, cambio de grupo sin saltos en el detalle, videos dentro de la app, reglas de "¿Vas a ir?" iguales a la web, mapa y buscador (OpenStreetMap) en "Nuevo lugar", inicio de asistencia anticipada rediseñado y editar evento en 2 pasos.
+
 2026-11-07 — App Android: ícono de Eventos más legible (cuadrado redondeado simple con el día en Nunito Black).
 
 2026-11-06 — App Android: fix — el gesto o botón atrás cierra primero el buscador o el calendario en vez de salir de la app.

@@ -942,7 +942,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       barrierDismissible: true,
       barrierLabel: 'Cerrar',
       barrierColor: context.pivot.velo,
-      transitionDuration: const Duration(milliseconds: 260),
+      transitionDuration: const Duration(milliseconds: 320),
       pageBuilder: (c, _, _) => _MenuAcciones(acciones: acciones),
       transitionBuilder: (c, a, _, hijo) => FadeTransition(
         opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
@@ -1065,7 +1065,7 @@ class _TarjetaEvento extends StatelessWidget {
     final p = context.pivot;
     final ev = evento;
     final apagado = ev.cancelado;
-    final pedirRespuesta = !apagado && ev.miEstado == null && !ev.yaEmpezo;
+    final pedirRespuesta = !apagado && ev.miEstado == null && repo.motivoSinRespuesta(ev) == null;
     // Después de empezar se muestran quienes asistieron de verdad (si ya se tomó asistencia).
     final reales = ev.yaEmpezo && ev.asistentes.isNotEmpty;
     final asisten = reales ? ev.asistentes.map((a) => a.persona).toList() : ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
@@ -1497,17 +1497,12 @@ class _MenuAcciones extends StatefulWidget {
   State<_MenuAcciones> createState() => _MenuAccionesState();
 }
 
-class _MenuAccionesState extends State<_MenuAcciones> with SingleTickerProviderStateMixin {
-  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 320))..forward();
-
-  @override
-  void dispose() {
-    _a.dispose();
-    super.dispose();
-  }
-
+class _MenuAccionesState extends State<_MenuAcciones> {
   @override
   Widget build(BuildContext context) {
+    // La animación de la propia ruta: al abrir va hacia adelante y al cerrar
+    // (tocar ×, el velo o atrás) se invierte sola, así el "+" también gira de vuelta.
+    final Animation<double> ruta = ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation;
     final p = context.pivot;
     final n = widget.acciones.length;
     return SafeArea(
@@ -1526,7 +1521,7 @@ class _MenuAccionesState extends State<_MenuAcciones> with SingleTickerProviderS
                     // La más cercana al botón aparece primero.
                     final inicio = (n - 1 - i) * 0.12;
                     final anim = CurvedAnimation(
-                      parent: _a,
+                      parent: ruta,
                       curve: Interval(inicio, (inicio + 0.6).clamp(0, 1), curve: Curves.easeOutCubic),
                     );
                     final ac = widget.acciones[i];
@@ -1570,7 +1565,7 @@ class _MenuAccionesState extends State<_MenuAcciones> with SingleTickerProviderS
                 tooltip: 'Cerrar',
                 onPressed: () => Navigator.of(context).pop(),
                 child: RotationTransition(
-                  turns: Tween(begin: 0.0, end: 0.125).animate(CurvedAnimation(parent: _a, curve: Curves.easeOutCubic)),
+                  turns: Tween(begin: 0.0, end: 0.125).animate(CurvedAnimation(parent: ruta, curve: Curves.easeOutCubic)),
                   child: const Icon(Icons.add_rounded),
                 ),
               ),

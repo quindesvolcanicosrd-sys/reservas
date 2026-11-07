@@ -187,6 +187,9 @@ class Cuota {
     return excepciones.any((x) => x['idMiembro'] == nombre && x['mes'] == clave && (x['tipo'] == 'pago' || x['tipo'] == 'exenta'));
   }
 
+  /// Reserva no cancelada para un evento puntual (`r.fecha === e.id` en la web).
+  bool tieneReserva(String idEvento) => reservas.any((r) => r['fecha'] == idEvento && r['estado'] != 'Cancelada');
+
   bool mesPagado(int mes) => _mensuales.any((r) => _mesDe(r) == mes);
 
   bool get alDia {

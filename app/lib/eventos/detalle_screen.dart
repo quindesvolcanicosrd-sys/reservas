@@ -1,3 +1,4 @@
+import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -6,6 +7,7 @@ import '../core/tema.dart';
 import 'editar_evento_screen.dart';
 import 'eventos_repo.dart';
 import 'tomar_asistencia_screen.dart';
+import 'video_screen.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 
@@ -254,7 +256,14 @@ class _DetalleScreenState extends State<DetalleScreen> {
     final duracion = duracionEvento(ev);
     final botones = <Widget>[
       if (ev.mapsUrl.isNotEmpty) _BotonAcceso(icono: Icons.directions_outlined, texto: 'Cómo llegar', url: ev.mapsUrl),
-      if (ev.videoInstructivo.isNotEmpty) _BotonAcceso(icono: Icons.play_circle_outline_rounded, texto: 'Ver video', url: ev.videoInstructivo),
+      if (ev.videoInstructivo.isNotEmpty)
+        _BotonAcceso(
+          icono: Icons.play_circle_outline_rounded,
+          texto: 'Ver video',
+          url: ev.videoInstructivo,
+          dentroDeLaApp: true,
+          titulo: 'Cómo llegar a ${ev.lugar}',
+        ),
     ];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -317,7 +326,9 @@ class _DetalleScreenState extends State<DetalleScreen> {
 
   Widget _tuAsistencia(BuildContext context, Evento ev) {
     final p = context.pivot;
-    final bloqueado = ev.cancelado || ev.yaEmpezo;
+    final motivo = repo.motivoSinRespuesta(ev);
+    final bloqueado = motivo != null;
+    final sinNo = repo.sinNoAsistire(ev);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
@@ -335,10 +346,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
             child: SegmentedButton<EstadoRsvp>(
               showSelectedIcon: true,
               emptySelectionAllowed: true,
-              segments: const [
-                ButtonSegment(value: EstadoRsvp.asistire, label: Text('Asistiré')),
-                ButtonSegment(value: EstadoRsvp.noAsistire, label: Text('No asistiré')),
-                ButtonSegment(value: EstadoRsvp.noJugador, label: Text('No jugador')),
+              segments: [
+                const ButtonSegment(value: EstadoRsvp.asistire, label: Text('Asistiré')),
+                if (!sinNo) const ButtonSegment(value: EstadoRsvp.noAsistire, label: Text('No asistiré')),
+                const ButtonSegment(value: EstadoRsvp.noJugador, label: Text('No jugador')),
               ],
               selected: {?ev.miEstado},
               onSelectionChanged: bloqueado
@@ -354,14 +365,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            ev.cancelado
-                ? 'Este evento fue cancelado.'
-                : ev.yaEmpezo
-                ? 'El evento ya empezó; la asistencia la toma un admin.'
-                : 'Puedes cambiarla hasta que empiece el evento.',
-            style: TextStyle(fontSize: 13, color: p.textoSecundario),
-          ),
+          Text(motivo ?? 'Puedes cambiarla hasta 10 minutos antes de que empiece.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
         ],
       ),
     );
@@ -407,40 +411,51 @@ class _DetalleScreenState extends State<DetalleScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: KeyedSubtree(
-              key: ValueKey('${elegido.$1}-${personas?.length}'),
-              child: personas == null
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : personas.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text('Nadie en este grupo por ahora.', style: TextStyle(color: p.textoSecundario)),
-                    )
-                  : Column(
-                      children: [
-                        for (final per in personas)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            child: Row(
-                              children: [
-                                AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    per.nombreMostrar,
-                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+          // Cambio de grupo: "fundido cruzado" de Material (sale la lista
+          // anterior, entra la nueva, sin encimarse) y la altura se acomoda
+          // suave (antes las dos listas se superponían y saltaba el alto).
+          AnimatedSize(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: PageTransitionSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (hijo, primaria, secundaria) =>
+                  FadeThroughTransition(animation: primaria, secondaryAnimation: secundaria, fillColor: Colors.transparent, child: hijo),
+              layoutBuilder: (hijos) => Stack(alignment: Alignment.topCenter, children: hijos),
+              child: KeyedSubtree(
+                key: ValueKey('${elegido.$1}-${personas?.length}'),
+                child: personas == null
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : personas.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text('Nadie en este grupo por ahora.', style: TextStyle(color: p.textoSecundario)),
+                      )
+                    : Column(
+                        children: [
+                          for (final per in personas)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                              child: Row(
+                                children: [
+                                  AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      per.nombreMostrar,
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ],
@@ -498,7 +513,9 @@ class _Contador extends StatelessWidget {
 }
 
 class _BotonAcceso extends StatelessWidget {
-  const _BotonAcceso({required this.icono, required this.texto, required this.url});
+  const _BotonAcceso({required this.icono, required this.texto, required this.url, this.dentroDeLaApp = false, this.titulo = ''});
+  final bool dentroDeLaApp;
+  final String titulo;
   final IconData icono;
   final String texto;
   final String url;
@@ -513,6 +530,10 @@ class _BotonAcceso extends StatelessWidget {
         foregroundColor: p.texto,
       ),
       onPressed: () async {
+        if (dentroDeLaApp) {
+          await VideoScreen.abrir(context, url, titulo: titulo);
+          return;
+        }
         final uri = Uri.tryParse(url);
         if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
           if (context.mounted) {

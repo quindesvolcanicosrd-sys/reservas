@@ -54,7 +54,70 @@ class EventosRepo extends ChangeNotifier {
     final hoy = Fechas.hoy();
     final desde = _desde ?? hoy.subtract(const Duration(days: diasAtras));
     final hasta = _hasta ?? hoy.add(const Duration(days: diasAdelante));
+    if (forzar) _cuota = null;
+    _cargarCuota();
     await _traer(desde, hasta, reemplazar: true);
+  }
+
+  // ─── ¿Puede responder "¿Vas a ir?"? (mismas reglas que la web) ─────────
+
+    Cuota? _cuota;
+  bool _cargandoCuota = false;
+
+  @visibleForTesting
+  set cuotaParaPruebas(Cuota c) => _cuota = c;
+
+  Future<void> _cargarCuota() async {
+    if (_cuota != null || _cargandoCuota || !sesion.activa) return;
+    _cargandoCuota = true;
+    try {
+      _cuota = await anticipada.cuota();
+      notifyListeners();
+    } catch (_) {
+      // Sin datos de cuota: no se bloquea a nadie por error de red.
+    } finally {
+      _cargandoCuota = false;
+    }
+  }
+
+  String get _modo {
+    final c = (sesion.datos['categoria'] ?? '').toString().toLowerCase();
+    return c.isEmpty ? 'mirlxs' : c;
+  }
+
+  bool get _esAdminActivo => sesion.esAdmin && sesion.adminToken != null;
+
+  /// Mirlxs con la cuota al día pueden marcar "Asistiré", pero ya no
+  /// "No asistiré" en ese evento (web: `_evRsvpBarraHtml()`).
+  bool sinNoAsistire(Evento ev) => _modo == 'mirlxs' && ev.miEstado == EstadoRsvp.asistire;
+
+  /// null si puede responder; si no, el motivo para mostrar. Copia de
+  /// `_evRsvpBarraHtml()` de la web (mismo orden de reglas).
+  String? motivoSinRespuesta(Evento ev) {
+    final ini = ev.inicioUtc;
+    if (ev.cancelado) return 'Este evento fue cancelado.';
+    if (ev.yaEmpezo) return 'El evento ya empezó; la asistencia la toma un admin.';
+    if (ini != null && DateTime.now().toUtc().isAfter(ini.subtract(const Duration(minutes: 10)))) {
+      return 'Faltan menos de 10 minutos: ya no se puede cambiar la respuesta.';
+    }
+    final d = sesion.datos;
+    final c = _cuota;
+    final exenta = d['exenta_cuota'] == true || d['exenta_cuota'] == 'true';
+    if (_modo == 'mirlxs' &&
+        !_esAdminActivo &&
+        ev.tipo == 'Entrenamiento' &&
+        !exenta &&
+        c != null &&
+        ev.fecha.isAfter(Fechas.hoy()) &&
+        !c.mesPagado(ev.fecha.month)) {
+      return 'Para responder necesitas tener pagado el mes de ${Fechas.mes(ev.fecha)}.';
+    }
+    if (ev.tipo == 'Entrenamiento' && (d['necesitaPatines'] == 'Sí' || d['necesitaProtecciones'] == 'Sí')) {
+      return 'Como usas equipo del club, tu lugar en los entrenamientos se confirma con la reserva.';
+    }
+    if (_modo == 'mirlxs' && c != null && !c.alDia) return 'Para responder necesitas tener tu cuota al día.';
+    if (c != null && c.tieneReserva(ev.id)) return 'Ya tienes una reserva para este evento.';
+    return null;
   }
 
   /// Garantiza que el mes de [dia] esté cargado (navegación por calendario).
