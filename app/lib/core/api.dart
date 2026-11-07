@@ -36,10 +36,7 @@ class Api {
 
   static const _timeout = Duration(seconds: 20);
 
-  Map<String, String> get _headers => {
-        'apikey': ApiConfig.anonKey,
-        'Authorization': 'Bearer ${ApiConfig.anonKey}',
-      };
+  Map<String, String> get _headers => {'apikey': ApiConfig.anonKey, 'Authorization': 'Bearer ${ApiConfig.anonKey}'};
 
   Map<String, String> _conToken(Map<String, Object?> params) {
     final out = <String, String>{};
@@ -58,9 +55,11 @@ class Api {
 
   Future<Map<String, dynamic>> post(String action, [Map<String, Object?> params = const {}]) async {
     final resp = await _client
-        .post(Uri.parse(ApiConfig.backend),
-            headers: {..._headers, 'Content-Type': 'application/x-www-form-urlencoded'},
-            body: _conToken({'action': action, ...params}))
+        .post(
+          Uri.parse(ApiConfig.backend),
+          headers: {..._headers, 'Content-Type': 'application/x-www-form-urlencoded'},
+          body: _conToken({'action': action, ...params}),
+        )
         .timeout(_timeout);
     return _decodificar(resp);
   }
@@ -73,10 +72,39 @@ class Api {
     return jsonDecode(utf8.decode(resp.bodyBytes)) as List<dynamic>;
   }
 
+  /// Acciones que devuelven una lista en vez de un objeto (ej. getReservasPersona).
+  Future<List<dynamic>> getLista(String action, [Map<String, Object?> params = const {}]) async {
+    final uri = Uri.parse(ApiConfig.backend).replace(queryParameters: _conToken({'action': action, ...params}));
+    final resp = await _client.get(uri, headers: _headers).timeout(_timeout);
+    final data = jsonDecode(utf8.decode(resp.bodyBytes));
+    if (data is List) return data;
+    if (data is Map && data['error'] is String) throw ApiException(data['error'] as String);
+    return const [];
+  }
+
+  Future<void> restPost(String ruta, Map<String, Object?> cuerpo) async {
+    final resp = await _client
+        .post(
+          Uri.parse('${ApiConfig.rest}/$ruta'),
+          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+          body: jsonEncode(cuerpo),
+        )
+        .timeout(_timeout);
+    if (resp.statusCode >= 300) throw ApiException('No se pudo guardar (${resp.statusCode}).');
+  }
+
+  Future<void> restDelete(String ruta) async {
+    final resp = await _client.delete(Uri.parse('${ApiConfig.rest}/$ruta'), headers: _headers).timeout(_timeout);
+    if (resp.statusCode >= 300) throw ApiException('No se pudo eliminar (${resp.statusCode}).');
+  }
+
   Future<void> restPatch(String ruta, Map<String, Object?> cuerpo) async {
     final resp = await _client
-        .patch(Uri.parse('${ApiConfig.rest}/$ruta'),
-            headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'}, body: jsonEncode(cuerpo))
+        .patch(
+          Uri.parse('${ApiConfig.rest}/$ruta'),
+          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
+          body: jsonEncode(cuerpo),
+        )
         .timeout(_timeout);
     if (resp.statusCode >= 300) throw ApiException('No se pudieron guardar los cambios (${resp.statusCode}).');
   }

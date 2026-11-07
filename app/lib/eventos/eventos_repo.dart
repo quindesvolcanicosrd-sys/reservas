@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../core/api.dart';
 import '../core/fechas.dart';
 import '../sesion/sesion.dart';
+import 'anticipada.dart';
 import 'modelos.dart';
 
 /// Modo de edición de un evento recurrente (mismos 3 de la web,
@@ -22,6 +23,7 @@ class EventosRepo extends ChangeNotifier {
 
   final Sesion sesion;
   Api get _api => sesion.api;
+  late final AnticipadaRepo anticipada = AnticipadaRepo(sesion);
 
   List<Evento> eventos = [];
   List<Cumple> cumples = [];
@@ -68,9 +70,7 @@ class EventosRepo extends ChangeNotifier {
         _api.get('getCumpleañosRango', {'desde': d, 'hasta': h}).catchError((_) => <String, dynamic>{}),
       ]);
       final yo = sesion.nombre ?? '';
-      eventos = (resultados[0]['eventos'] as List? ?? const [])
-          .map((e) => Evento.desdeJson(e as Map<String, dynamic>, yo))
-          .toList()
+      eventos = (resultados[0]['eventos'] as List? ?? const []).map((e) => Evento.desdeJson(e as Map<String, dynamic>, yo)).toList()
         ..sort((a, b) {
           final c = a.fecha.compareTo(b.fecha);
           return c != 0 ? c : a.horaInicio.compareTo(b.horaInicio);
@@ -79,6 +79,10 @@ class EventosRepo extends ChangeNotifier {
       _desde = desde;
       _hasta = hasta;
       _cargadoEn = DateTime.now();
+      // Asistencia anticipada: se aplica sola al cargar, igual que la web.
+      anticipada.reconciliar(eventos).then((cambio) {
+        if (cambio) notifyListeners();
+      });
     } catch (e) {
       error = e is ApiException ? e.message : 'No se pudieron cargar los eventos. Revisa tu conexión.';
     } finally {
@@ -104,11 +108,9 @@ class EventosRepo extends ChangeNotifier {
     try {
       final res = await _api.post('marcarAsistenciaUsuario', {'nombre': sesion.nombre, 'idEvento': ev.id, 'estado': estado.valor});
       if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo guardar tu asistencia.').toString());
-      _api.post('notificarCambioAsistencia', {
-        'idEvento': ev.id,
-        'estadoNuevo': estado.valor,
-        'estadoAnterior': anterior?.valor ?? '',
-      }).catchError((_) => <String, dynamic>{});
+      _api
+          .post('notificarCambioAsistencia', {'idEvento': ev.id, 'estadoNuevo': estado.valor, 'estadoAnterior': anterior?.valor ?? ''})
+          .catchError((_) => <String, dynamic>{});
     } catch (e) {
       ev.miEstado = anterior;
       _reemplazarMiRsvp(ev, anterior);
@@ -216,19 +218,88 @@ class EventosRepo extends ChangeNotifier {
     for (final c in campos) {
       final esperado = upd[c]?.toString() ?? '';
       final real = guardado[c]?.toString() ?? '';
-      final ok = (c == 'inicia' || c == 'termina')
-          ? real.padRight(5).substring(0, 5) == esperado.padRight(5).substring(0, 5)
-          : real == esperado;
+      final ok = (c == 'inicia' || c == 'termina') ? real.padRight(5).substring(0, 5) == esperado.padRight(5).substring(0, 5) : real == esperado;
       if (!ok) throw ApiException('Los cambios no se guardaron: el evento sigue con los valores anteriores.');
     }
-    _api.get('pushEventoEditado', {
-      'adminToken': token,
-      'idEvento': ev.id,
-      'antesLugar': ev.lugar,
-      'antesHoraInicio': ev.horaInicio,
-      'antesHoraFin': ev.horaFin,
-    }).catchError((_) => <String, dynamic>{});
+    _api
+        .get('pushEventoEditado', {
+          'adminToken': token,
+          'idEvento': ev.id,
+          'antesLugar': ev.lugar,
+          'antesHoraInicio': ev.horaInicio,
+          'antesHoraFin': ev.horaFin,
+        })
+        .catchError((_) => <String, dynamic>{});
     await cargar(forzar: true);
+  }
+
+  /// Venues completos (para crear eventos: se copian nombre, mapa, etc.).
+  Future<List<Map<String, dynamic>>> venues() async {
+    final filas = await _api.restGet('venues?select=*&order=lugar.asc');
+    return filas.whereType<Map<String, dynamic>>().where((f) => (f['lugar'] ?? '').toString().trim().isNotEmpty).toList();
+  }
+
+  /// Crea un evento (único o recurrente). Mismo mecanismo que la web
+  /// (`_evCrearGuardar()`): una fila NUEVA en `venues` con la identidad del
+  /// lugar elegido + la recurrencia, después se regeneran las asistencias y
+  /// se avisa al equipo. Devuelve la fecha del primer evento creado.
+  Future<DateTime?> crear({
+    required Map<String, dynamic> venue,
+    required String tipoEvento,
+    required String descripcion,
+    required String tipoRecurrencia, // 'unico' | 'dias_semana' | 'cada_tantos'
+    List<int> dias = const [],
+    int? frecuencia,
+    String? unidad,
+    DateTime? fecha,
+    required String horaInicio,
+    String? horaFin,
+  }) async {
+    final token = _adminToken;
+    final fila = <String, Object?>{
+      'lugar': venue['lugar'],
+      'google_maps': venue['google_maps'],
+      'video_instructivo': venue['video_instructivo'],
+      'tipo_icono': tipoEvento,
+      'requiere_reserva': venue['requiere_reserva'] != false,
+      'info_adicional': descripcion.trim().isEmpty ? null : descripcion.trim(),
+      'tipo': tipoRecurrencia,
+      'inicia': horaInicio,
+      'finaliza': horaFin,
+    };
+    if (tipoRecurrencia == 'dias_semana') {
+      fila['dias'] = ([...dias]..sort()).toString();
+    } else {
+      fila['fecha_referencia'] = Fechas.iso(fecha!);
+      if (tipoRecurrencia == 'cada_tantos') {
+        fila['frecuencia'] = frecuencia;
+        fila['unidad'] = unidad;
+      }
+    }
+    await _api.restPost('venues', fila);
+    try {
+      await _api.get('adminRegenerarVentanaAsistencias', {'adminToken': token});
+    } catch (_) {
+      // El cron diario también regenera la ventana.
+    }
+    DateTime? primera;
+    if (tipoRecurrencia == 'dias_semana') {
+      final hoy = Fechas.hoy();
+      for (var i = 0; i < 7 && primera == null; i++) {
+        final c = hoy.add(Duration(days: i));
+        if (dias.contains(c.weekday)) primera = c;
+      }
+    } else {
+      primera = fecha;
+    }
+    if (primera != null) {
+      _api
+          .get('pushEventoCreado', {'adminToken': token, 'tipo': tipoEvento, 'fecha': Fechas.iso(primera), 'hora': horaInicio, 'lugar': venue['lugar']})
+          .catchError((_) => <String, dynamic>{});
+    }
+    _lugares = null;
+    await cargar(forzar: true);
+    return primera;
   }
 
   /// Cancela un evento: mismas acciones que la web (`_evCancelarEvento()`).
@@ -237,13 +308,9 @@ class EventosRepo extends ChangeNotifier {
     final res = await _api.get('adminCancelarEvento', {'adminToken': token, 'idEvento': ev.id});
     if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo cancelar el evento.').toString());
     if (!ev.finalizado) {
-      _api.get('pushEventoCancelado', {
-        'adminToken': token,
-        'tipo': ev.tipo,
-        'fecha': Fechas.iso(ev.fecha),
-        'hora': ev.horaInicio,
-        'lugar': ev.lugar,
-      }).catchError((_) => <String, dynamic>{});
+      _api
+          .get('pushEventoCancelado', {'adminToken': token, 'tipo': ev.tipo, 'fecha': Fechas.iso(ev.fecha), 'hora': ev.horaInicio, 'lugar': ev.lugar})
+          .catchError((_) => <String, dynamic>{});
     }
     await cargar(forzar: true);
   }
@@ -259,10 +326,12 @@ class EventosRepo extends ChangeNotifier {
     final yo = (sesion.nombre ?? '').trim().toLowerCase();
     ev.rsvps.removeWhere((r) => r.persona.username.trim().toLowerCase() == yo);
     if (estado != null) {
-      ev.rsvps.add(Rsvp(
-        persona: Persona(username: sesion.nombre ?? '', nombreDerby: sesion.nombreDerby, fotoPerfil: sesion.fotoPerfil),
-        estado: estado,
-      ));
+      ev.rsvps.add(
+        Rsvp(
+          persona: Persona(username: sesion.nombre ?? '', nombreDerby: sesion.nombreDerby, fotoPerfil: sesion.fotoPerfil),
+          estado: estado,
+        ),
+      );
     }
   }
 }

@@ -1,0 +1,343 @@
+import 'package:flutter/material.dart';
+
+import '../core/api.dart';
+import '../core/fechas.dart';
+import '../sesion/sesion.dart';
+import 'modelos.dart';
+
+/// Asistencia anticipada: reglas que marcan solas tus entrenamientos futuros.
+/// Misma tabla y lógica que la web (`_evAnt*` en js/eventos.js):
+/// `reglas_asistencia` por PostgREST, prioridad periodo > meses > indefinido,
+/// nunca pisa una respuesta real y el motivo de "No asistiré" actualiza tu
+/// estado en el equipo (`autodeclararEstado` / `terminarMiViaje`).
+enum TipoRango {
+  meses('meses', 'Por meses'),
+  periodo('periodo', 'Por período'),
+  indefinido('indefinido', 'Indefinido');
+
+  const TipoRango(this.valor, this.etiqueta);
+  final String valor;
+  final String etiqueta;
+
+  static TipoRango? desde(String? v) {
+    for (final t in values) {
+      if (t.valor == v) return t;
+    }
+    return null;
+  }
+}
+
+class MotivoAusencia {
+  const MotivoAusencia(this.valor, this.estadoEquipo, this.icono, this.ayuda);
+  final String valor;
+  final String estadoEquipo;
+  final IconData icono;
+  final String ayuda;
+
+  static const todos = [
+    MotivoAusencia('De viaje', 'De viaje', Icons.flight_rounded, 'Tu categoría queda congelada durante el viaje.'),
+    MotivoAusencia('Lesionadx', 'Lesionadx', Icons.personal_injury_outlined, 'Tu categoría queda congelada mientras dure la lesión.'),
+    MotivoAusencia('Inactivx', 'Ausente', Icons.event_busy_outlined, 'Tu categoría sigue las reglas normales de asistencia.'),
+  ];
+  static const ayudaComun = 'Si vienes a entrenar, vuelves a Activx automáticamente.';
+
+  static MotivoAusencia? de(String? v) {
+    for (final m in todos) {
+      if (m.valor == v) return m;
+    }
+    return null;
+  }
+}
+
+class ReglaAnticipada {
+  const ReglaAnticipada({
+    this.id,
+    required this.tipo,
+    required this.estado,
+    this.motivo,
+    this.desde,
+    this.hasta,
+    this.meses = const [],
+    this.tiposEvento = const ['Entrenamiento'],
+  });
+
+  final String? id;
+  final TipoRango tipo;
+  final EstadoRsvp estado;
+  final String? motivo;
+  final DateTime? desde;
+  final DateTime? hasta;
+  final List<int> meses;
+  final List<String> tiposEvento;
+
+  static ReglaAnticipada? desdeFila(Map<String, dynamic> f) {
+    final tipo = TipoRango.desde(f['tipo_rango']?.toString());
+    final estado = EstadoRsvp.desde(f['estado']?.toString());
+    if (tipo == null || estado == null) return null;
+    final te = f['tipos_evento'];
+    final tipos = te is List ? te.map((e) => e.toString()).toList() : (te == null ? <String>[] : te.toString().split(','));
+    final ms = f['meses'];
+    return ReglaAnticipada(
+      id: f['id']?.toString(),
+      tipo: tipo,
+      estado: estado,
+      motivo: f['motivo']?.toString(),
+      desde: Fechas.desdeIso(f['fecha_desde']),
+      hasta: Fechas.desdeIso(f['fecha_hasta']),
+      meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => m >= 1 && m <= 12).toList() : const [],
+      tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
+    );
+  }
+
+  bool aplicaA(Evento ev) {
+    if (tiposEvento.isNotEmpty && !tiposEvento.contains(ev.tipo)) return false;
+    switch (tipo) {
+      case TipoRango.indefinido:
+        return desde != null && !ev.fecha.isBefore(desde!);
+      case TipoRango.meses:
+        return meses.contains(ev.fecha.month);
+      case TipoRango.periodo:
+        return desde != null && hasta != null && !ev.fecha.isBefore(desde!) && !ev.fecha.isAfter(hasta!);
+    }
+  }
+
+  /// "Meses: noviembre, diciembre 2026" / "Del 9/11/2026 al 20/11/2026".
+  String get resumenRango {
+    String num(DateTime d) => '${d.day}/${d.month}/${d.year}';
+    switch (tipo) {
+      case TipoRango.meses:
+        final ord = [...meses]..sort();
+        return 'Meses: ${ord.map((m) => Fechas.mes(DateTime(2000, m))).join(', ')} ${Fechas.hoy().year}';
+      case TipoRango.periodo:
+        return 'Del ${desde == null ? '' : num(desde!)} al ${hasta == null ? '' : num(hasta!)}';
+      case TipoRango.indefinido:
+        return 'Desde el ${desde == null ? '' : num(desde!)}, sin fecha de fin';
+    }
+  }
+
+  String get resumenEstado => 'Estado: ${estado.valor}${estado == EstadoRsvp.noAsistire && motivo != null ? ' · $motivo' : ''}';
+
+  Map<String, Object?> aFila(String nombre) => {
+    'nombre': nombre,
+    'tipo_rango': tipo.valor,
+    'tipos_evento': tiposEvento.join(','),
+    'estado': estado.valor,
+    'motivo': estado == EstadoRsvp.noAsistire ? motivo : null,
+    'meses': tipo == TipoRango.meses ? meses : null,
+    'fecha_desde': tipo == TipoRango.meses || desde == null ? null : Fechas.iso(desde!),
+    'fecha_hasta': tipo == TipoRango.periodo && hasta != null ? Fechas.iso(hasta!) : null,
+  };
+
+  /// Rango del viaje para `autodeclararEstado` (`_evAntRangoViaje()`).
+  (DateTime?, DateTime?) get rangoViaje {
+    switch (tipo) {
+      case TipoRango.periodo:
+        return (desde, hasta);
+      case TipoRango.indefinido:
+        return (desde, null);
+      case TipoRango.meses:
+        if (meses.isEmpty) return (null, null);
+        final anio = Fechas.hoy().year;
+        final ord = [...meses]..sort();
+        var d = DateTime(anio, ord.first, 1);
+        if (d.isBefore(Fechas.hoy())) d = Fechas.hoy();
+        return (d, DateTime(anio, ord.last + 1, 0));
+    }
+  }
+}
+
+/// Estado de la cuota para limitar "Asistiré" a los meses pagados. Copia
+/// literal de la web (`_evAntPagaCuotaMensual()`, `_evMesPagado()`,
+/// `_evVencimientoCuota()`, `_evTieneCuotaAlDia()`, `_evAntLimiteCuota()`).
+class Cuota {
+  Cuota({required this.datos, required this.esAdmin, required this.nombre, required this.reservas, required this.excepciones});
+
+  final Map<String, dynamic> datos;
+  final bool esAdmin;
+  final String nombre;
+  final List<Map<String, dynamic>> reservas;
+  final List<Map<String, dynamic>> excepciones;
+
+  static const _meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  bool get _especial {
+    final e = datos['exenta_cuota'];
+    return e == true || e == 'true' || datos['estado_miembro'] == 'Técnico' || datos['estado_miembro'] == 'Lesionadx';
+  }
+
+  String get _categoria => (datos['categoria'] ?? '').toString().toLowerCase();
+
+  // La web lee `validezHasta`, pero el backend devuelve `validez_hasta`: para
+  // la web ese dato nunca existe. Se replica igual para que ambas coincidan.
+  Iterable<Map<String, dynamic>> get _mensuales => reservas.where((r) => r['tipo'] == 'mensual' && r['estado'] != 'Cancelada');
+
+  int? _mesDe(Map<String, dynamic> r) {
+    final i = _meses.indexOf((r['fecha'] ?? r['mes_texto'] ?? '').toString().toLowerCase().trim());
+    return i < 0 ? null : i + 1;
+  }
+
+  bool get pagaCuotaMensual {
+    if (_especial) return false;
+    if (_categoria == 'quindes' && !esAdmin && _mensuales.isEmpty) return false;
+    return _mensuales.isNotEmpty;
+  }
+
+  bool _excepcion(int mes, int anio) {
+    final clave = '$anio-${mes.toString().padLeft(2, '0')}';
+    return excepciones.any((x) => x['idMiembro'] == nombre && x['mes'] == clave && (x['tipo'] == 'pago' || x['tipo'] == 'exenta'));
+  }
+
+  bool mesPagado(int mes) => _mensuales.any((r) => _mesDe(r) == mes);
+
+  bool get alDia {
+    final hoy = Fechas.hoy();
+    if (_excepcion(hoy.month, hoy.year) || _especial) return true;
+    return _mensuales.isNotEmpty;
+  }
+
+  DateTime? get _vencimiento {
+    final hoy = Fechas.hoy();
+    for (final r in _mensuales) {
+      final m = _mesDe(r);
+      if (m == null) continue;
+      final fin = DateTime(hoy.year, m + 1, 0);
+      if (!hoy.isAfter(fin)) return fin;
+    }
+    return null;
+  }
+
+  /// Con "Asistiré" y cuota mensual: solo meses pagados.
+  bool restringe(EstadoRsvp? estado) => estado == EstadoRsvp.asistire && pagaCuotaMensual;
+
+  bool mesPermitido(EstadoRsvp? estado, int mes, int anio) => !restringe(estado) || mesPagado(mes) || _excepcion(mes, anio);
+
+  DateTime? limite(EstadoRsvp? estado) {
+    if (!restringe(estado)) return null;
+    final v = _vencimiento;
+    if (v != null) return v;
+    final hoy = Fechas.hoy();
+    if (_excepcion(hoy.month, hoy.year)) return DateTime(hoy.year, hoy.month + 1, 0);
+    if (alDia) return null;
+    return hoy.subtract(const Duration(days: 1));
+  }
+}
+
+class AnticipadaRepo {
+  AnticipadaRepo(this.sesion);
+  final Sesion sesion;
+  Api get _api => sesion.api;
+  final _enVuelo = <String>{};
+
+  /// Quién la ve (web: `_evActualizarTopBarModo()`): no Mirlxs y sin
+  /// equipo rentado del club.
+  bool get disponible {
+    final d = sesion.datos;
+    final cat = (d['categoria'] ?? '').toString().toLowerCase();
+    final necesita = (d['necesitaPatines'] ?? '').toString().toLowerCase();
+    final necesitaEquipo = necesita.isNotEmpty && necesita != 'no';
+    return cat.isNotEmpty && cat != 'mirlxs' && !necesitaEquipo;
+  }
+
+  Future<List<ReglaAnticipada>> reglas() async {
+    final nombre = Uri.encodeComponent(sesion.nombre ?? '');
+    final filas = await _api.restGet('reglas_asistencia?select=*&nombre=eq.$nombre&order=created_at.desc');
+    return [for (final f in filas) ?ReglaAnticipada.desdeFila(f as Map<String, dynamic>)];
+  }
+
+  Future<Cuota> cuota() async {
+    final res = await Future.wait([
+      _api.getLista('getReservasPersona', {'nombre': sesion.nombre}).catchError((_) => <dynamic>[]),
+      _api.get('listarExcepcionesCuota').then((r) => (r['excepciones'] as List?) ?? const []).catchError((_) => <dynamic>[]),
+    ]);
+    return Cuota(
+      datos: sesion.datos,
+      esAdmin: sesion.esAdmin,
+      nombre: sesion.nombre ?? '',
+      reservas: res[0].whereType<Map<String, dynamic>>().toList(),
+      excepciones: res[1].whereType<Map<String, dynamic>>().toList(),
+    );
+  }
+
+  /// Crea (o reemplaza, al editar: la web borra y vuelve a crear) una regla.
+  /// Devuelve un aviso si la regla se guardó pero tu estado no se pudo actualizar.
+  Future<String?> guardar(ReglaAnticipada nueva, {ReglaAnticipada? vieja}) async {
+    if (vieja?.id != null) await _api.restDelete('reglas_asistencia?id=eq.${vieja!.id}');
+    await _api.restPost('reglas_asistencia', nueva.aFila(sesion.nombre ?? ''));
+    return _sincronizarEstado(nueva, vieja);
+  }
+
+  Future<String?> eliminar(ReglaAnticipada r) async {
+    await _api.restDelete('reglas_asistencia?id=eq.${r.id}');
+    return _sincronizarEstado(null, r);
+  }
+
+  Future<String?> _sincronizarEstado(ReglaAnticipada? nueva, ReglaAnticipada? vieja) async {
+    final def = nueva != null && nueva.estado == EstadoRsvp.noAsistire ? MotivoAusencia.de(nueva.motivo) : null;
+    Map<String, Object?>? req;
+    String accion;
+    if (def != null) {
+      accion = 'autodeclararEstado';
+      req = {'estado': def.estadoEquipo};
+      if (def.estadoEquipo == 'De viaje') {
+        final (d, h) = nueva!.rangoViaje;
+        if (d != null) req['viajeDesde'] = Fechas.iso(d);
+        if (h != null) req['viajeHasta'] = Fechas.iso(h);
+      }
+    } else if (vieja != null && vieja.estado == EstadoRsvp.noAsistire && vieja.motivo == 'De viaje') {
+      accion = 'terminarMiViaje';
+      req = {};
+    } else {
+      return null;
+    }
+    try {
+      final res = await _api.post(accion, req);
+      if (res['exito'] != true) return 'La asistencia anticipada se guardó, pero no se pudo actualizar tu estado: ${res['error'] ?? 'error desconocido'}';
+    } catch (e) {
+      return 'La asistencia anticipada se guardó, pero no se pudo actualizar tu estado: $e';
+    }
+    return null;
+  }
+
+  /// Aplica las reglas a los eventos futuros sin respuesta real y guarda la
+  /// respuesta en el servidor (`_evAntReconciliarConReglas()` de la web).
+  /// Devuelve true si cambió algún evento.
+  Future<bool> reconciliar(List<Evento> eventos, {List<ReglaAnticipada>? precargadas}) async {
+    final List<ReglaAnticipada> lista;
+    try {
+      lista = precargadas ?? await reglas();
+    } catch (_) {
+      return false;
+    }
+    if (lista.isEmpty) return false;
+    const orden = {TipoRango.indefinido: 0, TipoRango.meses: 1, TipoRango.periodo: 2};
+    lista.sort((a, b) => orden[a.tipo]!.compareTo(orden[b.tipo]!));
+    final hoy = Fechas.hoy();
+    final yo = (sesion.nombre ?? '').trim().toLowerCase();
+    final resultado = <Evento, EstadoRsvp>{};
+    for (final ev in eventos) {
+      if (ev.fecha.isBefore(hoy) || ev.cancelado || ev.miEstado != null) continue;
+      for (final r in lista) {
+        if (r.aplicaA(ev)) resultado[ev] = r.estado;
+      }
+    }
+    for (final entrada in resultado.entries) {
+      final ev = entrada.key;
+      if (ev.rsvps.any((r) => r.persona.username.trim().toLowerCase() == yo)) continue;
+      if (!_enVuelo.add(ev.id)) continue;
+      ev.miEstado = entrada.value;
+      ev.rsvps.add(
+        Rsvp(
+          persona: Persona(username: sesion.nombre ?? '', nombreDerby: sesion.nombreDerby, fotoPerfil: sesion.fotoPerfil),
+          estado: entrada.value,
+        ),
+      );
+      _api
+          .post('marcarAsistenciaUsuario', {'nombre': sesion.nombre, 'idEvento': ev.id, 'estado': entrada.value.valor, 'origenAuto': 'true'})
+          .catchError((_) {
+            return <String, dynamic>{};
+          })
+          .whenComplete(() => _enVuelo.remove(ev.id));
+    }
+    return resultado.isNotEmpty;
+  }
+}

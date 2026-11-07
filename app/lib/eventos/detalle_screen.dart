@@ -62,24 +62,31 @@ class _DetalleScreenState extends State<DetalleScreen> {
     final accion = await showModalBottomSheet<String>(
       context: context,
       builder: (c) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (!ev.finalizado && !ev.cancelado)
-            ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Editar evento'), onTap: () => Navigator.pop(c, 'editar')),
-          if (!ev.cancelado)
-            ListTile(leading: const Icon(Icons.event_busy_outlined), title: const Text('Cancelar evento'), onTap: () => Navigator.pop(c, 'cancelar')),
-          ListTile(
-            leading: Icon(Icons.delete_outline_rounded, color: c.pivot.marcaTexto),
-            title: Text('Eliminar evento', style: TextStyle(color: c.pivot.marcaTexto)),
-            onTap: () => Navigator.pop(c, 'eliminar'),
-          ),
-          const SizedBox(height: 8),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!ev.finalizado && !ev.cancelado)
+              ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Editar evento'), onTap: () => Navigator.pop(c, 'editar')),
+            if (!ev.cancelado)
+              ListTile(leading: const Icon(Icons.event_busy_outlined), title: const Text('Cancelar evento'), onTap: () => Navigator.pop(c, 'cancelar')),
+            ListTile(
+              leading: Icon(Icons.delete_outline_rounded, color: c.pivot.marcaTexto),
+              title: Text('Eliminar evento', style: TextStyle(color: c.pivot.marcaTexto)),
+              onTap: () => Navigator.pop(c, 'eliminar'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
     if (!mounted || accion == null) return;
     switch (accion) {
       case 'editar':
-        final guardado = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => EditarEventoScreen(repo: repo, evento: ev)));
+        final guardado = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EditarEventoScreen(repo: repo, evento: ev),
+          ),
+        );
         if (guardado == true) _avisar('Cambios guardados. Se avisó al equipo.');
       case 'cancelar':
         await _confirmarCancelar(ev);
@@ -106,7 +113,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
   Future<void> _confirmarCancelar(Evento ev) async {
     final ok = await _confirmar(
       titulo: '¿Cancelar el ${ev.tipo.toLowerCase()}?',
-      texto: '${Fechas.encabezado(ev.fecha)} · ${ev.rangoHorario}\n${ev.finalizado ? 'El evento ya pasó: no se avisará al equipo.' : 'Se avisará a todo el equipo.'}',
+      texto:
+          '${Fechas.encabezado(ev.fecha)} · ${ev.rangoHorario}\n${ev.finalizado ? 'El evento ya pasó: no se avisará al equipo.' : 'Se avisará a todo el equipo.'}',
       si: 'Sí, cancelar',
     );
     if (!ok || !mounted) return;
@@ -165,45 +173,55 @@ class _DetalleScreenState extends State<DetalleScreen> {
           });
         }
         return Scaffold(
-          appBar: AppBar(),
+          appBar: AppBar(
+            toolbarHeight: 68,
+            titleSpacing: 0,
+            title: _titulo(context, ev),
+            actions: [
+              if (ev.cancelado)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Etiqueta(texto: textoEstadoEvento(ev), apagada: true),
+                ),
+            ],
+          ),
           floatingActionButton: _esAdmin
               ? FloatingActionButton(tooltip: 'Opciones de admin', onPressed: () => _menuAdmin(ev), child: const Icon(Icons.edit_calendar_outlined))
               : null,
           body: ListView(
-            padding: const EdgeInsets.only(bottom: 96),
-            children: [
-              _cabecera(context, ev),
-              _resumen(context, ev),
-              _tuAsistencia(context, ev),
-              _equipo(context, ev),
-            ],
+            padding: const EdgeInsets.only(top: 8, bottom: 96),
+            children: [_resumen(context, ev), _tuAsistencia(context, ev), _equipo(context, ev)],
           ),
         );
       },
     );
   }
 
-  Widget _cabecera(BuildContext context, Evento ev) {
+  /// Fecha y tipo del evento, fijos en la barra superior (pedido 2026-11-06).
+  Widget _titulo(BuildContext context, Evento ev) {
     final p = context.pivot;
-    final t = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(Fechas.encabezado(ev.fecha), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.marcaTexto)),
-        const SizedBox(height: 6),
-        Row(children: [
-          Expanded(
-            child: Text(ev.tipo,
-                style: t.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                  decoration: ev.cancelado ? TextDecoration.lineThrough : null,
-                  color: ev.cancelado ? p.apagado : p.texto,
-                )),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          Fechas.encabezado(ev.fecha),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p.marcaTexto),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          ev.tipo,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.3,
+            decoration: ev.cancelado ? TextDecoration.lineThrough : null,
+            color: ev.cancelado ? p.apagado : p.texto,
           ),
-          if (ev.cancelado) Etiqueta(texto: textoEstadoEvento(ev), apagada: true),
-        ]),
-      ]),
+        ),
+      ],
     );
   }
 
@@ -212,51 +230,66 @@ class _DetalleScreenState extends State<DetalleScreen> {
     final p = context.pivot;
     final duracion = duracionEvento(ev);
     final botones = <Widget>[
-      if (ev.mapsUrl.isNotEmpty)
-        _BotonAcceso(icono: Icons.directions_outlined, texto: 'Cómo llegar', url: ev.mapsUrl),
-      if (ev.videoInstructivo.isNotEmpty)
-        _BotonAcceso(icono: Icons.play_circle_outline_rounded, texto: 'Ver video', url: ev.videoInstructivo),
+      if (ev.mapsUrl.isNotEmpty) _BotonAcceso(icono: Icons.directions_outlined, texto: 'Cómo llegar', url: ev.mapsUrl),
+      if (ev.videoInstructivo.isNotEmpty) _BotonAcceso(icono: Icons.play_circle_outline_rounded, texto: 'Ver video', url: ev.videoInstructivo),
     ];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: _dato(p, Icons.schedule_rounded, ev.rangoHorario, duracion)),
-          Container(width: 1, height: 36, color: p.tarjetaBorde),
-          const SizedBox(width: 12),
-          Expanded(child: _dato(p, Icons.place_outlined, ev.lugar, null)),
-        ]),
-        if (botones.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Wrap(spacing: 8, runSpacing: 8, children: botones),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _dato(p, Icons.schedule_rounded, ev.rangoHorario, duracion)),
+              Container(width: 1, height: 36, color: p.tarjetaBorde),
+              const SizedBox(width: 12),
+              Expanded(child: _dato(p, Icons.place_outlined, ev.lugar, null)),
+            ],
+          ),
+          if (botones.isNotEmpty) ...[const SizedBox(height: 14), Wrap(spacing: 8, runSpacing: 8, children: botones)],
+          if (ev.descripcion.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Divider(height: 1, color: p.tarjetaBorde),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, size: 20, color: p.textoSecundario),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(ev.descripcion.trim(), style: TextStyle(fontSize: 14, height: 1.45, color: p.texto)),
+                ),
+              ],
+            ),
+          ],
         ],
-        if (ev.descripcion.trim().isNotEmpty) ...[
-          const SizedBox(height: 14),
-          Divider(height: 1, color: p.tarjetaBorde),
-          const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.info_outline_rounded, size: 20, color: p.textoSecundario),
-            const SizedBox(width: 10),
-            Expanded(child: Text(ev.descripcion.trim(), style: TextStyle(fontSize: 14, height: 1.45, color: p.texto))),
-          ]),
-        ],
-      ]),
+      ),
     );
   }
 
   Widget _dato(PivotPaleta p, IconData icono, String principal, String? secundario) {
-    return Row(children: [
-      Icon(icono, size: 22, color: p.textoSecundario),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(principal, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto)),
-          if (secundario != null && secundario.isNotEmpty) Text(secundario, style: TextStyle(fontSize: 12, color: p.textoSecundario)),
-        ]),
-      ),
-    ]);
+    return Row(
+      children: [
+        Icon(icono, size: 22, color: p.textoSecundario),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                principal,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+              ),
+              if (secundario != null && secundario.isNotEmpty) Text(secundario, style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _tuAsistencia(BuildContext context, Evento ev) {
@@ -266,42 +299,48 @@ class _DetalleScreenState extends State<DetalleScreen> {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Tu asistencia', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<EstadoRsvp>(
-            showSelectedIcon: true,
-            emptySelectionAllowed: true,
-            segments: const [
-              ButtonSegment(value: EstadoRsvp.asistire, label: Text('Asistiré')),
-              ButtonSegment(value: EstadoRsvp.noAsistire, label: Text('No asistiré')),
-              ButtonSegment(value: EstadoRsvp.noJugador, label: Text('No jugador')),
-            ],
-            selected: {?ev.miEstado},
-            onSelectionChanged: bloqueado
-                ? null
-                : (sel) async {
-                    if (sel.isEmpty) return;
-                    try {
-                      await repo.marcar(ev, sel.first);
-                    } catch (e) {
-                      _avisar(e.toString());
-                    }
-                  },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tu asistencia',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
           ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          ev.cancelado
-              ? 'Este evento fue cancelado.'
-              : ev.yaEmpezo
-                  ? 'El evento ya empezó; la asistencia la toma un admin.'
-                  : 'Puedes cambiarla hasta que empiece el evento.',
-          style: TextStyle(fontSize: 13, color: p.textoSecundario),
-        ),
-      ]),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<EstadoRsvp>(
+              showSelectedIcon: true,
+              emptySelectionAllowed: true,
+              segments: const [
+                ButtonSegment(value: EstadoRsvp.asistire, label: Text('Asistiré')),
+                ButtonSegment(value: EstadoRsvp.noAsistire, label: Text('No asistiré')),
+                ButtonSegment(value: EstadoRsvp.noJugador, label: Text('No jugador')),
+              ],
+              selected: {?ev.miEstado},
+              onSelectionChanged: bloqueado
+                  ? null
+                  : (sel) async {
+                      if (sel.isEmpty) return;
+                      try {
+                        await repo.marcar(ev, sel.first);
+                      } catch (e) {
+                        _avisar(e.toString());
+                      }
+                    },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            ev.cancelado
+                ? 'Este evento fue cancelado.'
+                : ev.yaEmpezo
+                ? 'El evento ya empezó; la asistencia la toma un admin.'
+                : 'Puedes cambiarla hasta que empiece el evento.',
+            style: TextStyle(fontSize: 13, color: p.textoSecundario),
+          ),
+        ],
+      ),
     );
   }
 
@@ -317,52 +356,72 @@ class _DetalleScreenState extends State<DetalleScreen> {
     final personas = elegido.$3;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text('Asistencia del equipo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
-        ),
-        const SizedBox(height: 12),
-        Row(children: [
-          for (final (i, g) in grupos.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: _Contador(
-                cantidad: g.$3?.length,
-                etiqueta: g.$2,
-                elegido: g.$1 == elegido.$1,
-                cargando: g.$1 == _Grupo.sinRespuesta && _cargandoSinRespuesta,
-                alTocar: () => setState(() => _grupo = g.$1),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              'Asistencia del equipo',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
             ),
-          ],
-        ]),
-        const SizedBox(height: 12),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: KeyedSubtree(
-            key: ValueKey('${elegido.$1}-${personas?.length}'),
-            child: personas == null
-                ? const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
-                : personas.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text('Nadie en este grupo por ahora.', style: TextStyle(color: p.textoSecundario)),
-                      )
-                    : Column(children: [
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final (i, g) in grupos.indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _Contador(
+                    cantidad: g.$3?.length,
+                    etiqueta: g.$2,
+                    elegido: g.$1 == elegido.$1,
+                    cargando: g.$1 == _Grupo.sinRespuesta && _cargandoSinRespuesta,
+                    alTocar: () => setState(() => _grupo = g.$1),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: KeyedSubtree(
+              key: ValueKey('${elegido.$1}-${personas?.length}'),
+              child: personas == null
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : personas.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text('Nadie en este grupo por ahora.', style: TextStyle(color: p.textoSecundario)),
+                    )
+                  : Column(
+                      children: [
                         for (final per in personas)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            child: Row(children: [
-                              AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
-                              const SizedBox(width: 14),
-                              Expanded(child: Text(per.nombreMostrar, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto))),
-                            ]),
+                            child: Row(
+                              children: [
+                                AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    per.nombreMostrar,
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                      ]),
+                      ],
+                    ),
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -387,18 +446,28 @@ class _Contador extends StatelessWidget {
         onTap: alTocar,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-          child: Column(children: [
-            SizedBox(
-              height: 26,
-              child: Center(
-                child: cargando || cantidad == null
-                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: color))
-                    : Text('$cantidad', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 26,
+                child: Center(
+                  child: cargando || cantidad == null
+                      ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: color))
+                      : Text(
+                          '$cantidad',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color),
+                        ),
+                ),
               ),
-            ),
-            Text(etiqueta, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: elegido ? color : p.textoSecundario)),
-          ]),
+              Text(
+                etiqueta,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: elegido ? color : p.textoSecundario),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -415,7 +484,11 @@ class _BotonAcceso extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40), side: BorderSide(color: p.bordeSuave), foregroundColor: p.texto),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 40),
+        side: BorderSide(color: p.bordeSuave),
+        foregroundColor: p.texto,
+      ),
       onPressed: () async {
         final uri = Uri.tryParse(url);
         if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {

@@ -3,10 +3,7 @@
 class Fechas {
   static const _dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
   static const _diasCortos = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
-  static const _meses = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-  ];
+  static const _meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
   /// "Ahora" en Ecuador como fecha/hora de pared.
   static DateTime ahoraEcuador() {
@@ -20,8 +17,7 @@ class Fechas {
   }
 
   static DateTime soloDia(DateTime d) => DateTime(d.year, d.month, d.day);
-  static int diasEntre(DateTime a, DateTime b) =>
-      DateTime.utc(b.year, b.month, b.day).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
+  static int diasEntre(DateTime a, DateTime b) => DateTime.utc(b.year, b.month, b.day).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
   static DateTime lunesDe(DateTime d) => soloDia(d).subtract(Duration(days: d.weekday - 1));
 
   static String diaCorto(DateTime d) => _diasCortos[d.weekday - 1];
@@ -51,8 +47,17 @@ class Fechas {
 
   static String hora(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 
-  static String iso(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  static String iso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// "9 de noviembre" (+ año si no es el actual).
+  static String corta(DateTime d) => '${d.day} de ${mes(d)}${d.year != hoy().year ? ' de ${d.year}' : ''}';
+
+  /// Lee 'AAAA-MM-DD' (o un timestamp que empiece así) como día local.
+  static DateTime? desdeIso(Object? v) {
+    final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch((v ?? '').toString());
+    if (m == null) return null;
+    return DateTime(int.parse(m[1]!), int.parse(m[2]!), int.parse(m[3]!));
+  }
 
   static String _mayuscula(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }
