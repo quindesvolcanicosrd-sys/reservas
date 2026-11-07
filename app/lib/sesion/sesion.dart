@@ -126,6 +126,62 @@ class Sesion extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Ajustes: guardar datos propios ─────────────────────────────────────
+  // Lo guardado se mezcla en `datos` (solo en memoria: nada sensible se
+  // escribe en el teléfono).
+
+  Map<String, dynamic> _ok(Map<String, dynamic> r, String error) {
+    if (r['exito'] == false || r['error'] != null && r['exito'] != true) throw ApiException('${r['error'] ?? error}');
+    return r;
+  }
+
+  /// Campos de `actualizarDatosPersona` (lista blanca del servidor).
+  Future<void> guardarDatos(Map<String, String> cambios) async {
+    _ok(await api.post('actualizarDatosPersona', {'nombre': nombre, 'datos': jsonEncode(cambios)}), 'No se pudo guardar.');
+    datos = {...datos, ...cambios};
+    notifyListeners();
+  }
+
+  /// Patines y protecciones. Devuelve true si pasó de Quindes a Mirlxs.
+  Future<bool> guardarEquipamiento({required String patines, required String talla, required String protecciones}) async {
+    final r = _ok(
+      await api.post('actualizarEquipamientoPersona', {'nombre': nombre, 'necesitaPatines': patines, 'talla': talla, 'necesitaProtecciones': protecciones}),
+      'No se pudo guardar tu equipamiento.',
+    );
+    datos = {
+      ...datos,
+      'necesitaPatines': patines,
+      'talla': talla,
+      'necesitaProtecciones': protecciones,
+      if (r['categoria'] != null) 'categoria': r['categoria'],
+    };
+    notifyListeners();
+    return r['categoriaCambiada'] == true;
+  }
+
+  /// Fecha de nacimiento y qué ve el resto (web `guardarPermisos()`).
+  Future<void> guardarPrivacidad({required String fechaNacimiento, required bool fechaPublica, required bool edadPublica}) async {
+    final f = fechaPublica ? 'Sí' : 'No', e = edadPublica ? 'Sí' : 'No';
+    _ok(
+      await api.post('actualizarPerfilGoogle', {'fechaNac': fechaNacimiento, 'guardarFecha': 'si', 'fechaPublica': f, 'edadPublica': e}),
+      'No se pudo guardar tu privacidad.',
+    );
+    datos = {...datos, 'fechaNacimiento': fechaNacimiento, 'fechaPublica': f, 'edadPublica': e, 'permisosConfigurados': true};
+    notifyListeners();
+  }
+
+  /// PIN de 4 dígitos, mismo hash que la web: sha256(pin + '|' + username).
+  Future<void> cambiarPin(String pin) async {
+    final hash = sha256.convert(utf8.encode('$pin|$nombre')).toString();
+    _ok(await api.post('actualizarPin', {'nombre': nombre, 'pinHash': hash}), 'No se pudo cambiar el PIN.');
+  }
+
+  /// Borra los datos personales y cierra la sesión (web `mecConfirmar()`).
+  Future<void> eliminarCuenta() async {
+    _ok(await api.post('eliminarCuenta'), 'No se pudo eliminar la cuenta.');
+    await cerrar(avisarBackend: false);
+  }
+
   void _aplicar(Map<String, dynamic> res) {
     if (res['datos'] is Map<String, dynamic>) datos = res['datos'] as Map<String, dynamic>;
     esAdmin = res['esAdmin'] == true;

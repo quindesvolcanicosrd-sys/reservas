@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — Equipo: el estado en la ficha (admins) se elige con pills; el texto de archivar aclara que, si la persona vuelve a ingresar, sale de archivo y queda activx (app y web). Web: "no podrás volver a iniciar sesión" al eliminar la cuenta (sin voseo).
+
 2026-11-07 — Equipo (app y web): se quitó "Copiar link de activación de cuenta"; todas las cuentas ya están migradas.
 
 2026-11-07 — App Android, ficha de Equipo: Administración siempre abierta y sin título; el selector de categoría dice "Auto" para que no se corte.

@@ -465,17 +465,23 @@ class _AdministracionState extends State<_Administracion> {
                   onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría actualizada'),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: const ['Activx', 'Ausente', 'Técnico', 'Lesionadx'].contains(p.estado) ? p.estado : null,
-                  decoration: const InputDecoration(labelText: 'Estado'),
-                  items: const [
-                    DropdownMenuItem(value: 'Activx', child: Text('Activx')),
-                    DropdownMenuItem(value: 'Ausente', child: Text('Ausente')),
-                    DropdownMenuItem(value: 'Técnico', child: Text('Técnico')),
-                    DropdownMenuItem(value: 'Lesionadx', child: Text('Lesionadx')),
+                // Pills en vez de desplegable (Victor, 2026-11-07). "De viaje" se
+                // marca abajo con fechas.
+                Text('Estado', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final e in const ['Activx', 'Ausente', 'Técnico', 'Lesionadx'])
+                      ChoiceChip(
+                        label: Text(e),
+                        selected: p.estado == e,
+                        onSelected: p.estado == e ? null : (_) => _hacer(() => repo.cambiarEstado(p, e), 'Estado actualizado'),
+                      ),
                   ],
-                  onChanged: (v) => v == null ? null : _hacer(() => repo.cambiarEstado(p, v), 'Estado actualizado'),
                 ),
+                const SizedBox(height: 4),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Paga cuota'),
@@ -536,7 +542,7 @@ class _AdministracionState extends State<_Administracion> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.archive_outlined, color: pal.marcaTexto),
                     title: Text('Archivar a ${p.nombreMostrar}', style: TextStyle(color: pal.marcaTexto)),
-                    subtitle: const Text('Deja de aparecer en Equipo y no puede iniciar sesión. Su historial se conserva.'),
+                    subtitle: const Text('Deja de aparecer en Equipo. Su historial se conserva y, si vuelve a ingresar, sale de archivo y queda activx.'),
                     onTap: () async {
                       final nav = Navigator.of(context);
                       if (!await _confirmar('¿Archivar?', 'No se puede archivar si tiene reservas activas o cuotas pendientes.', 'Archivar')) return;

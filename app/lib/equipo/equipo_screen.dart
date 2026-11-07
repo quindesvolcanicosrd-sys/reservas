@@ -389,7 +389,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
       builder: (c) => AlertDialog(
         title: Text('¿Archivar a ${x.nombreMostrar}?'),
         content: const Text(
-          'Deja de aparecer en Equipo y no puede iniciar sesión. Su historial se conserva. No se puede archivar si tiene reservas activas o cuotas pendientes.',
+          'Deja de aparecer en Equipo. Su historial se conserva y, si vuelve a ingresar, sale de archivo y queda activx. No se puede archivar si tiene reservas activas o cuotas pendientes.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Volver')),

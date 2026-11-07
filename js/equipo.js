@@ -3921,7 +3921,7 @@ function _eqAbrirSheetEliminar(id, nombreDerby) {
   var sh = document.getElementById('eq-sheet-eliminar');
   var texto = document.getElementById('eq-sheet-eliminar-texto');
   if (!ov || !sh) return;
-  if (texto) texto.textContent = '¿Archivar a ' + nombreDerby + '? Deja de aparecer en Equipo, eventos y notificaciones, y no podrá volver a iniciar sesión. Su historial de pagos, asistencias y puntos se conserva, y la cuenta se puede restaurar después desde Mi Liga → Usuarios.';
+  if (texto) texto.textContent = '¿Archivar a ' + nombreDerby + '? Deja de aparecer en Equipo, eventos y notificaciones. Su historial de pagos, asistencias y puntos se conserva y, si vuelve a ingresar, sale de archivo y queda activx.';
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
