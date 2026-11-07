@@ -204,8 +204,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final ev = it.evento;
     final texto = ev != null
         ? '${ev.tipo} ${ev.lugar} ${ev.descripcion} ${textoEstadoEvento(ev)} ${Fechas.encabezado(ev.fecha)} ${Fechas.mes(ev.fecha)}'
-        : it.cumple != null
-        ? 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}'
+                : it.cumple != null
+        ? (it.cumple!.esAniversario ? 'aniversario en el equipo ${Fechas.mes(it.cumple!.fecha)}' : 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}')
         : 'descanso temporada ${it.temporada!.nombre} ${Fechas.mes(it.temporada!.desde)} ${Fechas.mes(it.temporada!.hasta)}';
     return q.split(RegExp(r'\s+')).every((palabra) => texto.toLowerCase().contains(palabra));
   }
@@ -226,7 +226,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   List<_Item> _todos() => [
     for (final e in repo.eventos) _Item.evento(e),
-    for (final c in repo.cumples) _Item.cumple(c),
+        for (final c in repo.cumples) _Item.cumple(c),
+    for (final a in repo.aniversarios) _Item.cumple(a),
     for (final t in repo.temporadas) _Item.temporada(t),
   ];
 
@@ -423,7 +424,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   /// Identidad estable de una fila entre cargas.
   String _claveFila(_Fila f) =>
-      '${Fechas.iso(f.dia)}|${f.semana != null ? 's' : ''}|${f.ahora ? 'a' : ''}|${f.item?.evento?.id ?? f.item?.cumple?.nombre ?? f.item?.temporada?.id ?? ''}';
+      '${Fechas.iso(f.dia)}|${f.semana != null ? 's' : ''}|${f.ahora ? 'a' : ''}|${f.item?.evento?.id ?? (f.item?.cumple == null ? null : '${f.item!.cumple!.nombre}${f.item!.cumple!.esAniversario ? '-aniv' : ''}') ?? f.item?.temporada?.id ?? ''}';
 
   void _mantenerAncla(List<_Fila> antes, List<_Fila> despues) {
     if (_desplazandoProgramado || !_scroll.isAttached || antes.isEmpty) return;
@@ -670,7 +671,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                   textInputAction: TextInputAction.search,
                   onChanged: (v) => _cambiarFiltros(() => _consulta = v),
                   decoration: InputDecoration(
-                    hintText: 'Buscar...',
+                    hintText: 'Buscar en la línea de tiempo',
                     isDense: true,
                     suffixIcon: _consulta.isEmpty
                         ? null
@@ -1465,7 +1466,12 @@ class _TarjetaCumple extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    final esHoy = Fechas.soloDia(cumple.fecha) == Fechas.hoy();
+        final esHoy = Fechas.soloDia(cumple.fecha) == Fechas.hoy();
+    final anios = cumple.aniosEquipo;
+    final titulo = anios != null ? 'Aniversario en el equipo' : 'Cumpleaños de ${cumple.nombre}';
+    final detalle = anios == null
+        ? textoCumple(cumple, Fechas.hoy())
+        : '${esHoy ? 'Hoy cumples' : 'Cumples'} $anios ${anios == 1 ? 'año' : 'años'} en el equipo';
     final contenido = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
@@ -1476,16 +1482,16 @@ class _TarjetaCumple extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Cumpleaños de ${cumple.nombre}',
+                                Text(
+                  titulo,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.texto),
                 ),
                 const SizedBox(height: 2),
-                Text(textoCumple(cumple, Fechas.hoy()), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                Text(detalle, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
               ],
             ),
           ),
-          const Text('🎈', style: TextStyle(fontSize: 20)),
+                    Text(anios != null ? '🎉' : '🎈', style: const TextStyle(fontSize: 20)),
         ],
       ),
     );

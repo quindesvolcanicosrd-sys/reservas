@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: aniversario propio en el equipo en la línea de tiempo, buscador "Buscar en la línea de tiempo" y recordatorio al abrir de datos del perfil incompletos (salud, contacto de emergencia, identidad, dirección, privacidad), posponible 30 días.
+
+
+
 2026-11-07 — Se quitó por completo Apps Script: cancelar evento y cambiar protecciones de una reserva ahora funcionan en el servidor nuevo (antes dependían de Apps Script); se eliminaron la nota de pago y el resumen por correo de reservas, y la opción de cambiar el nombre de usuario (nunca funcionó).
 
 

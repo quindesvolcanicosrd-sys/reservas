@@ -45,7 +45,20 @@ class EventosRepo extends ChangeNotifier {
   static const diasAtras = 30;
   static const diasAdelante = 120;
 
-  DateTime? get desdeCargado => _desde;
+    DateTime? get desdeCargado => _desde;
+
+  /// Aniversarios propios de entrada al equipo dentro del rango cargado
+  /// (web: `_evComputarAniversariosIngreso()`; no el año de ingreso).
+  List<Cumple> get aniversarios {
+    final ingreso = Fechas.desdeIso(sesion.datos['fechaIngreso']);
+    final d = _desde, h = _hasta;
+    if (ingreso == null || d == null || h == null) return const [];
+    return [
+      for (var y = d.year; y <= h.year; y++)
+        if (y > ingreso.year && !DateTime(y, ingreso.month, ingreso.day).isBefore(d) && !DateTime(y, ingreso.month, ingreso.day).isAfter(h))
+          Cumple(nombre: sesion.nombreMostrar, fecha: DateTime(y, ingreso.month, ingreso.day), edad: null, fotoPerfil: sesion.fotoPerfil, aniosEquipo: y - ingreso.year),
+    ];
+  }
   DateTime? get hastaCargado => _hasta;
 
   Future<void> cargar({bool forzar = false}) async {

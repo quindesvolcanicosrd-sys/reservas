@@ -217,11 +217,16 @@ class Lugar {
 }
 
 class Cumple {
-  const Cumple({required this.nombre, required this.fecha, required this.edad, required this.fotoPerfil});
+  const Cumple({required this.nombre, required this.fecha, required this.edad, required this.fotoPerfil, this.aniosEquipo});
   final String nombre;
   final DateTime fecha;
   final int? edad;
   final String fotoPerfil;
+
+  /// Aniversario propio de entrada al equipo (no un cumpleaños): cuántos años cumple.
+  final int? aniosEquipo;
+  bool get esAniversario => aniosEquipo != null;
+
 
   factory Cumple.desdeJson(Map<String, dynamic> raw) => Cumple(
     nombre: (raw['nombre'] ?? '').toString(),

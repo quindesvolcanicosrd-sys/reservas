@@ -1,4 +1,5 @@
 import 'package:coach/core/api.dart';
+import 'package:coach/core/datos_pendientes.dart';
 import 'package:coach/core/fechas.dart';
 import 'package:coach/eventos/anticipada.dart';
 import 'package:coach/eventos/eventos_repo.dart';
@@ -65,5 +66,13 @@ void main() {
     expect(ReglaAnticipada.coincide(ReglaAnticipada.clave(prox), DateTime(prox.year + 1, prox.month, 15)), isFalse);
     expect(ReglaAnticipada.coincide(prox.month, DateTime(prox.year + 1, prox.month, 15)), isTrue);
     expect(ReglaAnticipada.mesDe(202609), DateTime(2026, 9));
+  });
+  test('Datos pendientes del perfil', () {
+    expect(DatosPendientes.calcular(const {}).length, 6);
+    final completo = {
+      for (final c in ['emerg1Nombre', 'emerg1Telefono', 'seguro', 'alergias', 'enfermedad', 'medicamentos', 'atencionMedica', 'fechaNacimiento', 'nombreLegal', 'tipoDocumento', 'numeroDocumento', 'callePrincipal', 'sector', 'canton']) c: 'x',
+      'permisosConfigurados': true,
+    };
+    expect(DatosPendientes.calcular(completo), isEmpty);
   });
 }

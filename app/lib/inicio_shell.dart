@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/api.dart';
 import 'core/fechas.dart';
 import 'core/tema.dart';
+import 'core/datos_pendientes.dart';
 import 'core/tour.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
@@ -30,7 +31,16 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+        WidgetsBinding.instance.addObserver(this);
+    // Datos del perfil pendientes: al entrar, sin tapar el tour de primera vez.
+    Future.delayed(const Duration(milliseconds: 2500), _recordarDatos);
+  }
+
+  Future<void> _recordarDatos() async {
+    if (!mounted || Tour.activo) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('tour.eventos.visto') != true || !mounted) return;
+    await DatosPendientes.recordarSiCorresponde(context, widget.sesion);
   }
 
   @override

@@ -36,6 +36,9 @@ class ClavesTour {
 class Tour {
   static bool _activo = false;
 
+  /// Hay un tour en pantalla (para no tapar uno con otra hoja).
+  static bool get activo => _activo;
+
   /// Muestra el tour si no se vio. [preferencia] guarda que ya se vio.
   static Future<void> mostrarSiCorresponde(BuildContext context, {required String preferencia, required List<PasoTour> pasos}) async {
     if (_activo) return;
