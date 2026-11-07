@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android, Equipo cerrado: filtros por período y rol, marcar o cancelar viaje y registrar asistencia externa desde la ficha (admins), Emergencia movida a la barra superior de la ficha, sin íconos en las secciones. Servidor: mensajes "Falta la persona" / "No existe esa persona" (sin femenino).
+
 2026-11-07 — App Android, Equipo: secciones como acordeón (siempre una abierta; abrir otra cierra la anterior con transición suave), encabezados más claros y archivar inactivxs desde la lista (admins).
 
 2026-11-07 — App Android, Equipo: la lista de Inactivxs ahora se calcula como en la web (30+ días sin asistir); emergencia solo para quien fue marcado hoy a tiempo o tarde, con pill roja junto al avatar en la ficha; animación del avatar corregida (sin línea amarilla ni salto de letras). Servidor: `getEquipo` devuelve `presenteHoy`.

@@ -2431,14 +2431,14 @@ async function adminRegistrarAsistenciaExterna(params: Record<string, any>): Pro
   const idJugadora = String(params.idJugadora ?? '').trim();
   const fecha      = String(params.fecha ?? '').trim();
   const lugar      = String(params.lugar ?? '').trim();
-  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  if (!idJugadora) return { exito: false, error: 'Falta la persona.' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || isNaN(new Date(fecha + 'T00:00:00Z').getTime())) return { exito: false, error: 'Fecha inválida.' };
   if (lugar.length > 60) return { exito: false, error: 'El lugar no puede superar 60 caracteres.' };
   const hoyEc = new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10); // Ecuador = UTC-5, sin DST
   if (fecha > hoyEc) return { exito: false, error: 'La fecha no puede ser futura.' };
 
   const { data: persona } = await supabase.from('equipo').select('username').eq('username', idJugadora).maybeSingle();
-  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+  if (!persona) return { exito: false, error: 'No existe esa persona.' };
 
   const { error } = await supabase.from('log_asistencias').insert({
     id_evento: 'ext_' + crypto.randomUUID(),
@@ -2465,7 +2465,7 @@ async function adminGetAsistenciasExternas(params: Record<string, any>): Promise
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const idJugadora = String(params.idJugadora ?? '').trim();
-  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  if (!idJugadora) return { exito: false, error: 'Falta la persona.' };
   const { data, error } = await supabase.from('log_asistencias')
     .select('id_evento, fecha_entrenamiento, lugar_externo, marca_temporal')
     .eq('nombre_usuario', idJugadora).eq('origen', 'Externa')
@@ -3383,7 +3383,7 @@ async function adminActualizarEstadoViaje(params: Record<string, any>): Promise<
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const idJugadora = String(params.idJugadora ?? '').trim();
-  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  if (!idJugadora) return { exito: false, error: 'Falta la persona.' };
   const normFecha = (v: unknown): string | null | false => {
     if (v === null || v === undefined || v === '') return null;
     const t = String(v).trim();
@@ -3395,7 +3395,7 @@ async function adminActualizarEstadoViaje(params: Record<string, any>): Promise<
   if (desde && hasta && hasta < desde) return { exito: false, error: 'La fecha de regreso no puede ser anterior a la de salida.' };
 
   const { data: persona } = await supabase.from('equipo').select('username, estado_miembro').eq('username', idJugadora).maybeSingle();
-  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+  if (!persona) return { exito: false, error: 'No existe esa persona.' };
 
   const { error } = await supabase.from('equipo')
     .update({ estado_miembro: 'De viaje', exenta_cuota: false, viaje_desde: desde, viaje_hasta: hasta })
@@ -3432,9 +3432,9 @@ async function adminCancelarViaje(params: Record<string, any>): Promise<Record<s
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const idJugadora = String(params.idJugadora ?? '').trim();
-  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  if (!idJugadora) return { exito: false, error: 'Falta la persona.' };
   const { data: persona } = await supabase.from('equipo').select('username, estado_miembro').eq('username', idJugadora).maybeSingle();
-  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+  if (!persona) return { exito: false, error: 'No existe esa persona.' };
   if (persona.estado_miembro !== 'De viaje') return { exito: false, error: 'No está marcadx como De viaje.' };
   const { error } = await supabase.from('equipo')
     .update({ estado_miembro: 'Activx', viaje_desde: null, viaje_hasta: null })

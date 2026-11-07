@@ -96,6 +96,15 @@ class _EquipoScreenState extends State<EquipoScreen> {
                   ),
           ),
           actions: [
+            if (!_buscando)
+              ListenableBuilder(
+                listenable: repo,
+                builder: (context, _) => IconButton(
+                  tooltip: 'Filtros',
+                  onPressed: _abrirFiltros,
+                  icon: Badge(isLabelVisible: repo.hayFiltros, smallSize: 8, child: const Icon(Icons.tune_rounded)),
+                ),
+              ),
             IconButton(
               tooltip: _buscando ? 'Cerrar búsqueda' : 'Buscar',
               onPressed: _alternarBusqueda,
@@ -127,7 +136,21 @@ class _EquipoScreenState extends State<EquipoScreen> {
             } else {
               cuerpo = _lista(context, p, personas);
             }
-            return AnimatedSwitcher(duration: const Duration(milliseconds: 240), child: cuerpo);
+            return Stack(
+              children: [
+                AnimatedSwitcher(duration: const Duration(milliseconds: 240), child: cuerpo),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    opacity: repo.cargando && personas != null ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const LinearProgressIndicator(minHeight: 2),
+                  ),
+                ),
+              ],
+            );
           },
         ),
       ),
@@ -146,7 +169,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
   Widget _lista(BuildContext context, PivotPaleta p, List<Integrante> personas) {
     final hoy = Fechas.hoy();
     List<Integrante> grupo(String g) {
-      final l = personas.where((x) => x.grupo == g).toList()
+      final l = personas.where((x) => x.grupo == g && repo.pasaRoles(x)).toList()
         ..sort((a, b) {
           // Tu fila primero; después por nombre.
           if (repo.esYo(a) != repo.esYo(b)) return repo.esYo(a) ? -1 : 1;
@@ -170,7 +193,8 @@ class _EquipoScreenState extends State<EquipoScreen> {
         key: const ValueKey('lista'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          if (favoritos.isNotEmpty) ...[
+          if (repo.hayFiltros) SliverToBoxAdapter(child: _filtrosActivos(p)),
+          if (favoritos.isNotEmpty && !repo.hayFiltros) ...[
             _encabezado(p, 'Favoritos', favoritos.length),
             SliverToBoxAdapter(
               child: SizedBox(
@@ -217,15 +241,24 @@ class _EquipoScreenState extends State<EquipoScreen> {
                 ),
               ],
             ),
+          if (conGente.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Nadie coincide con estos filtros.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: p.textoSecundario),
+                ),
+              ),
+            ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
     );
   }
 
-  static const _iconos = {'Quindes': Icons.groups_rounded, 'Mirlxs': Icons.school_rounded, 'Inactivxs': Icons.bedtime_outlined};
-
-  /// Encabezado del acordeón: tarjeta con ícono, nombre, cantidad y flecha.
+  /// Encabezado del acordeón: tarjeta con nombre, cantidad y flecha.
   /// Tocar la abierta no hace nada (siempre queda una abierta).
   Widget _seccion(PivotPaleta p, String titulo, int n, {required bool abierta}) {
     const dur = Duration(milliseconds: 300);
@@ -254,8 +287,6 @@ class _EquipoScreenState extends State<EquipoScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   child: Row(
                     children: [
-                      Icon(_iconos[titulo], size: 20, color: abierta ? p.marcaTexto : p.textoSecundario),
-                      const SizedBox(width: 10),
                       AnimatedDefaultTextStyle(
                         duration: dur,
                         style: Theme.of(context).textTheme.titleMedium!
@@ -309,7 +340,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
   }
 
   Widget _fila(BuildContext context, Integrante x, DateTime hoy, {List<String>? motivos}) {
-    final datos = datosRelevantes(x, hoy);
+    final datos = datosRelevantes(x, hoy, periodo: repo.periodoCorto);
     return _FilaIntegrante(
       key: ValueKey('fila-${x.username}'),
       p: x,
@@ -321,6 +352,31 @@ class _EquipoScreenState extends State<EquipoScreen> {
       // Emergencia solo para quien fue marcadx hoy a tiempo o tarde (Victor, 2026-11-07).
       emergencia: repo.esAdmin && x.presenteHoy ? () => EmergenciaScreen.abrir(context, repo, x) : null,
       archivar: repo.esAdmin && x.inactivx && !repo.esYo(x) ? () => _archivar(x) : null,
+    );
+  }
+
+  /// Fila de filtros activos, cada uno con su ✕ (web: badge del botón Filtros).
+  Widget _filtrosActivos(PivotPaleta p) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: [
+          if (repo.periodoMes != null || repo.periodoHistorico)
+            InputChip(label: Text(repo.periodoTitulo), onDeleted: () => repo.cambiarPeriodo(), onPressed: _abrirFiltros),
+          for (final r in repo.filtroRoles) InputChip(label: Text(r), onDeleted: () => repo.alternarRol(r), onPressed: _abrirFiltros),
+        ],
+      ),
+    );
+  }
+
+  void _abrirFiltros() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _HojaFiltros(repo: repo),
     );
   }
 
@@ -617,6 +673,91 @@ class _PlegableState extends State<_Plegable> with SingleTickerProviderStateMixi
               ),
             ),
       child: widget.child,
+    );
+  }
+}
+
+/// Filtros de Equipo: período de los stats (mes o histórico) y roles.
+class _HojaFiltros extends StatelessWidget {
+  const _HojaFiltros({required this.repo});
+  final EquipoRepo repo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final hoy = Fechas.hoy();
+    final meses = [for (var i = 0; i < 12; i++) DateTime(hoy.year, hoy.month - i)];
+    Widget titulo(String t) => Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Text(
+        t,
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 0.4, color: p.textoSecundario),
+      ),
+    );
+    return ListenableBuilder(
+      listenable: repo,
+      builder: (context, _) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text('Filtros', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  const Spacer(),
+                  AnimatedOpacity(
+                    opacity: repo.hayFiltros ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: TextButton(onPressed: repo.hayFiltros ? repo.limpiarFiltros : null, child: const Text('Limpiar')),
+                  ),
+                ],
+              ),
+            ),
+            titulo('Período de las estadísticas'),
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  for (final (i, m) in meses.indexed)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(i == 0 ? 'Este mes' : (m.year == hoy.year ? Fechas.mesNombre(m) : Fechas.mesAnio(m))),
+                        selected: !repo.periodoHistorico && (i == 0 ? repo.periodoMes == null : repo.periodoMes == m),
+                        onSelected: (_) => repo.cambiarPeriodo(mes: m),
+                      ),
+                    ),
+                  ChoiceChip(label: const Text('Histórico'), selected: repo.periodoHistorico, onSelected: (_) => repo.cambiarPeriodo(historico: true)),
+                ],
+              ),
+            ),
+            titulo('Roles'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  for (final r in EquipoRepo.rolesCatalogo)
+                    FilterChip(label: Text(r), selected: repo.filtroRoles.contains(r), onSelected: (_) => repo.alternarRol(r)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+              child: FilledButton(
+                style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Listo'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -21,6 +21,7 @@ class Integrante {
   String get email => '${m['email'] ?? ''}';
   String get estado => '${m['estado'] ?? 'Activx'}';
   String get tierModo => '${m['tierModo'] ?? 'auto'}';
+  DateTime? get viajeDesde => Fechas.desdeIso(m['viajeDesde']);
   DateTime? get viajeHasta => Fechas.desdeIso(m['viajeHasta']);
   DateTime? get fechaIngreso => Fechas.desdeIso(m['fechaIngreso']);
   DateTime? get ultimaAsistencia => Fechas.desdeIso(m['ultimaAsistencia']);
@@ -117,7 +118,7 @@ class DatoFila {
 /// estado (fijo) > cumpleaños en 7 días > aniversario en 7 días > nuevo en el
 /// equipo (< 30 días) > asistencia del mes ≥ 80% > ≥ 5 puntos > racha.
 /// Hasta 3; la fila los rota con fundido.
-List<DatoFila> datosRelevantes(Integrante p, DateTime hoy) {
+List<DatoFila> datosRelevantes(Integrante p, DateTime hoy, {String periodo = 'este mes'}) {
   if (p.deViaje) {
     final h = p.viajeHasta;
     return [DatoFila(Icons.flight_takeoff_rounded, h == null ? 'De viaje' : 'De viaje hasta el ${h.day}/${h.month}', fijo: true)];
@@ -145,7 +146,7 @@ List<DatoFila> datosRelevantes(Integrante p, DateTime hoy) {
     final flecha = p.tendencia == 'sube' ? ' ↑' : (p.tendencia == 'baja' ? ' ↓' : '');
     res.add(DatoFila(Icons.event_available_outlined, '$pct% de asistencia$flecha'));
   }
-  if (p.puntos >= 5) res.add(DatoFila(Icons.star_outline_rounded, '${_num(p.puntos)} pts este mes'));
+  if (p.puntos >= 5) res.add(DatoFila(Icons.star_outline_rounded, '${_num(p.puntos)} pts $periodo'));
   if (p.racha >= 2) res.add(DatoFila(Icons.local_fire_department_outlined, 'Racha de ${p.racha} meses'));
   return res.take(3).toList();
 }

@@ -58,7 +58,7 @@ class _Ficha extends StatelessWidget {
     ]..sort((a, b) => b.puntos.compareTo(a.puntos));
     if (grupo.length < 2 || p.inactivx) return null;
     final i = grupo.indexWhere((x) => x.username == p.username);
-    return i < 0 ? null : 'Puesto ${i + 1} de ${grupo.length} en ${p.grupo} este mes';
+    return i < 0 ? null : 'Puesto ${i + 1} de ${grupo.length} en ${p.grupo} ${repo.periodoCorto}';
   }
 
   @override
@@ -72,6 +72,8 @@ class _Ficha extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         actions: [
+          // Emergencia arriba a la derecha (Victor, 2026-11-07: junto al avatar se veía mal).
+          if (repo.esAdmin) Center(child: _PildoraEmergencia(repo: repo, p: p)),
           if (!yo)
             IconButton(
               tooltip: fav ? 'Quitar de favoritos' : 'Agregar a favoritos',
@@ -89,15 +91,11 @@ class _Ficha extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                HeroAvatar(
-                  tag: 'avatar-${p.username}',
-                  child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
-                ),
-                if (repo.esAdmin) ...[const SizedBox(width: 14), _PildoraEmergencia(repo: repo, p: p)],
-              ],
+            Center(
+              child: HeroAvatar(
+                tag: 'avatar-${p.username}',
+                child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
+              ),
             ),
             const SizedBox(height: 14),
             Text.rich(
@@ -187,7 +185,7 @@ class _Ficha extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: _Stat(valor: pct == null ? '—' : '$pct%', etiqueta: 'Asistencia del mes'),
+                child: _Stat(valor: pct == null ? '—' : '$pct%', etiqueta: 'Asistencia ${repo.periodoCorto}'),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -378,6 +376,48 @@ class _AdministracionState extends State<_Administracion> {
     }
   }
 
+  String _textoViaje(Integrante p) {
+    final d = p.viajeDesde, h = p.viajeHasta;
+    if (d == null && h == null) return 'De viaje';
+    if (d == null) return 'De viaje hasta el ${Fechas.corta(h!)}';
+    if (h == null) return 'De viaje desde el ${Fechas.corta(d)}';
+    return 'De viaje del ${Fechas.corta(d)} al ${Fechas.corta(h)}';
+  }
+
+  Future<void> _marcarViaje() async {
+    final hoy = Fechas.hoy();
+    final r = await showDateRangePicker(
+      context: context,
+      firstDate: hoy.subtract(const Duration(days: 60)),
+      lastDate: hoy.add(const Duration(days: 365)),
+      initialDateRange: DateTimeRange(start: hoy, end: hoy.add(const Duration(days: 7))),
+      helpText: 'Fechas del viaje',
+      saveText: 'Guardar',
+    );
+    if (r == null || !mounted) return;
+    setState(() => _ocupado = true);
+    final m = ScaffoldMessenger.of(context);
+    try {
+      final aviso = await widget.repo.marcarViaje(widget.p, r.start, r.end);
+      m.showSnackBar(SnackBar(content: Text(aviso ?? 'Viaje guardado')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Future<void> _asistenciaExterna() async {
+    final res = await showModalBottomSheet<(DateTime, String)>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => const _HojaAsistenciaExterna(),
+    );
+    if (res == null) return;
+    await _hacer(() => widget.repo.registrarAsistenciaExterna(widget.p, res.$1, res.$2), 'Asistencia externa registrada');
+  }
+
   Future<bool> _confirmar(String titulo, String texto, String si) async {
     final r = await showDialog<bool>(
       context: context,
@@ -471,6 +511,35 @@ class _AdministracionState extends State<_Administracion> {
                       await Clipboard.setData(ClipboardData(text: link));
                     }, 'Link copiado'),
                   ),
+                  // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
+                  if (p.deViaje)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
+                      title: Text(_textoViaje(p)),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          if (!await _confirmar('¿Cancelar el viaje?', '${p.nombreMostrar} vuelve a quedar Activx.', 'Cancelar viaje')) return;
+                          await _hacer(() => repo.cancelarViaje(p), 'Viaje cancelado');
+                        },
+                        child: const Text('Cancelar'),
+                      ),
+                    )
+                  else
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.flight_takeoff_rounded, color: pal.marcaTexto),
+                      title: const Text('Marcar viaje'),
+                      subtitle: const Text('Mientras esté de viaje no cuenta como inactividad.'),
+                      onTap: _marcarViaje,
+                    ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.add_task_rounded, color: pal.marcaTexto),
+                    title: const Text('Registrar asistencia externa'),
+                    subtitle: const Text('Un entrenamiento fuera de la liga. Suma puntos de asistencia.'),
+                    onTap: _asistenciaExterna,
+                  ),
                   // Archivar solo con inactividad (Victor, 2026-11-07); el
                   // servidor además lo impide con reservas o cuotas activas.
                   if (p.inactivx)
@@ -496,7 +565,7 @@ class _AdministracionState extends State<_Administracion> {
   }
 }
 
-/// Pill roja "Emergencia" junto al avatar (solo admins). Se habilita solo si
+/// Pill roja "Emergencia" en la barra de la ficha (solo admins). Se habilita solo si
 /// la persona fue marcada hoy "A tiempo" o "Tarde" (Victor, 2026-11-07).
 class _PildoraEmergencia extends StatelessWidget {
   const _PildoraEmergencia({required this.repo, required this.p});
@@ -521,20 +590,77 @@ class _PildoraEmergencia extends StatelessWidget {
                   ..hideCurrentSnackBar()
                   ..showSnackBar(const SnackBar(content: Text('Se activa cuando la persona está marcada hoy a tiempo o tarde.'))),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.emergency_rounded, size: 18, color: pal.sobreMarca),
-                const SizedBox(width: 6),
+                Icon(Icons.emergency_rounded, size: 16, color: pal.sobreMarca),
+                const SizedBox(width: 5),
                 Text(
                   'Emergencia',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: pal.sobreMarca),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: pal.sobreMarca),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Fecha (hasta hoy) y lugar (opcional, 60 caracteres) de una asistencia externa.
+class _HojaAsistenciaExterna extends StatefulWidget {
+  const _HojaAsistenciaExterna();
+
+  @override
+  State<_HojaAsistenciaExterna> createState() => _HojaAsistenciaExternaState();
+}
+
+class _HojaAsistenciaExternaState extends State<_HojaAsistenciaExterna> {
+  DateTime? _fecha;
+  final _lugar = TextEditingController();
+
+  @override
+  void dispose() {
+    _lugar.dispose();
+    super.dispose();
+  }
+
+  Future<void> _elegirFecha() async {
+    final hoy = Fechas.hoy();
+    final f = await showDatePicker(context: context, firstDate: DateTime(hoy.year - 1, hoy.month, hoy.day), lastDate: hoy, initialDate: _fecha ?? hoy);
+    if (f != null) setState(() => _fecha = f);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Asistencia externa', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _elegirFecha,
+            icon: const Icon(Icons.calendar_today_outlined, size: 18),
+            label: Text(_fecha == null ? 'Elegir fecha' : Fechas.corta(_fecha!)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _lugar,
+            maxLength: 60,
+            decoration: const InputDecoration(labelText: 'Lugar (opcional)'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            onPressed: _fecha == null ? null : () => Navigator.of(context).pop((_fecha!, _lugar.text)),
+            child: const Text('Registrar'),
+          ),
+        ],
       ),
     );
   }
