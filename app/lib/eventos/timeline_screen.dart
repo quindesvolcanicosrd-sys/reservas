@@ -40,11 +40,13 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _Item {
-  _Item.evento(this.evento) : cumple = null;
-  _Item.cumple(this.cumple) : evento = null;
+  _Item.evento(this.evento) : cumple = null, temporada = null;
+  _Item.cumple(this.cumple) : evento = null, temporada = null;
+  _Item.temporada(this.temporada) : evento = null, cumple = null;
+  final Temporada? temporada;
   final Evento? evento;
   final Cumple? cumple;
-  DateTime get fecha => evento?.fecha ?? cumple!.fecha;
+  DateTime get fecha => evento?.fecha ?? cumple?.fecha ?? temporada!.desde;
 }
 
 /// Una fila del timeline: fecha (solo en la primera del día), punto y contenido.
@@ -188,7 +190,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final ev = it.evento;
     final texto = ev != null
         ? '${ev.tipo} ${ev.lugar} ${ev.descripcion} ${textoEstadoEvento(ev)} ${Fechas.encabezado(ev.fecha)} ${Fechas.mes(ev.fecha)}'
-        : 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}';
+        : it.cumple != null
+        ? 'cumpleaños ${it.cumple!.nombre} ${Fechas.mes(it.cumple!.fecha)}'
+        : 'descanso temporada ${it.temporada!.nombre} ${Fechas.mes(it.temporada!.desde)} ${Fechas.mes(it.temporada!.hasta)}';
     return q.split(RegExp(r'\s+')).every((palabra) => texto.toLowerCase().contains(palabra));
   }
 
@@ -198,6 +202,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (_filtroLugar != null && ev?.lugar != _filtroLugar) return false;
     if (_filtroTipo != null) {
       if (_filtroTipo == 'Cumpleaños') return it.cumple != null;
+      if (_filtroTipo == 'Descanso') return it.temporada != null;
       if (ev?.tipo != _filtroTipo) return false;
     }
     return true;
@@ -205,7 +210,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool get _hayFiltros => _consulta.trim().isNotEmpty || _filtroLugar != null || _filtroTipo != null;
 
-  List<_Item> _todos() => [for (final e in repo.eventos) _Item.evento(e), for (final c in repo.cumples) _Item.cumple(c)];
+  List<_Item> _todos() => [
+    for (final e in repo.eventos) _Item.evento(e),
+    for (final c in repo.cumples) _Item.cumple(c),
+    for (final t in repo.temporadas) _Item.temporada(t),
+  ];
 
   /// Opciones de los filtros: solo las que existen en lo que ya coincide con
   /// el texto buscado (y con el otro filtro), igual que la web.
@@ -222,18 +231,19 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   List<String> _opcionesTipo() {
     final s = <String>{};
-    var hayCumples = false;
+    var hayCumples = false, hayDescanso = false;
     for (final it in _todos()) {
       if (!_coincideTexto(it)) continue;
       final ev = it.evento;
       if (ev == null) {
-        hayCumples = true;
+        if (it.cumple != null) hayCumples = true;
+        if (it.temporada != null) hayDescanso = true;
         continue;
       }
       if (_filtroLugar != null && _filtroLugar != ev.lugar) continue;
       s.add(ev.tipo);
     }
-    return [...(s.toList()..sort()), if (hayCumples && _filtroLugar == null) 'Cumpleaños'];
+    return [...(s.toList()..sort()), if (hayCumples && _filtroLugar == null) 'Cumpleaños', if (hayDescanso && _filtroLugar == null) 'Descanso'];
   }
 
   // ─── Filas ──────────────────────────────────────────────────────────────
@@ -397,7 +407,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   /// Identidad estable de una fila entre cargas.
   String _claveFila(_Fila f) =>
-      '${Fechas.iso(f.dia)}|${f.semana != null ? 's' : ''}|${f.ahora ? 'a' : ''}|${f.item?.evento?.id ?? f.item?.cumple?.nombre ?? ''}';
+      '${Fechas.iso(f.dia)}|${f.semana != null ? 's' : ''}|${f.ahora ? 'a' : ''}|${f.item?.evento?.id ?? f.item?.cumple?.nombre ?? f.item?.temporada?.id ?? ''}';
 
   void _mantenerAncla(List<_Fila> antes, List<_Fila> despues) {
     if (_desplazandoProgramado || !_scroll.isAttached || antes.isEmpty) return;
@@ -453,9 +463,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         }
         final panel = _calMontado ? RepaintBoundary(child: _panelCalendario(context)) : null;
         return Scaffold(
-          floatingActionButton: _esAdmin && !_buscando
-              ? FloatingActionButton(tooltip: 'Nuevo evento', onPressed: _nuevoEvento, child: const Icon(Icons.add_rounded))
-              : null,
+          floatingActionButton: _acciones.isEmpty || _buscando
+              ? null
+              : FloatingActionButton(tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -568,12 +578,6 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
               WidgetsBinding.instance.addPostFrameCallback((_) => _focoBusqueda.requestFocus());
             },
           ),
-          if (repo.anticipada.disponible) ...[
-            const SizedBox(width: 4),
-            _BotonAnticipada(
-              alTocar: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AnticipadaScreen(repo: repo))),
-            ),
-          ],
           const SizedBox(width: 4),
         ],
       ),
@@ -852,7 +856,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       );
     } else {
       punto = _punto(p, f.item!);
-      contenido = f.item!.cumple != null
+      contenido = f.item!.temporada != null
+          ? _TarjetaDescanso(temporada: f.item!.temporada!, repo: repo)
+          : f.item!.cumple != null
           ? _TarjetaCumple(cumple: f.item!.cumple!)
           : _TarjetaEvento(evento: f.item!.evento!, repo: repo, alAbrir: () => _abrirDetalle(f.item!.evento!));
     }
@@ -880,10 +886,52 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
 
+  // ─── Botón "+": menú de acciones (pedido 2026-11-06, como la web) ───────
+
+  List<_Accion> get _acciones => [
+    if (_esAdmin) _Accion(Icons.edit_calendar_outlined, 'Nuevo evento', _nuevoEvento),
+    if (repo.anticipada.disponible)
+      _Accion(
+        Symbols.event_upcoming_rounded,
+        'Asistencia anticipada',
+        () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AnticipadaScreen(repo: repo, abrirNueva: true))),
+      ),
+  ];
+
+  /// Con una sola acción, el "+" la abre directo; con más, despliega el menú
+  /// con un velo sobre la pantalla (el botón gira a ×).
+  Future<void> _abrirAcciones() async {
+    final acciones = _acciones;
+    _cerrarCalendario();
+    if (acciones.length == 1) {
+      acciones.first.alTocar();
+      return;
+    }
+    final elegida = await showGeneralDialog<_Accion>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Cerrar',
+      barrierColor: context.pivot.velo,
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (c, _, _) => _MenuAcciones(acciones: acciones),
+      transitionBuilder: (c, a, _, hijo) => FadeTransition(
+        opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
+        child: hijo,
+      ),
+    );
+    elegida?.alTocar();
+  }
+
   Future<void> _nuevoEvento() async {
     _cerrarCalendario();
     final r = await Navigator.of(context).push<Object>(MaterialPageRoute(builder: (_) => CrearEventoScreen(repo: repo)));
     if (r == null || !mounted) return;
+    if (r is Map) {
+      // Temporada de descanso: la pantalla ya avisó; se lleva al inicio del período.
+      final d = r['descanso'];
+      if (d is DateTime) WidgetsBinding.instance.addPostFrameCallback((_) => _irA(d));
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Evento creado. Se avisó al equipo.')));
     if (r is DateTime) {
       _cambiarFiltros(_limpiarFiltros);
@@ -1179,6 +1227,109 @@ class _PuntoEnVivoState extends State<_PuntoEnVivo> with SingleTickerProviderSta
   }
 }
 
+/// Temporada de descanso (como la card `ev-card-offseason` de la web). Los
+/// admins la editan o la eliminan tocándola.
+class _TarjetaDescanso extends StatelessWidget {
+  const _TarjetaDescanso({required this.temporada, required this.repo});
+  final Temporada temporada;
+  final EventosRepo repo;
+
+  Future<void> _acciones(BuildContext context) async {
+    final accion = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Editar temporada'), onTap: () => Navigator.pop(c, 'editar')),
+            ListTile(
+              leading: Icon(Icons.delete_outline_rounded, color: c.pivot.marcaTexto),
+              title: Text('Eliminar temporada', style: TextStyle(color: c.pivot.marcaTexto)),
+              subtitle: const Text('Los entrenamientos de esas fechas vuelven a aparecer.'),
+              onTap: () => Navigator.pop(c, 'eliminar'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (accion == null || !context.mounted) return;
+    final mensajero = ScaffoldMessenger.of(context);
+    if (accion == 'editar') {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CrearEventoScreen(repo: repo, temporada: temporada),
+        ),
+      );
+      return;
+    }
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('¿Eliminar la temporada?'),
+        content: Text('${temporada.nombre}: los entrenamientos de esas fechas vuelven a aparecer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await repo.eliminarDescanso(temporada);
+      mensajero.showSnackBar(const SnackBar(content: Text('Temporada eliminada.')));
+    } catch (e) {
+      mensajero.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final esAdmin = repo.sesion.esAdmin && repo.sesion.adminToken != null;
+    return Material(
+      color: p.apagadoFondo,
+      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        onTap: esAdmin ? () => _acciones(context) : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: p.tarjeta, shape: BoxShape.circle),
+                child: Icon(Icons.bedtime_outlined, color: p.textoSecundario),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      temporada.nombre,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.texto),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Sin entrenamientos del ${Fechas.corta(temporada.desde)} al ${Fechas.corta(temporada.hasta)}',
+                      style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                    ),
+                  ],
+                ),
+              ),
+              if (esAdmin) Icon(Icons.more_vert_rounded, color: p.textoSecundario),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Tarjeta de cumpleaños: avatar de la persona y, si cumple hoy, confeti
 /// cayendo en loop dentro de la tarjeta.
 class _TarjetaCumple extends StatelessWidget {
@@ -1298,80 +1449,103 @@ class _PintorConfeti extends CustomPainter {
   bool shouldRepaint(_PintorConfeti viejo) => false;
 }
 
-/// Botón de asistencia anticipada: lleno con el color de marca para que
-/// resalte e invite a tocarlo, con un halo que late suave hasta que la
-/// persona lo abre por primera vez (se recuerda en el teléfono).
-class _BotonAnticipada extends StatefulWidget {
-  const _BotonAnticipada({required this.alTocar});
+class _Accion {
+  const _Accion(this.icono, this.texto, this.alTocar);
+  final IconData icono;
+  final String texto;
   final VoidCallback alTocar;
-
-  @override
-  State<_BotonAnticipada> createState() => _BotonAnticipadaState();
 }
 
-class _BotonAnticipadaState extends State<_BotonAnticipada> with SingleTickerProviderStateMixin {
-  static const _kVisto = 'eventos.anticipadaVista';
-  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
-  bool _visto = true;
+/// Menú del "+": opciones con ícono y texto completo que suben escalonadas
+/// desde el botón, que gira a ×.
+class _MenuAcciones extends StatefulWidget {
+  const _MenuAcciones({required this.acciones});
+  final List<_Accion> acciones;
 
   @override
-  void initState() {
-    super.initState();
-    SharedPreferences.getInstance()
-        .then((pr) {
-          if (!mounted || (pr.getBool(_kVisto) ?? false)) return;
-          setState(() => _visto = false);
-          _latido.repeat();
-        })
-        .catchError((_) {});
-  }
+  State<_MenuAcciones> createState() => _MenuAccionesState();
+}
+
+class _MenuAccionesState extends State<_MenuAcciones> with SingleTickerProviderStateMixin {
+  late final AnimationController _a = AnimationController(vsync: this, duration: const Duration(milliseconds: 320))..forward();
 
   @override
   void dispose() {
-    _latido.dispose();
+    _a.dispose();
     super.dispose();
-  }
-
-  void _tocar() {
-    if (!_visto) {
-      setState(() => _visto = true);
-      _latido.stop();
-      SharedPreferences.getInstance().then((pr) => pr.setBool(_kVisto, true)).catchError((_) => false);
-    }
-    widget.alTocar();
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (!_visto)
-            AnimatedBuilder(
-              animation: _latido,
-              builder: (context, _) {
-                final v = Curves.easeOut.transform(_latido.value);
-                return Container(
-                  width: 40 + 14 * v,
-                  height: 40 + 14 * v,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: p.marca.withValues(alpha: 0.35 * (1 - v)),
-                  ),
-                );
-              },
-            ),
-          IconButton.filled(
-            tooltip: 'Asistencia anticipada',
-            style: IconButton.styleFrom(backgroundColor: p.marca, foregroundColor: p.sobreMarca),
-            icon: const Icon(Symbols.event_upcoming_rounded),
-            onPressed: _tocar,
+    final n = widget.acciones.length;
+    return SafeArea(
+      child: Padding(
+        // Mismo lugar que el FAB del Scaffold (16 px del borde, sobre la barra inferior).
+        padding: const EdgeInsets.only(right: 16, bottom: 16 + 80),
+        child: Align(
+          alignment: Alignment.bottomRight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < n; i++)
+                Builder(
+                  builder: (context) {
+                    // La más cercana al botón aparece primero.
+                    final inicio = (n - 1 - i) * 0.12;
+                    final anim = CurvedAnimation(
+                      parent: _a,
+                      curve: Interval(inicio, (inicio + 0.6).clamp(0, 1), curve: Curves.easeOutCubic),
+                    );
+                    final ac = widget.acciones[i];
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween(begin: const Offset(0, 0.4), end: Offset.zero).animate(anim),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Material(
+                            color: p.tarjeta,
+                            elevation: 3,
+                            shadowColor: p.velo,
+                            borderRadius: BorderRadius.circular(PivotRadios.boton),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(PivotRadios.boton),
+                              onTap: () => Navigator.of(context).pop(ac),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(ac.icono, color: p.marcaTexto),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      ac.texto,
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              FloatingActionButton(
+                heroTag: null,
+                tooltip: 'Cerrar',
+                onPressed: () => Navigator.of(context).pop(),
+                child: RotationTransition(
+                  turns: Tween(begin: 0.0, end: 0.125).animate(CurvedAnimation(parent: _a, curve: Curves.easeOutCubic)),
+                  child: const Icon(Icons.add_rounded),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

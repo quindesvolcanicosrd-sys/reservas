@@ -56,7 +56,10 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
       builder: (context, _) {
         final ev = widget.repo.porId(widget.eventoId);
         if (ev == null) {
-          return Scaffold(appBar: AppBar(), body: const Center(child: Text('No encontramos este evento.')));
+          return Scaffold(
+            appBar: AppBar(),
+            body: const Center(child: Text('No encontramos este evento.')),
+          );
         }
         final marcados = {for (final a in ev.asistentes) a.persona.username.trim().toUpperCase(): a.estado};
         return Scaffold(

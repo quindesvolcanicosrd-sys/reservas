@@ -102,7 +102,7 @@ class Evento {
     if (i == null) return fecha.isBefore(DateTime.now().subtract(const Duration(days: 1)));
     final p = horaFin.split(':');
     final h = int.tryParse(p.first), m = p.length > 1 ? int.tryParse(p[1]) : null;
-        var fin = (h != null && m != null) ? DateTime.utc(fecha.year, fecha.month, fecha.day, h + 5, m) : i.add(const Duration(hours: 2));
+    var fin = (h != null && m != null) ? DateTime.utc(fecha.year, fecha.month, fecha.day, h + 5, m) : i.add(const Duration(hours: 2));
     if (!fin.isAfter(i)) fin = fin.add(const Duration(days: 1)); // termina pasada la medianoche
     return DateTime.now().toUtc().isAfter(fin);
   }
@@ -188,6 +188,23 @@ class Evento {
       videoInstructivo: (raw['videoInstructivo'] ?? '').toString(),
       asistentes: reales,
     );
+  }
+}
+
+/// Temporada de descanso (`temporadas_descanso`): sin entrenamientos entre
+/// esas fechas.
+class Temporada {
+  const Temporada({required this.id, required this.nombre, required this.desde, required this.hasta});
+  final String id;
+  final String nombre;
+  final DateTime desde;
+  final DateTime hasta;
+
+  static Temporada? desdeFila(Map<String, dynamic> f) {
+    final d = DateTime.tryParse((f['fecha_inicio'] ?? '').toString());
+    final h = DateTime.tryParse((f['fecha_fin'] ?? '').toString());
+    if (d == null || h == null) return null;
+    return Temporada(id: f['id'].toString(), nombre: (f['nombre'] ?? 'Temporada de descanso').toString(), desde: d, hasta: h);
   }
 }
 

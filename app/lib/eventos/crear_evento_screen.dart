@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../core/asistente.dart';
+
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import 'eventos_repo.dart';
+import 'modelos.dart';
+import 'nuevo_lugar_screen.dart';
 import 'selector_fechas.dart';
 
-enum _Paso { tipo, lugar, detalles, frecuencia, fecha, hora }
+enum _Paso { tipo, lugar, detalles, frecuencia, fecha, hora, descanso }
 
 /// "Nuevo evento" (solo admins). Mismos pasos que el asistente de la web
 /// (`irEvCrear()`): Tipo → Lugar → Detalles → Frecuencia → Fecha → Horario.
-/// "Temporada de descanso" queda fuera: en la web todavía no guarda.
+/// "Temporada de descanso": nombre + fechas; el servidor elimina los
+/// eventos de ese período y avisa al equipo (`adminGuardarTemporadaDescanso`).
 class CrearEventoScreen extends StatefulWidget {
-  const CrearEventoScreen({super.key, required this.repo});
+  const CrearEventoScreen({super.key, required this.repo, this.temporada});
   final EventosRepo repo;
+
+  /// Editar una temporada de descanso existente (solo ese paso).
+  final Temporada? temporada;
 
   @override
   State<CrearEventoScreen> createState() => _CrearEventoScreenState();
@@ -23,6 +31,10 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
   bool _adelante = true;
 
   bool? _recurrente;
+  bool _descanso = false;
+  final _nombreDescanso = TextEditingController();
+  DateTime? _descDesde;
+  DateTime? _descHasta;
   List<Map<String, dynamic>>? _venues;
   String? _errorVenues;
   Map<String, dynamic>? _venue;
@@ -45,12 +57,22 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
   @override
   void initState() {
     super.initState();
+    final t = widget.temporada;
+    if (t != null) {
+      _descanso = true;
+      _paso = _Paso.descanso;
+      _nombreDescanso.text = t.nombre;
+      _descDesde = t.desde;
+      _descHasta = t.hasta;
+      return;
+    }
     _cargarVenues();
   }
 
   @override
   void dispose() {
     _otro.dispose();
+    _nombreDescanso.dispose();
     _descripcion.dispose();
     super.dispose();
   }
@@ -69,7 +91,11 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
 
   bool get _porSemana => _recurrente == true && _unidad == 'semanas';
 
-  List<_Paso> get _pasos => [_Paso.tipo, _Paso.lugar, _Paso.detalles, if (_recurrente == true) _Paso.frecuencia, if (!_porSemana) _Paso.fecha, _Paso.hora];
+  List<_Paso> get _pasos => widget.temporada != null
+      ? const [_Paso.descanso]
+      : _descanso
+      ? const [_Paso.tipo, _Paso.descanso]
+      : [_Paso.tipo, _Paso.lugar, _Paso.detalles, if (_recurrente == true) _Paso.frecuencia, if (!_porSemana) _Paso.fecha, _Paso.hora];
 
   String get _tipoEvento {
     final c = _categoria ?? (_venue?['tipo_icono'] ?? 'Entrenamiento').toString();
@@ -84,6 +110,7 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
     _Paso.frecuencia => _unidad != 'semanas' || _dias.isNotEmpty,
     _Paso.fecha => _fecha != null,
     _Paso.hora => true,
+    _Paso.descanso => _descDesde != null && _descHasta != null,
   };
 
   void _ir(int delta) {
@@ -137,81 +164,84 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
     }
   }
 
+  Future<void> _guardarDescanso() async {
+    setState(() => _guardando = true);
+    try {
+      final n = await widget.repo.guardarDescanso(id: widget.temporada?.id, nombre: _nombreDescanso.text, desde: _descDesde!, hasta: _descHasta!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${widget.temporada != null ? 'Temporada actualizada.' : 'Temporada creada. Se avisó al equipo.'} ${n == 0
+                ? ''
+                : n == 1
+                ? 'Se eliminó 1 evento.'
+                : 'Se eliminaron $n eventos.'}',
+          ),
+        ),
+      );
+      Navigator.of(context).pop({'descanso': _descDesde});
+    } catch (e) {
+      if (mounted) {
+        setState(() => _guardando = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _agregarLugar() async {
+    final nuevo = await Navigator.of(context).push<Map<String, dynamic>>(MaterialPageRoute(builder: (_) => NuevoLugarScreen(repo: widget.repo)));
+    if (nuevo == null || !mounted) return;
+    await _cargarVenues();
+    if (!mounted) return;
+    setState(() {
+      _venue = nuevo;
+      _categoria = _categorias.contains(nuevo['tipo_icono']) ? nuevo['tipo_icono'].toString() : _categoria;
+    });
+  }
+
   // ─── Construcción ───────────────────────────────────────────────────────
 
   static const _titulos = {
-    _Paso.tipo: 'Tipo de evento',
-    _Paso.lugar: 'Seleccionar lugar',
-    _Paso.detalles: 'Detalles del evento',
-    _Paso.frecuencia: 'Frecuencia',
-    _Paso.fecha: 'Fecha del evento',
+    _Paso.tipo: '¿Qué quieres crear?',
+    _Paso.lugar: '¿Dónde será?',
+    _Paso.detalles: 'Detalles',
+    _Paso.frecuencia: '¿Cada cuánto se repite?',
+    _Paso.fecha: '¿Qué día?',
     _Paso.hora: 'Horario',
+    _Paso.descanso: 'Temporada de descanso',
+  };
+
+  String? get _ayuda => switch (_paso) {
+    _Paso.tipo => null,
+    _Paso.lugar => 'Elige un lugar o agrega uno nuevo.',
+    _Paso.detalles => 'El tipo define el ícono y cómo se ve en el timeline.',
+    _Paso.frecuencia => null,
+    _Paso.fecha => _recurrente == true ? 'Desde esta fecha se cuenta la frecuencia.' : null,
+    _Paso.hora => null,
+    _Paso.descanso => 'Sin entrenamientos entre esas fechas: los eventos que ya existen se eliminan y se avisa al equipo.',
   };
 
   @override
   Widget build(BuildContext context) {
-    final p = context.pivot;
     final pasos = _pasos;
     final idx = pasos.indexOf(_paso);
     final ultimo = idx == pasos.length - 1;
-    return PopScope(
-      canPop: _paso == _Paso.tipo,
-      onPopInvokedWithResult: (hecho, _) {
-        if (!hecho) _ir(-1);
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(icon: const Icon(Icons.arrow_back_rounded), tooltip: 'Atrás', onPressed: () => _ir(-1)),
-          title: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: Text(_titulos[_paso]!, key: ValueKey(_paso)),
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(12),
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var i = 0; i < pasos.length; i++)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: i == idx ? 20 : 8,
-                      height: 4,
-                      decoration: BoxDecoration(color: i <= idx ? p.marca : p.tarjetaBorde, borderRadius: BorderRadius.circular(PivotRadios.chip)),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 260),
-          transitionBuilder: (c, a) => FadeTransition(
-            opacity: a,
-            child: SlideTransition(
-              position: Tween(begin: Offset(_adelante ? 0.08 : -0.08, 0), end: Offset.zero).animate(a),
-              child: c,
-            ),
-          ),
-          child: KeyedSubtree(key: ValueKey(_paso), child: _contenido(context)),
-        ),
-        bottomNavigationBar: _paso == _Paso.tipo
-            ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-                    onPressed: !_valido(_paso) || _guardando ? null : (ultimo ? _guardar : () => _ir(1)),
-                    child: _guardando
-                        ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: p.sobreMarca))
-                        : Text(ultimo ? 'Crear evento' : 'Siguiente'),
-                  ),
-                ),
-              ),
-      ),
+    return Asistente(
+      titulo: widget.temporada != null ? 'Editar temporada' : (_descanso ? 'Nueva temporada de descanso' : 'Nuevo evento'),
+      indice: idx,
+      total: _paso == _Paso.tipo ? 4 : pasos.length,
+      tituloPaso: _titulos[_paso]!,
+      ayuda: _ayuda,
+      clavePaso: _paso,
+      adelante: _adelante,
+      alAtras: () => _ir(-1),
+      cuerpo: _contenido(context),
+      textoBoton: _paso == _Paso.tipo
+          ? null
+          : (ultimo ? (_descanso ? (widget.temporada != null ? 'Guardar cambios' : 'Crear temporada') : 'Crear evento') : 'Siguiente'),
+      alContinuar: !_valido(_paso) ? null : (ultimo ? (_descanso ? _guardarDescanso : _guardar) : () => _ir(1)),
+      ocupado: _guardando,
     );
   }
 
@@ -222,7 +252,48 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
     _Paso.frecuencia => _pasoFrecuencia(context),
     _Paso.fecha => _pasoFecha(context),
     _Paso.hora => _pasoHora(context),
+    _Paso.descanso => _pasoDescanso(context),
   };
+
+  Widget _pasoDescanso(BuildContext context) {
+    final p = context.pivot;
+    final hoy = Fechas.hoy();
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        TextField(
+          controller: _nombreDescanso,
+          maxLength: 40,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(labelText: 'Nombre (opcional)', hintText: 'Ej.: Vacaciones de fin de año'),
+        ),
+        SelectorFechas(
+          desde: _descDesde,
+          hasta: _descHasta,
+          rango: true,
+          deshabilitado: (d) => d.isBefore(hoy),
+          alCambiar: (d, h) => setState(() {
+            _descDesde = d;
+            _descHasta = h;
+          }),
+        ),
+        const SizedBox(height: 8),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: Text(
+            _descDesde == null
+                ? 'Toca el primer día y luego el último.'
+                : _descHasta == null
+                ? 'Desde el ${Fechas.corta(_descDesde!)}: ahora toca el último día.'
+                : 'Del ${Fechas.corta(_descDesde!)} al ${Fechas.corta(_descHasta!)}',
+            key: ValueKey('$_descDesde$_descHasta'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.w600, color: p.marcaTexto),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _tarjetaOpcion(
     BuildContext context, {
@@ -231,46 +302,14 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
     required String texto,
     required bool activa,
     required VoidCallback alTocar,
-  }) {
-    final p = context.pivot;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: activa ? p.suave : p.tarjeta,
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-          onTap: alTocar,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                Icon(icono, size: 30, color: p.marcaTexto),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        titulo,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(texto, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  }) => OpcionAsistente(icono: icono, titulo: titulo, texto: texto, activa: activa, alTocar: alTocar);
 
   Widget _pasoTipo(BuildContext context) {
-    void elegir(bool recurrente) {
-      setState(() => _recurrente = recurrente);
+    void elegir(bool? recurrente) {
+      setState(() {
+        _descanso = recurrente == null;
+        _recurrente = recurrente;
+      });
       Future.delayed(const Duration(milliseconds: 150), () {
         if (mounted) _ir(1);
       });
@@ -295,6 +334,15 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
           activa: _recurrente == false,
           alTocar: () => elegir(false),
         ),
+        if (widget.repo.sesion.esAdmin)
+          _tarjetaOpcion(
+            context,
+            icono: Icons.bedtime_outlined,
+            titulo: 'Temporada de descanso',
+            texto: 'Un período sin entrenamientos',
+            activa: _descanso,
+            alTocar: () => elegir(null),
+          ),
       ],
     );
   }
@@ -346,9 +394,13 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
               _categoria ??= _categorias.contains(v['tipo_icono']) ? v['tipo_icono'].toString() : null;
             }),
           ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text('Para agregar un lugar nuevo, por ahora usa la web.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+        _tarjetaOpcion(
+          context,
+          icono: Icons.add_location_alt_outlined,
+          titulo: 'Agregar lugar',
+          texto: 'Un lugar que todavía no está en la lista',
+          activa: false,
+          alTocar: _agregarLugar,
         ),
       ],
     );

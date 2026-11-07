@@ -34,6 +34,7 @@ class EventosRepo extends ChangeNotifier {
 
   List<Evento> eventos = [];
   List<Cumple> cumples = [];
+  List<Temporada> temporadas = [];
   bool cargando = false;
   String? error;
   DateTime? _cargadoEn;
@@ -95,7 +96,15 @@ class EventosRepo extends ChangeNotifier {
       final resultados = await Future.wait([
         _api.get('getEventosRango', {'desde': d, 'hasta': h}),
         _api.get('getCumpleañosRango', {'desde': d, 'hasta': h}).catchError((_) => <String, dynamic>{}),
+        _api
+            .restGet('temporadas_descanso?select=id,nombre,fecha_inicio,fecha_fin&fecha_fin=gte.$d&fecha_inicio=lte.$h&order=fecha_inicio.asc')
+            .then((l) => <String, dynamic>{'temporadas': l})
+            .catchError((_) => <String, dynamic>{}),
       ]);
+      temporadas = [
+        for (final t in (resultados[2]['temporadas'] as List? ?? const []))
+          if (t is Map<String, dynamic>) ?Temporada.desdeFila(t),
+      ];
       final yo = sesion.nombre ?? '';
       eventos = (resultados[0]['eventos'] as List? ?? const []).map((e) => Evento.desdeJson(e as Map<String, dynamic>, yo)).toList()
         ..sort((a, b) {
@@ -314,6 +323,46 @@ class EventosRepo extends ChangeNotifier {
     }
   }
 
+  // ─── Temporadas de descanso y lugares (admins) ──────────────────────────
+
+  /// Crea o edita una temporada: el servidor elimina los eventos de esas
+  /// fechas y avisa al equipo. Devuelve cuántos eventos se eliminaron.
+  Future<int> guardarDescanso({String? id, required String nombre, required DateTime desde, required DateTime hasta}) async {
+    final res = await _api.post('adminGuardarTemporadaDescanso', {
+      'adminToken': _adminToken,
+      'id': id ?? '',
+      'nombre': nombre,
+      'desde': Fechas.iso(desde),
+      'hasta': Fechas.iso(hasta),
+    });
+    if (res['exito'] != true) throw ApiException((res['error'] ?? 'No se pudo guardar la temporada.').toString());
+    await cargar(forzar: true);
+    return (res['eliminados'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Borra una temporada: los eventos que había eliminado vuelven.
+  Future<void> eliminarDescanso(Temporada t) async {
+    final res = await _api.post('adminEliminarTemporadaDescanso', {'adminToken': _adminToken, 'id': t.id});
+    if (res['exito'] != true) throw ApiException((res['error'] ?? 'No se pudo eliminar la temporada.').toString());
+    await cargar(forzar: true);
+  }
+
+  /// Nuevo lugar (como `_evLugarGuardar()` de la web): queda sin horario
+  /// hasta que se use para crear un evento.
+  Future<Map<String, dynamic>> crearLugar({required String nombre, required String mapsUrl, required String tipo, String? video}) async {
+    _adminToken;
+    final fila = await _api.restPostDevolver('venues', {
+      'lugar': nombre.trim(),
+      'google_maps': mapsUrl.trim(),
+      'video_instructivo': (video ?? '').trim().isEmpty ? null : video!.trim(),
+      'tipo_icono': tipo,
+      'requiere_reserva': tipo == 'Entrenamiento',
+      'tipo': null,
+    });
+    _lugares = null;
+    return fila;
+  }
+
   /// Venues completos (para crear eventos: se copian nombre, mapa, etc.).
   Future<List<Map<String, dynamic>>> venues() async {
     final filas = await _api.restGet('venues?select=*&order=lugar.asc');
@@ -357,7 +406,13 @@ class EventosRepo extends ChangeNotifier {
         fila['unidad'] = unidad;
       }
     }
-    await _api.restPost('venues', fila);
+    // Lugar recién creado sin horario: se completa esa misma fila en vez de
+    // dejarla huérfana (mismo criterio que la web, `esVenuePlaceholderRecienCreado`).
+    if (venue['tipo'] == null && venue['id'] != null) {
+      await _api.restPatch('venues?id=eq.${Uri.encodeComponent(venue['id'].toString())}', fila);
+    } else {
+      await _api.restPost('venues', fila);
+    }
     try {
       await _api.get('adminRegenerarVentanaAsistencias', {'adminToken': token});
     } catch (_) {

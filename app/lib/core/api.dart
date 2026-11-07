@@ -93,6 +93,20 @@ class Api {
     if (resp.statusCode >= 300) throw ApiException('No se pudo guardar (${resp.statusCode}).');
   }
 
+  /// POST que devuelve la fila creada.
+  Future<Map<String, dynamic>> restPostDevolver(String ruta, Map<String, Object?> cuerpo) async {
+    final resp = await _client
+        .post(
+          Uri.parse('${ApiConfig.rest}/$ruta'),
+          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
+          body: jsonEncode(cuerpo),
+        )
+        .timeout(_timeout);
+    if (resp.statusCode >= 300) throw ApiException('No se pudo guardar (${resp.statusCode}).');
+    final d = jsonDecode(utf8.decode(resp.bodyBytes));
+    return d is List && d.isNotEmpty ? Map<String, dynamic>.from(d.first as Map) : <String, dynamic>{};
+  }
+
   Future<void> restDelete(String ruta) async {
     final resp = await _client.delete(Uri.parse('${ApiConfig.rest}/$ruta'), headers: _headers).timeout(_timeout);
     if (resp.statusCode >= 300) throw ApiException('No se pudo eliminar (${resp.statusCode}).');
