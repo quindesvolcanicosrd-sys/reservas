@@ -126,15 +126,40 @@ Al asignar personas en el asistente:
 - La lista ya tiene buscador.
 - Ahora muestra solo a quienes pueden recibir esa tarea, según la audiencia elegida.
 
-### Qué pasa al cambiar de categoría
-- **Lo ya tomado se queda**: si alguien de Quindes tenía una tarea de Quindes en curso y baja a Mirlxs, la puede terminar y suma sus puntos. La categoría se revisa solo al tomar una tarea, no después.
-- **Respuestas a eventos futuros de la categoría anterior**:
-  - Se mantienen, pero el evento muestra "Ya no aplica a tu categoría".
-  - Admins ven esa marca en la lista de asistencia.
-  - Nada se borra solo.
-- **Estadísticas y % de asistencia** se calculan contra los eventos que le aplicaban **en la fecha del evento**. Hace falta guardar el historial de categoría por mes (ej. tabla `categoria_mensual`), para que un descenso no cambie el pasado.
-- **Aviso al cambiar de categoría** (push): "Desde este mes estás en Mirlxs". Ahora verás primero el calendario y las tareas de Mirlxs.
-- **Si admins fijaron la categoría a mano** (`tier_modo`), no cambia sola.
+### Cambio de categoría (reglas de Victor, 2026-11-08)
+**Cuándo se recalcula**
+- **Puntos de tareas**: se acreditan solo cuando admin aprueba la tarea enviada a revisión. Si la rechaza, no hay puntos.
+- **Tarea que vence sin enviarse**: se archiva pasada la fecha. La persona no recibe puntos y la tarea se le suelta.
+- **Nadie cambia de categoría con tareas en curso o en revisión**: el recálculo espera a que todas se resuelvan (aprobada, rechazada o vencida).
+
+**Qué pasa al cambiar**
+- **Respuestas "Asistiré" a eventos futuros de la categoría anterior**: se quitan. Le toca responder a los de su nueva categoría.
+- **Asistencias pasadas y puntos ya ganados**: no se tocan.
+- **Historial de categoría por mes** (ej. `categoria_mensual`): las estadísticas se calculan contra lo que le aplicaba en cada fecha.
+- **Si admins fijaron la categoría a mano** (`tier_modo`): no cambia sola.
+
+**Aviso al abrir la app** (después de cada cambio, en una ventana, no en un toast)
+- Contenido:
+  - A qué equipo pasa.
+  - Por qué, con sus números del período, ej. "2 de 3 clases y 31 de 50 puntos".
+  - Qué pasó con sus respuestas a eventos y con sus tareas.
+- Botones: "Entiendo" y "Pedir revisión" (en vez de "disputa").
+- "Pedir revisión":
+  - Mensaje opcional.
+  - Llega a lxs administradorxs (push `avisos_admin`).
+  - Muestra la lista de administradorxs con llamar o WhatsApp.
+- **Mientras está en revisión**: el cambio queda "En revisión" (ver pregunta abierta 2).
+- **Admins resuelven** desde la bandeja de Mi Liga: se queda o pasa.
+- **Al resolver**: push con el resultado y, al abrir la app, otra ventana que explica la decisión.
+- **Al subir de categoría**: la misma ventana en tono de celebración, sin botón de revisión.
+
+### Preguntas abiertas
+1. **Baúl**: hoy una tarea vencida pasa al baúl y otra persona la puede rescatar. Con la regla nueva (vence, se archiva y se suelta), ¿se elimina el baúl o se mantiene para que otra persona la rescate?
+2. **Mientras está en revisión**:
+   - (a) Sigue en su categoría anterior y no se le quita nada hasta que admins decidan (propuesta).
+   - (b) El cambio aplica de inmediato y se revierte si admins le dan la razón.
+3. **Plazo**: ¿hay un plazo para pedir revisión (ej. 7 días) y para que admins respondan?
+4. **Audiencia por rol** (ej. solo entrenadorxs): ¿se suma?
 
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
