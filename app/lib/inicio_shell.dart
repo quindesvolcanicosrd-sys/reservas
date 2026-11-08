@@ -14,6 +14,8 @@ import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
 import 'sesion/sesion.dart';
+import 'tareas/tareas_repo.dart';
+import 'tareas/tareas_screen.dart';
 
 /// Estructura principal con la barra de navegación inferior. En esta
 /// primera versión solo Eventos es nativo; el resto abre la web mientras se
@@ -80,7 +82,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         const NavigationDestination(icon: Icon(Icons.group_outlined), selectedIcon: Icon(Icons.group), label: 'Equipo'),
         EquipoScreen(repo: EquipoRepo.de(widget.sesion)),
       ),
-      (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), const _EnLaWeb(titulo: 'Tareas', ruta: '/')),
+      (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), TareasScreen(repo: TareasRepo.de(widget.sesion))),
       (
         const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Ajustes'),
         AjustesScreen(sesion: widget.sesion, eventos: widget.repo),

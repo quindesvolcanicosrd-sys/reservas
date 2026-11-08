@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-08 — App Android: Tareas nativa (tablero, mis tareas, sugeridas, baúl, asistente para crear, editar recurrentes con alcance, pausar o terminar recurrentes, aprobar o devolver desde el detalle) y push de tareas por vencer y revisadas.
+
 2026-11-08 — App Android: modo sin conexión para Asistiré / No asistiré y para tomar asistencia: se guarda en el teléfono y se sube solo al volver la señal; Eventos y Tomar asistencia abren con la última copia guardada.
 
 2026-11-08 — App Android: loader propio animado con las formas de Pivot en lugar del círculo de carga.

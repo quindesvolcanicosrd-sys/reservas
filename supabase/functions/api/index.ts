@@ -1774,10 +1774,16 @@ async function adminValidarTarea(params: Record<string, any>): Promise<Record<st
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { idAsignacion, accion, notaRechazo } = params;
-  if (accion === 'aprobar') return await _aprobarAsignacionTarea(idAsignacion);
+    if (accion === 'aprobar') {
+    const r = await _aprobarAsignacionTarea(idAsignacion);
+    if (r.exito) await _avisarRevisionTarea(idAsignacion, true);
+    return r;
+  }
+
   const { data: a } = await supabase.from('asignaciones_tareas').select('id').eq('id', idAsignacion).maybeSingle();
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
-  await supabase.from('asignaciones_tareas').update({ estado: 'iniciada', nota_rechazo: notaRechazo ?? null, fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
+    await supabase.from('asignaciones_tareas').update({ estado: 'iniciada', nota_rechazo: notaRechazo ?? null, fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
+  await _avisarRevisionTarea(idAsignacion, false, notaRechazo);
   return { exito: true };
 }
 
@@ -1880,6 +1886,151 @@ async function crearTareaPropia(params: Record<string, any>): Promise<Record<str
   return { exito: true, idTarea: creada.id };
 }
 
+
+// ─── Tareas en la app Android (2026-11-08) ────────────────────────────────────
+// Una sola llamada con todo lo que necesita la pestaña Tareas: mis tareas
+// (con fecha y motivo de rechazo), el tablero activo (con o sin cupos), el
+// baúl, el límite de tareas activas y los puntos del mes contra la meta del
+// tier más alto que pide puntos (para "Sugeridas para ti").
+async function getTareasApp(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const { anio, mes } = _mesEcuadorActual();
+  const [{ data: tareas }, { data: mias }, limite, { data: pm }, { data: tiers }, equipoPorNombre] = await Promise.all([
+    supabase.from('tareas').select('*').in('estado', ['no_iniciada', 'en_progreso', 'expirada']),
+    supabase.from('asignaciones_tareas').select('*').eq('nombre_usuario', username).in('estado', ['iniciada', 'pendiente_revision']),
+    _limiteTareasActivas(),
+    supabase.from('puntos_mensuales').select('*').eq('nombre_usuario', username).eq('anio', anio).eq('mes', mes).maybeSingle(),
+    supabase.from('config_tiers').select('nombre, min_puntos, min_clases, orden').order('orden'),
+    _mapaEquipoPorNombre(),
+  ]);
+  const lista = tareas ?? [];
+  const ids = lista.map((t: any) => t.id).concat((mias ?? []).map((a: any) => a.tarea_id));
+  const { data: asigs } = ids.length
+    ? await supabase.from('asignaciones_tareas').select('id, tarea_id, nombre_usuario, estado').in('estado', ['iniciada', 'pendiente_revision']).in('tarea_id', ids)
+    : { data: [] as any[] };
+  const porTarea: Record<string, any[]> = {};
+  (asigs ?? []).forEach((a: any) => {
+    const eq = equipoPorNombre[String(a.nombre_usuario).trim().toUpperCase()] ?? {};
+    (porTarea[a.tarea_id] ??= []).push({ nombre: a.nombre_usuario, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '', estado: a.estado, idAsignacion: a.id });
+  });
+  const armar = (t: any) => {
+    const activas = porTarea[t.id] ?? [];
+    return {
+      idTarea: t.id, titulo: t.titulo, notas: t.notas ?? '', area: t.area ?? '', puntos: t.puntos, estado: t.estado,
+      fechaVencimiento: t.fecha_vencimiento, cuposTotales: t.max_asignados, cuposLibres: Math.max(0, t.max_asignados - activas.length),
+      asignados: activas, idPlantilla: t.tarea_recurrente_id ?? null, creadoPor: t.creado_por ?? '',
+    };
+  };
+  const faltantes = (mias ?? []).filter((a: any) => !lista.some((t: any) => t.id === a.tarea_id)).map((a: any) => a.tarea_id);
+  const { data: extra } = faltantes.length ? await supabase.from('tareas').select('*').in('id', faltantes) : { data: [] as any[] };
+  const todas: Record<string, any> = {};
+  [...lista, ...(extra ?? [])].forEach((t: any) => { todas[t.id] = t; });
+  const misTareas = (mias ?? []).filter((a: any) => todas[a.tarea_id]).map((a: any) => ({
+    idAsignacion: a.id, estado: a.estado, esRescate: a.es_rescate, fechaVencimiento: a.fecha_vencimiento_personal ?? todas[a.tarea_id].fecha_vencimiento,
+    notaRechazo: a.estado === 'iniciada' ? (a.nota_rechazo ?? '') : '', tarea: armar(todas[a.tarea_id]),
+  }));
+  const puntosMes = pm ? Number(pm.puntos_total ?? 0) || (Number(pm.puntos_asistencia ?? 0) + Number(pm.puntos_tareas ?? 0) + Number(pm.puntos_bonificacion ?? 0) + Number(pm.puntos_extra ?? 0)) : 0;
+  const meta = (tiers ?? []).find((t: any) => Number(t.min_puntos) > 0);
+  return {
+    exito: true,
+    misTareas,
+    tablero: lista.filter((t: any) => t.estado !== 'expirada').map(armar),
+    baul: lista.filter((t: any) => t.estado === 'expirada').map(armar).filter((x: any) => x.cuposLibres > 0),
+    limite, iniciadas: (mias ?? []).filter((a: any) => a.estado === 'iniciada').length,
+    puntosMes, meta: meta ? { nombre: meta.nombre, minPuntos: Number(meta.min_puntos), minClases: Number(meta.min_clases ?? 0) } : null,
+  };
+}
+
+async function adminGetTareasRecurrentes(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  const { data } = await supabase.from('tareas_recurrentes').select('*').neq('estado', 'terminada').order('created_at');
+  return { exito: true, plantillas: (data ?? []).map((p: any) => ({ idPlantilla: p.id, titulo: p.titulo, notas: p.notas ?? '', area: p.area ?? '', puntos: p.puntos, cuposTotales: p.max_asignados, estado: p.estado })) };
+}
+
+// Editar una recurrente "esta y las siguientes": cambia la plantilla y las
+// instancias que todavía no se archivaron. "Solo esta" usa adminEditarTarea.
+async function adminEditarTareaRecurrente(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  let datos = params.datosJson ?? params.datos;
+  if (typeof datos === 'string') datos = JSON.parse(datos);
+  const cambios: Record<string, any> = {};
+  if (datos.titulo != null) cambios.titulo = String(datos.titulo).trim();
+  if (datos.notas != null) cambios.notas = String(datos.notas).trim() || null;
+  if (datos.area != null) cambios.area = datos.area;
+  if (datos.puntos != null) cambios.puntos = Number(datos.puntos) || 0;
+  if (datos.maxAsignados != null) cambios.max_asignados = Math.max(1, Number(datos.maxAsignados) || 1);
+  if (!Object.keys(cambios).length) return { exito: true };
+  const { error } = await supabase.from('tareas_recurrentes').update(cambios).eq('id', params.idPlantilla);
+  if (error) return { exito: false, error: 'No se pudo guardar.' };
+  await supabase.from('tareas').update(cambios).eq('tarea_recurrente_id', params.idPlantilla).in('estado', ['no_iniciada', 'en_progreso', 'expirada']);
+  return { exito: true };
+}
+
+// Pausar (deja de generarse cada mes), reanudar o terminar una recurrente.
+// El historial queda; al terminar, la instancia de este período se borra
+// solo si nadie la tomó.
+async function adminEstadoTareaRecurrente(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  const estado = String(params.estado ?? '');
+  if (!['activa', 'pausada', 'terminada'].includes(estado)) return { exito: false, error: 'Estado inválido.' };
+  const { error } = await supabase.from('tareas_recurrentes').update({ estado, activa: estado === 'activa' }).eq('id', params.idPlantilla);
+  if (error) return { exito: false, error: 'No se pudo guardar.' };
+  if (estado === 'activa') {
+    const { data: p } = await supabase.from('tareas_recurrentes').select('*').eq('id', params.idPlantilla).maybeSingle();
+    const { anio, mes } = _mesEcuadorActual();
+    if (p) await _generarInstanciaTareaRecurrente(p, anio, mes);
+  }
+  if (estado === 'terminada') {
+    const { data: abiertas } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', params.idPlantilla).eq('estado', 'no_iniciada');
+    for (const t of (abiertas ?? [])) {
+      const { data: alguna } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', t.id).limit(1);
+      if (!alguna?.length) await supabase.from('tareas').delete().eq('id', t.id);
+    }
+  }
+  return { exito: true };
+}
+
+// Push a quien hizo la tarea cuando admins la aprueban o la devuelven.
+async function _avisarRevisionTarea(idAsignacion: string, aprobada: boolean, nota?: string): Promise<void> {
+  try {
+    const { data: a } = await supabase.from('asignaciones_tareas').select('nombre_usuario, tarea_id').eq('id', idAsignacion).maybeSingle();
+    if (!a) return;
+    const { data: t } = await supabase.from('tareas').select('titulo').eq('id', a.tarea_id).maybeSingle();
+    await sendPush({
+      tipo: 'tarea_revisada',
+      include_external_user_ids: [a.nombre_usuario],
+      headings: { es: aprobada ? 'Tarea aprobada' : 'Tu tarea necesita cambios' },
+      contents: { es: `${t?.titulo ?? 'Tu tarea'}: ` + (aprobada ? 'se aprobó y sumó tus puntos.' : 'volvió a tus tareas.' + (nota ? ` Nota: ${nota}` : '')) },
+      url: APP_URL + '/',
+    });
+  } catch (_) { /* best-effort */ }
+}
+
+// Cron diario (9:00 Ecuador): recordatorio a quien tiene una tarea tomada
+// que vence mañana.
+async function cronRecordatorioTareas(): Promise<Record<string, any>> {
+  const manana = new Date(Date.now() - 5 * 3600000 + 24 * 3600000).toISOString().substring(0, 10);
+  const { data: asigs } = await supabase.from('asignaciones_tareas').select('nombre_usuario, tarea_id').eq('estado', 'iniciada').eq('fecha_vencimiento_personal', manana);
+  if (!asigs?.length) return { exito: true, enviados: 0 };
+  const { data: tareas } = await supabase.from('tareas').select('id, titulo').in('id', asigs.map((a: any) => a.tarea_id));
+  const titulo: Record<string, string> = {};
+  (tareas ?? []).forEach((t: any) => { titulo[t.id] = t.titulo; });
+  const porPersona: Record<string, string[]> = {};
+  asigs.forEach((a: any) => { (porPersona[a.nombre_usuario] ??= []).push(titulo[a.tarea_id] ?? 'Una tarea'); });
+  let enviados = 0;
+  for (const [u, ts] of Object.entries(porPersona)) {
+    await sendPush({
+      tipo: 'tarea_vence', include_external_user_ids: [u],
+      headings: { es: ts.length === 1 ? 'Tu tarea vence mañana' : `${ts.length} tareas vencen mañana` },
+      contents: { es: ts.length === 1 ? `${ts[0]}. Si ya la terminaste, envíala a revisión.` : ts.join(' · ') },
+      url: APP_URL + '/',
+    });
+    enviados++;
+  }
+  return { exito: true, enviados };
+}
+
 async function adminCrearTarea(params: Record<string, any>): Promise<any> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -1920,9 +2071,10 @@ async function adminCrearTarea(params: Record<string, any>): Promise<any> {
     await supabase.from('tareas').update({ estado: 'archivada', fecha_archivado: new Date().toISOString() }).eq('id', tarea.id);
   } else if (asignarA.length) {
     await supabase.from('asignaciones_tareas').insert(asignarA.map((n: string) => ({ tarea_id: tarea.id, nombre_usuario: n, estado: 'iniciada', es_rescate: false, fecha_vencimiento_personal: tarea.fecha_vencimiento ?? null })));
-    await supabase.from('tareas').update({ estado: 'en_progreso' }).eq('id', tarea.id);
+        await supabase.from('tareas').update({ estado: 'en_progreso' }).eq('id', tarea.id);
   }
-  return creada;
+  // Objeto (no el array crudo): la app Android solo acepta respuestas JSON con forma de objeto.
+  return { exito: true, idTarea: tarea.id };
 }
 
 async function adminEditarTarea(params: Record<string, any>): Promise<Record<string, any>> {
@@ -5331,6 +5483,8 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debes la cuota.', categoria: 'Cuenta' },
     { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
   { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tu excepción de cuota.', categoria: 'Cuenta' },
+    { clave: 'tarea_vence', nombre: 'Tareas por vencer', descripcion: 'Un día antes de que venza una tarea que tomaste.', categoria: 'Tareas' },
+  { clave: 'tarea_revisada', nombre: 'Revisión de tus tareas', descripcion: 'Cuando admins aprueban o devuelven una tarea que enviaste.', categoria: 'Tareas' },
   { clave: 'avisos_admin', nombre: 'Avisos para admins', descripcion: 'Resumen antes del entrenamiento, bajas de última hora, solicitudes pendientes y cambios de reservas.', categoria: 'Administración', soloAdmin: true },
 ];
 const CATALOGO_CLAVES = new Set(CATALOGO_NOTIFICACIONES.map((c) => c.clave));
@@ -6721,6 +6875,15 @@ Deno.serve(async (req: Request) => {
       case 'adminGetEquipamiento':            return json(await adminGetEquipamiento());
       case 'adminGuardarEquipamiento':        return json(await adminGuardarEquipamiento(params));
       // Tareas
+            case 'getTareasApp':                    return json(await getTareasApp(params));
+      case 'adminGetTareasRecurrentes':       return json(await adminGetTareasRecurrentes(params));
+      case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
+      case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
+      case 'cronRecordatorioTareas': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronRecordatorioTareas());
+      }
       case 'getConfigTareas':                 return json(await getConfigTareas());
       case 'getTareasDisponibles':            return json(await getTareasDisponibles());
       case 'getMisTareas':                    return json(await getMisTareas(params));

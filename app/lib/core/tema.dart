@@ -84,6 +84,13 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
       'identidad' || 'numero' || 'ingreso' => oscuro ? (_rosaFuerte, _sobreRosaFuerte) : (_vino, _sobreVino),
       'privacidad' || 'roles' => (_rojoVino, sobreSeccion),
       'notificaciones' || 'equipamiento' => (_coral, sobreSeccion),
+      // Áreas de Tareas.
+      'logistica' || 'recaudacion' => (_rojo, sobreSeccion),
+      'organizacion' => oscuro ? (_rosaFuerte, _sobreRosaFuerte) : (_vino, _sobreVino),
+      'redes' => (_coral, sobreSeccion),
+      'entrenamientos' => (_rojoVino, sobreSeccion),
+      'mantenimiento' => (_rosaFuerte, _sobreRosaFuerte),
+
       _ => oscuro ? (_rosa, _sobreRosa) : (_vino, _sobreVino),
     };
     return (LinearGradient(colors: c, begin: Alignment.topLeft, end: Alignment.bottomRight), icono);
