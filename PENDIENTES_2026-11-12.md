@@ -59,3 +59,67 @@ Reglas de siempre: español neutro (sin voseo), sin pronombres femeninos, "admin
 ## Después de esta ronda
 
 - Entrega 3: Mi Liga nativa (bandeja "Por revisar" y cinco grupos; Finanzas al final).
+
+---
+
+# Rediseño acordado el 2026-11-08: Calendario, Yo y tareas del equipo
+
+Objetivo: que las tareas del equipo se vean junto a los eventos, para que la gente sepa qué hay para tomar y se involucre más, sin llenar el timeline.
+
+## A. Calendario (antes Eventos) y nueva pestaña Yo
+- [ ] "Eventos" pasa a llamarse "Calendario". Se quita la pestaña Tareas y entra "Yo" en su lugar.
+- [ ] Barra inferior: Calendario · Equipo · Yo · Mi Liga (admins) · Ajustes.
+- [ ] **Yo**: la ficha propia que hoy está en Equipo (foto, estadísticas, desgloses, datos editables), más el resumen de mis tareas y los puntos del mes.
+- [ ] En Equipo, el avatar propio queda como atajo a Yo.
+- [ ] **Mis tareas en el timeline** en su fecha de vencimiento:
+  - Tarjeta compacta, distinta a la de un evento: ícono en degradado del área y puntos.
+  - Las vencidas van fijas arriba en una franja roja "Atrasadas".
+- [ ] **Tareas tomadas por otras personas**: una línea agrupada por día ("3 tareas vencen este día ›") que se despliega.
+- [ ] **Vista de mes**: un puntito distinto para los días con vencimientos de tareas.
+- [ ] **Tareas sin tomar**, franja deslizable arriba del timeline:
+  - Título "Para tomar · N tareas · hasta +X pts".
+  - Primero las sugeridas si me faltan puntos; última tarjeta "Ver todas".
+  - No aparece si no hay ninguna.
+- [ ] **Ícono de tareas junto a la lupa**, con el número de disponibles, que abre el tablero completo:
+  - Lo que hoy es la pestaña Tareas: puntos del mes, filtros por área, sin cupos y baúl.
+- [ ] **Detalle de tarea** con el mismo estilo que el detalle de un evento:
+  - Cabecera grande en degradado del área, fecha, puntos y quiénes la tienen.
+  - Acciones abajo.
+- [ ] **Filtros** "Todo · Eventos · Tareas" arriba del timeline; la lupa también busca tareas.
+- [ ] **Botón flotante**:
+  - Admins: se abre en "Nuevo evento" y "Nueva tarea".
+  - El resto: "Proponer tarea", si la configuración lo permite (ver C).
+- [ ] **Asistente de tareas más pulido**: vista previa de la tarjeta mientras se arma y áreas en mosaico.
+- [ ] **Tour guiado actualizado**: Calendario, franja de tareas, tarea en el timeline, botón de crear y la pestaña Yo.
+
+## B. Por equipo o para toda la liga (para que escale a ligas grandes)
+- [ ] Eventos y tareas llevan "para quién aplica": toda la liga, o uno o varios equipos (hoy Mirlxs y Quindes).
+  - Se agrega como un paso en los dos asistentes.
+- [ ] El timeline muestra por defecto lo de mi equipo más lo de toda la liga, con un selector arriba:
+  - "Mi equipo · Quindes · Mirlxs · Toda la liga". Admins ven todo.
+- [ ] Una tarea de un equipo solo la puede tomar alguien de ese equipo.
+- [ ] Las notificaciones, recordatorios y el % de asistencia respetan a quién aplica. Un evento solo de Quindes no baja la asistencia de Mirlxs ni les llega aviso.
+- [ ] Equipo se organiza igual: mi equipo primero, con el mismo selector.
+- [ ] La web debe respetar el campo nuevo (al menos no romperse ni mostrar mal).
+
+## C. Gestión de tareas en Mi Liga (configuración de admins)
+- [ ] **Quién puede crear tareas**: solo admins, o todo el equipo.
+  - Opción "pasan por aprobación antes de publicarse": evita spam en el timeline.
+- [ ] **Quién puede asignar tareas a otras personas.**
+- [ ] **Quién valida**: admins, o también quien creó la tarea.
+- [ ] **Límite de tareas activas por persona** (hoy `config_tareas.limite_tareas_activas`).
+- [ ] **Puntos de tareas propuestas**: los define admin al aprobar.
+- [ ] **Si se muestran las tareas de otras personas en el timeline** (sí/no).
+- [ ] **Aviso de tarea nueva**: a todo el equipo, solo a quienes aplica, o a nadie.
+
+## Pregunta abierta (decidir antes de construir B)
+- Mirlxs y Quindes hoy son **tiers**: se recalculan solos por asistencia y puntos, así que una persona puede cambiar de uno a otro de un mes a otro. Si el timeline se separa por tier, lo que ve cambiaría solo.
+- Alternativas:
+  - (a) Usar el tier tal cual: simple y sirve para esta liga.
+  - (b) Crear "equipos" fijos que asignan admins (ej. selección, equipo B, árbitros), con tiers aparte para puntos y cuota. Es lo más escalable para ligas grandes, y aquí se podría arrancar con dos equipos que copien los tiers actuales.
+
+## Orden propuesto
+1. Ronda de 11 cambios de arriba y la migración pendiente.
+2. A (Calendario + Yo).
+3. C junto con Mi Liga nativa.
+4. B, cuando se decida la pregunta abierta.
