@@ -162,10 +162,45 @@ Al asignar personas en el asistente:
    - Si toca "Entiendo", el cambio aplica en ese momento.
    - Si pasan los 7 días sin respuesta, el cambio aplica solo y ya no puede pedir revisión.
    - Pendiente de definir: plazo para que admins respondan. Propuesta: recordatorio push a admins a los 3 días, sin cambio automático.
-4. **Audiencia por rol**: explicada a Victor, pendiente de su respuesta.
+4. **Audiencia por rol**: sí, se suma (ej. reunión solo de entrenadorxs, tarea solo para árbitros). Usa los roles de la ficha.
+
+## D. Personalización de la liga en Mi Liga (Victor, 2026-11-08)
+Cada liga decide cómo se ve la app según su tamaño. Una sección "Cómo funciona tu liga" en Mi Liga, con interruptores (`config_app`, clave `personalizacion`).
+
+**Valores por defecto**: todo apagado, es decir el comportamiento de hoy, con todo visible para todos. Así nada cambia en la liga actual al publicar.
+
+1. **Equipo dividido por categorías**:
+   - Encendido: mi equipo primero, con el selector "Mi equipo · Quindes · Mirlxs · Toda la liga".
+   - Apagado: una sola lista como hoy.
+2. **Calendario dividido por categorías**:
+   - Encendido: el timeline muestra mi equipo más lo de toda la liga, con el mismo selector, y los asistentes de eventos y tareas suman el paso "Para quién es".
+   - Apagado: todo para todos y el paso no aparece.
+3. **Gestión de tareas**:
+   - Qué categorías pueden ver y tomar tareas.
+   - Quién crea: solo admins, todo el equipo, o todo el equipo con aprobación previa.
+   - Quién asigna a otras personas.
+   - Quién valida.
+   - Límite de tareas activas.
+   - Si se ven las tareas de otras personas en el timeline.
+   - A quién llega el aviso de tarea nueva.
+   - (Reemplaza la lista de la sección C.)
+4. **Audiencias extra**: permitir publicar "solo administradorxs" y "por rol".
+
+**Ideas para que sea fácil de usar**
+- **Arriba, dos atajos que encienden un conjunto de interruptores de una vez**:
+  - "Liga pequeña: todo visible para todos".
+  - "Liga con varios equipos: cada equipo ve lo suyo primero".
+  - Después cada interruptor se puede ajustar.
+- **Cada interruptor con una vista previa corta** de cómo cambia la app.
+- **Cambio de categoría y "Pedir revisión"**: dependen de que la liga use tiers automáticos. Si las categorías se fijan a mano, no hay ventana de cambio.
+
+**Cosas a cuidar al construirlo**
+- **El servidor aplica las reglas**, no solo la app: quién puede crear, tomar y ver. Así la web y cualquier versión vieja de la app no se las saltan.
+- **La web lee la misma configuración**: al menos no muestra lo que no corresponde.
+- **El tour guiado se adapta**: si la liga no está dividida, no habla de equipos.
 
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
 2. A (Calendario + Yo).
-3. C junto con Mi Liga nativa.
-4. B (audiencias por categoría, administradorxs y roles).
+3. C y D junto con Mi Liga nativa (primero los interruptores, con todo apagado por defecto).
+4. B (audiencias por categoría, administradorxs y roles), encendible desde D.
