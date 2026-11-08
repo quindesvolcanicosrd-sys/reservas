@@ -199,8 +199,75 @@ Cada liga decide cómo se ve la app según su tamaño. Una sección "Cómo funci
 - **La web lee la misma configuración**: al menos no muestra lo que no corresponde.
 - **El tour guiado se adapta**: si la liga no está dividida, no habla de equipos.
 
+## E. Personalización completa de la liga (Victor, 2026-11-08)
+Amplía D: que Pivot sirva a cualquier liga del mundo, de cualquier tamaño, y que cada liga active solo lo que usa.
+
+**Configuración rápida** (tres botones arriba, cada uno con explicación detallada):
+1. **Completo**: todo lo que ofrece la app.
+2. **Sin datos personales**: todo menos datos personales:
+   - sin nombre legal, documento, dirección, salud ni contactos de emergencia
+   - solo nombre derby, número y lo deportivo
+3. **Básico**: asistencias, grilla de Equipo, Mi perfil y un Mi Liga reducido.
+
+Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qué hace y qué pasa al cambiarla.
+
+**Qué se puede personalizar**
+- **Identidad**:
+  - nombre y logo de la liga
+  - logo de cada equipo o categoría (se usa como ícono en el selector del calendario y en Equipo; si no hay logo, las iniciales sobre el degradado de la marca)
+  - país, zona horaria, moneda e idioma (hoy Ecuador, UTC-5 y USD están fijos en el código)
+- **Canales de comunicación**:
+  - WhatsApp (grupo y contacto directo), Messenger, Telegram, Instagram, correo, etc.
+  - Cuáles se muestran y en qué orden: botones de contacto en las fichas y "Canales de la liga" en Yo/Equipo.
+- **Pagos**:
+  - si la liga cobra, cuánto (cuota, clases, paquetes)
+  - hasta 3 medios de pago (ej. De Una y banco internacional), cada uno con:
+    - nombre y datos
+    - color de énfasis, elegido de una paleta fija de `tema.dart` para que siempre se lea bien
+    - logo opcional de 150×150, con el mismo recorte que la foto de perfil
+- **Datos personales**:
+  - salud, contactos de emergencia, identidad y dirección, cada uno activable
+  - al desactivarlos se borran (ver abajo)
+- **Puntos y tiers**:
+  - si la liga usa puntos
+  - cuántos da cada cosa
+  - tiers automáticos o fijados a mano
+  - racha
+- **Tareas**: activadas o no, y todo lo de la sección D.
+- **Administradorxs**:
+  - agregar o quitar
+  - qué puede ver o hacer cada una, por áreas: personas, eventos, tareas, finanzas, salud y emergencia
+  - ej. alguien que gestiona eventos pero no ve datos de emergencia
+  - siempre debe quedar al menos un administrador/a con acceso total, y nadie se quita su propio acceso total si es el último
+
+**Borrado de datos al pasar a un modo más básico** (cuidado especial)
+- Antes de confirmar:
+  - mostrar qué se borra y a cuántas personas afecta (ej. "Se borrarán los datos de salud de 23 personas")
+  - pedir que se escriba el nombre de la liga
+- **Propuesta**: el borrado queda programado 7 días, se puede cancelar en ese plazo y después es permanente. Evita perder todo por un toque equivocado.
+- A cada persona afectada le llega un aviso de que sus datos se borraron.
+
+**Compromiso de privacidad** (texto visible en la personalización, en el registro y en la política de privacidad)
+- Pivot guarda solo los datos que tu liga decide activar.
+- Nunca los vende, no los usa para publicidad ni los monetiza, ahora ni en el futuro.
+- Se cifran en la base de datos y solo los ven las personas autorizadas de tu liga.
+- Cada persona decide qué información pone.
+- Ojo con la redacción: no decir "Pivot no recolecta datos personales" si una liga activa salud o identidad, porque sí los guarda. Lo correcto es "no los vende ni los usa con otros fines".
+- **Antes de la app pública**:
+  - política de privacidad formal (Google Play la exige, junto con el formulario de seguridad de datos)
+  - revisarla contra la Ley Orgánica de Protección de Datos Personales de Ecuador: los datos de salud son sensibles y piden consentimiento explícito
+  - pedir ese consentimiento a cada persona al activar salud o emergencia
+
+**Decisión grande antes de construir E: varias ligas en una sola app**
+- Hoy Pivot es una sola liga por base de datos.
+- Para que cualquier liga la use hay dos caminos:
+  - (a) Una base compartida, con `liga_id` en todas las tablas y reglas (RLS) que aíslen a cada liga. Es lo más escalable.
+  - (b) Un proyecto de Supabase por liga. Es más simple de aislar, pero más caro y difícil de mantener.
+- Afecta a todo lo anterior, así que conviene decidirlo antes de empezar D y E.
+
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
 2. A (Calendario + Yo).
 3. C y D junto con Mi Liga nativa (primero los interruptores, con todo apagado por defecto).
 4. B (audiencias por categoría, administradorxs y roles), encendible desde D.
+5. E (personalización completa), después de decidir lo de varias ligas en una sola app.
