@@ -297,7 +297,14 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 7. **Varias ligas**: una sola base de datos compartida, con `liga_id` en todas las tablas y reglas en el servidor que aíslan a cada liga. Sin bases separadas.
 
 ## G. Auditoría de escalabilidad y seguridad (antes de abrir a otras ligas)
-- [ ] Encontrar y documentar el error del principio con "Asistiré" (límite de la base de datos).
+- [ ] **Contexto**: el error de "Asistiré" era que la respuesta no se guardaba o no se veía. Victor lo resolvió subiendo el límite de 1000 filas de Supabase. Eso tapa el síntoma, pero con más ligas vuelve a pasar.
+- [ ] **Prioridad 1**: `_ultimaAsistenciaPorPersonaTodas` (index.ts ~línea 267, la que arma las respuestas de cada evento):
+  - Trae toda la tabla `log_asistencias` (`.limit(100000)`, hoy ~11.200 filas y crece unas 4.000 por mes) y filtra en memoria.
+  - Pasarla a `.in('id_evento', ids)` en lotes, o a una función SQL que devuelva solo la última fila por persona y evento.
+- [ ] `_ultimaAsistenciaRealPorUsuario` (~línea 340): trae todas las asistencias reales de la historia. Acotar por período o resolverlo en SQL.
+- [ ] Racha (~línea 4199, sin `soloUsuario`): trae todos los registros de Admin. Acotar al período de la racha.
+- [ ] Revisar el resto de consultas sin filtro de evento, persona o fecha, y añadir índices en `log_asistencias (id_evento)`, `(nombre_usuario, origen)` y `(fecha_entrenamiento)` (y `liga_id` cuando exista).
+- [ ] **Regla para código nuevo**: nunca traer una tabla completa para filtrar en memoria. Toda consulta va filtrada en la base, y si puede crecer sin techo, paginada.
 - [ ] Revisar las consultas que pueden pasar de 1000 filas: Supabase devuelve como máximo 1000 por consulta, salvo que se pagine. Ej. asistencias, notificaciones enviadas, historial de puntos.
 - [ ] **Índices** en las columnas que se filtran siempre (usuario, evento, fecha, y `liga_id` cuando exista).
 - [ ] **Plan de Supabase**: conexiones, tamaño de base, invocaciones de Edge Functions y tráfico. El plan gratis pausa el proyecto si no se usa y tiene límites bajos; para producción con varias ligas, plan pago con copias de seguridad diarias.
