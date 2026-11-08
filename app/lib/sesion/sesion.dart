@@ -170,6 +170,18 @@ class Sesion extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Foto de perfil (JPEG ya reducido). Vacío = quitar la foto.
+  Future<void> subirFoto(List<int>? jpeg) async {
+    final r = _ok(
+      await api.post('subirFotoPerfil', {'base64Data': jpeg == null ? '' : 'data:image/jpeg;base64,${base64Encode(jpeg)}'}),
+      'No se pudo subir la foto.',
+    );
+    final url = '${r['url'] ?? ''}';
+    // Misma ruta en el servidor: el ?v= evita que se vea la foto anterior en caché.
+    datos = {...datos, 'fotoPerfil': url.isEmpty ? '' : '$url?v=${DateTime.now().millisecondsSinceEpoch}'};
+    notifyListeners();
+  }
+
   /// PIN de 4 dígitos, mismo hash que la web: sha256(pin + '|' + username).
   Future<void> cambiarPin(String pin) async {
     final hash = sha256.convert(utf8.encode('$pin|$nombre')).toString();

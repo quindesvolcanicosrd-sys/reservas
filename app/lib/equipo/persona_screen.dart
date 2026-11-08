@@ -177,6 +177,24 @@ class _Ficha extends StatelessWidget {
   Widget _stats(BuildContext context, PivotPaleta pal) {
     final pct = p.asistenciaPct;
     final anioPct = p.eventosAnio == 0 ? null : (p.asistenciasAnio * 100 / p.eventosAnio).round();
+    // Con todo (o casi todo) en cero, seis tarjetas vacías no dicen nada:
+    // solo la asistencia del año, o "Sin estadísticas aún" (Victor, 2026-11-07).
+    final conValor = [(pct ?? 0) > 0, p.horasAnio > 0, p.puntosAsistencia > 0, p.puntosTareas > 0, p.puntosRacha > 0].where((x) => x).length;
+    if (conValor <= 1) {
+      if ((anioPct ?? 0) > 0) {
+        return Row(
+          children: [
+            Expanded(
+              child: _Stat(valor: '$anioPct%', etiqueta: 'Asistencia del año'),
+            ),
+          ],
+        );
+      }
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text('Sin estadísticas aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)),
+      );
+    }
     return Column(
       children: [
         IntrinsicHeight(

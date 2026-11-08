@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-07 — App Android: pestaña Ajustes nativa (mis datos, foto de perfil, equipamiento con aviso para Quindes, contactos de emergencia, ficha de salud, identidad y dirección, privacidad, notificaciones, excepción de cuota, PIN, eliminar cuenta). El recordatorio "Completa tu perfil" suma foto, teléfono, nombre derby, pronombres y roles, y cada dato abre su pantalla. Equipo: tu grupo primero y stats en cero resumidas.
+
 2026-11-07 — Equipo: el estado en la ficha (admins) se elige con pills; el texto de archivar aclara que, si la persona vuelve a ingresar, sale de archivo y queda activx (app y web). Web: "no podrás volver a iniciar sesión" al eliminar la cuenta (sin voseo).
 
 2026-11-07 — Equipo (app y web): se quitó "Copiar link de activación de cuenta"; todas las cuentas ya están migradas.

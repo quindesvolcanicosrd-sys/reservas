@@ -101,7 +101,9 @@ void main() {
     expect(ReglaAnticipada.mesDe(202609), DateTime(2026, 9));
   });
   test('Datos pendientes del perfil', () {
-    expect(DatosPendientes.calcular(const {}).length, 6);
+    // 6 de seguridad + foto, teléfono, nombre derby y pronombres (roles solo si el servidor los manda).
+    expect(DatosPendientes.calcular(const {}).length, 10);
+    expect(DatosPendientes.calcular(const {'roles': []}).length, 11);
     final completo = {
       for (final c in [
         'emerg1Nombre',
@@ -118,6 +120,10 @@ void main() {
         'callePrincipal',
         'sector',
         'canton',
+        'fotoPerfil',
+        'telefono',
+        'nombreDerby',
+        'pronombres',
       ])
         c: 'x',
       'permisosConfigurados': true,

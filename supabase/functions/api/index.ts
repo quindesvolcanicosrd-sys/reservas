@@ -106,7 +106,8 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     seguroContacto:       row.seguro_contacto       ?? '',
     cuponDisponible:      row.cupon_disponible      === true,
     fotoPerfil:           row.foto_perfil           ?? '',
-    permisosConfigurados: row.permisos_configurados === true,
+        permisosConfigurados: row.permisos_configurados === true,
+    roles:                Array.isArray(row.roles) ? row.roles : [],
     // Fase 2 completa del sistema de tiers (Parte 5, ver MANIFEST.md) --
     // `tierRiesgoDesde`/`tierRiesgoHasta` son columnas simples (sin `?? ''`,
     // a propósito -- `null` real, no cadena vacía, para que el frontend

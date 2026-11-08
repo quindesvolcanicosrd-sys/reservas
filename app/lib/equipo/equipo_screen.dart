@@ -179,13 +179,14 @@ class _EquipoScreenState extends State<EquipoScreen> {
     }
 
     final favoritos = personas.where((x) => repo.favoritos.contains(x.username)).toList();
-    const secciones = ['Quindes', 'Mirlxs', 'Inactivxs'];
+    final mio = personas.where(repo.esYo).map((x) => x.grupo).firstOrNull;
+    // Tu grupo arriba: si eres Mirlxs, Mirlxs va antes que Quindes (Victor, 2026-11-07).
+    final secciones = mio == 'Mirlxs' ? const ['Mirlxs', 'Quindes', 'Inactivxs'] : const ['Quindes', 'Mirlxs', 'Inactivxs'];
     final grupos = {for (final g in secciones) g: grupo(g)};
     final conGente = [
       for (final g in secciones)
         if (grupos[g]!.isNotEmpty) g,
     ];
-    final mio = personas.where(repo.esYo).map((x) => x.grupo).firstOrNull;
     final abierto = conGente.contains(_abierto) ? _abierto : (conGente.contains(mio) ? mio : conGente.firstOrNull);
 
     return _envolverScroll(

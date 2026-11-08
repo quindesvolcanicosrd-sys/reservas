@@ -7,11 +7,11 @@ import 'core/fechas.dart';
 import 'core/tema.dart';
 import 'core/datos_pendientes.dart';
 import 'core/tour.dart';
+import 'ajustes/ajustes_screen.dart';
 import 'equipo/equipo_repo.dart';
 import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
-import 'reservas/gestionar_reserva.dart';
 import 'sesion/sesion.dart';
 
 /// Estructura principal con la barra de navegación inferior. En esta
@@ -42,7 +42,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
     if (!mounted || Tour.activo) return;
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('tour.eventos.visto') != true || !mounted) return;
-    await DatosPendientes.recordarSiCorresponde(context, widget.sesion);
+    await DatosPendientes.recordarSiCorresponde(context, widget.sesion, abrir: (clave) => abrirPendiente(context, widget.sesion, clave));
   }
 
   @override
@@ -77,8 +77,8 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
       ),
       (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), const _EnLaWeb(titulo: 'Tareas', ruta: '/')),
       (
-        const NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Mi perfil'),
-        _MiPerfil(sesion: widget.sesion, repo: widget.repo),
+        const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Ajustes'),
+        AjustesScreen(sesion: widget.sesion, eventos: widget.repo),
       ),
       if (widget.sesion.esAdmin)
         (
@@ -185,61 +185,6 @@ class _EnLaWeb extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MiPerfil extends StatelessWidget {
-  const _MiPerfil({required this.sesion, required this.repo});
-  final Sesion sesion;
-  final EventosRepo repo;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Mi perfil', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(sesion.nombreMostrar, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            subtitle: Text(sesion.nombre ?? ''),
-          ),
-          const SizedBox(height: 8),
-          // Clases y cuotas activas, con cancelar o reagendar.
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MisReservasScreen(repo: repo))),
-            icon: const Icon(Icons.confirmation_number_outlined),
-            label: const Text('Mis reservas'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => launchUrl(Uri.parse('${ApiConfig.webAppUrl}/'), mode: LaunchMode.externalApplication),
-            icon: const Icon(Icons.open_in_new_rounded),
-            label: const Text('Editar mis datos en la web'),
-          ),
-          const SizedBox(height: 8),
-          // El tour vuelve a aparecer al entrar de nuevo a Eventos.
-          TextButton.icon(
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove('tour.eventos.visto');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listo: verás el tour al volver a Eventos.')));
-              }
-            },
-            icon: const Icon(Icons.tour_outlined),
-            label: const Text('Ver el tour de nuevo'),
-          ),
-          const SizedBox(height: 4),
-          TextButton.icon(onPressed: () => sesion.cerrar(), icon: const Icon(Icons.logout_rounded), label: const Text('Cerrar sesión')),
-        ],
       ),
     );
   }
