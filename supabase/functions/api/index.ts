@@ -780,6 +780,24 @@ async function cambiarPassword(params: Record<string, any>): Promise<Record<stri
   return { exito: true };
 }
 
+// Cambiar el nombre de usuario (Ajustes → Cuenta y acceso). Todas las tablas
+// lo siguen por ON UPDATE CASCADE + fn_renombrar_usuario (migración
+// 20261108030000). La sesión sigue valiendo: sessions también se actualiza.
+async function cambiarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
+  const actual = await _validarToken(params.token);
+  if (!actual) return { exito: false, error: 'Sesión inválida.' };
+  const nuevo = String(params.nuevo ?? '').trim().replace(/\s+/g, ' ');
+  if (nuevo.length < 2 || nuevo.length > 30) return { exito: false, error: 'Usa entre 2 y 30 caracteres.' };
+  if (!/^[\p{L}\p{N} ._-]+$/u.test(nuevo)) return { exito: false, error: 'Solo letras, números, espacios, punto, guion y guion bajo.' };
+  if (nuevo === actual) return { exito: true, username: actual };
+  const { error } = await supabase.rpc('fn_renombrar_usuario', { viejo: actual, nuevo });
+  if (error) {
+    if (String(error.message).includes('usuario_en_uso')) return { exito: false, error: 'Ese nombre de usuario ya está en uso.' };
+    return { exito: false, error: 'No se pudo cambiar el usuario.' };
+  }
+  return { exito: true, username: nuevo };
+}
+
 // País del equipo (prefijo y documento por defecto en Ajustes).
 async function getConfigEquipo(params: Record<string, any>): Promise<Record<string, any>> {
   if (!(await _validarToken(params.token))) return { exito: false, error: 'Sesión inválida.' };
@@ -1841,6 +1859,27 @@ async function adminArchivarTarea(params: Record<string, any>): Promise<Record<s
   return { exito: true };
 }
 
+// Tarea propia (2026-11-08): la persona propone y se asigna una tarea, con
+// fecha límite -- por ejemplo, como compromiso de una subvención de cuota.
+// Sin puntos al crearla (los decide admin al validarla, si corresponde).
+async function crearTareaPropia(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const titulo = String(params.titulo ?? '').trim();
+  const notas = String(params.notas ?? '').trim();
+  const area = String(params.area ?? '').trim() || 'Otro';
+  const fecha = String(params.fechaVencimiento ?? '').trim();
+  if (titulo.length < 3 || titulo.length > 120) return { exito: false, error: 'Escribe un título de 3 a 120 caracteres.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { exito: false, error: 'Elige una fecha límite.' };
+  const { data: creada, error } = await supabase.from('tareas').insert({
+    titulo, notas: notas || null, area, puntos: 0, max_asignados: 1,
+    fecha_vencimiento: fecha, estado: 'en_progreso', creado_por: username,
+  }).select('id').maybeSingle();
+  if (error || !creada) return { exito: false, error: 'No se pudo crear la tarea.' };
+  await supabase.from('asignaciones_tareas').insert({ tarea_id: creada.id, nombre_usuario: username, estado: 'iniciada', es_rescate: false, fecha_vencimiento_personal: fecha });
+  return { exito: true, idTarea: creada.id };
+}
+
 async function adminCrearTarea(params: Record<string, any>): Promise<any> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -2700,20 +2739,61 @@ async function solicitarExcepcion(params: Record<string, any>): Promise<Record<s
   if (!['ausencias', 'economica'].includes(tipo)) return { exito: false, error: 'Tipo de solicitud inválido.' };
   const mesAplicacion = String(params.mesAplicacion ?? '').trim();
   if (!mesAplicacion) return { exito: false, error: 'Mes de aplicación inválido.' };
-  let datos = params.datos;
+    let datos = params.datos;
   if (typeof datos === 'string') { try { datos = JSON.parse(datos); } catch { return { exito: false, error: 'Datos inválidos.' }; } }
+  // Administradorxs que pueden leerla (2026-11-08): vacío = todxs. Solo se
+  // aceptan usernames que de verdad son admins.
+  let destino: string[] = [];
+  try { destino = Array.isArray(params.adminsDestino) ? params.adminsDestino : JSON.parse(String(params.adminsDestino ?? '[]')); } catch { destino = []; }
+  const admins = (await _administradorxs()).map((a) => a.username);
+  destino = destino.map(String).filter((u) => admins.includes(u));
+  if (destino.length === admins.length) destino = [];
   const { data, error } = await supabase.from('solicitudes_excepcion').insert({
-    nombre: username, tipo, datos: datos ?? {}, mes_aplicacion: mesAplicacion, estado: 'pendiente',
+    nombre: username, tipo, datos: datos ?? {}, mes_aplicacion: mesAplicacion, estado: 'pendiente', admins_destino: destino,
   }).select('id').maybeSingle();
   if (error) return { exito: false, error: error.message };
+  const todos = await _adminDestinatariosPush();
+  await sendPush({
+    tipo: 'avisos_admin',
+    include_external_user_ids: destino.length ? todos.filter((u) => destino.includes(u)) : todos,
+    headings: { es: 'Solicitud de excepción de cuota' },
+    contents: { es: `${username} pidió ${tipo === 'ausencias' ? 'media cuota por ausencias justificadas' : 'una subvención por dificultad económica'}. Revísala en Mi Liga.` },
+    url: APP_URL + '/?tab=miliga',
+  });
   return { exito: true, id: data?.id };
+}
+
+/** Admins con fila en Equipo (username, nombre y foto), sin archivadxs. */
+async function _administradorxs(): Promise<{ username: string; nombre: string; foto: string; email: string }[]> {
+  const { data: adminsRows } = await supabase.from('admins').select('email');
+  const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsRows ?? []).map((a: any) => String(a.email).toLowerCase())]);
+  const { data: filas } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil, email, eliminado_en');
+  return (filas ?? [])
+    .filter((r: any) => r.email && emails.has(String(r.email).toLowerCase()) && !_estaArchivado(r))
+    .map((r: any) => ({ username: r.username, nombre: r.nombre_derby || r.username, foto: r.foto_perfil || '', email: String(r.email).toLowerCase() }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+/** Lista para elegir quién lee una solicitud (cualquier persona con sesión). */
+async function getAdministradorxs(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarToken(params.token))) return { exito: false, error: 'Sesión inválida.' };
+  return { exito: true, admins: (await _administradorxs()).map(({ email: _e, ...a }) => a) };
+}
+
+/** ¿Este admin puede ver la solicitud? (vacío = todxs). */
+async function _puedeVerExcepcion(adminEmail: string, destino: string[] | null): Promise<boolean> {
+  if (!destino || destino.length === 0) return true;
+  const yo = (await _administradorxs()).find((a) => a.email === adminEmail.toLowerCase());
+  return !!yo && destino.includes(yo.username);
 }
 
 async function adminGetExcepciones(params: Record<string, any>): Promise<any[]> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return [];
-  const { data } = await supabase.from('solicitudes_excepcion').select('*').eq('estado', 'pendiente').order('created_at', { ascending: false });
-  return (data ?? []).map((r: any) => ({ id: r.id, nombre: r.nombre, tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, createdAt: r.created_at }));
+    const { data } = await supabase.from('solicitudes_excepcion').select('*').eq('estado', 'pendiente').order('created_at', { ascending: false });
+  const visibles: any[] = [];
+  for (const r of data ?? []) if (await _puedeVerExcepcion(adminEmail, r.admins_destino)) visibles.push(r);
+  return visibles.map((r: any) => ({ id: r.id, nombre: r.nombre, tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, createdAt: r.created_at, adminsDestino: r.admins_destino ?? [] }));
 }
 
 async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
@@ -2722,9 +2802,33 @@ async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Rec
   const id = params.id;
   const estado = String(params.estado ?? '').trim();
   if (!id || !['aprobada', 'rechazada'].includes(estado)) return { exito: false, error: 'Parámetros inválidos.' };
-  const notaAdmin = params.notaAdmin != null && params.notaAdmin !== '' ? String(params.notaAdmin) : null;
+    const notaAdmin = params.notaAdmin != null && params.notaAdmin !== '' ? String(params.notaAdmin) : null;
+  const { data: sol } = await supabase.from('solicitudes_excepcion').select('nombre, tipo, mes_aplicacion, admins_destino').eq('id', id).maybeSingle();
+  if (!sol) return { exito: false, error: 'La solicitud no existe.' };
+  if (!(await _puedeVerExcepcion(adminEmail, sol.admins_destino))) return { exito: false, error: 'Esta solicitud no está dirigida a ti.' };
   const { error } = await supabase.from('solicitudes_excepcion').update({ estado, nota_admin: notaAdmin }).eq('id', id);
   if (error) return { exito: false, error: error.message };
+  // Ausencias aprobadas: media cuota de ese mes, sin pasos manuales.
+  let detalle = '';
+  if (estado === 'aprobada' && sol.tipo === 'ausencias') {
+    const precios = await getPreciosClases();
+    const mitad = Math.round(Number(precios.precioMensual ?? 0) * 50) / 100;
+    await supabase.from('cuota_excepcion').upsert(
+      { id_miembro: sol.nombre, mes: sol.mes_aplicacion, tipo: 'pago', monto: mitad, notas: 'Media cuota por ausencias justificadas' },
+      { onConflict: 'id_miembro,mes' },
+    );
+    detalle = ` Este mes pagas media cuota ($${mitad.toFixed(2)}).`;
+  }
+  await sendPush({
+    tipo: 'solicitud_resuelta',
+    include_external_user_ids: [sol.nombre],
+    headings: { es: estado === 'aprobada' ? 'Tu solicitud fue aprobada' : 'Tu solicitud fue rechazada' },
+    contents: {
+      es: (sol.tipo === 'ausencias' ? 'Media cuota por ausencias justificadas: ' : 'Subvención por dificultad económica: ')
+        + (estado === 'aprobada' ? 'aprobada.' : 'rechazada.') + detalle + (notaAdmin ? ` Nota: ${notaAdmin}` : ''),
+    },
+    url: APP_URL + '/',
+  });
   return { exito: true };
 }
 
@@ -5225,7 +5329,8 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
   { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
   { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debes la cuota.', categoria: 'Cuenta' },
-  { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
+    { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
+  { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tu excepción de cuota.', categoria: 'Cuenta' },
   { clave: 'avisos_admin', nombre: 'Avisos para admins', descripcion: 'Resumen antes del entrenamiento, bajas de última hora, solicitudes pendientes y cambios de reservas.', categoria: 'Administración', soloAdmin: true },
 ];
 const CATALOGO_CLAVES = new Set(CATALOGO_NOTIFICACIONES.map((c) => c.clave));
@@ -6575,7 +6680,10 @@ Deno.serve(async (req: Request) => {
       case 'loginGoogle':                     return json(await loginGoogle(params));
       case 'adminLogin':                      return json(await adminLogin(params));
             case 'validarPin':                      return json(await validarPin(params));
-      case 'cambiarPassword':                 return json(await cambiarPassword(params));
+            case 'cambiarPassword':                 return json(await cambiarPassword(params));
+            case 'cambiarUsuario':                  return json(await cambiarUsuario(params));
+      case 'crearTareaPropia':                return json(await crearTareaPropia(params));
+      case 'getAdministradorxs':              return json(await getAdministradorxs(params));
       case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
       case 'restaurarSesion':                 return json(await restaurarSesion(params));
       case 'cerrarSesion':                    return json(await cerrarSesion(params));
