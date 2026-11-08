@@ -37,7 +37,7 @@ Reglas de siempre: español neutro (sin voseo), sin pronombres femeninos, "admin
    - [ ] Quitar el texto "Esto lo verá todo el equipo en tu ficha".
    - [ ] Unir el teléfono al resto de los bloques (ya es visible por el botón de WhatsApp).
 
-9. **Mi equipamiento**
+9. **Mi equipamiento** (ver F.6: ahora va a Yo, no a Ajustes; si Yo todavía no existe el jueves, se deja para la entrega de Calendario + Yo)
    - [ ] Sacarlo de Mi perfil en Equipo y moverlo a Ajustes, junto a Excepción de cuota (mismo grupo).
 
 10. **Excepción de cuota (`ajustes/excepcion_screen.dart`)**
@@ -265,9 +265,50 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
   - (b) Un proyecto de Supabase por liga. Es más simple de aislar, pero más caro y difícil de mantener.
 - Afecta a todo lo anterior, así que conviene decidirlo antes de empezar D y E.
 
+## F. Decisiones de Victor sobre E (2026-11-08)
+1. **País, zona horaria, moneda e idioma** se eligen al crear la liga y se pueden cambiar después desde la personalización.
+2. **Color de los medios de pago**: paleta fija.
+3. **Acceso total**:
+   - Quien crea la liga tiene acceso total siempre.
+   - Si deja la liga o borra su cuenta, el acceso total pasa a la siguiente persona administradora. Le llega un aviso que explica por qué lo recibe.
+   - Si la única persona con acceso total quiere borrar su cuenta, al tocar "Eliminar cuenta" primero debe elegir de una lista a quién se lo pasa. Recién después se borra.
+4. **Borrado de datos** al pasar a un modo más básico:
+   - Desglose de cuántas personas pierden qué.
+   - Se hace efectivo 7 días después y se puede cancelar en ese plazo.
+   - A cada persona afectada le llega un aviso con la categoría borrada (ej. "Se borraron tus contactos de emergencia"), nunca el dato en sí.
+5. **Redacción del compromiso de privacidad**: "no los vende ni los usa con otros fines", no "no recolecta".
+6. **Datos sensibles en Yo, con consentimiento de cada persona**:
+   - Excepción de cuota, Salud y emergencia, e Identidad y dirección se mudan a Yo.
+   - Mi equipamiento va a Yo también: reemplaza el punto 9 de la ronda, que lo llevaba a Ajustes.
+   - **Pantalla de consentimiento**: la primera vez que la persona abre Salud y emergencia o Identidad y dirección:
+     - Título "Tratamiento de datos personales y de salud".
+     - Términos completos y claros.
+     - Dos botones grandes: "Acepto" / "No acepto".
+   - **"No acepto"**:
+     - Vuelve a la pantalla anterior y no se guarda nada, aunque admin haya activado esos datos.
+     - Si cambia de opinión, vuelve a entrar y acepta.
+   - Se guarda la aceptación con fecha y versión del texto: si el texto cambia, se pide de nuevo.
+   - **Retirar el consentimiento**: si después lo retira, se borran sus datos de esa sección.
+   - **Modelo legal propuesto**:
+     - La liga es la responsable de los datos de su gente y lo acepta al activar esas secciones.
+     - Pivot es quien los guarda por encargo (encargado del tratamiento), cifrados, sin venderlos ni usarlos para nada más.
+     - Las secciones sensibles vienen apagadas en las ligas nuevas.
+     - Revisión con abogadx antes de la app pública (Ecuador y los países donde se lance).
+7. **Varias ligas**: una sola base de datos compartida, con `liga_id` en todas las tablas y reglas en el servidor que aíslan a cada liga. Sin bases separadas.
+
+## G. Auditoría de escalabilidad y seguridad (antes de abrir a otras ligas)
+- [ ] Encontrar y documentar el error del principio con "Asistiré" (límite de la base de datos).
+- [ ] Revisar las consultas que pueden pasar de 1000 filas: Supabase devuelve como máximo 1000 por consulta, salvo que se pagine. Ej. asistencias, notificaciones enviadas, historial de puntos.
+- [ ] **Índices** en las columnas que se filtran siempre (usuario, evento, fecha, y `liga_id` cuando exista).
+- [ ] **Plan de Supabase**: conexiones, tamaño de base, invocaciones de Edge Functions y tráfico. El plan gratis pausa el proyecto si no se usa y tiene límites bajos; para producción con varias ligas, plan pago con copias de seguridad diarias.
+- [ ] **RLS activado en todas las tablas** con datos de ligas; revisar los avisos de seguridad y rendimiento de Supabase (advisors).
+- [ ] **Prueba de carga simple**: muchas personas marcando "Asistiré" a la vez en el mismo evento.
+- [ ] **Monitoreo**: alertas de errores de la Edge Function y del uso del plan.
+
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
 2. A (Calendario + Yo).
 3. C y D junto con Mi Liga nativa (primero los interruptores, con todo apagado por defecto).
 4. B (audiencias por categoría, administradorxs y roles), encendible desde D.
-5. E (personalización completa), después de decidir lo de varias ligas en una sola app.
+5. G (auditoría), antes de construir la base para varias ligas.
+6. E (personalización completa) sobre la base multi-liga (F.7).
