@@ -112,14 +112,32 @@ Objetivo: que las tareas del equipo se vean junto a los eventos, para que la gen
 - [ ] **Si se muestran las tareas de otras personas en el timeline** (sí/no).
 - [ ] **Aviso de tarea nueva**: a todo el equipo, solo a quienes aplica, o a nadie.
 
-## Pregunta abierta (decidir antes de construir B)
-- Mirlxs y Quindes hoy son **tiers**: se recalculan solos por asistencia y puntos, así que una persona puede cambiar de uno a otro de un mes a otro. Si el timeline se separa por tier, lo que ve cambiaría solo.
-- Alternativas:
-  - (a) Usar el tier tal cual: simple y sirve para esta liga.
-  - (b) Crear "equipos" fijos que asignan admins (ej. selección, equipo B, árbitros), con tiers aparte para puntos y cuota. Es lo más escalable para ligas grandes, y aquí se podría arrancar con dos equipos que copien los tiers actuales.
+## Decisión (2026-11-08): los equipos son las categorías
+Quindes es la categoría A y Mirlxs la B; se sube o baja según el desempeño (tier). "Para quién aplica" usa esas categorías, más estas audiencias:
+- Toda la liga · una o varias categorías · **Solo administradorxs**.
+- (Propuesta) **Por rol** (ej. entrenadorxs, comité de eventos), usando los roles de la ficha.
+
+Una tarea o evento "solo administradorxs":
+- Solo lo ven ellxs en el timeline.
+- Solo ellxs pueden tomarlo.
+- El aviso push solo les llega a ellxs.
+
+Al asignar personas en el asistente:
+- La lista ya tiene buscador.
+- Ahora muestra solo a quienes pueden recibir esa tarea, según la audiencia elegida.
+
+### Qué pasa al cambiar de categoría
+- **Lo ya tomado se queda**: si alguien de Quindes tenía una tarea de Quindes en curso y baja a Mirlxs, la puede terminar y suma sus puntos. La categoría se revisa solo al tomar una tarea, no después.
+- **Respuestas a eventos futuros de la categoría anterior**:
+  - Se mantienen, pero el evento muestra "Ya no aplica a tu categoría".
+  - Admins ven esa marca en la lista de asistencia.
+  - Nada se borra solo.
+- **Estadísticas y % de asistencia** se calculan contra los eventos que le aplicaban **en la fecha del evento**. Hace falta guardar el historial de categoría por mes (ej. tabla `categoria_mensual`), para que un descenso no cambie el pasado.
+- **Aviso al cambiar de categoría** (push): "Desde este mes estás en Mirlxs". Ahora verás primero el calendario y las tareas de Mirlxs.
+- **Si admins fijaron la categoría a mano** (`tier_modo`), no cambia sola.
 
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
 2. A (Calendario + Yo).
 3. C junto con Mi Liga nativa.
-4. B, cuando se decida la pregunta abierta.
+4. B (audiencias por categoría, administradorxs y roles).
