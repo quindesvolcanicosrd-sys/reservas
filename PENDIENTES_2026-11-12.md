@@ -153,13 +153,16 @@ Al asignar personas en el asistente:
 - **Al resolver**: push con el resultado y, al abrir la app, otra ventana que explica la decisión.
 - **Al subir de categoría**: la misma ventana en tono de celebración, sin botón de revisión.
 
-### Preguntas abiertas
-1. **Baúl**: hoy una tarea vencida pasa al baúl y otra persona la puede rescatar. Con la regla nueva (vence, se archiva y se suelta), ¿se elimina el baúl o se mantiene para que otra persona la rescate?
-2. **Mientras está en revisión**:
-   - (a) Sigue en su categoría anterior y no se le quita nada hasta que admins decidan (propuesta).
-   - (b) El cambio aplica de inmediato y se revierte si admins le dan la razón.
-3. **Plazo**: ¿hay un plazo para pedir revisión (ej. 7 días) y para que admins respondan?
-4. **Audiencia por rol** (ej. solo entrenadorxs): ¿se suma?
+### Respuestas de Victor (2026-11-08)
+1. **Baúl**: se mantiene. Una tarea vencida se le suelta a quien la tenía y pasa al baúl, donde otra persona la puede rescatar. **Archivadas** = cerradas: las aprobadas y las que admins sacaron del tablero. No se ven en el tablero, pero quedan como historial para puntos y estadísticas.
+2. **Mientras está en revisión**: sigue en su categoría anterior y no se le quita nada.
+3. **Plazo de 7 días** desde el aviso:
+   - La ventana aparece cada vez que abre la app hasta que toque "Entiendo" o "Pedir revisión".
+   - Durante esos 7 días sigue en su categoría anterior.
+   - Si toca "Entiendo", el cambio aplica en ese momento.
+   - Si pasan los 7 días sin respuesta, el cambio aplica solo y ya no puede pedir revisión.
+   - Pendiente de definir: plazo para que admins respondan. Propuesta: recordatorio push a admins a los 3 días, sin cambio automático.
+4. **Audiencia por rol**: explicada a Victor, pendiente de su respuesta.
 
 ## Orden propuesto
 1. Ronda de 11 cambios de arriba y la migración pendiente.
