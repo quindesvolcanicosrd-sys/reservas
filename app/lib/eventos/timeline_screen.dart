@@ -20,6 +20,7 @@ import 'eventos_repo.dart';
 import 'modelos.dart';
 import 'tomar_asistencia_screen.dart';
 import 'widgets_comunes.dart';
+import '../core/cargando.dart';
 
 /// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
 /// - Barra: "Noviembre ⌄" despliega el calendario del mes hacia abajo (como
@@ -818,7 +819,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   Widget _cuerpo(BuildContext context) {
     final p = context.pivot;
-    if (repo.cargando && repo.eventos.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (repo.cargando && repo.eventos.isEmpty) return const Center(child: PivotCargando());
     if (repo.error != null && repo.eventos.isEmpty) {
       return Center(
         child: Padding(

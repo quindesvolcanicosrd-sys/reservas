@@ -10,6 +10,7 @@ import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
 import 'persona_screen.dart';
+import '../core/cargando.dart';
 
 /// Pestaña Equipo (Victor, 2026-11-07; plan en el Claude Doc "Pivot app —
 /// Equipo, Tareas, Ajustes y Mi Liga"): favoritos en una fila de avatares,
@@ -130,7 +131,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
                         ],
                       ),
                     )
-                  : const Center(key: ValueKey('cargando'), child: CircularProgressIndicator());
+                  : const Center(key: ValueKey('cargando'), child: PivotCargando());
             } else if (_buscando && _busqueda.text.trim().isNotEmpty) {
               cuerpo = _resultados(context, p, personas);
             } else {

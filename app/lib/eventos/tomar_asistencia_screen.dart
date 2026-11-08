@@ -5,6 +5,7 @@ import '../core/tema.dart';
 import 'eventos_repo.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
+import '../core/cargando.dart';
 
 /// "Tomar asistencia" (solo admins, desde que el evento empieza). Mismo
 /// comportamiento que la subpantalla de la web (`_evAbrirMarcarAsistencia()`):
@@ -114,7 +115,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         ),
       );
     }
-    if (_roster == null) return const Center(child: CircularProgressIndicator());
+    if (_roster == null) return const Center(child: PivotCargando());
     final q = _busqueda.trim().toLowerCase();
     bool coincide(MiembroRoster m) => q.isEmpty || m.persona.nombreMostrar.toLowerCase().contains(q) || m.persona.username.toLowerCase().contains(q);
     final activos = _roster!.where((m) => !m.inactivo && coincide(m)).toList();

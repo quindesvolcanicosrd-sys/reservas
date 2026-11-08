@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 
 import '../core/tema.dart';
+import '../core/cargando.dart';
 
 /// Encuadre de la foto de perfil (como el lienzo de la web): se arrastra y
 /// se pellizca la imagen dentro del círculo; "Guardar" devuelve un JPEG
@@ -106,7 +107,7 @@ class _RecorteFotoScreenState extends State<RecorteFotoScreen> {
                 child: LayoutBuilder(
                   builder: (context, c) {
                     final lado = (c.maxWidth < c.maxHeight ? c.maxWidth : c.maxHeight) - 32;
-                    if (_imagen == null) return const CircularProgressIndicator();
+                    if (_imagen == null) return const PivotCargando();
                     _prepararVisor(lado);
                     return SizedBox(
                       width: lado,

@@ -17,6 +17,7 @@ import 'tomar_asistencia_screen.dart';
 import 'video_screen.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
+import '../core/cargando.dart';
 
 /// Grupos de asistencia del detalle (mismo orden que la web).
 enum _Grupo { asisten, noAsisten, noJugador, sinRespuesta }
@@ -171,7 +172,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
             appBar: AppBar(),
             body: Center(
               child: repo.cargando
-                  ? const CircularProgressIndicator()
+                  ? const PivotCargando()
                   : const Padding(padding: EdgeInsets.all(32), child: Text('No encontramos este evento. Puede que lo hayan eliminado.')),
             ),
           );
@@ -533,7 +534,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
                 child: personas == null
                     ? const Padding(
                         padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
+                        child: Center(child: PivotCargando()),
                       )
                     : personas.isEmpty
                     ? Padding(

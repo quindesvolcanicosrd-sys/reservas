@@ -9,6 +9,7 @@ import '../eventos/widgets_comunes.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
+import '../core/cargando.dart';
 
 /// Ficha de una persona del equipo (web: `_eqRenderPerfil()`): encabezado,
 /// acciones (WhatsApp, llamar, favorito y, para admins, Emergencia), stats
@@ -37,7 +38,7 @@ class PersonaScreen extends StatelessWidget {
         if (per == null) {
           return Scaffold(
             appBar: AppBar(),
-            body: Center(child: repo.personas == null ? const CircularProgressIndicator() : const Text('No se encontró a esta persona.')),
+            body: Center(child: repo.personas == null ? const PivotCargando() : const Text('No se encontró a esta persona.')),
           );
         }
         return _Ficha(repo: repo, p: per);
@@ -409,7 +410,7 @@ class _EstadisticasState extends State<_Estadisticas> {
                 if (!s.hasData && !s.hasError)
                   const Padding(
                     padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: Center(child: PivotCargando()),
                   ),
                 if (filas != null && filas.isEmpty) Text('Todavía no hay puntos por este concepto.', style: TextStyle(color: pal.textoSecundario)),
                 for (final f in filas ?? const <Map<String, dynamic>>[])

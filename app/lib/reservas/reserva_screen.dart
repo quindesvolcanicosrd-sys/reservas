@@ -9,6 +9,7 @@ import '../core/tema.dart';
 import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
 import 'reservas_repo.dart';
+import '../core/cargando.dart';
 
 enum _Paso { elegir, pago }
 
@@ -143,7 +144,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
       cuerpo: _error != null
           ? _errorCarga(context)
           : !listo
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PivotCargando())
           : switch (_paso) {
               _Paso.elegir => _esMes ? _pasoMeses(context) : _pasoClases(context),
               _Paso.pago => _pasoPago(context, total),
@@ -306,7 +307,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
                   child: !s.hasData
                       ? const Padding(
                           padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()),
+                          child: Center(child: PivotCargando()),
                         )
                       : s.data!.isEmpty
                       ? Text('No quedan patines libres para esta fecha.', style: TextStyle(color: p.textoSecundario))

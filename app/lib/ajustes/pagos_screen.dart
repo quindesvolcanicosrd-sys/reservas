@@ -8,6 +8,7 @@ import '../reservas/gestionar_reserva.dart';
 import '../reservas/reserva_screen.dart';
 import '../reservas/reservas_repo.dart';
 import 'componentes.dart';
+import '../core/cargando.dart';
 
 /// "Mis pagos y reservas" (Victor, 2026-11-08): reemplaza a "Mis reservas".
 /// Solo aparece en Ajustes si la persona tiene algo que mostrar (reservas,
@@ -45,7 +46,7 @@ class _PagosScreenState extends State<PagosScreen> {
           final c = widget.repo.cuota;
           return AnimatedSwitcher(
             duration: const Duration(milliseconds: 240),
-            child: c == null ? const Center(key: ValueKey('cargando'), child: CircularProgressIndicator()) : _contenido(context, c),
+            child: c == null ? const Center(key: ValueKey('cargando'), child: PivotCargando()) : _contenido(context, c),
           );
         },
       ),

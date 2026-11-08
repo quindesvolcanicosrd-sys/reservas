@@ -95,6 +95,11 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
   static const degradadoIdentidad = LinearGradient(colors: [Color(0xFF8A1A22), Color(0xFF2A0709)], begin: Alignment.topLeft, end: Alignment.bottomRight);
   static const degradadoMarca = LinearGradient(colors: [Color(0xFFFF3B3B), Color(0xFF8A0F18)], begin: Alignment.topLeft, end: Alignment.bottomRight);
   static const seccionSalud = Color(0xFFE5121B);
+
+  /// Loader (`PivotCargando`): rojo y vino de la marca; en oscuro, rosa.
+  static const cargandoRojo = Color(0xFFFF0000);
+  static const cargandoVino = Color(0xFF260808);
+  static const cargandoRosa = Color(0xFFFFD9D9);
   static const sobreSeccion = Color(0xFFFFFFFF);
 
   /// Confeti de la tarjeta de cumpleaños (mismo en claro y oscuro).

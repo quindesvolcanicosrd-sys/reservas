@@ -5,6 +5,7 @@ import '../core/tema.dart';
 import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
 import 'reservas_repo.dart';
+import '../core/cargando.dart';
 
 /// "Cancelar o reagendar" una reserva (web: `abrirGestionar()` y su hoja
 /// `#sheet-gestionar`): primero las dos opciones; cancelar pide
@@ -270,7 +271,7 @@ class _ReagendarScreenState extends State<ReagendarScreen> {
         ),
       );
     } else if (_clases == null) {
-      cuerpo = const Center(key: ValueKey('cargando'), child: CircularProgressIndicator());
+      cuerpo = const Center(key: ValueKey('cargando'), child: PivotCargando());
     } else if (_clases!.isEmpty) {
       cuerpo = Center(
         key: const ValueKey('vacio'),
@@ -399,7 +400,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
           final c = widget.repo.cuota;
           final Widget cuerpo;
           if (c == null) {
-            cuerpo = const Center(key: ValueKey('cargando'), child: CircularProgressIndicator());
+            cuerpo = const Center(key: ValueKey('cargando'), child: PivotCargando());
           } else {
             final lista = ReservasRepo.activas(c);
             cuerpo = lista.isEmpty

@@ -12,6 +12,7 @@ import 'inicio_shell.dart';
 import 'push/push.dart';
 import 'sesion/login_screen.dart';
 import 'sesion/sesion.dart';
+import 'core/cargando.dart';
 
 final _navegador = GlobalKey<NavigatorState>();
 
@@ -122,7 +123,7 @@ class _RaizState extends State<_Raiz> {
         if (s.cargando) {
           pantalla = const Scaffold(
             key: ValueKey('cargando'),
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(child: PivotCargando()),
           );
         } else if (!s.activa) {
           pantalla = LoginScreen(key: const ValueKey('login'), sesion: s);

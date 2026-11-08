@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
+import '../core/cargando.dart';
 
 /// Ajustes → Notificaciones: interruptor general y uno por tipo, generados
 /// desde el catálogo del servidor (`getCatalogoNotificaciones`). Guardado
@@ -129,7 +130,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 ),
               )
             : tipos == null
-            ? const Center(key: ValueKey('cargando'), child: CircularProgressIndicator())
+            ? const Center(key: ValueKey('cargando'), child: PivotCargando())
             : ListView(
                 key: const ValueKey('lista'),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),

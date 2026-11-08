@@ -7,6 +7,7 @@ import '../core/paises.dart';
 import '../core/tema.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
+import '../core/cargando.dart';
 
 /// Ficha de emergencia (solo admins, Victor 2026-11-07): de acceso rápido
 /// desde la fila de Equipo o la ficha de la persona. Arriba, a quién llamar
@@ -130,7 +131,7 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
                   if (_f == null)
                     const Padding(
                       padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: Center(child: PivotCargando()),
                     ),
                   if (_f != null) ...[
                     if (_hay('seguro')) ...[
