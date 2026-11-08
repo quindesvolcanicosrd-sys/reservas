@@ -88,19 +88,22 @@ class _Ficha extends StatelessWidget {
                     child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
                   ),
                   // Tu ficha: cámara arriba a la derecha para cambiar la foto (con encuadre).
+                  // Aparece después de que el avatar llega a su lugar (fundido + escala).
                   if (yo)
                     Positioned(
                       right: -2,
                       top: -2,
-                      child: Material(
-                        color: pal.marca,
-                        shape: CircleBorder(side: BorderSide(color: pal.fondo, width: 3)),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () => cambiarFoto(context, repo.sesion),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(Icons.photo_camera_rounded, size: 18, color: pal.sobreMarca),
+                      child: _AlLlegar(
+                        child: Material(
+                          color: pal.marca,
+                          shape: CircleBorder(side: BorderSide(color: pal.fondo, width: 3)),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => cambiarFoto(context, repo.sesion),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(Icons.photo_camera_rounded, size: 18, color: pal.sobreMarca),
+                            ),
                           ),
                         ),
                       ),
@@ -255,92 +258,118 @@ class _EstadisticasState extends State<_Estadisticas> {
     final p = widget.p;
     final anioPct = p.eventosAnio == 0 ? null : (p.asistenciasAnio * 100 / p.eventosAnio).round();
     final delAnio = [
-      if ((anioPct ?? 0) > 0) _Stat(valor: '$anioPct%', etiqueta: 'Asistencia del año'),
-      if (p.horasAnio > 0) _Stat(valor: numero(p.horasAnio), etiqueta: 'Horas en el año'),
+      if ((anioPct ?? 0) > 0) _Stat(valor: '$anioPct%', etiqueta: 'Asistencia'),
+      if (p.horasAnio > 0) _Stat(valor: numero(p.horasAnio), etiqueta: 'Horas patinadas'),
     ];
+    // Cada bloque en su caja (Victor, 2026-11-08): "Datos anuales" y el mes
+    // con su pill "Noviembre ▾".
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (delAnio.isEmpty) Text('Sin estadísticas del año aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)) else _fila(delAnio),
-        const SizedBox(height: 18),
-        // "Datos de noviembre ▾"
-        Align(
-          alignment: Alignment.centerLeft,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(PivotRadios.chip),
-            onTap: _elegirMes,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Datos de $_nombreMes',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: pal.texto),
+        _Caja(
+          titulo: Text(
+            'Datos anuales',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: pal.texto),
+          ),
+          hijo: delAnio.isEmpty ? Text('Sin estadísticas del año aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)) : _fila(delAnio),
+        ),
+        const SizedBox(height: 12),
+        _Caja(
+          titulo: Align(
+            alignment: Alignment.centerLeft,
+            child: Material(
+              color: pal.suave,
+              shape: const StadiumBorder(),
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: _elegirMes,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          _mesPill,
+                          key: ValueKey(_mesPill),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: pal.sobreSuave),
+                        ),
+                      ),
+                      Icon(Icons.expand_more_rounded, size: 20, color: pal.sobreSuave),
+                    ],
                   ),
-                  const SizedBox(width: 2),
-                  Icon(Icons.expand_more_rounded, color: pal.textoSecundario),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        FutureBuilder<Integrante?>(
-          future: _datos,
-          builder: (context, s) {
-            final Widget hijo;
-            if (s.connectionState != ConnectionState.done) {
-              hijo = const Padding(
-                key: ValueKey('cargando'),
-                padding: EdgeInsets.all(16),
-                child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
+          hijo: FutureBuilder<Integrante?>(
+            future: _datos,
+            builder: (context, s) {
+              final Widget hijo;
+              if (s.connectionState != ConnectionState.done) {
+                hijo = const Padding(
+                  key: ValueKey('cargando'),
+                  padding: EdgeInsets.all(16),
+                  child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
+                );
+              } else if (s.hasError) {
+                hijo = Text(
+                  'No se pudieron cargar los datos de ese mes.',
+                  key: const ValueKey('error'),
+                  style: TextStyle(color: pal.textoSecundario),
+                );
+              } else {
+                final x = s.data;
+                final pct = x?.asistenciaPct;
+                final tarjetas = [
+                  if ((pct ?? 0) > 0) _Stat(valor: '$pct%', etiqueta: 'Asistencia'),
+                  if ((x?.puntosAsistencia ?? 0) > 0)
+                    _Stat(
+                      valor: numero(x!.puntosAsistencia),
+                      etiqueta: 'Puntos por asistencia',
+                      alTocar: () => _desglose(context, 'asistencia', 'Puntos por asistencia'),
+                    ),
+                  if ((x?.puntosTareas ?? 0) > 0)
+                    _Stat(valor: numero(x!.puntosTareas), etiqueta: 'Puntos por tareas', alTocar: () => _desglose(context, 'tareas', 'Puntos por tareas')),
+                  if ((x?.puntosRacha ?? 0) > 0)
+                    _Stat(valor: numero(x!.puntosRacha), etiqueta: 'Puntos por racha', alTocar: () => _desglose(context, 'racha', 'Puntos por racha')),
+                ];
+                hijo = tarjetas.isEmpty
+                    ? Text(
+                        'Sin datos en $_nombreMes',
+                        key: ValueKey('vacio$_mes'),
+                        style: TextStyle(fontSize: 14, color: pal.textoSecundario),
+                      )
+                    : Column(
+                        key: ValueKey('datos$_mes'),
+                        children: [
+                          _fila(tarjetas.take(2).toList()),
+                          if (tarjetas.length > 2) ...[const SizedBox(height: 10), _fila(tarjetas.skip(2).toList())],
+                        ],
+                      );
+              }
+              return AnimatedSize(
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 240),
+                  layoutBuilder: (actual, previos) => Stack(alignment: Alignment.topLeft, children: [...previos, ?actual]),
+                  child: hijo,
+                ),
               );
-            } else if (s.hasError) {
-              hijo = Text(
-                'No se pudieron cargar los datos de ese mes.',
-                key: const ValueKey('error'),
-                style: TextStyle(color: pal.textoSecundario),
-              );
-            } else {
-              final x = s.data;
-              final pct = x?.asistenciaPct;
-              final tarjetas = [
-                if ((pct ?? 0) > 0) _Stat(valor: '$pct%', etiqueta: 'Asistencia'),
-                if ((x?.puntosAsistencia ?? 0) > 0)
-                  _Stat(
-                    valor: numero(x!.puntosAsistencia),
-                    etiqueta: 'Puntos por asistencia',
-                    alTocar: () => _desglose(context, 'asistencia', 'Puntos por asistencia'),
-                  ),
-                if ((x?.puntosTareas ?? 0) > 0)
-                  _Stat(valor: numero(x!.puntosTareas), etiqueta: 'Puntos por tareas', alTocar: () => _desglose(context, 'tareas', 'Puntos por tareas')),
-                if ((x?.puntosRacha ?? 0) > 0)
-                  _Stat(valor: numero(x!.puntosRacha), etiqueta: 'Puntos por racha', alTocar: () => _desglose(context, 'racha', 'Puntos por racha')),
-              ];
-              hijo = tarjetas.isEmpty
-                  ? Text(
-                      'Sin datos en $_nombreMes',
-                      key: ValueKey('vacio$_mes'),
-                      style: TextStyle(fontSize: 14, color: pal.textoSecundario),
-                    )
-                  : Column(
-                      key: ValueKey('datos$_mes'),
-                      children: [
-                        _fila(tarjetas.take(2).toList()),
-                        if (tarjetas.length > 2) ...[const SizedBox(height: 10), _fila(tarjetas.skip(2).toList())],
-                      ],
-                    );
-            }
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 240),
-              layoutBuilder: (actual, previos) => Stack(alignment: Alignment.topLeft, children: [...previos, ?actual]),
-              child: hijo,
-            );
-          },
+            },
+          ),
         ),
       ],
     );
+  }
+
+  /// "Noviembre" (o "Octubre 2025" si es de otro año).
+  String get _mesPill {
+    final h = Fechas.hoy();
+    return _mes.year == h.year ? Fechas.mesNombre(_mes) : Fechas.mesAnio(_mes);
   }
 
   Widget _fila(List<Widget> tarjetas) => IntrinsicHeight(
@@ -444,6 +473,7 @@ class _Accion extends StatelessWidget {
 
 class _Stat extends StatelessWidget {
   const _Stat({required this.valor, required this.etiqueta, this.alTocar});
+  // Dentro de una `_Caja`: fondo hundido (color de fondo de la pantalla).
   final String valor;
   final String etiqueta;
   final VoidCallback? alTocar;
@@ -452,10 +482,10 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Material(
-      color: p.tarjeta,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+      color: p.fondo,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4)),
       child: InkWell(
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4),
         onTap: alTocar,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -476,6 +506,48 @@ class _Stat extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Muestra [child] con fundido y escala al terminar la transición de la ruta
+/// (cuando el avatar ya "aterrizó"); al volver, se va primero.
+class _AlLlegar extends StatelessWidget {
+  const _AlLlegar({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final ruta = ModalRoute.of(context)?.animation;
+    if (ruta == null) return child;
+    final opacidad = CurvedAnimation(
+      parent: ruta,
+      curve: const Interval(0.7, 1, curve: Curves.easeOut),
+    );
+    final escala = CurvedAnimation(
+      parent: ruta,
+      curve: const Interval(0.7, 1, curve: Curves.easeOutBack),
+    );
+    return FadeTransition(
+      opacity: opacidad,
+      child: ScaleTransition(scale: escala, child: child),
+    );
+  }
+}
+
+/// Contenedor de un bloque de stats: título arriba y contenido.
+class _Caja extends StatelessWidget {
+  const _Caja({required this.titulo, required this.hijo});
+  final Widget titulo;
+  final Widget hijo;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [titulo, const SizedBox(height: 12), hijo]),
     );
   }
 }
@@ -675,19 +747,19 @@ class _AdministracionState extends State<_Administracion> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Acceso admin'),
+                  title: const Text('Acceso de administradorx'),
                   value: p.esAdminMiembro,
                   onChanged: p.email.isEmpty
                       ? null
                       : (v) async {
                           if (!await _confirmar(
-                            v ? '¿Dar acceso admin?' : '¿Quitar acceso admin?',
+                            v ? '¿Dar acceso de administradorx?' : '¿Quitar acceso de administradorx?',
                             v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
                             v ? 'Dar acceso' : 'Quitar acceso',
                           )) {
                             return;
                           }
-                          _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso admin otorgado' : 'Acceso admin quitado');
+                          _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso de administradorx otorgado' : 'Acceso de administradorx quitado');
                         },
                 ),
 

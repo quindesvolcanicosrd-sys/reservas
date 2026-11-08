@@ -37,7 +37,7 @@ class PrivacidadScreen extends StatelessWidget {
           const AvisoPrivado(
             texto:
                 'Tu cumpleaños y tu edad los decides tú. Los datos sensibles, como salud, dirección e identidad, '
-                'solo los ven admins de tu equipo y solo por motivos de emergencia.',
+                'solo los ven administradorxs de tu equipo, por motivos de emergencia, logística de viajes u operativos del equipo.',
           ),
           GrupoAjustes(
             filas: [

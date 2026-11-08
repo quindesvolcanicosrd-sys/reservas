@@ -180,7 +180,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
           _confirmacionPedida = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!_esAdmin) {
-              _avisar('Solo un admin puede cancelar el evento.');
+              _avisar('Solo administradorxs pueden cancelar el evento.');
             } else if (ev.cancelado) {
               _avisar('Este evento ya está cancelado.');
             } else {
@@ -202,7 +202,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
             ],
           ),
           floatingActionButton: _esAdmin
-              ? FloatingActionButton(tooltip: 'Opciones de admin', onPressed: () => _menuAdmin(ev), child: const Icon(Icons.edit_calendar_outlined))
+              ? FloatingActionButton(tooltip: 'Opciones de administración', onPressed: () => _menuAdmin(ev), child: const Icon(Icons.edit_calendar_outlined))
               : null,
           body: ListView(
             padding: const EdgeInsets.only(top: 8, bottom: 96),

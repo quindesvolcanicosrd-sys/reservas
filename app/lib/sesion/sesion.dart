@@ -183,6 +183,14 @@ class Sesion extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Cambia el nombre de usuario (si está libre). La sesión sigue valiendo.
+  Future<void> cambiarUsuario(String nuevo) async {
+    final r = _ok(await api.post('cambiarUsuario', {'nuevo': nuevo}), 'No se pudo cambiar el usuario.');
+    nombre = '${r['username'] ?? nuevo}';
+    await _almacen.write(key: 'sesion', value: jsonEncode({'token': api.token, 'nombre': nombre}));
+    notifyListeners();
+  }
+
   /// Crea o cambia la contraseña ([actual] solo si ya tiene una).
   Future<void> cambiarPassword({String actual = '', required String nueva}) async {
     _ok(await api.post('cambiarPassword', {'actual': actual, 'nueva': nueva}), 'No se pudo guardar la contraseña.');

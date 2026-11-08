@@ -58,14 +58,43 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
 
   static const _avatares = [Color(0xFFE8000D), Color(0xFF775652), Color(0xFF3B6470), Color(0xFF6B5778), Color(0xFF5D6230), Color(0xFF8A4F2A)];
 
-  /// Ajustes: un color por sección para los íconos (mismo en claro y oscuro).
-  static const seccionReservas = Color(0xFF1E88E5);
-  static const seccionCuota = Color(0xFF00A884);
-  static const seccionSalud = Color(0xFFE53935);
-  static const seccionIdentidad = Color(0xFFFB8C00);
-  static const seccionPrivacidad = Color(0xFF8E24AA);
-  static const seccionNotificaciones = Color(0xFFFFB300);
-  static const seccionCuenta = Color(0xFF5C6BC0);
+  /// Ajustes y Mi perfil: íconos en cuadros con degradados de la escala de
+  /// la marca (rojo, coral, vino y rosa; captura de Victor, 2026-11-08). En
+  /// oscuro, los tonos vino pasan a rosa para que no se pierdan en el fondo.
+  static const _rojo = [Color(0xFFFF3B3B), Color(0xFFC8000F)];
+  static const _coral = [Color(0xFFFF8080), Color(0xFFFF1F1F)];
+  static const _rojoVino = [Color(0xFFE8001C), Color(0xFF5A0F14)];
+  static const _vino = [Color(0xFF7A1A20), Color(0xFF2E0A0C)];
+  static const _rosa = [Color(0xFFFFE0E0), Color(0xFFFFB0B0)];
+  static const _rosaFuerte = [Color(0xFFFFC2C2), Color(0xFFFF8585)];
+  static const _sobreRosa = Color(0xFFC8000F);
+  static const _sobreRosaFuerte = Color(0xFF3A0D10);
+  static const _sobreVino = Color(0xFFFFD9D9);
+
+  /// Degradado y color del ícono para una sección ('reservas', 'cuota',
+  /// 'salud', 'identidad', 'privacidad', 'notificaciones', 'cuenta', o los de
+  /// Mi perfil: 'foto', 'nombre', 'numero', 'pronombres', 'roles', 'ingreso',
+  /// 'telefono', 'equipamiento').
+  static (LinearGradient, Color) seccion(String clave, Brightness b) {
+    final oscuro = b == Brightness.dark;
+    final (List<Color> c, Color icono) = switch (clave) {
+      'reservas' || 'nombre' || 'telefono' => (_rojo, sobreSeccion),
+      'cuota' || 'pronombres' => (_rosa, _sobreRosa),
+      'salud' || 'foto' => (_rojo, sobreSeccion),
+      'identidad' || 'numero' || 'ingreso' => oscuro ? (_rosaFuerte, _sobreRosaFuerte) : (_vino, _sobreVino),
+      'privacidad' || 'roles' => (_rojoVino, sobreSeccion),
+      'notificaciones' || 'equipamiento' => (_coral, sobreSeccion),
+      _ => oscuro ? (_rosa, _sobreRosa) : (_vino, _sobreVino),
+    };
+    return (LinearGradient(colors: c, begin: Alignment.topLeft, end: Alignment.bottomRight), icono);
+  }
+
+  /// Tarjetas grandes de color (ficha de emergencia, credencial, interruptor
+  /// de notificaciones).
+  static const degradadoSalud = LinearGradient(colors: [Color(0xFFFF2D2D), Color(0xFFB0000E)], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const degradadoIdentidad = LinearGradient(colors: [Color(0xFF8A1A22), Color(0xFF2A0709)], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const degradadoMarca = LinearGradient(colors: [Color(0xFFFF3B3B), Color(0xFF8A0F18)], begin: Alignment.topLeft, end: Alignment.bottomRight);
+  static const seccionSalud = Color(0xFFE5121B);
   static const sobreSeccion = Color(0xFFFFFFFF);
 
   /// Confeti de la tarjeta de cumpleaños (mismo en claro y oscuro).

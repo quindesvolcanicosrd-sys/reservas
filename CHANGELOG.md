@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-08 — App Android: ficha con datos anuales y del mes en cajas, cámara con animación; Ajustes con íconos de la marca, Mis pagos y reservas, contactos de emergencia con asistente, países del mundo con buscador y banderas, usuario editable, notificaciones simplificadas y excepción de cuota con elección de administradorxs, tareas de compromiso y aviso push al resolverla.
+
 2026-11-08 — App Android: Mi perfil dentro de tu ficha de Equipo (foto con encuadre, datos visibles, equipamiento); Ajustes rediseñado con colores por sección, Salud y emergencia, Identidad y dirección con mapa, país del equipo por defecto, notificaciones simplificadas, excepción de cuota en pasos y Cuenta y acceso con contraseña. Equipo: stats por mes en la ficha, estado con confirmación, estrella de favoritos, nombres largos que se deslizan, sin puesto ni emergencia propia. Servidor: contraseñas (PBKDF2), `getConfigEquipo`, foto con `?v=`, pronombres normalizados.
 
 2026-11-07 — App Android: pestaña Ajustes nativa (mis datos, foto de perfil, equipamiento con aviso para Quindes, contactos de emergencia, ficha de salud, identidad y dirección, privacidad, notificaciones, excepción de cuota, PIN, eliminar cuenta). El recordatorio "Completa tu perfil" suma foto, teléfono, nombre derby, pronombres y roles, y cada dato abre su pantalla. Equipo: tu grupo primero y stats en cero resumidas.

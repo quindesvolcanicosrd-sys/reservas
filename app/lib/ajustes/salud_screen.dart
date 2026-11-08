@@ -5,6 +5,8 @@ import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import 'campos.dart';
 import 'componentes.dart';
+import 'contacto_screen.dart';
+import '../eventos/widgets_comunes.dart';
 
 /// Salud y emergencia (antes "Contactos de emergencia" + "Ficha de salud",
 /// Victor 2026-11-07). Arriba, tu ficha de emergencia de un vistazo, como la
@@ -14,7 +16,6 @@ class SaludEmergenciaScreen extends StatelessWidget {
   const SaludEmergenciaScreen({super.key, required this.sesion});
   final Sesion sesion;
 
-  static const _relaciones = ['Madre', 'Padre', 'Pareja', 'Hermanx', 'Amistad', 'Familiar'];
   static const _atencion = ['MSP (Ministerio de Salud Pública)', 'IESS', 'Seguro Privado'];
   static const _seguros = ['Saludsa', 'Ecuasanitas', 'Humana', 'BMI del Ecuador', 'Confiamed', 'BUPA Ecuador', 'Pan American Life', 'CruzBlanca'];
   static const _enfermedades = [
@@ -55,15 +56,11 @@ class SaludEmergenciaScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 22),
-          _titulo(context, 'Atención médica'),
+          // Alergias, medicamentos, enfermedades y atención se editan en la
+          // ficha de arriba; aquí solo lo que no está en ella.
+          _titulo(context, 'Otros datos de salud'),
           GrupoAjustes(
             filas: [
-              FilaAjuste(
-                icono: Icons.local_hospital_outlined,
-                titulo: 'Dónde te atiendes',
-                valor: valorDe(s, 'atencionMedica'),
-                alTocar: () => _editar(context, 'atencion'),
-              ),
               if (privado) ...[
                 FilaAjuste(
                   icono: Icons.health_and_safety_outlined,
@@ -78,19 +75,6 @@ class SaludEmergenciaScreen extends StatelessWidget {
                   alTocar: () => editarCampo(context, s, 'seguroContacto', 'Contacto del seguro', ayuda: 'Teléfono o correo para emergencias.'),
                 ),
               ],
-            ],
-          ),
-          _titulo(context, 'Tu salud'),
-          GrupoAjustes(
-            filas: [
-              FilaAjuste(icono: Icons.coronavirus_outlined, titulo: 'Alergias', valor: _alergias(s), alTocar: () => _editar(context, 'alergias')),
-              FilaAjuste(icono: Icons.medication_outlined, titulo: 'Medicamentos', valor: _medicamentos(s), alTocar: () => _editar(context, 'medicamentos')),
-              FilaAjuste(
-                icono: Icons.monitor_heart_outlined,
-                titulo: 'Enfermedades',
-                valor: vacioComo(s, 'enfermedad', 'Ninguna'),
-                alTocar: () => _editar(context, 'enfermedad'),
-              ),
               FilaAjuste(
                 icono: Icons.history_rounded,
                 titulo: 'Antecedentes',
@@ -133,7 +117,7 @@ class SaludEmergenciaScreen extends StatelessWidget {
       case 'enfermedad':
         await elegirCampo(context, s, 'enfermedad', 'Enfermedades', _enfermedades, multi: true, otro: true, ayuda: 'Déjalo vacío si no tienes ninguna.');
       case 'alergias':
-        final v = await elegirOpciones(context, titulo: 'Alergias', opciones: const ['Sí', 'No', 'Tal vez'], valor: valorDe(s, 'alergias'));
+        final v = await elegirOpciones(context, titulo: 'Alergias', opciones: const ['Sí', 'No'], valor: valorDe(s, 'alergias'));
         if (v == null || !context.mounted) return;
         var desc = '';
         if (v != 'No') {
@@ -169,50 +153,8 @@ class SaludEmergenciaScreen extends StatelessWidget {
     }
   }
 
-  /// Nombre → relación → teléfono, en hojas seguidas.
-  Future<void> _editarContacto(BuildContext context, String n) async {
-    final s = sesion;
-    final accion = valorDe(s, 'emerg${n}Nombre').isEmpty
-        ? 'nombre'
-        : await showModalBottomSheet<String>(
-            context: context,
-            showDragHandle: true,
-            builder: (c) => SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(leading: const Icon(Icons.person_outline_rounded), title: const Text('Nombre'), onTap: () => Navigator.of(c).pop('nombre')),
-                  ListTile(leading: const Icon(Icons.diversity_3_outlined), title: const Text('Relación'), onTap: () => Navigator.of(c).pop('relacion')),
-                  ListTile(leading: const Icon(Icons.phone_outlined), title: const Text('Teléfono'), onTap: () => Navigator.of(c).pop('telefono')),
-                  if (n == '2')
-                    ListTile(
-                      leading: Icon(Icons.delete_outline_rounded, color: c.pivot.marcaTexto),
-                      title: Text('Quitar este contacto', style: TextStyle(color: c.pivot.marcaTexto)),
-                      onTap: () => Navigator.of(c).pop('quitar'),
-                    ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          );
-    if (accion == null || !context.mounted) return;
-    switch (accion) {
-      case 'quitar':
-        await guardarCampos(context, s, {'emerg2Nombre': '', 'emerg2Relacion': '', 'emerg2Prefijo': '', 'emerg2Telefono': ''});
-      case 'relacion':
-        await elegirCampo(context, s, 'emerg${n}Relacion', 'Relación', _relaciones, otro: true);
-      case 'telefono':
-        await editarTelefono(context, s, 'emerg${n}Prefijo', 'emerg${n}Telefono', 'Teléfono del contacto');
-      case 'nombre':
-        final nuevo = valorDe(s, 'emerg${n}Nombre').isEmpty;
-        await editarCampo(context, s, 'emerg${n}Nombre', 'Nombre del contacto', maxLength: 60, obligatorio: n == '1');
-        // Contacto nuevo: sigue con relación y teléfono.
-        if (nuevo && context.mounted && valorDe(s, 'emerg${n}Nombre').isNotEmpty) {
-          await elegirCampo(context, s, 'emerg${n}Relacion', 'Relación', _relaciones, otro: true);
-          if (context.mounted) await editarTelefono(context, s, 'emerg${n}Prefijo', 'emerg${n}Telefono', 'Teléfono del contacto');
-        }
-    }
-  }
+  /// Asistente para crear o editar el contacto (Victor, 2026-11-08).
+  Future<void> _editarContacto(BuildContext context, String n) => ContactoScreen.abrir(context, sesion, n);
 }
 
 /// Resumen tipo "ficha médica" en la tarjeta roja de la sección.
@@ -236,7 +178,7 @@ class _FichaRapida extends StatelessWidget {
     ];
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: PivotPaleta.seccionSalud, borderRadius: BorderRadius.circular(PivotRadios.grande)),
+      decoration: BoxDecoration(gradient: PivotPaleta.degradadoSalud, borderRadius: BorderRadius.circular(PivotRadios.grande)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -253,55 +195,61 @@ class _FichaRapida extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text('Lo que admins ven si te pasa algo en un entrenamiento.', style: TextStyle(color: sobre.withValues(alpha: 0.85), fontSize: 12.5)),
+          Text(
+            'Lo que administradorxs ven si te pasa algo en un entrenamiento o un viaje.',
+            style: TextStyle(color: sobre.withValues(alpha: 0.85), fontSize: 12.5),
+          ),
           const SizedBox(height: 14),
           for (var i = 0; i < datos.length; i += 2)
             Padding(
               padding: EdgeInsets.only(bottom: i + 2 < datos.length ? 10 : 0),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final (j, d) in datos.skip(i).take(2).indexed) ...[
-                      if (j > 0) const SizedBox(width: 10),
-                      Expanded(
-                        child: Material(
-                          color: sobre.withValues(alpha: 0.14),
+              // Sin IntrinsicHeight: el texto deslizante usa LayoutBuilder;
+              // las tarjetas ya miden lo mismo (una línea cada una).
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (j, d) in datos.skip(i).take(2).indexed) ...[
+                    if (j > 0) const SizedBox(width: 10),
+                    Expanded(
+                      child: Material(
+                        color: sobre.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4),
-                            onTap: () => alEditar(d.$1),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(d.$2, color: sobre, size: 16),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        d.$3,
-                                        style: TextStyle(color: sobre.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w700),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    d.$4,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(color: sobre, fontSize: 14.5, fontWeight: FontWeight.w700),
-                                  ),
-                                ],
-                              ),
+                          onTap: () => alEditar(d.$1),
+                          // Alto fijo: todas las celdas iguales, con o sin texto deslizante.
+                          child: Container(
+                            height: 76,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(d.$2, color: sobre, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      d.$3,
+                                      style: TextStyle(color: sobre.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w700),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                // Valores largos se deslizan con fundido (Victor, 2026-11-08).
+                                TextoDeslizante(
+                                  texto: d.$4,
+                                  alineacion: TextAlign.left,
+                                  estilo: TextStyle(color: sobre, fontSize: 14.5, fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
         ],

@@ -136,7 +136,7 @@ class EventosRepo extends ChangeNotifier {
   String? motivoSinRespuesta(Evento ev) {
     final ini = ev.inicioUtc;
     if (ev.cancelado) return 'Este evento fue cancelado.';
-    if (ev.yaEmpezo) return 'El evento ya empezó; la asistencia la toma un admin.';
+    if (ev.yaEmpezo) return 'El evento ya empezó; la asistencia la toma unx administradorx.';
     if (ini != null && DateTime.now().toUtc().isAfter(ini.subtract(const Duration(minutes: 10)))) {
       return 'Faltan menos de 10 minutos: ya no se puede cambiar la respuesta.';
     }
@@ -262,7 +262,7 @@ class EventosRepo extends ChangeNotifier {
 
   String get _adminToken {
     final t = sesion.adminToken;
-    if (t == null) throw ApiException('Esta acción es solo para admins.');
+    if (t == null) throw ApiException('Esta acción es solo para administradorxs.');
     return t;
   }
 

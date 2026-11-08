@@ -8,7 +8,11 @@ import '../core/tema.dart';
 
 /// Título de grupo + tarjeta con las filas separadas por una línea fina.
 class GrupoAjustes extends StatelessWidget {
-  const GrupoAjustes({super.key, this.titulo, required this.filas, this.pie});
+  const GrupoAjustes({super.key, this.titulo, required this.filas, this.pie, this.cabecera});
+
+  /// Contenido arriba de las filas dentro de la misma tarjeta (ej. el mapa
+  /// de la dirección): queda pegado, sin bordes ni líneas entre ambos.
+  final Widget? cabecera;
   final String? titulo;
   final List<Widget> filas;
   final String? pie;
@@ -35,6 +39,7 @@ class GrupoAjustes extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
+                ?cabecera,
                 for (final (i, f) in filas.indexed) ...[if (i > 0) Divider(height: 1, indent: 56, color: p.fondo), f],
               ],
             ),
@@ -61,11 +66,12 @@ class FilaAjuste extends StatelessWidget {
     this.pendiente = false,
     this.peligro = false,
     this.derecha,
-    this.color,
+    this.seccion,
   });
 
-  /// Si llega, el ícono va en un cuadro de ese color (home de Ajustes).
-  final Color? color;
+  /// Si llega, el ícono va en un cuadro con el degradado de esa sección
+  /// (`PivotPaleta.seccion`): home de Ajustes y Mi perfil.
+  final String? seccion;
   final IconData icono;
   final String titulo;
   final String? valor;
@@ -88,16 +94,22 @@ class FilaAjuste extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            if (color != null)
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(PivotRadios.chip + 2)),
-                child: Icon(icono, size: 21, color: PivotPaleta.sobreSeccion),
+            if (seccion != null)
+              Builder(
+                builder: (context) {
+                  final (degradado, sobre) = PivotPaleta.seccion(seccion!, Theme.of(context).brightness);
+                  return Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(PivotRadios.chip + 2)),
+                    child: Icon(icono, size: 21, color: sobre),
+                  );
+                },
               )
             else
-              Icon(icono, size: 22, color: peligro ? p.marcaTexto : p.textoSecundario),
-            SizedBox(width: color != null ? 14 : 18),
+              // Íconos de subsecciones: siempre del rojo de la app (Victor, 2026-11-08).
+              Icon(icono, size: 22, color: p.marcaTexto),
+            SizedBox(width: seccion != null ? 14 : 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +436,7 @@ class AvisoPrivado extends StatelessWidget {
   final String texto;
 
   static const textoSensible =
-      'Información visible y de uso de emergencia solo por administradores de tu equipo. '
+      'Información visible solo para administradorxs de tu equipo, por motivos de emergencia, logística de viajes u operativos del equipo. '
       'Todos tus datos personales están cifrados y son seguros.';
 
   @override

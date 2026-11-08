@@ -84,35 +84,81 @@ Future<void> editarTelefono(BuildContext context, Sesion s, String campoPrefijo,
   await guardarCampos(context, s, {campoPrefijo: r.$1, campoTel: r.$2});
 }
 
-/// Lista de países con buscador; el del equipo primero.
-Future<Pais?> elegirPais(BuildContext context, {required String paisEquipo, Pais? actual, String titulo = 'País'}) {
+/// Lista de todos los países con buscador (nombre, siglas o prefijo); el
+/// del equipo primero.
+Future<Pais?> elegirPais(BuildContext context, {required String paisEquipo, Pais? actual, String titulo = 'País', bool conPrefijo = false}) {
   return showModalBottomSheet<Pais>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (c) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.6,
-      maxChildSize: 0.9,
-      builder: (c, scroll) => ListView(
-        controller: scroll,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-            child: Text(titulo, style: Theme.of(c).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          ),
-          for (final p in Paises.ordenados(paisEquipo))
-            ListTile(
-              leading: Text(p.bandera, style: const TextStyle(fontSize: 24)),
-              title: Text(p.nombre),
-              subtitle: Text('+${p.prefijo}'),
-              trailing: p == actual ? Icon(Icons.check_rounded, color: c.pivot.marcaTexto) : null,
-              onTap: () => Navigator.of(c).pop(p),
-            ),
-        ],
-      ),
-    ),
+    builder: (_) => _HojaPais(paisEquipo: paisEquipo, actual: actual, titulo: titulo, conPrefijo: conPrefijo),
   );
+}
+
+class _HojaPais extends StatefulWidget {
+  const _HojaPais({required this.paisEquipo, required this.actual, required this.titulo, required this.conPrefijo});
+  final String paisEquipo;
+  final Pais? actual;
+  final String titulo;
+  final bool conPrefijo;
+
+  @override
+  State<_HojaPais> createState() => _HojaPaisState();
+}
+
+class _HojaPaisState extends State<_HojaPais> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final lista = Paises.buscar(_q, widget.paisEquipo);
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+              child: Text(widget.titulo, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                autocorrect: false,
+                onChanged: (v) => setState(() => _q = v),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: widget.conPrefijo ? 'Busca: Ecuador, EC, ECU o 593' : 'Busca: Ecuador, EC o ECU',
+                ),
+              ),
+            ),
+            Expanded(
+              child: lista.isEmpty
+                  ? Center(
+                      child: Text('Ningún país coincide.', style: TextStyle(color: p.textoSecundario)),
+                    )
+                  : ListView.builder(
+                      itemCount: lista.length,
+                      itemBuilder: (c, i) {
+                        final x = lista[i];
+                        return ListTile(
+                          leading: BanderaPais(pais: x, alto: 20),
+                          title: Text(x.nombre),
+                          subtitle: Text(widget.conPrefijo ? '+${x.prefijo} · ${x.codigo}' : x.codigo3),
+                          trailing: x == widget.actual ? Icon(Icons.check_rounded, color: p.marcaTexto) : null,
+                          onTap: () => Navigator.of(context).pop(x),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HojaTelefono extends StatefulWidget {
@@ -162,7 +208,7 @@ class _HojaTelefonoState extends State<_HojaTelefono> {
             child: InkWell(
               borderRadius: BorderRadius.circular(PivotRadios.chip),
               onTap: () async {
-                final x = await elegirPais(context, paisEquipo: widget.paisEquipo, actual: _pais, titulo: 'Prefijo del país');
+                final x = await elegirPais(context, paisEquipo: widget.paisEquipo, actual: _pais, titulo: 'Prefijo del país', conPrefijo: true);
                 if (x != null) setState(() => _pais = x);
               },
               child: Padding(
@@ -170,7 +216,7 @@ class _HojaTelefonoState extends State<_HojaTelefono> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_pais.bandera, style: const TextStyle(fontSize: 20)),
+                    BanderaPais(pais: _pais, alto: 16),
                     const SizedBox(width: 6),
                     Text(
                       '+${_pais.prefijo}',

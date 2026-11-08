@@ -174,9 +174,10 @@ class HeroAvatar extends StatelessWidget {
 /// bucle con fundido en los bordes (nombres largos en Favoritos). Con
 /// "reducir animaciones" queda cortado con "…".
 class TextoDeslizante extends StatefulWidget {
-  const TextoDeslizante({super.key, required this.texto, required this.estilo});
+  const TextoDeslizante({super.key, required this.texto, required this.estilo, this.alineacion = TextAlign.center});
   final String texto;
   final TextStyle estilo;
+  final TextAlign alineacion;
 
   @override
   State<TextoDeslizante> createState() => _TextoDeslizanteState();
@@ -206,7 +207,7 @@ class _TextoDeslizanteState extends State<TextoDeslizante> with SingleTickerProv
         final cabe = ancho <= cons.maxWidth;
         if (cabe || MediaQuery.of(context).disableAnimations) {
           _c.stop();
-          return Text(widget.texto, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: widget.estilo);
+          return Text(widget.texto, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: widget.alineacion, style: widget.estilo);
         }
         final recorrido = ancho + _hueco;
         // ~30 px/s, con una pausa al inicio de cada vuelta.

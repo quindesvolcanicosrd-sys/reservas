@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/tema.dart';
+import '../equipo/equipo_repo.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
 
@@ -58,8 +61,7 @@ class CuentaScreen extends StatelessWidget {
                   icono: Icons.alternate_email_rounded,
                   titulo: 'Usuario',
                   valor: '@${sesion.nombre ?? ''}',
-                  derecha: candado,
-                  alTocar: () => fijo('Tu nombre de usuario no se puede cambiar.'),
+                  alTocar: conFicha ? () => _cambiarUsuario(context) : null,
                 ),
                 if (email.isNotEmpty)
                   FilaAjuste(
@@ -83,8 +85,7 @@ class CuentaScreen extends StatelessWidget {
               filas: [
                 FilaAjuste(
                   icono: Icons.restart_alt_rounded,
-                  titulo: 'Reestablecer el tour de la app',
-                  valor: 'Vuelve a ver la guía al abrir Eventos',
+                  titulo: 'Reestablecer tour guiado de Pivot',
                   alTocar: () async {
                     final m = ScaffoldMessenger.of(context);
                     final prefs = await SharedPreferences.getInstance();
@@ -105,6 +106,24 @@ class CuentaScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _cambiarUsuario(BuildContext context) async {
+    final nuevo = await editarTexto(
+      context,
+      titulo: 'Nombre de usuario',
+      valor: sesion.nombre ?? '',
+      ayuda: 'Con él entras a Pivot. Si ya lo usa otra persona, no se podrá guardar.',
+      maxLength: 30,
+      validar: (v) {
+        if (v.length < 2) return 'Usa al menos 2 caracteres.';
+        if (!RegExp(r"^[\p{L}\p{N} ._-]+$", unicode: true).hasMatch(v)) return 'Solo letras, números, espacios, punto, guion y guion bajo.';
+        return null;
+      },
+    );
+    if (nuevo == null || nuevo == sesion.nombre || !context.mounted) return;
+    final ok = await guardarConAviso(context, () => sesion.cambiarUsuario(nuevo), ok: 'Usuario actualizado');
+    if (ok) unawaited(EquipoRepo.de(sesion).cargar(forzar: true));
   }
 
   Future<void> _contrasena(BuildContext context, bool tiene) async {

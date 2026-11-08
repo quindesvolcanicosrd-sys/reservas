@@ -29,6 +29,11 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     _cargar();
   }
 
+  static bool _fija(String categoria) {
+    final c = categoria.toLowerCase();
+    return c.contains('admin') || c.contains('cuenta');
+  }
+
   Future<void> _cargar() async {
     setState(() => _error = null);
     try {
@@ -39,7 +44,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       setState(() {
         _tipos = [
           for (final t in (c['tipos'] as List? ?? const []))
-            if (t is Map<String, dynamic> && (t['soloAdmin'] != true || widget.sesion.esAdmin)) t,
+            // Administración y Cuenta no se pueden apagar (Victor, 2026-11-08).
+            if (t is Map<String, dynamic> && t['soloAdmin'] != true && !_fija('${t['categoria'] ?? ''}')) t,
         ];
         _activas = p['activas'] != false;
         _prefs = {for (final e in ((p['preferencias'] as Map?) ?? const {}).entries) '${e.key}': e.value == true};
@@ -128,26 +134,33 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 key: const ValueKey('lista'),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
                 children: [
-                  // Interruptor general, grande.
+                  // Interruptor general, grande, con el degradado de la marca
+                  // (el amarillo no se leía en modo oscuro).
                   Material(
-                    color: _activas ? PivotPaleta.seccionNotificaciones : p.tarjeta,
-                    borderRadius: BorderRadius.circular(PivotRadios.grande),
-                    child: SwitchListTile(
-                      value: _activas,
-                      onChanged: (v) => _guardar({'activas': '$v'}, () => _activas = v, () => _activas = !v),
-                      contentPadding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.grande)),
-                      secondary: Icon(
-                        _activas ? Icons.notifications_active_rounded : Icons.notifications_off_outlined,
-                        color: _activas ? PivotPaleta.sobreSeccion : p.textoSecundario,
+                    type: MaterialType.transparency,
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: _activas ? PivotPaleta.degradadoMarca : null,
+                        color: _activas ? null : p.tarjeta,
+                        borderRadius: BorderRadius.circular(PivotRadios.grande),
                       ),
-                      title: Text(
-                        _activas ? 'Notificaciones activadas' : 'Notificaciones apagadas',
-                        style: TextStyle(fontWeight: FontWeight.w800, color: _activas ? PivotPaleta.sobreSeccion : p.texto),
-                      ),
-                      subtitle: Text(
-                        _activas ? 'Elige abajo qué temas te interesan.' : 'No te llega ningún aviso de Pivot.',
-                        style: TextStyle(color: _activas ? PivotPaleta.sobreSeccion.withValues(alpha: 0.85) : p.textoSecundario),
+                      child: SwitchListTile(
+                        value: _activas,
+                        onChanged: (v) => _guardar({'activas': '$v'}, () => _activas = v, () => _activas = !v),
+                        contentPadding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.grande)),
+                        secondary: Icon(
+                          _activas ? Icons.notifications_active_rounded : Icons.notifications_off_outlined,
+                          color: _activas ? PivotPaleta.sobreSeccion : p.textoSecundario,
+                        ),
+                        title: Text(
+                          _activas ? 'Notificaciones activadas' : 'Notificaciones apagadas',
+                          style: TextStyle(fontWeight: FontWeight.w800, color: _activas ? PivotPaleta.sobreSeccion : p.texto),
+                        ),
+                        subtitle: Text(
+                          _activas ? 'Elige abajo qué temas te interesan.' : 'No te llega ningún aviso de Pivot.',
+                          style: TextStyle(color: _activas ? PivotPaleta.sobreSeccion.withValues(alpha: 0.85) : p.textoSecundario),
+                        ),
                       ),
                     ),
                   ),
@@ -179,7 +192,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
-                      'Si no te llegan, revisa también los permisos de notificaciones de Pivot en los ajustes del teléfono.',
+                      'Recomendamos mantener activas todas las notificaciones, así no te pierdes de nada importante.',
                       style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
                     ),
                   ),
@@ -272,7 +285,6 @@ class _CategoriaState extends State<_Categoria> {
                             onChanged: (v) => widget.alCambiarUno(t, v),
                             contentPadding: const EdgeInsets.fromLTRB(72, 0, 16, 0),
                             title: Text('${t['nombre'] ?? t['clave']}'),
-                            subtitle: '${t['descripcion'] ?? ''}'.isEmpty ? null : Text('${t['descripcion']}'),
                           ),
                         const SizedBox(height: 6),
                       ],

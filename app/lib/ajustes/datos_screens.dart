@@ -33,6 +33,7 @@ class MiPerfilEditable extends StatelessWidget {
               filas: [
                 FilaAjuste(
                   icono: Icons.add_a_photo_outlined,
+                  seccion: 'foto',
                   titulo: 'Foto de perfil',
                   valor: s.fotoPerfil.isEmpty ? '' : 'Cambiar o quitar',
                   alTocar: () => cambiarFoto(context, s),
@@ -40,18 +41,21 @@ class MiPerfilEditable extends StatelessWidget {
 
                 FilaAjuste(
                   icono: Icons.sports_rounded,
+                  seccion: 'nombre',
                   titulo: 'Nombre derby',
                   valor: valorDe(s, 'nombreDerby'),
                   alTocar: () => editarCampo(context, s, 'nombreDerby', 'Nombre derby', maxLength: 40),
                 ),
                 FilaAjuste(
                   icono: Icons.tag_rounded,
+                  seccion: 'numero',
                   titulo: 'Número derby',
                   valor: valorDe(s, 'numeroDerby'),
                   alTocar: () => editarCampo(context, s, 'numeroDerby', 'Número derby', maxLength: 4),
                 ),
                 FilaAjuste(
                   icono: Icons.record_voice_over_outlined,
+                  seccion: 'pronombres',
                   titulo: 'Pronombres',
                   valor: valorDe(s, 'pronombres'),
                   alTocar: () =>
@@ -63,6 +67,7 @@ class MiPerfilEditable extends StatelessWidget {
                     final roles = equipo.persona(s.nombre ?? '')?.roles ?? const <String>[];
                     return FilaAjuste(
                       icono: Icons.shield_outlined,
+                      seccion: 'roles',
                       titulo: 'Roles en el equipo',
                       valor: roles.join(', '),
                       alTocar: () async {
@@ -82,6 +87,7 @@ class MiPerfilEditable extends StatelessWidget {
                 ),
                 FilaAjuste(
                   icono: Icons.event_outlined,
+                  seccion: 'ingreso',
                   titulo: 'Entraste al equipo',
                   valor: fechaLarga(s.datos['fechaIngreso']),
                   alTocar: () => elegirFechaCampo(context, s, 'fechaIngreso', ayuda: 'Cuándo entraste al equipo', desde: DateTime(2010)),
@@ -92,6 +98,7 @@ class MiPerfilEditable extends StatelessWidget {
               filas: [
                 FilaAjuste(
                   icono: Icons.phone_outlined,
+                  seccion: 'telefono',
                   titulo: 'Teléfono',
                   valor: Paises.telefono(valorDe(s, 'prefijo'), tel),
                   alTocar: () => editarTelefono(context, s, 'prefijo', 'telefono', 'Teléfono'),
@@ -102,6 +109,7 @@ class MiPerfilEditable extends StatelessWidget {
               filas: [
                 FilaAjuste(
                   icono: Icons.roller_skating_outlined,
+                  seccion: 'equipamiento',
                   titulo: 'Mi equipamiento',
                   valor: textoEquipamiento(s.datos),
                   alTocar: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: s)),

@@ -119,7 +119,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
                 FilaAjuste(
                   icono: Icons.public_rounded,
                   titulo: 'País de emisión',
-                  valor: pais == null ? valorDe(s, 'paisExpedicion') : pais.etiqueta,
+                  valor: pais == null ? valorDe(s, 'paisExpedicion') : pais.nombre,
                   alTocar: () async {
                     final x = await elegirPais(context, paisEquipo: s.paisEquipo, actual: pais, titulo: 'País de emisión');
                     if (x != null && context.mounted) await guardarCampos(context, s, {'paisExpedicion': x.nombre});
@@ -135,9 +135,10 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: context.pivot.texto),
               ),
             ),
-            _VistaMapa(punto: _punto, cargando: _buscandoPunto, alTocar: _abrirMapa),
-            const SizedBox(height: 12),
+            // Mapa y campos en una sola tarjeta: es todo la misma dirección.
+            // Al escribir la dirección a mano, el pin se vuelve a ubicar solo.
             GrupoAjustes(
+              cabecera: _VistaMapa(punto: _punto, cargando: _buscandoPunto, alTocar: _abrirMapa),
               filas: [
                 for (final (campo, icono, titulo, max) in const [
                   ('callePrincipal', Icons.signpost_outlined, 'Calle principal', 80),
@@ -175,7 +176,7 @@ class _Credencial extends StatelessWidget {
     final nombre = valorDe(sesion, 'nombreLegal');
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: PivotPaleta.seccionIdentidad, borderRadius: BorderRadius.circular(PivotRadios.grande)),
+      decoration: BoxDecoration(gradient: PivotPaleta.degradadoIdentidad, borderRadius: BorderRadius.circular(PivotRadios.grande)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -186,7 +187,7 @@ class _Credencial extends StatelessWidget {
                 style: TextStyle(color: sobre.withValues(alpha: 0.9), fontSize: 12.5, fontWeight: FontWeight.w800, letterSpacing: 1.2),
               ),
               const Spacer(),
-              if (pais != null) Text(pais!.bandera, style: const TextStyle(fontSize: 22)),
+              if (pais != null) BanderaPais(pais: pais!, alto: 22, radio: 4),
             ],
           ),
           const SizedBox(height: 14),
@@ -223,8 +224,7 @@ class _VistaMapa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+    return ClipRect(
       child: SizedBox(
         height: 170,
         child: Stack(
