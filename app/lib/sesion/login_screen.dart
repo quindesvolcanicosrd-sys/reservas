@@ -106,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
               : const Text('Entrar con Google'),
         ),
         const SizedBox(height: 12),
-        TextButton(onPressed: _ocupado ? null : () => setState(() => _modoPin = true), child: const Text('Entrar con mi PIN')),
+        TextButton(onPressed: _ocupado ? null : () => setState(() => _modoPin = true), child: const Text('Entrar con usuario y contraseña')),
       ],
     );
   }
@@ -125,8 +125,9 @@ class _LoginScreenState extends State<LoginScreen> {
         TextField(
           controller: _pin,
           obscureText: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'PIN', border: OutlineInputBorder()),
+          keyboardType: TextInputType.visiblePassword,
+          autocorrect: false,
+          decoration: const InputDecoration(labelText: 'Contraseña o PIN', border: OutlineInputBorder()),
           onSubmitted: (_) => _entrarConPin(),
         ),
         const SizedBox(height: 16),
@@ -144,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _entrarConPin() {
     if (_identificador.text.trim().isEmpty || _pin.text.isEmpty) {
-      setState(() => _error = 'Escribe tu nombre de usuario y tu PIN.');
+      setState(() => _error = 'Escribe tu usuario y tu contraseña o PIN.');
       return;
     }
     _ejecutar(() => widget.sesion.conPin(_identificador.text, _pin.text));

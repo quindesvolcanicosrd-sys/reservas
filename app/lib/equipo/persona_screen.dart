@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../ajustes/ajustes_screen.dart';
+import '../ajustes/datos_screens.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
@@ -49,24 +51,12 @@ class _Ficha extends StatelessWidget {
   final EquipoRepo repo;
   final Integrante p;
 
-  /// Puesto por puntos dentro de su grupo (web `_eqRankTexto()`).
-  String? _ranking() {
-    final grupo = [
-      for (final x in repo.personas ?? const <Integrante>[])
-        if (x.grupo == p.grupo) x,
-    ]..sort((a, b) => b.puntos.compareTo(a.puntos));
-    if (grupo.length < 2 || p.inactivx) return null;
-    final i = grupo.indexWhere((x) => x.username == p.username);
-    return i < 0 ? null : 'Puesto ${i + 1} de ${grupo.length} en ${p.grupo} ${repo.periodoCorto}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final pal = context.pivot;
     final t = Theme.of(context).textTheme;
     final yo = repo.esYo(p);
     final fav = repo.favoritos.contains(p.username);
-    final rank = _ranking();
     final estado = datosRelevantes(p, Fechas.hoy()).where((d) => d.fijo).firstOrNull;
     return Scaffold(
       appBar: AppBar(
@@ -78,7 +68,8 @@ class _Ficha extends StatelessWidget {
               icon: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-                child: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, key: ValueKey(fav), color: fav ? pal.marca : null),
+                // Estrella redondeada, como la del jammer (Victor, 2026-11-07).
+                child: Icon(fav ? Icons.star_rounded : Icons.star_outline_rounded, key: ValueKey(fav), size: 28, color: fav ? pal.marca : null),
               ),
             ),
         ],
@@ -89,9 +80,32 @@ class _Ficha extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
           children: [
             Center(
-              child: HeroAvatar(
-                tag: 'avatar-${p.username}',
-                child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  HeroAvatar(
+                    tag: 'avatar-${p.username}',
+                    child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
+                  ),
+                  // Tu ficha: cámara arriba a la derecha para cambiar la foto (con encuadre).
+                  if (yo)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Material(
+                        color: pal.marca,
+                        shape: CircleBorder(side: BorderSide(color: pal.fondo, width: 3)),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => cambiarFoto(context, repo.sesion),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(Icons.photo_camera_rounded, size: 18, color: pal.sobreMarca),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -129,15 +143,9 @@ class _Ficha extends StatelessWidget {
             const SizedBox(height: 18),
             _acciones(context, pal, yo),
             const SizedBox(height: 18),
-            _stats(context, pal),
-            if (rank != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                rank,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: pal.textoSecundario),
-              ),
-            ],
+            _Estadisticas(repo: repo, p: p),
+            // Mi perfil vive en tu ficha (como en la web): lo que ve el equipo.
+            if (yo && repo.sesion.datos.isNotEmpty) ...[const SizedBox(height: 24), MiPerfilEditable(sesion: repo.sesion)],
             if (p.fechaIngreso != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -165,7 +173,8 @@ class _Ficha extends StatelessWidget {
         ),
       if (!yo && tel.isNotEmpty) _Accion(icono: Icons.call_rounded, texto: 'Llamar', alTocar: () => launchUrl(Uri.parse('tel:$completo'))),
       // En Equipo, Emergencia está siempre disponible para admins (Victor, 2026-11-07).
-      if (repo.esAdmin) _Accion(icono: Icons.emergency_rounded, texto: 'Emergencia', roja: true, alTocar: () => EmergenciaScreen.abrir(context, repo, p)),
+      if (repo.esAdmin && !yo)
+        _Accion(icono: Icons.emergency_rounded, texto: 'Emergencia', roja: true, alTocar: () => EmergenciaScreen.abrir(context, repo, p)),
     ];
     if (botones.isEmpty) return const SizedBox.shrink();
     return Row(
@@ -173,77 +182,180 @@ class _Ficha extends StatelessWidget {
       children: [for (final b in botones) Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: b)],
     );
   }
+}
 
-  Widget _stats(BuildContext context, PivotPaleta pal) {
-    final pct = p.asistenciaPct;
-    final anioPct = p.eventosAnio == 0 ? null : (p.asistenciasAnio * 100 / p.eventosAnio).round();
-    // Con todo (o casi todo) en cero, seis tarjetas vacías no dicen nada:
-    // solo la asistencia del año, o "Sin estadísticas aún" (Victor, 2026-11-07).
-    final conValor = [(pct ?? 0) > 0, p.horasAnio > 0, p.puntosAsistencia > 0, p.puntosTareas > 0, p.puntosRacha > 0].where((x) => x).length;
-    if (conValor <= 1) {
-      if ((anioPct ?? 0) > 0) {
-        return Row(
+/// Stats de la persona (Victor, 2026-11-07): arriba lo del año (asistencia
+/// y horas); abajo "Datos de noviembre ▾" con asistencia y puntos de ese mes.
+/// El mes se cambia desde el chevron y cada tarjeta abre su desglose.
+class _Estadisticas extends StatefulWidget {
+  const _Estadisticas({required this.repo, required this.p});
+  final EquipoRepo repo;
+  final Integrante p;
+
+  @override
+  State<_Estadisticas> createState() => _EstadisticasState();
+}
+
+class _EstadisticasState extends State<_Estadisticas> {
+  late DateTime _mes = DateTime(Fechas.hoy().year, Fechas.hoy().month);
+  late Future<Integrante?> _datos = widget.repo.enMes(widget.p.username, _mes);
+
+  EquipoRepo get repo => widget.repo;
+  bool get _esActual {
+    final h = Fechas.hoy();
+    return _mes.year == h.year && _mes.month == h.month;
+  }
+
+  @override
+  void didUpdateWidget(_Estadisticas old) {
+    super.didUpdateWidget(old);
+    // Al recargar la lista, el mes actual toma los datos nuevos.
+    if (_esActual && !identical(old.p, widget.p)) _datos = Future.value(widget.p);
+  }
+
+  String get _nombreMes {
+    final h = Fechas.hoy();
+    return _mes.year == h.year ? Fechas.mesNombre(_mes).toLowerCase() : Fechas.mesAnio(_mes).toLowerCase();
+  }
+
+  Future<void> _elegirMes() async {
+    final h = Fechas.hoy();
+    final meses = [for (var i = 0; i < 12; i++) DateTime(h.year, h.month - i)];
+    final m = await showModalBottomSheet<DateTime>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
           children: [
-            Expanded(
-              child: _Stat(valor: '$anioPct%', etiqueta: 'Asistencia del año'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Ver datos de', style: Theme.of(c).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
             ),
+            for (final x in meses)
+              ListTile(
+                title: Text(x.year == h.year ? Fechas.mesNombre(x) : Fechas.mesAnio(x)),
+                trailing: x == _mes ? Icon(Icons.check_rounded, color: c.pivot.marcaTexto) : null,
+                onTap: () => Navigator.of(c).pop(x),
+              ),
           ],
-        );
-      }
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text('Sin estadísticas aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)),
-      );
-    }
+        ),
+      ),
+    );
+    if (m == null || m == _mes || !mounted) return;
+    setState(() {
+      _mes = m;
+      _datos = repo.enMes(widget.p.username, m);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pal = context.pivot;
+    final p = widget.p;
+    final anioPct = p.eventosAnio == 0 ? null : (p.asistenciasAnio * 100 / p.eventosAnio).round();
+    final delAnio = [
+      if ((anioPct ?? 0) > 0) _Stat(valor: '$anioPct%', etiqueta: 'Asistencia del año'),
+      if (p.horasAnio > 0) _Stat(valor: numero(p.horasAnio), etiqueta: 'Horas en el año'),
+    ];
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _Stat(valor: pct == null ? '—' : '$pct%', etiqueta: 'Asistencia ${repo.periodoCorto}'),
+        if (delAnio.isEmpty) Text('Sin estadísticas del año aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)) else _fila(delAnio),
+        const SizedBox(height: 18),
+        // "Datos de noviembre ▾"
+        Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(PivotRadios.chip),
+            onTap: _elegirMes,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Datos de $_nombreMes',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: pal.texto),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.expand_more_rounded, color: pal.textoSecundario),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Stat(valor: anioPct == null ? '—' : '$anioPct%', etiqueta: 'Asistencia del año'),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Stat(valor: numero(p.horasAnio), etiqueta: 'Horas en el año'),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 10),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _Stat(
-                  valor: numero(p.puntosAsistencia),
-                  etiqueta: 'Puntos por asistencia',
-                  alTocar: () => _desglose(context, 'asistencia', 'Puntos por asistencia'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Stat(valor: numero(p.puntosTareas), etiqueta: 'Puntos por tareas', alTocar: () => _desglose(context, 'tareas', 'Puntos por tareas')),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Stat(valor: numero(p.puntosRacha), etiqueta: 'Puntos por racha', alTocar: () => _desglose(context, 'racha', 'Puntos por racha')),
-              ),
-            ],
-          ),
+        const SizedBox(height: 8),
+        FutureBuilder<Integrante?>(
+          future: _datos,
+          builder: (context, s) {
+            final Widget hijo;
+            if (s.connectionState != ConnectionState.done) {
+              hijo = const Padding(
+                key: ValueKey('cargando'),
+                padding: EdgeInsets.all(16),
+                child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
+              );
+            } else if (s.hasError) {
+              hijo = Text(
+                'No se pudieron cargar los datos de ese mes.',
+                key: const ValueKey('error'),
+                style: TextStyle(color: pal.textoSecundario),
+              );
+            } else {
+              final x = s.data;
+              final pct = x?.asistenciaPct;
+              final tarjetas = [
+                if ((pct ?? 0) > 0) _Stat(valor: '$pct%', etiqueta: 'Asistencia'),
+                if ((x?.puntosAsistencia ?? 0) > 0)
+                  _Stat(
+                    valor: numero(x!.puntosAsistencia),
+                    etiqueta: 'Puntos por asistencia',
+                    alTocar: () => _desglose(context, 'asistencia', 'Puntos por asistencia'),
+                  ),
+                if ((x?.puntosTareas ?? 0) > 0)
+                  _Stat(valor: numero(x!.puntosTareas), etiqueta: 'Puntos por tareas', alTocar: () => _desglose(context, 'tareas', 'Puntos por tareas')),
+                if ((x?.puntosRacha ?? 0) > 0)
+                  _Stat(valor: numero(x!.puntosRacha), etiqueta: 'Puntos por racha', alTocar: () => _desglose(context, 'racha', 'Puntos por racha')),
+              ];
+              hijo = tarjetas.isEmpty
+                  ? Text(
+                      'Sin datos en $_nombreMes',
+                      key: ValueKey('vacio$_mes'),
+                      style: TextStyle(fontSize: 14, color: pal.textoSecundario),
+                    )
+                  : Column(
+                      key: ValueKey('datos$_mes'),
+                      children: [
+                        _fila(tarjetas.take(2).toList()),
+                        if (tarjetas.length > 2) ...[const SizedBox(height: 10), _fila(tarjetas.skip(2).toList())],
+                      ],
+                    );
+            }
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 240),
+              layoutBuilder: (actual, previos) => Stack(alignment: Alignment.topLeft, children: [...previos, ?actual]),
+              child: hijo,
+            );
+          },
         ),
       ],
     );
   }
 
-  /// Desglose línea por línea (`getDesglosePuntos`), como la web.
+  Widget _fila(List<Widget> tarjetas) => IntrinsicHeight(
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: t)],
+      ],
+    ),
+  );
+
+  /// Desglose línea por línea (`getDesglosePuntos`) del mes elegido.
   void _desglose(BuildContext context, String concepto, String titulo) {
+    final mes = _mes;
+    final nombreMes = _nombreMes;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -253,7 +365,7 @@ class _Ficha extends StatelessWidget {
         initialChildSize: 0.55,
         maxChildSize: 0.9,
         builder: (context, scroll) => FutureBuilder<List<Map<String, dynamic>>>(
-          future: repo.desglose(p.username, concepto),
+          future: repo.desglose(widget.p.username, concepto, mes: mes),
           builder: (context, s) {
             final pal = context.pivot;
             final filas = s.data;
@@ -262,7 +374,7 @@ class _Ficha extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               children: [
                 Text(titulo, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                Text('Este mes', style: TextStyle(color: pal.textoSecundario)),
+                Text('En $nombreMes', style: TextStyle(color: pal.textoSecundario)),
                 const SizedBox(height: 12),
                 if (s.hasError) Text('No se pudo cargar el desglose.', style: TextStyle(color: pal.textoSecundario)),
                 if (!s.hasData && !s.hasError)
@@ -436,6 +548,48 @@ class _AdministracionState extends State<_Administracion> {
     await _hacer(() => widget.repo.registrarAsistenciaExterna(widget.p, res.$1, res.$2), 'Asistencia externa registrada');
   }
 
+  static const _estados = {
+    'Activx': (Icons.directions_run_rounded, 'Entrena con normalidad.'),
+    'Ausente': (Icons.event_busy_rounded, 'Fuera por un tiempo, avisado.'),
+    'Técnico': (Icons.sports_rounded, 'Acompaña desde el staff técnico.'),
+    'Lesionadx': (Icons.healing_rounded, 'En recuperación de una lesión.'),
+  };
+
+  Future<void> _elegirEstado() async {
+    final p = widget.p;
+    final e = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) {
+        final pal = c.pivot;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text('Estado de ${p.nombreMostrar}', style: Theme.of(c).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              ),
+              for (final x in _estados.entries)
+                ListTile(
+                  leading: Icon(x.value.$1, color: x.key == p.estado ? pal.marcaTexto : pal.textoSecundario),
+                  title: Text(x.key, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(x.value.$2),
+                  trailing: x.key == p.estado ? Icon(Icons.check_rounded, color: pal.marcaTexto) : null,
+                  onTap: () => Navigator.of(c).pop(x.key),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+    if (e == null || e == p.estado || !mounted) return;
+    if (!await _confirmar('¿Cambiar el estado?', '${p.nombreMostrar} pasa de ${p.estado} a $e.', 'Cambiar')) return;
+    await _hacer(() => widget.repo.cambiarEstado(p, e), 'Estado actualizado');
+  }
+
   Future<bool> _confirmar(String titulo, String texto, String si) async {
     final r = await showDialog<bool>(
       context: context,
@@ -483,21 +637,34 @@ class _AdministracionState extends State<_Administracion> {
                   onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría actualizada'),
                 ),
                 const SizedBox(height: 12),
-                // Pills en vez de desplegable (Victor, 2026-11-07). "De viaje" se
-                // marca abajo con fechas.
+                // Selector tipo desplegable (más claro que las pills) y con
+                // confirmación: no se cambia por accidente (Victor, 2026-11-07).
+                // "De viaje" se marca abajo con fechas.
                 Text('Estado', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final e in const ['Activx', 'Ausente', 'Técnico', 'Lesionadx'])
-                      ChoiceChip(
-                        label: Text(e),
-                        selected: p.estado == e,
-                        onSelected: p.estado == e ? null : (_) => _hacer(() => repo.cambiarEstado(p, e), 'Estado actualizado'),
+                const SizedBox(height: 6),
+                Material(
+                  color: pal.suave,
+                  borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                    onTap: _ocupado ? null : _elegirEstado,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(_estados[p.estado]?.$1 ?? Icons.flight_takeoff_rounded, color: pal.sobreSuave),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              p.estado,
+                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: pal.sobreSuave),
+                            ),
+                          ),
+                          Icon(Icons.unfold_more_rounded, color: pal.sobreSuave),
+                        ],
                       ),
-                  ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 SwitchListTile(

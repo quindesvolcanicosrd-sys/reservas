@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
@@ -14,16 +12,23 @@ import '../reservas/gestionar_reserva.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
 import 'cuenta.dart';
-import 'datos_screens.dart';
+import 'excepcion_screen.dart';
+import 'identidad_screen.dart';
+import 'privacidad_screen.dart';
+import 'salud_screen.dart';
 import 'notificaciones_screen.dart';
+import 'recorte_foto.dart';
 
-/// Pestaña Ajustes (doc del taller, 2026-11-07): tu tarjeta arriba (abre tu
-/// ficha de Equipo) y después los grupos. Un punto rojo marca lo que falta
-/// completar (mismos datos que el recordatorio al abrir la app).
+/// Pestaña Ajustes (rediseño de Victor, 2026-11-07): como en la web, solo
+/// ajustes de la app, de seguridad y de emergencia; lo que ve el resto del
+/// equipo se edita en tu ficha de Equipo. Sin títulos de grupo: los bloques
+/// bastan. Cada sección con su color, y un punto rojo en lo que falta.
 class AjustesScreen extends StatelessWidget {
   const AjustesScreen({super.key, required this.sesion, required this.eventos});
   final Sesion sesion;
   final EventosRepo eventos;
+
+  static const _datosPerfil = ['Foto de perfil', 'Teléfono', 'Nombre derby', 'Pronombres', 'Roles en el equipo'];
 
   @override
   Widget build(BuildContext context) {
@@ -42,112 +47,75 @@ class AjustesScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
             children: [
-              _Tarjeta(sesion: sesion),
+              _Tarjeta(sesion: sesion, pendiente: _datosPerfil.any(falta)),
               const SizedBox(height: 18),
               GrupoAjustes(
                 filas: [
                   FilaAjuste(
-                    icono: Icons.confirmation_number_outlined,
+                    icono: Icons.confirmation_number_rounded,
+                    color: PivotPaleta.seccionReservas,
                     titulo: 'Mis reservas',
                     valor: 'Clases y mensualidades, cancelar o reagendar',
                     alTocar: () => SubAjustes.abrir(context, MisReservasScreen(repo: eventos)),
                   ),
+                  if (conFicha)
+                    FilaAjuste(
+                      icono: Icons.volunteer_activism_rounded,
+                      color: PivotPaleta.seccionCuota,
+                      titulo: 'Excepción de cuota',
+                      valor: 'Por ausencias justificadas o dificultad económica',
+                      alTocar: () => SubAjustes.abrir(context, ExcepcionScreen(sesion: sesion)),
+                    ),
                 ],
               ),
-              if (conFicha) ...[
+              if (conFicha)
                 GrupoAjustes(
-                  titulo: 'MI PERFIL',
                   filas: [
                     FilaAjuste(
-                      icono: Icons.person_outline_rounded,
-                      titulo: 'Mis datos',
-                      valor: 'Foto, nombre derby, número, pronombres, teléfono, roles',
-                      pendiente: ['Foto de perfil', 'Teléfono', 'Nombre derby', 'Pronombres', 'Roles en el equipo'].any(falta),
-
-                      alTocar: () => SubAjustes.abrir(context, MisDatosScreen(sesion: sesion)),
+                      icono: Icons.emergency_rounded,
+                      color: PivotPaleta.seccionSalud,
+                      titulo: 'Salud y emergencia',
+                      valor: 'Contactos, seguro y ficha médica',
+                      pendiente: falta('Contacto de emergencia') || falta('Ficha de salud'),
+                      alTocar: () => SubAjustes.abrir(context, SaludEmergenciaScreen(sesion: sesion)),
                     ),
                     FilaAjuste(
-                      icono: Icons.roller_skating_outlined,
-                      titulo: 'Mi equipamiento',
-                      valor: textoEquipamiento(d),
-                      alTocar: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
-                    ),
-                  ],
-                ),
-                GrupoAjustes(
-                  titulo: 'SEGURIDAD',
-                  pie: 'Solo admins ven estos datos, y solo en una emergencia.',
-                  filas: [
-                    FilaAjuste(
-                      icono: Icons.contact_phone_outlined,
-                      titulo: 'Contactos de emergencia',
-                      valor: '${d['emerg1Nombre'] ?? ''}'.trim(),
-                      pendiente: falta('Contacto de emergencia'),
-                      alTocar: () => SubAjustes.abrir(context, ContactosScreen(sesion: sesion)),
-                    ),
-                    FilaAjuste(
-                      icono: Icons.medical_information_outlined,
-                      titulo: 'Ficha de salud',
-                      valor: '${d['atencionMedica'] ?? ''}'.trim(),
-                      pendiente: falta('Ficha de salud'),
-                      alTocar: () => SubAjustes.abrir(context, SaludScreen(sesion: sesion)),
-                    ),
-                    FilaAjuste(
-                      icono: Icons.badge_outlined,
+                      icono: Icons.badge_rounded,
+                      color: PivotPaleta.seccionIdentidad,
                       titulo: 'Identidad y dirección',
-                      valor: '${d['nombreLegal'] ?? ''}'.trim(),
+                      valor: 'Documento y dónde vives',
                       pendiente: falta('Identidad legal') || falta('Dirección'),
                       alTocar: () => SubAjustes.abrir(context, IdentidadScreen(sesion: sesion)),
                     ),
                   ],
                 ),
-                GrupoAjustes(
-                  titulo: 'PREFERENCIAS',
-                  filas: [
+              GrupoAjustes(
+                filas: [
+                  if (conFicha)
                     FilaAjuste(
-                      icono: Icons.lock_outline_rounded,
+                      icono: Icons.lock_rounded,
+                      color: PivotPaleta.seccionPrivacidad,
                       titulo: 'Privacidad',
                       valor: 'Qué ve el resto del equipo',
                       pendiente: falta('Opciones de privacidad') || falta('Fecha de nacimiento'),
                       alTocar: () => SubAjustes.abrir(context, PrivacidadScreen(sesion: sesion)),
                     ),
+                  if (conFicha)
                     FilaAjuste(
-                      icono: Icons.notifications_none_rounded,
+                      icono: Icons.notifications_rounded,
+                      color: PivotPaleta.seccionNotificaciones,
                       titulo: 'Notificaciones',
-                      valor: 'Elige qué avisos recibes',
+                      valor: 'Qué avisos recibes',
                       alTocar: () => SubAjustes.abrir(context, NotificacionesScreen(sesion: sesion)),
                     ),
-                  ],
-                ),
-                GrupoAjustes(
-                  titulo: 'CUOTA',
-                  filas: [
-                    FilaAjuste(
-                      icono: Icons.volunteer_activism_outlined,
-                      titulo: 'Pedir una excepción de cuota',
-                      valor: 'Por ausencias justificadas o dificultad económica',
-                      alTocar: () => SubAjustes.abrir(context, ExcepcionScreen(sesion: sesion)),
-                    ),
-                  ],
-                ),
-              ],
-              GrupoAjustes(
-                titulo: 'CUENTA',
-                filas: [
-                  if (conFicha) FilaAjuste(icono: Icons.pin_outlined, titulo: 'Cambiar PIN', alTocar: () => cambiarPin(context, sesion)),
                   FilaAjuste(
-                    icono: Icons.tour_outlined,
-                    titulo: 'Ver el tour de nuevo',
-                    alTocar: () async {
-                      final m = ScaffoldMessenger.of(context);
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.remove('tour.eventos.visto');
-                      m.showSnackBar(const SnackBar(content: Text('Listo: verás el tour al volver a Eventos.')));
-                    },
+                    icono: Icons.manage_accounts_rounded,
+                    color: PivotPaleta.seccionCuenta,
+                    titulo: 'Cuenta y acceso',
+                    valor: 'Usuario, contraseña, cerrar sesión',
+                    pendiente: conFicha && d['tienePassword'] == false,
+                    alTocar: () => SubAjustes.abrir(context, CuentaScreen(sesion: sesion)),
                   ),
-                  FilaAjuste(icono: Icons.logout_rounded, titulo: 'Cerrar sesión', peligro: true, alTocar: () => cerrarSesion(context, sesion)),
-                  if (conFicha)
-                    FilaAjuste(icono: Icons.delete_outline_rounded, titulo: 'Eliminar cuenta', peligro: true, alTocar: () => eliminarCuenta(context, sesion)),
                 ],
               ),
             ],
@@ -160,8 +128,11 @@ class AjustesScreen extends StatelessWidget {
 
 /// Tu tarjeta: avatar, nombre y @usuario; abre tu ficha de Equipo.
 class _Tarjeta extends StatelessWidget {
-  const _Tarjeta({required this.sesion});
+  const _Tarjeta({required this.sesion, this.pendiente = false});
   final Sesion sesion;
+
+  /// Faltan datos que ve el equipo (foto, teléfono…): se completan en tu ficha.
+  final bool pendiente;
 
   @override
   Widget build(BuildContext context) {
@@ -218,13 +189,20 @@ class _Tarjeta extends StatelessWidget {
                     if (sesion.datos.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Ver mi ficha',
+                        pendiente ? 'Completa tu perfil' : 'Ver mi perfil',
                         style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.marcaTexto),
                       ),
                     ],
                   ],
                 ),
               ),
+              if (pendiente)
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(color: p.marca, shape: BoxShape.circle),
+                ),
               if (sesion.datos.isNotEmpty) Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
             ],
           ),
@@ -281,9 +259,9 @@ Future<void> cambiarFoto(BuildContext context, Sesion sesion) async {
     try {
       img = await ImagePicker().pickImage(
         source: opcion == 'camara' ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: 640,
-        maxHeight: 640,
-        imageQuality: 82,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 90,
         preferredCameraDevice: CameraDevice.front,
       );
     } catch (_) {
@@ -291,25 +269,29 @@ Future<void> cambiarFoto(BuildContext context, Sesion sesion) async {
       return;
     }
     if (img == null || !context.mounted) return;
-    final bytes = await img.readAsBytes();
+    final original = await img.readAsBytes();
     if (!context.mounted) return;
+    // Lienzo para encuadrar, como en la web.
+    final bytes = await RecorteFotoScreen.abrir(context, original);
+    if (bytes == null || !context.mounted) return;
     await guardarConAviso(context, () => sesion.subirFoto(bytes), ok: 'Foto actualizada');
   }
   EquipoRepo.de(sesion).cargar(forzar: true);
 }
 
 /// Desde el recordatorio "Completa tu perfil": abre la pantalla del dato.
+/// Lo que ve el equipo (foto, teléfono, nombre…) se completa en tu ficha.
 void abrirPendiente(BuildContext context, Sesion sesion, String clave) {
   final Widget? pantalla = switch (clave) {
-    'contactos' => ContactosScreen(sesion: sesion),
-    'salud' => SaludScreen(sesion: sesion),
+    'contactos' || 'salud' => SaludEmergenciaScreen(sesion: sesion),
     'privacidad' => PrivacidadScreen(sesion: sesion),
     'identidad' => IdentidadScreen(sesion: sesion),
-    'datos' => MisDatosScreen(sesion: sesion),
     _ => null,
   };
   if (clave == 'foto') {
     cambiarFoto(context, sesion);
+  } else if (clave == 'datos') {
+    PersonaScreen.abrir(context, EquipoRepo.de(sesion), sesion.nombre ?? '');
   } else if (pantalla != null) {
     SubAjustes.abrir(context, pantalla);
   }

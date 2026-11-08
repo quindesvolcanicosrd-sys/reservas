@@ -215,11 +215,10 @@ class _EquipoScreenState extends State<EquipoScreen> {
                             children: [
                               _AvatarEstado(p: f, tamano: 52, hero: false),
                               const SizedBox(height: 6),
-                              Text(
-                                f.nombreMostrar,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: p.texto),
+                              // Nombre largo: se desliza con fundido en los bordes (Victor, 2026-11-07).
+                              TextoDeslizante(
+                                texto: f.nombreMostrar,
+                                estilo: TextStyle(fontSize: 12, color: p.texto),
                               ),
                             ],
                           ),
@@ -341,7 +340,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
   }
 
   Widget _fila(BuildContext context, Integrante x, DateTime hoy, {List<String>? motivos}) {
-    final datos = datosRelevantes(x, hoy, periodo: repo.periodoCorto);
+    final datos = datosRelevantes(x, hoy);
     return _FilaIntegrante(
       key: ValueKey('fila-${x.username}'),
       p: x,
@@ -351,7 +350,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
       tick: _tick,
       alTocar: () => _abrir(x),
       // Emergencia solo para quien fue marcadx hoy a tiempo o tarde (Victor, 2026-11-07).
-      emergencia: repo.esAdmin && x.presenteHoy ? () => EmergenciaScreen.abrir(context, repo, x) : null,
+      emergencia: repo.esAdmin && x.presenteHoy && !repo.esYo(x) ? () => EmergenciaScreen.abrir(context, repo, x) : null,
       archivar: repo.esAdmin && x.inactivx && !repo.esYo(x) ? () => _archivar(x) : null,
     );
   }
@@ -363,11 +362,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
       child: Wrap(
         spacing: 8,
         runSpacing: 6,
-        children: [
-          if (repo.periodoMes != null || repo.periodoHistorico)
-            InputChip(label: Text(repo.periodoTitulo), onDeleted: () => repo.cambiarPeriodo(), onPressed: _abrirFiltros),
-          for (final r in repo.filtroRoles) InputChip(label: Text(r), onDeleted: () => repo.alternarRol(r), onPressed: _abrirFiltros),
-        ],
+        children: [for (final r in repo.filtroRoles) InputChip(label: Text(r), onDeleted: () => repo.alternarRol(r), onPressed: _abrirFiltros)],
       ),
     );
   }
@@ -686,8 +681,6 @@ class _HojaFiltros extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    final hoy = Fechas.hoy();
-    final meses = [for (var i = 0; i < 12; i++) DateTime(hoy.year, hoy.month - i)];
     Widget titulo(String t) => Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
       child: Text(
@@ -713,26 +706,6 @@ class _HojaFiltros extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     child: TextButton(onPressed: repo.hayFiltros ? repo.limpiarFiltros : null, child: const Text('Limpiar')),
                   ),
-                ],
-              ),
-            ),
-            titulo('Período de las estadísticas'),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  for (final (i, m) in meses.indexed)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(i == 0 ? 'Este mes' : (m.year == hoy.year ? Fechas.mesNombre(m) : Fechas.mesAnio(m))),
-                        selected: !repo.periodoHistorico && (i == 0 ? repo.periodoMes == null : repo.periodoMes == m),
-                        onSelected: (_) => repo.cambiarPeriodo(mes: m),
-                      ),
-                    ),
-                  ChoiceChip(label: const Text('Histórico'), selected: repo.periodoHistorico, onSelected: (_) => repo.cambiarPeriodo(historico: true)),
                 ],
               ),
             ),

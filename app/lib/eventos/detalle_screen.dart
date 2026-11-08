@@ -562,7 +562,9 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
                                       ),
                                     ),
-                                    if (_esAdmin && marcadxs.contains(per.username.trim().toLowerCase()))
+                                    if (_esAdmin &&
+                                        marcadxs.contains(per.username.trim().toLowerCase()) &&
+                                        per.username.toLowerCase() != (repo.sesion.nombre ?? '').toLowerCase())
                                       PildoraEmergencia(alTocar: () => _emergencia(per))
                                     else
                                       Icon(Icons.chevron_right_rounded, color: p.textoSecundario),

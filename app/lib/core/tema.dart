@@ -58,6 +58,16 @@ class PivotPaleta extends ThemeExtension<PivotPaleta> {
 
   static const _avatares = [Color(0xFFE8000D), Color(0xFF775652), Color(0xFF3B6470), Color(0xFF6B5778), Color(0xFF5D6230), Color(0xFF8A4F2A)];
 
+  /// Ajustes: un color por sección para los íconos (mismo en claro y oscuro).
+  static const seccionReservas = Color(0xFF1E88E5);
+  static const seccionCuota = Color(0xFF00A884);
+  static const seccionSalud = Color(0xFFE53935);
+  static const seccionIdentidad = Color(0xFFFB8C00);
+  static const seccionPrivacidad = Color(0xFF8E24AA);
+  static const seccionNotificaciones = Color(0xFFFFB300);
+  static const seccionCuenta = Color(0xFF5C6BC0);
+  static const sobreSeccion = Color(0xFFFFFFFF);
+
   /// Confeti de la tarjeta de cumpleaños (mismo en claro y oscuro).
   static const confeti = [Color(0xFFE8000D), Color(0xFFFFB300), Color(0xFF43A047), Color(0xFF1E88E5), Color(0xFF8E24AA), Color(0xFFFF7043)];
 

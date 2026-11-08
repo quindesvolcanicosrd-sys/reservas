@@ -61,7 +61,11 @@ class FilaAjuste extends StatelessWidget {
     this.pendiente = false,
     this.peligro = false,
     this.derecha,
+    this.color,
   });
+
+  /// Si llega, el ícono va en un cuadro de ese color (home de Ajustes).
+  final Color? color;
   final IconData icono;
   final String titulo;
   final String? valor;
@@ -84,8 +88,16 @@ class FilaAjuste extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icono, size: 22, color: peligro ? p.marcaTexto : p.textoSecundario),
-            const SizedBox(width: 18),
+            if (color != null)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(PivotRadios.chip + 2)),
+                child: Icon(icono, size: 21, color: PivotPaleta.sobreSeccion),
+              )
+            else
+              Icon(icono, size: 22, color: peligro ? p.marcaTexto : p.textoSecundario),
+            SizedBox(width: color != null ? 14 : 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,6 +413,39 @@ class HojaBase extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Aviso de datos sensibles (salud, identidad, dirección): escudo + texto.
+class AvisoPrivado extends StatelessWidget {
+  const AvisoPrivado({super.key, this.texto = AvisoPrivado.textoSensible});
+  final String texto;
+
+  static const textoSensible =
+      'Información visible y de uso de emergencia solo por administradores de tu equipo. '
+      'Todos tus datos personales están cifrados y son seguros.';
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        border: Border.all(color: p.bordeSuave),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.verified_user_outlined, size: 20, color: p.textoSecundario),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(texto, style: TextStyle(fontSize: 13, height: 1.35, color: p.textoSecundario)),
+          ),
+        ],
       ),
     );
   }

@@ -28,26 +28,15 @@ class EquipoRepo extends ChangeNotifier {
   bool _cargando = false;
   bool get cargando => _cargando;
 
-  // ─── Filtros (web `_eqFiltroPeriodo` / `_eqFiltroRoles`) ───────────────
-  /// Mes de los stats (null = el actual) o histórico. Pide de nuevo al servidor.
-  DateTime? periodoMes;
-  bool periodoHistorico = false;
+  // ─── Filtro por rol (web `_eqFiltroRoles`) ─────────────────────────────
+  // El período de las stats ya no filtra la home: se elige por persona en su
+  // ficha (`enMes`, Victor 2026-11-07).
 
   /// Roles elegidos; filtran la lista sin ir al servidor.
   final Set<String> filtroRoles = {};
   static const rolesCatalogo = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
 
-  bool get hayFiltros => filtroRoles.isNotEmpty || periodoMes != null || periodoHistorico;
-
-  /// "este mes", "en octubre", "en total" (para textos como "Asistencia en octubre").
-  String get periodoCorto {
-    if (periodoHistorico) return 'en total';
-    final m = periodoMes;
-    if (m == null) return 'este mes';
-    return 'en ${Fechas.mes(m)}${m.year != Fechas.hoy().year ? ' ${m.year}' : ''}';
-  }
-
-  String get periodoTitulo => periodoHistorico ? 'Histórico' : (periodoMes == null ? 'Este mes' : Fechas.mesAnio(periodoMes!));
+  bool get hayFiltros => filtroRoles.isNotEmpty;
 
   bool pasaRoles(Integrante p) {
     if (filtroRoles.isEmpty) return true;
@@ -60,20 +49,36 @@ class EquipoRepo extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> cambiarPeriodo({DateTime? mes, bool historico = false}) {
-    final hoy = Fechas.hoy();
-    periodoHistorico = historico;
-    periodoMes = historico || mes == null || (mes.year == hoy.year && mes.month == hoy.month) ? null : DateTime(mes.year, mes.month);
-    return cargar(forzar: true);
+  void limpiarFiltros() {
+    filtroRoles.clear();
+    notifyListeners();
   }
 
-  Future<void> limpiarFiltros() async {
-    filtroRoles.clear();
-    if (periodoMes != null || periodoHistorico) {
-      await cambiarPeriodo();
-    } else {
-      notifyListeners();
-    }
+  /// Stats de una persona en otro mes (la ficha). El mes actual sale de la
+  /// lista ya cargada; los demás se piden una vez y quedan en memoria.
+  final Map<String, Future<List<Integrante>>> _porMes = {};
+
+  static Map<String, String> paramsMes(DateTime m) => {'mesDesde': '${m.month}', 'anioDesde': '${m.year}', 'mesHasta': '${m.month}', 'anioHasta': '${m.year}'};
+
+  Future<Integrante?> enMes(String username, DateTime mes) {
+    final hoy = Fechas.hoy();
+    if (mes.year == hoy.year && mes.month == hoy.month) return Future.value(persona(username));
+    final clave = '${mes.year}-${mes.month}';
+    final f = _porMes[clave] ??= _api.get('getEquipo', {if (esAdmin) 'adminToken': sesion.adminToken, ...paramsMes(mes)}).then((r) {
+      return [
+        for (final m in (r['personas'] as List? ?? const []))
+          if (m is Map<String, dynamic>) Integrante(m),
+      ];
+    });
+    return f
+        .then((l) {
+          final u = username.toLowerCase();
+          return l.where((x) => x.username.toLowerCase() == u).firstOrNull;
+        })
+        .catchError((Object e) {
+          _porMes.remove(clave);
+          throw e;
+        });
   }
 
   bool get esAdmin => sesion.esAdmin && sesion.adminToken != null;
@@ -92,16 +97,12 @@ class EquipoRepo extends ChangeNotifier {
   Future<void> cargar({bool forzar = false}) async {
     if (_cargando || (personas != null && !forzar)) return;
     _cargando = true;
-    if (personas != null) scheduleMicrotask(notifyListeners); // barra de carga al cambiar el período
+    if (personas != null) scheduleMicrotask(notifyListeners); // barra de carga al recargar
+    _porMes.clear();
     try {
       final prefs = await SharedPreferences.getInstance();
       favoritos = (prefs.getStringList(_prefFavoritos) ?? const []).toSet();
-      final m = periodoMes;
-      final r = await _api.get('getEquipo', {
-        if (esAdmin) 'adminToken': sesion.adminToken,
-        if (periodoHistorico) 'historico': 'true',
-        if (!periodoHistorico && m != null) ...{'mesDesde': '${m.month}', 'anioDesde': '${m.year}', 'mesHasta': '${m.month}', 'anioHasta': '${m.year}'},
-      });
+      final r = await _api.get('getEquipo', {if (esAdmin) 'adminToken': sesion.adminToken});
       personas = [
         for (final m in (r['personas'] as List? ?? const []))
           if (m is Map<String, dynamic>) Integrante(m),
@@ -134,8 +135,8 @@ class EquipoRepo extends ChangeNotifier {
     return ('${r['paisEquipo'] ?? 'EC'}', Map<String, dynamic>.from(r['ficha'] as Map));
   }
 
-  Future<List<Map<String, dynamic>>> desglose(String username, String concepto) async {
-    final r = await _api.get('getDesglosePuntos', {'nombreUsuario': username, 'concepto': concepto});
+  Future<List<Map<String, dynamic>>> desglose(String username, String concepto, {DateTime? mes}) async {
+    final r = await _api.get('getDesglosePuntos', {'nombreUsuario': username, 'concepto': concepto, if (mes != null) ...paramsMes(mes)});
     return [
       for (final f in (r['filas'] as List? ?? const []))
         if (f is Map<String, dynamic>) f,

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/emergencias.dart';
 import '../core/fechas.dart';
+import '../core/paises.dart';
 import '../core/tema.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
@@ -190,7 +191,8 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
 
   Widget _contacto(PivotPaleta p, String n) {
     final tel = _v('emerg${n}_telefono');
-    final pre = _v('emerg${n}_prefijo');
+    // Guardado como "🇪🇨 +593 (Ecuador)" (web y app): solo los dígitos del prefijo.
+    final pre = Paises.desdeValor(_v('emerg${n}_prefijo'))?.prefijo ?? _v('emerg${n}_prefijo').replaceAll(RegExp(r'[^0-9]'), '');
     return _tarjeta(
       p,
       Icons.contact_phone_outlined,

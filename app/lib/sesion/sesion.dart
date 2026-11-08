@@ -84,16 +84,18 @@ class Sesion extends ChangeNotifier {
     await _guardar(res);
   }
 
-  /// Inicio con PIN: mismo hash que la web, sha256(pin + '|' + username).
-  Future<void> conPin(String identificador, String pin) async {
+  /// Inicio con contraseña o PIN. El PIN usa el mismo hash que la web,
+  /// sha256(pin + '|' + username); la contraseña viaja en el cuerpo (POST),
+  /// nunca en la URL, y el servidor la prueba primero si la persona tiene una.
+  Future<void> conPin(String identificador, String clave) async {
     final r = await api.get('resolverNombre', {'identificador': identificador.trim()});
     if (r['encontrado'] != true) throw LoginFallido('No encontramos a nadie con ese nombre o correo.');
     final usuario = r['nombre'] as String;
-    final hash = sha256.convert(utf8.encode('$pin|$usuario')).toString();
-    final res = await api.get('validarPin', {'nombre': usuario, 'pinHash': hash});
+    final hash = sha256.convert(utf8.encode('$clave|$usuario')).toString();
+    final res = await api.post('validarPin', {'nombre': usuario, 'pinHash': hash, 'password': clave});
     if (res['bloqueado'] == true) throw LoginFallido('Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.');
     if (res['pinNeedsReset'] == true) throw LoginFallido('Tu PIN fue reiniciado. Entra con Google para configurar uno nuevo.');
-    if (res['valido'] != true) throw LoginFallido('PIN incorrecto.');
+    if (res['valido'] != true) throw LoginFallido('Contraseña o PIN incorrecto.');
     res['nombre'] = usuario;
     await _guardar(res);
   }
@@ -176,10 +178,29 @@ class Sesion extends ChangeNotifier {
       await api.post('subirFotoPerfil', {'base64Data': jpeg == null ? '' : 'data:image/jpeg;base64,${base64Encode(jpeg)}'}),
       'No se pudo subir la foto.',
     );
-    final url = '${r['url'] ?? ''}';
-    // Misma ruta en el servidor: el ?v= evita que se vea la foto anterior en caché.
-    datos = {...datos, 'fotoPerfil': url.isEmpty ? '' : '$url?v=${DateTime.now().millisecondsSinceEpoch}'};
+    // El servidor ya devuelve la URL con ?v= para no mostrar la foto vieja en caché.
+    datos = {...datos, 'fotoPerfil': '${r['url'] ?? ''}'};
     notifyListeners();
+  }
+
+  /// Crea o cambia la contraseña ([actual] solo si ya tiene una).
+  Future<void> cambiarPassword({String actual = '', required String nueva}) async {
+    _ok(await api.post('cambiarPassword', {'actual': actual, 'nueva': nueva}), 'No se pudo guardar la contraseña.');
+    datos = {...datos, 'tienePassword': true};
+    notifyListeners();
+  }
+
+  /// País del equipo (ISO, ej. 'EC'): prefijo y documento por defecto.
+  String paisEquipo = 'EC';
+  bool _paisCargado = false;
+  Future<void> cargarPaisEquipo() async {
+    if (_paisCargado) return;
+    try {
+      final r = await api.get('getConfigEquipo');
+      if (r['exito'] == true) paisEquipo = '${r['paisEquipo'] ?? 'EC'}';
+      _paisCargado = true;
+      notifyListeners();
+    } catch (_) {}
   }
 
   /// PIN de 4 dígitos, mismo hash que la web: sha256(pin + '|' + username).

@@ -15,8 +15,14 @@ import 'tema.dart';
 /// mapa. Devuelve las coordenadas; el enlace de Google Maps se arma con ellas
 /// (`enlaceGoogleMaps`), así "Cómo llegar" sigue abriendo Google Maps.
 class SelectorUbicacion extends StatefulWidget {
-  const SelectorUbicacion({super.key, this.inicial, this.consultaInicial = '', required this.alCambiar});
+  const SelectorUbicacion({super.key, this.inicial, this.consultaInicial = '', required this.alCambiar, this.pais = 'ec', this.ayuda});
   final LatLng? inicial;
+
+  /// Código ISO del país donde buscar (el del equipo).
+  final String pais;
+
+  /// Texto bajo el mapa (por defecto, el de los lugares de Eventos).
+  final String? ayuda;
   final String consultaInicial;
   final ValueChanged<LatLng> alCambiar;
 
@@ -74,7 +80,7 @@ class _SelectorUbicacionState extends State<SelectorUbicacion> {
         'q': q,
         'format': 'jsonv2',
         'limit': '6',
-        'countrycodes': 'ec',
+        'countrycodes': widget.pais.toLowerCase(),
         'accept-language': 'es',
         // Prioriza Quito sin excluir el resto del país.
         'viewbox': '-78.65,0.05,-78.33,-0.42',
@@ -237,7 +243,7 @@ class _SelectorUbicacionState extends State<SelectorUbicacion> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Mueve el mapa para dejar el pin justo en la entrada.',
+          widget.ayuda ?? 'Mueve el mapa para dejar el pin justo en la entrada.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: p.textoSecundario),
         ),

@@ -169,3 +169,88 @@ class HeroAvatar extends StatelessWidget {
     );
   }
 }
+
+/// Texto de una línea que, si no entra, se desliza de derecha a izquierda en
+/// bucle con fundido en los bordes (nombres largos en Favoritos). Con
+/// "reducir animaciones" queda cortado con "…".
+class TextoDeslizante extends StatefulWidget {
+  const TextoDeslizante({super.key, required this.texto, required this.estilo});
+  final String texto;
+  final TextStyle estilo;
+
+  @override
+  State<TextoDeslizante> createState() => _TextoDeslizanteState();
+}
+
+class _TextoDeslizanteState extends State<TextoDeslizante> with SingleTickerProviderStateMixin {
+  static const _hueco = 24.0;
+  late final _c = AnimationController(vsync: this);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, cons) {
+        final tp = TextPainter(
+          text: TextSpan(text: widget.texto, style: widget.estilo),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        final ancho = tp.width;
+        final cabe = ancho <= cons.maxWidth;
+        if (cabe || MediaQuery.of(context).disableAnimations) {
+          _c.stop();
+          return Text(widget.texto, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: widget.estilo);
+        }
+        final recorrido = ancho + _hueco;
+        // ~30 px/s, con una pausa al inicio de cada vuelta.
+        final mov = Duration(milliseconds: (recorrido / 30 * 1000).round());
+        final total = mov + const Duration(milliseconds: 1600);
+        if (_c.duration != total) {
+          _c.duration = total;
+          _c.repeat();
+        }
+        final pausa = 1600 / total.inMilliseconds;
+        return ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (r) => const LinearGradient(
+            colors: [Color(0x00000000), Color(0xFF000000), Color(0xFF000000), Color(0x00000000)],
+            stops: [0, 0.12, 0.88, 1],
+          ).createShader(r),
+          child: ClipRect(
+            child: SizedBox(
+              height: tp.height,
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (context, _) {
+                  final t = _c.value < pausa ? 0.0 : Curves.linear.transform((_c.value - pausa) / (1 - pausa));
+                  return OverflowBox(
+                    alignment: Alignment.centerLeft,
+                    maxWidth: double.infinity,
+                    child: Transform.translate(
+                      offset: Offset(-recorrido * t, 0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(widget.texto, maxLines: 1, softWrap: false, style: widget.estilo),
+                          const SizedBox(width: _hueco),
+                          Text(widget.texto, maxLines: 1, softWrap: false, style: widget.estilo),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

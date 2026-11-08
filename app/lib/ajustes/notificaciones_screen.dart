@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
-import 'componentes.dart';
 
 /// Ajustes → Notificaciones: interruptor general y uno por tipo, generados
 /// desde el catálogo del servidor (`getCatalogoNotificaciones`). Guardado
@@ -62,6 +61,38 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     }
   }
 
+  /// Una categoría entera de una vez (cada clave se guarda por separado).
+  Future<void> _categoria(List<Map<String, dynamic>> tipos, bool v) async {
+    final antes = {for (final t in tipos) '${t['clave']}': _prefs['${t['clave']}']};
+    setState(() {
+      for (final t in tipos) {
+        _prefs['${t['clave']}'] = v;
+      }
+    });
+    try {
+      final rs = await Future.wait([
+        for (final t in tipos) _api.post('guardarPreferenciasPush', {'clave': '${t['clave']}', 'valor': '$v'}),
+      ]);
+      if (rs.any((r) => r['exito'] != true)) throw ApiException('');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        antes.forEach((k, x) => x == null ? _prefs.remove(k) : _prefs[k] = x);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo guardar. Revisa tu conexión.')));
+    }
+  }
+
+  static IconData _iconoCategoria(String c) {
+    final x = c.toLowerCase();
+    if (x.contains('evento') || x.contains('entren')) return Icons.event_rounded;
+    if (x.contains('tarea')) return Icons.task_alt_rounded;
+    if (x.contains('pago') || x.contains('cuota') || x.contains('reserva')) return Icons.payments_outlined;
+    if (x.contains('equipo') || x.contains('cumple')) return Icons.groups_rounded;
+    if (x.contains('admin')) return Icons.admin_panel_settings_outlined;
+    return Icons.notifications_none_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
@@ -97,16 +128,30 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                 key: const ValueKey('lista'),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
                 children: [
-                  GrupoAjustes(
-                    filas: [
-                      FilaAjuste(
-                        icono: Icons.notifications_active_outlined,
-                        titulo: 'Recibir notificaciones',
-                        valor: _activas ? 'Activadas' : 'Apagadas: no te llega ninguna',
-                        derecha: Switch(value: _activas, onChanged: (v) => _guardar({'activas': '$v'}, () => _activas = v, () => _activas = !v)),
+                  // Interruptor general, grande.
+                  Material(
+                    color: _activas ? PivotPaleta.seccionNotificaciones : p.tarjeta,
+                    borderRadius: BorderRadius.circular(PivotRadios.grande),
+                    child: SwitchListTile(
+                      value: _activas,
+                      onChanged: (v) => _guardar({'activas': '$v'}, () => _activas = v, () => _activas = !v),
+                      contentPadding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.grande)),
+                      secondary: Icon(
+                        _activas ? Icons.notifications_active_rounded : Icons.notifications_off_outlined,
+                        color: _activas ? PivotPaleta.sobreSeccion : p.textoSecundario,
                       ),
-                    ],
+                      title: Text(
+                        _activas ? 'Notificaciones activadas' : 'Notificaciones apagadas',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: _activas ? PivotPaleta.sobreSeccion : p.texto),
+                      ),
+                      subtitle: Text(
+                        _activas ? 'Elige abajo qué temas te interesan.' : 'No te llega ningún aviso de Pivot.',
+                        style: TextStyle(color: _activas ? PivotPaleta.sobreSeccion.withValues(alpha: 0.85) : p.textoSecundario),
+                      ),
+                    ),
                   ),
+                  const SizedBox(height: 18),
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
                     opacity: _activas ? 1 : 0.4,
@@ -115,21 +160,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                       child: Column(
                         children: [
                           for (final c in categorias.entries)
-                            GrupoAjustes(
-                              titulo: c.key.toUpperCase(),
-                              filas: [
-                                for (final t in c.value)
-                                  _FilaTipo(
-                                    nombre: '${t['nombre'] ?? t['clave']}',
-                                    descripcion: '${t['descripcion'] ?? ''}',
-                                    valor: _prefs['${t['clave']}'] != false,
-                                    alCambiar: (v) {
-                                      final k = '${t['clave']}';
-                                      final antes = _prefs[k];
-                                      _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
-                                    },
-                                  ),
-                              ],
+                            _Categoria(
+                              nombre: c.key,
+                              icono: _iconoCategoria(c.key),
+                              tipos: c.value,
+                              prefs: _prefs,
+                              alCambiarTodo: (v) => _categoria(c.value, v),
+                              alCambiarUno: (t, v) {
+                                final k = '${t['clave']}';
+                                final antes = _prefs[k];
+                                _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
+                              },
                             ),
                         ],
                       ),
@@ -149,21 +190,97 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
   }
 }
 
-class _FilaTipo extends StatelessWidget {
-  const _FilaTipo({required this.nombre, required this.descripcion, required this.valor, required this.alCambiar});
+/// Un tema (Eventos, Tareas…) con un solo interruptor; "Personalizar" abre
+/// cada aviso por separado para quien quiera afinar.
+class _Categoria extends StatefulWidget {
+  const _Categoria({
+    required this.nombre,
+    required this.icono,
+    required this.tipos,
+    required this.prefs,
+    required this.alCambiarTodo,
+    required this.alCambiarUno,
+  });
   final String nombre;
-  final String descripcion;
-  final bool valor;
-  final ValueChanged<bool> alCambiar;
+  final IconData icono;
+  final List<Map<String, dynamic>> tipos;
+  final Map<String, bool> prefs;
+  final ValueChanged<bool> alCambiarTodo;
+  final void Function(Map<String, dynamic>, bool) alCambiarUno;
+
+  @override
+  State<_Categoria> createState() => _CategoriaState();
+}
+
+class _CategoriaState extends State<_Categoria> {
+  bool _abierta = false;
 
   @override
   Widget build(BuildContext context) {
-    return SwitchListTile(
-      value: valor,
-      onChanged: alCambiar,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: descripcion.isEmpty ? null : Text(descripcion),
+    final p = context.pivot;
+    final activas = widget.tipos.where((t) => widget.prefs['${t['clave']}'] != false).length;
+    final total = widget.tipos.length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            SwitchListTile(
+              value: activas > 0,
+              onChanged: widget.alCambiarTodo,
+              secondary: Icon(widget.icono, color: p.marcaTexto),
+              title: Text(widget.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(activas == total ? 'Todos los avisos' : (activas == 0 ? 'Ninguno' : '$activas de $total avisos')),
+            ),
+            if (total > 1)
+              InkWell(
+                onTap: () => setState(() => _abierta = !_abierta),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 12, 10),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 40),
+                      Text(
+                        _abierta ? 'Ocultar' : 'Personalizar',
+                        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: p.marcaTexto),
+                      ),
+                      AnimatedRotation(
+                        turns: _abierta ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 240),
+                        child: Icon(Icons.expand_more_rounded, size: 20, color: p.marcaTexto),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: !_abierta
+                  ? const SizedBox(width: double.infinity)
+                  : Column(
+                      children: [
+                        Divider(height: 1, color: p.fondo),
+                        for (final t in widget.tipos)
+                          SwitchListTile(
+                            dense: true,
+                            value: widget.prefs['${t['clave']}'] != false,
+                            onChanged: (v) => widget.alCambiarUno(t, v),
+                            contentPadding: const EdgeInsets.fromLTRB(72, 0, 16, 0),
+                            title: Text('${t['nombre'] ?? t['clave']}'),
+                            subtitle: '${t['descripcion'] ?? ''}'.isEmpty ? null : Text('${t['descripcion']}'),
+                          ),
+                        const SizedBox(height: 6),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

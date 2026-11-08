@@ -15,7 +15,9 @@ class Integrante {
 
   /// Categoría: 'Quindes' o 'Mirlxs' (el servidor la llama `rol`).
   String get categoria => '${m['rol'] ?? 'Mirlxs'}';
-  String get pronombres => '${m['pronombres'] ?? ''}'.trim();
+
+  /// Datos viejos traían "Ella/ella"; se muestra solo "Ella" (migración 20261108010000).
+  String get pronombres => normalizarPronombres('${m['pronombres'] ?? ''}');
   String get prefijo => '${m['prefijo'] ?? ''}'.replaceAll(RegExp(r'[^0-9]'), '');
   String get telefono => '${m['telefono'] ?? ''}'.replaceAll(RegExp(r'[^0-9]'), '');
   String get email => '${m['email'] ?? ''}';
@@ -150,6 +152,8 @@ List<DatoFila> datosRelevantes(Integrante p, DateTime hoy, {String periodo = 'es
   if (p.racha >= 2) res.add(DatoFila(Icons.local_fire_department_outlined, 'Racha de ${p.racha} meses'));
   return res.take(3).toList();
 }
+
+String normalizarPronombres(String s) => s.replaceAll(RegExp(r'/(ella|él|elle)', caseSensitive: false), '').trim();
 
 String _num(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 String numero(double v) => _num(v);

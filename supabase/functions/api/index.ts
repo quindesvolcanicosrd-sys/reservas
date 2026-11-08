@@ -107,7 +107,10 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     cuponDisponible:      row.cupon_disponible      === true,
     fotoPerfil:           row.foto_perfil           ?? '',
         permisosConfigurados: row.permisos_configurados === true,
-    roles:                Array.isArray(row.roles) ? row.roles : [],
+        roles:                Array.isArray(row.roles) ? row.roles : [],
+    // Cuenta y acceso (Ajustes de la app): solo si existen, nunca el hash.
+    tienePassword:        !!row.password_hash,
+    tienePin:             !!row.pin_hash,
     // Fase 2 completa del sistema de tiers (Parte 5, ver MANIFEST.md) --
     // `tierRiesgoDesde`/`tierRiesgoHasta` son columnas simples (sin `?? ''`,
     // a propósito -- `null` real, no cadena vacía, para que el frontend
@@ -558,8 +561,19 @@ async function validarPin(params: Record<string, any>): Promise<Record<string, a
     attemptCount = 0;
     await supabase.from('pin_attempts').update({ count: 0, blocked_until: null }).eq('username', nombre);
   }
-  const row = await _getEquipoRow(nombre);
+    const row = await _getEquipoRow(nombre);
   if (!row || _estaArchivado(row)) return { valido: false };
+  // Contraseña (app Android, 2026-11-08): mismo límite de intentos que el PIN.
+  const password = String(params.password ?? '');
+  if (password && row.password_hash) {
+    if (!(await _verificarPassword(password, row.password_hash))) {
+      const bloqueado = await _registrarIntentoFallido(nombre, attemptCount);
+      return bloqueado ? { valido: false, bloqueado: true } : { valido: false };
+    }
+    await supabase.from('pin_attempts').delete().eq('username', nombre);
+    const tokenPw = await _crearToken(nombre);
+    return _adjuntarAdmin({ valido: true, token: tokenPw, datos: getDatosCompletos(row) }, row);
+  }
   if (row.pin_needs_reset) return { valido: false, pinNeedsReset: true };
   if (!row.pin_hash) { await _registrarIntentoFallido(nombre, attemptCount); return { valido: false }; }
   if (row.pin_hash !== pinHash) {
@@ -711,6 +725,66 @@ async function actualizarEquipamientoPersona(params: Record<string, any>): Promi
   const { error } = await supabase.from('equipo').update(update).eq('username', username);
   if (error) return { exito: false, error: error.message };
   return { exito: true, categoriaCambiada, categoria: update.categoria ?? fila.categoria ?? null };
+}
+
+// ─── Contraseña ─────────────────────────────────────────────────────────────
+// PBKDF2-SHA256 con sal aleatoria (WebCrypto). Se guarda como
+// pbkdf2$<iter>$<sal>$<hash> en equipo.password_hash.
+const _PW_ITER = 150000;
+
+function _b64(bytes: Uint8Array): string { let s = ''; bytes.forEach((b) => (s += String.fromCharCode(b))); return btoa(s); }
+function _desdeB64(s: string): Uint8Array { return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); }
+
+async function _pbkdf2(password: string, sal: Uint8Array, iter: number): Promise<Uint8Array> {
+  const clave = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: sal, iterations: iter }, clave, 256);
+  return new Uint8Array(bits);
+}
+
+async function _hashPassword(password: string): Promise<string> {
+  const sal = crypto.getRandomValues(new Uint8Array(16));
+  return `pbkdf2$${_PW_ITER}$${_b64(sal)}$${_b64(await _pbkdf2(password, sal, _PW_ITER))}`;
+}
+
+async function _verificarPassword(password: string, guardado: string): Promise<boolean> {
+  const [tipo, iter, sal, hash] = String(guardado).split('$');
+  if (tipo !== 'pbkdf2' || !iter || !sal || !hash) return false;
+  const calc = _b64(await _pbkdf2(password, _desdeB64(sal), Number(iter)));
+  // Comparación de tiempo constante.
+  if (calc.length !== hash.length) return false;
+  let dif = 0;
+  for (let i = 0; i < calc.length; i++) dif |= calc.charCodeAt(i) ^ hash.charCodeAt(i);
+  return dif === 0;
+}
+
+function _passwordValida(p: string): string | null {
+  if (p.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+  if (!/[A-Za-zÁÉÍÓÚÑáéíóúñ]/.test(p) || !/[0-9]/.test(p)) return 'Usa letras y números.';
+  if (p.length > 128) return 'La contraseña es demasiado larga.';
+  return null;
+}
+
+// Crear o cambiar la contraseña propia. Si ya hay una, pide la actual.
+async function cambiarPassword(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const row = await _getEquipoRow(username);
+  if (!row || _estaArchivado(row)) return { exito: false, error: 'Sesión inválida.' };
+  const nueva = String(params.nueva ?? '');
+  const err = _passwordValida(nueva);
+  if (err) return { exito: false, error: err };
+  if (row.password_hash && !(await _verificarPassword(String(params.actual ?? ''), row.password_hash))) {
+    return { exito: false, error: 'La contraseña actual no es correcta.' };
+  }
+  await supabase.from('equipo').update({ password_hash: await _hashPassword(nueva) }).eq('username', username);
+  return { exito: true };
+}
+
+// País del equipo (prefijo y documento por defecto en Ajustes).
+async function getConfigEquipo(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarToken(params.token))) return { exito: false, error: 'Sesión inválida.' };
+  const { data: pais } = await supabase.from('config_app').select('value').eq('key', 'pais_equipo').maybeSingle();
+  return { exito: true, paisEquipo: pais?.value ?? 'EC' };
 }
 
 async function actualizarPin(params: Record<string, any>): Promise<Record<string, any>> {
@@ -1075,7 +1149,8 @@ async function subirFotoPerfil(params: Record<string, any>): Promise<Record<stri
     .upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
   if (uploadError) return { exito: false, error: 'Error al subir imagen: ' + uploadError.message };
   const { data: urlData } = supabase.storage.from('fotos-perfil').getPublicUrl(path);
-  const url = urlData.publicUrl;
+    // Misma ruta siempre: el ?v= hace que todos vean la foto nueva y no la de caché.
+  const url = `${urlData.publicUrl}?v=${Date.now()}`;
   await supabase.from('equipo').update({ foto_perfil: url }).eq('username', username);
   return { exito: true, url };
 }
@@ -6499,7 +6574,9 @@ Deno.serve(async (req: Request) => {
       // Auth
       case 'loginGoogle':                     return json(await loginGoogle(params));
       case 'adminLogin':                      return json(await adminLogin(params));
-      case 'validarPin':                      return json(await validarPin(params));
+            case 'validarPin':                      return json(await validarPin(params));
+      case 'cambiarPassword':                 return json(await cambiarPassword(params));
+      case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
       case 'restaurarSesion':                 return json(await restaurarSesion(params));
       case 'cerrarSesion':                    return json(await cerrarSesion(params));
       case 'resolverNombre':                  return json(await resolverNombre(params));
