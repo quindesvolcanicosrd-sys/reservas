@@ -372,7 +372,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
                   : (sel) async {
                       if (sel.isEmpty) return;
                       try {
-                        await repo.marcar(ev, sel.first);
+                        final sinSenal = await repo.marcar(ev, sel.first);
+                        if (sinSenal) _avisar('Sin señal: tu respuesta quedó guardada y se sube sola cuando vuelva la conexión.');
                       } catch (e) {
                         _avisar(e.toString());
                       }

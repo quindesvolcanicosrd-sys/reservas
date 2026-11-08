@@ -31,6 +31,9 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     _cargar();
   }
 
+  /// El aviso de "sin señal" sale una sola vez por pantalla.
+  bool _avisoSinSenal = false;
+
   Future<void> _cargar() async {
     setState(() => _error = null);
     try {
@@ -43,7 +46,12 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
 
   Future<void> _marcar(Evento ev, Persona persona, EstadoReal? estado) async {
     try {
-      await widget.repo.marcarReal(ev, persona, estado);
+      final sinSenal = await widget.repo.marcarReal(ev, persona, estado);
+      if (sinSenal && mounted && !_avisoSinSenal) {
+        _avisoSinSenal = true;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Sin señal: la asistencia se guarda en el teléfono y se sube sola cuando vuelva la conexión.')));
+      }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }

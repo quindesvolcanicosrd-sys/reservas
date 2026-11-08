@@ -8,6 +8,7 @@ import 'core/tema.dart';
 import 'core/datos_pendientes.dart';
 import 'core/tour.dart';
 import 'ajustes/ajustes_screen.dart';
+import 'core/aviso_sin_conexion.dart';
 import 'equipo/equipo_repo.dart';
 import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
@@ -55,7 +56,11 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   // El número del ícono de Eventos se actualiza al volver a la app (por si cambió el día).
   @override
   void didChangeAppLifecycleState(AppLifecycleState estado) {
-    if (estado == AppLifecycleState.resumed) setState(() {});
+    if (estado == AppLifecycleState.resumed) {
+      setState(() {});
+      // Al volver a la app: subir lo guardado sin señal.
+      widget.repo.cola.sincronizar();
+    }
   }
 
   @override
@@ -93,17 +98,23 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         duration: const Duration(milliseconds: 200),
         child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
       ),
-      bottomNavigationBar: NavigationBar(
-        key: ClavesTour.navegacion,
-        selectedIndex: indice,
-        onDestinationSelected: (i) {
-          if (i == 0 && indice == 0) {
-            _irAHoy.disparar();
-          } else {
-            setState(() => _indice = i);
-          }
-        },
-        destinations: [for (final d in destinos) d.$1],
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AvisoSinConexion(repo: widget.repo),
+          NavigationBar(
+            key: ClavesTour.navegacion,
+            selectedIndex: indice,
+            onDestinationSelected: (i) {
+              if (i == 0 && indice == 0) {
+                _irAHoy.disparar();
+              } else {
+                setState(() => _indice = i);
+              }
+            },
+            destinations: [for (final d in destinos) d.$1],
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api.dart';
+import '../core/cola_offline.dart';
 import '../core/fechas.dart';
 import '../sesion/sesion.dart';
 import 'anticipada.dart';
@@ -31,6 +36,24 @@ class EventosRepo extends ChangeNotifier {
   final Sesion sesion;
   Api get _api => sesion.api;
   late final AnticipadaRepo anticipada = AnticipadaRepo(sesion);
+
+  /// Cambios hechos sin señal, para subir al volver la conexión.
+  late final ColaOffline cola = ColaOffline(_api)..addListener(_alSubirCola);
+  int _subidasVistas = 0;
+
+  /// Mostrando datos guardados en el teléfono (no hubo conexión al cargar).
+  bool sinConexion = false;
+
+  /// Al subir la cola: se recargan los eventos para ver lo del servidor.
+  void _alSubirCola() {
+    if (cola.subidas != _subidasVistas) {
+      _subidasVistas = cola.subidas;
+      if (!cola.sinConexion) unawaited(cargar(forzar: true));
+    }
+    notifyListeners();
+  }
+
+  static const _prefCache = 'eventos.cache';
 
   List<Evento> eventos = [];
   List<Cumple> cumples = [];
@@ -196,6 +219,7 @@ class EventosRepo extends ChangeNotifier {
     notifyListeners();
     try {
       final d = Fechas.iso(desde), h = Fechas.iso(hasta);
+      unawaited(cola.cargar());
       final resultados = await Future.wait([
         _api.get('getEventosRango', {'desde': d, 'hasta': h}),
         _api.get('getCumpleañosRango', {'desde': d, 'hasta': h}).catchError((_) => <String, dynamic>{}),
@@ -215,6 +239,16 @@ class EventosRepo extends ChangeNotifier {
           return c != 0 ? c : a.horaInicio.compareTo(b.horaInicio);
         });
       cumples = (resultados[1]['cumpleanos'] as List? ?? const []).map((c) => Cumple.desdeJson(c as Map<String, dynamic>)).toList();
+      sinConexion = false;
+      cola.hayConexion();
+      // Copia para abrir la app sin señal (eventos y cumpleaños públicos;
+      // nada sensible).
+      unawaited(
+        SharedPreferences.getInstance().then(
+          (p) => p.setString(_prefCache, jsonEncode({'desde': d, 'hasta': h, 'eventos': resultados[0]['eventos'], 'cumpleanos': resultados[1]['cumpleanos']})),
+        ),
+      );
+      _aplicarCola();
       _desde = desde;
       _hasta = hasta;
       _cargadoEn = DateTime.now();
@@ -223,10 +257,51 @@ class EventosRepo extends ChangeNotifier {
         if (cambio) notifyListeners();
       });
     } catch (e) {
-      error = e is ApiException ? e.message : 'No se pudieron cargar los eventos. Revisa tu conexión.';
+      // Sin señal: se usa la última copia guardada, con los cambios pendientes.
+      if (ColaOffline.esDeRed(e) && await _desdeCache(desde, hasta)) {
+        sinConexion = true;
+      } else {
+        error = e is ApiException ? e.message : 'No se pudieron cargar los eventos. Revisa tu conexión.';
+      }
     } finally {
       cargando = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> _desdeCache(DateTime desde, DateTime hasta) async {
+    try {
+      final raw = (await SharedPreferences.getInstance()).getString(_prefCache);
+      if (raw == null) return false;
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      final yo = sesion.nombre ?? '';
+      eventos = (m['eventos'] as List? ?? const []).map((e) => Evento.desdeJson(e as Map<String, dynamic>, yo)).toList()
+        ..sort((a, b) {
+          final c = a.fecha.compareTo(b.fecha);
+          return c != 0 ? c : a.horaInicio.compareTo(b.horaInicio);
+        });
+      cumples = (m['cumpleanos'] as List? ?? const []).map((c) => Cumple.desdeJson(c as Map<String, dynamic>)).toList();
+      await cola.cargar();
+      _aplicarCola();
+      _desde = desde;
+      _hasta = hasta;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Lo que está en la cola se ve aplicado aunque el servidor no lo sepa aún.
+  void _aplicarCola() {
+    for (final ev in eventos) {
+      final r = cola.pendiente('rsvp|${ev.id}');
+      if (r != null) {
+        final e = EstadoRsvp.values.where((x) => x.valor == r['estado']).firstOrNull;
+        if (e != null) {
+          ev.miEstado = e;
+          _reemplazarMiRsvp(ev, e);
+        }
+      }
     }
   }
 
@@ -238,19 +313,26 @@ class EventosRepo extends ChangeNotifier {
   }
 
   /// Guarda la asistencia de forma optimista; si falla, revierte y lanza.
-  Future<void> marcar(Evento ev, EstadoRsvp estado) async {
+  /// Sin señal queda en la cola y se sube después: devuelve true.
+  Future<bool> marcar(Evento ev, EstadoRsvp estado) async {
     final anterior = ev.miEstado;
-    if (anterior == estado) return;
+    if (anterior == estado) return false;
     ev.miEstado = estado;
     _reemplazarMiRsvp(ev, estado);
     notifyListeners();
+    final params = {'nombre': sesion.nombre, 'idEvento': ev.id, 'estado': estado.valor};
+    final aviso = {'idEvento': ev.id, 'estadoNuevo': estado.valor, 'estadoAnterior': anterior?.valor ?? ''};
     try {
-      final res = await _api.post('marcarAsistenciaUsuario', {'nombre': sesion.nombre, 'idEvento': ev.id, 'estado': estado.valor});
+      final res = await _api.post('marcarAsistenciaUsuario', params);
       if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo guardar tu asistencia.').toString());
-      _api
-          .post('notificarCambioAsistencia', {'idEvento': ev.id, 'estadoNuevo': estado.valor, 'estadoAnterior': anterior?.valor ?? ''})
-          .catchError((_) => <String, dynamic>{});
+      _api.post('notificarCambioAsistencia', aviso).catchError((_) => <String, dynamic>{});
+      cola.hayConexion();
+      return false;
     } catch (e) {
+      if (ColaOffline.esDeRed(e)) {
+        await cola.encolar('marcarAsistenciaUsuario', params, clave: 'rsvp|${ev.id}', despues: {'accion': 'notificarCambioAsistencia', 'params': aviso});
+        return true;
+      }
       ev.miEstado = anterior;
       _reemplazarMiRsvp(ev, anterior);
       notifyListeners();
@@ -380,7 +462,19 @@ class EventosRepo extends ChangeNotifier {
   /// que la web): activos e inactivos (30+ días sin asistencia real).
   Future<List<MiembroRoster>> roster({bool forzar = false}) async {
     if (_roster != null && !forzar) return _roster!;
-    final res = await _api.get('adminGetRosterEquipo', {'adminToken': _adminToken});
+    Map<String, dynamic> res;
+    try {
+      res = await _api.get('adminGetRosterEquipo', {'adminToken': _adminToken});
+      // Copia para tomar asistencia sin señal (nombres y fotos).
+      unawaited(SharedPreferences.getInstance().then((p) => p.setString('eventos.roster', jsonEncode(res))));
+    } catch (e) {
+      final raw = ColaOffline.esDeRed(e) ? (await SharedPreferences.getInstance()).getString('eventos.roster') : null;
+      if (raw == null) {
+        if (_roster != null) return _roster!;
+        rethrow;
+      }
+      res = jsonDecode(raw) as Map<String, dynamic>;
+    }
     final hoy = DateTime.now();
     _roster = [
       for (final p in (res['personas'] as List? ?? const []))
@@ -402,7 +496,7 @@ class EventosRepo extends ChangeNotifier {
 
   /// Marca (o quita, con null) la asistencia real de una persona. Optimista:
   /// si el servidor falla, vuelve atrás y lanza (`_evMarcarAsistenciaAdmin()`).
-  Future<void> marcarReal(Evento ev, Persona persona, EstadoReal? estado) async {
+  Future<bool> marcarReal(Evento ev, Persona persona, EstadoReal? estado) async {
     final token = _adminToken;
     final clave = persona.username.trim().toUpperCase();
     final anterior = List<AsistenciaReal>.of(ev.asistentes);
@@ -417,7 +511,19 @@ class EventosRepo extends ChangeNotifier {
         'estado': estado?.valor ?? 'Ninguno',
       });
       if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo guardar la asistencia.').toString());
+      cola.hayConexion();
+      return false;
     } catch (e) {
+      // Sin señal en el entrenamiento: queda guardada y se sube después.
+      if (ColaOffline.esDeRed(e)) {
+        await cola.encolar('adminMarcarAsistencia', {
+          'adminToken': token,
+          'idEvento': ev.id,
+          'nombre': persona.username,
+          'estado': estado?.valor ?? 'Ninguno',
+        }, clave: 'real|${ev.id}|$clave');
+        return true;
+      }
       ev.asistentes
         ..clear()
         ..addAll(anterior);
