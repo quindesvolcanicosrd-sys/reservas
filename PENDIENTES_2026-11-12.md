@@ -3,6 +3,12 @@
 Antes de empezar: leer MANIFEST.md. Al terminar: actualizar MANIFEST.md y CHANGELOG.md, commit y push.
 Reglas de siempre: español neutro (sin voseo), sin pronombres femeninos, "administradorxs" en textos de la app, colores solo en `tema.dart` (`PivotPaleta` / `PivotRadios`), transiciones suaves (fade/slide).
 
+## Lo primero el jueves (Victor: urgente)
+- [ ] **Prioridad 1 de la auditoría (sección G)**:
+  - Dejar de traer `log_asistencias` completa en `_ultimaAsistenciaPorPersonaTodas`, `_ultimaAsistenciaRealPorUsuario` y la racha.
+  - Añadir los índices.
+  - Probar que "Asistiré" se guarda y se ve igual que antes (web y app).
+
 ## Pendiente de la ronda anterior
 
 - [ ] Aplicar la migración `supabase/migrations/20261108040000_tareas_recurrentes_estado.sql` (columna `tareas_recurrentes.estado` + cron `push-recordatorio-tareas`). Supabase pide aprobación de Victor. Sin ella, la pantalla "Tareas recurrentes" muestra error.
@@ -312,10 +318,50 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] **Prueba de carga simple**: muchas personas marcando "Asistiré" a la vez en el mismo evento.
 - [ ] **Monitoreo**: alertas de errores de la Edge Function y del uso del plan.
 
+## H. Inicio de sesión, crear cuenta y crear liga (Victor, 2026-11-08)
+**Pantalla de inicio**
+- Entrar con Google · con correo o usuario y contraseña.
+- Abajo: "Crear cuenta" y "Crear tu liga".
+
+**Crear tu liga**: asistente por pasos, bonito. Las secciones opcionales se pueden saltar y completar después desde Mi Liga.
+1. **Deporte y equipos**:
+   - Deporte elegido de una lista muy completa, solo deportes de equipo (fútbol, roller derby, bicipolo, rugby, hockey, vóley, ultimate, etc.), cada uno con su ícono.
+   - Nombre de la liga, nombre de cada equipo y logo opcional de cada equipo.
+2. **Datos de la liga**:
+   - Fecha de fundación, redes sociales y contacto.
+   - Grupos de WhatsApp (con enlace), Facebook, Messenger, Instagram, etc.
+   - Todo esto se ve en una sección **"Comunidad"** dentro de Equipo: tarjetas con el ícono de cada red y botón para unirse o abrir.
+3. **Equipamiento** (opcional):
+   - ¿Tu liga presta equipamiento? Qué presta, con un inventario.
+   - Si se salta: la liga no presta, ni en entrenamientos, ni a personas nuevas, ni a integrantes.
+4. **Cuota** (opcional):
+   - Cuánto se cobra, por clase o por mes, por equipo.
+   - Si se salta: no hay cobros. Si se completó el paso 3, se puede reservar equipamiento sin aprobar pagos.
+5. **Tareas** (opcional): qué son, cómo funcionan y opciones de personalización (las de la sección D).
+6. **Puntos** (opcional, para ligas competitivas):
+   - Mínimo de puntos por asistencia y por tareas, por mes, trimestre o semestre, para entrar o mantenerse en un equipo.
+   - Si se salta: la liga no usa puntos. **Pendiente: Victor no terminó la frase "y cualquier persona que…"**.
+
+**Sugerencias para completar el flujo**
+- **Cómo entra la gente a una liga**:
+  - La liga recién creada genera un enlace y un código QR de invitación.
+  - Quien crea cuenta con ese enlace queda en esa liga, con aprobación de admins si la liga lo pide.
+  - Sin enlace, "Crear cuenta" pide buscar la liga o ingresar el código.
+- **Paso de datos personales** en el asistente: modo Completo / Sin datos personales / Básico (sección E), con la explicación de privacidad.
+- **Paso final**: resumen de todo, con "Editar" en cada bloque, y "Crear liga".
+- Al terminar, un tour guiado para admins: cómo invitar, crear el primer evento y abrir Mi Liga.
+- **Una persona en varias ligas** (ej. juega en una y arbitra en otra): decidir si se permite y cómo se cambia entre ellas.
+- **Técnico**:
+  - Entrar con Google implica pasar del login propio (token + PIN/contraseña) a Supabase Auth, o enlazar las dos cosas. Es un cambio grande que conviene hacer junto con la base multi-liga (F.7).
+  - Si la app sale en iPhone y ofrece Google, Apple exige también "Continuar con Apple".
+  - Recuperar contraseña por correo.
+
 ## Orden propuesto
+0. Prioridad 1 de la auditoría (consultas de `log_asistencias` + índices).
 1. Ronda de 11 cambios de arriba y la migración pendiente.
 2. A (Calendario + Yo).
 3. C y D junto con Mi Liga nativa (primero los interruptores, con todo apagado por defecto).
 4. B (audiencias por categoría, administradorxs y roles), encendible desde D.
 5. G (auditoría), antes de construir la base para varias ligas.
 6. E (personalización completa) sobre la base multi-liga (F.7).
+7. H (inicio de sesión, crear cuenta y crear liga), junto con la base multi-liga y Supabase Auth.
