@@ -1,0 +1,102 @@
+# Hoja de ruta de Pivot (app Android)
+
+Fuente de verdad del trabajo pendiente. La lee cada corrida de la tarea programada (cada 2 días, 3:00 Ecuador) junto con MANIFEST.md.
+- Detalle de diseño de Calendario, Yo, audiencias, personalización y crear liga: `PENDIENTES_2026-11-12.md` (secciones A–H).
+- Revisión y respuestas de Victor del 2026-11-12: https://claude.ai/artifact/MqCCxzsXEGrYZr3KBhGXfE
+- Pedidos nuevos de Victor: documento "Pivot — Bandeja" (claude.ai); lo hecho se pasa aquí y a MANIFEST.
+
+Reglas de siempre:
+- Texto: español neutro, sin voseo, sin pronombres femeninos.
+- **"Pivot" reemplaza a "admin/administradorxs" en toda la app** (decidido 2026-11-12; plural "Pivots"). Se aplica en la etapa 4.
+- Diseño: colores solo en `tema.dart`; transiciones suaves; degradados en los íconos donde sumen.
+- Cierre: MANIFEST y CHANGELOG al día; commit, push y CI verde.
+- Con Victor primero: borrar datos, dinero, permisos, textos legales o algo que contradiga una decisión. Las migraciones de Supabase necesitan su aprobación: en corridas sin Victor se dejan preparadas en la Bandeja.
+
+## Etapas (orden aprobado 2026-11-12)
+
+1. [x] Consultas de asistencia escalables + ronda de 11 cambios (2026-11-12).
+2. [ ] **Bugs reportados**
+   - [ ] Push de 1 h antes:
+     - Los botones abren la app con confirmación.
+     - "Cancelar entrenamiento" solo para Pivots y con menos de 5 personas; si no, "No asistiré".
+     - Contar solo "Asistiré" y sin nombres: "X personas asistirán hoy".
+   - [ ] Timeline: la línea de "ahora" avanza cada minuto; "Tomar asistencia" se activa al llegar la hora con la app abierta.
+   - [ ] Eventos pasados:
+     - La tarjeta muestra tu asistencia real (a horario, tarde, no asististe).
+     - El detalle muestra quién fue y cómo llegó; sin botones de respuesta.
+   - [ ] Eventos cancelados: solo el aviso y, a lo sumo, quién había dicho que iba.
+   - [ ] Pivots pueden cambiar o quitar la respuesta de una persona desde el detalle del evento.
+   - [ ] Tomar lista: arriba quienes vinieron ese día de la semana en 3 de las últimas 4 semanas (sale de sugeridos si falta 2 semanas seguidas).
+   - [ ] Notificaciones en Ajustes abre al instante (configuración guardada).
+   - [ ] Eventos que se cruzan: permitidos en todo el calendario, con confirmación al crear ("Ya hay un evento a esa hora, ¿crear igual?").
+3. [ ] **Calendario + tareas + Mi perfil** (detalle en PENDIENTES sección A):
+   - Eventos → Calendario, con tareas integradas en el timeline.
+   - Ajustes se une a Mi perfil (pestaña con el avatar).
+   - Mi Liga se reparte:
+     - Bandeja de Pivots en Calendario.
+     - Funciones de personas en la ficha.
+     - Inventario y Comunidad en Equipo.
+     - Ajustes de la liga en Mi perfil.
+   - Nav: Calendario · Equipo · Finanzas (si la liga cobra y hay permiso) · Mi perfil. Decidido por Victor.
+4. [ ] **Pivots y permisos**
+   - "Pivot" en vez de admin.
+   - Permisos por área, cada uno con explicación de qué habilita.
+   - En datos sensibles se indica qué Pivot puede verlos, para que en una emergencia se le pregunte.
+   - Elegir qué Pivots reciben cada aviso operativo (qué llevar, equipamiento, pagos).
+   - Roles por deporte (roller derby: jammer, blocker, bench, coach…; fútbol: delantero, arquero…) con "+" para roles propios.
+5. [ ] **Tesorería** (Finanzas):
+   - **Cuentas**: efectivo (caja, con quién la tiene), De Una y banco. Saldo inicial = fondos que la liga ya tenía antes de usar Pivot.
+   - **Cada ingreso dice a qué cuenta entró.** Al aprobar un pago, el Pivot confirma el medio real (la persona pudo declarar banco y pagar con De Una) y se puede corregir después.
+   - **Corregir es anular y volver a registrar.** Nada se borra.
+   - **Conciliación**: el Pivot ingresa el saldo real del banco o De Una y la app muestra la diferencia, para encontrar centavos o pagos sin registrar.
+   - **Filtros completos**: fechas libres, medio de pago, persona, categoría, tipo. Exportar a Excel o CSV.
+   - **Préstamos o uso de fondos por una persona**: deuda aparte de la cuota, con abonos. No cambia la cuota.
+   - **Fondos de viaje**:
+     - Registrar el viaje, el monto y la ventana de asistencia (ej. últimos 2 años o desde una fecha).
+     - Tramos por % de asistencia (ej. ≥90 % reparte 50 %, 35–89 % el otro 50 %, menos no recibe).
+     - Vista previa de quién recibe cuánto.
+   - **Historial de pagos**: los datos de pago se conservan con nombre y datos aunque la persona borre su cuenta o la eliminen (como un banco).
+   - **Excepción manual**: dice el mes ("No paga noviembre 2026") y queda en el historial de la persona.
+   - **Transparencia**: si se activa, el equipo ve totales y en qué se gasta. Nunca pagos, deudas ni mora de otras personas: eso solo lo ven Pivots con permiso de Finanzas.
+   - **Cálculos**: con pruebas automáticas que comparan totales.
+   - **Aviso legal** revisado por abogado (Pivot no administra fondos).
+6. [ ] **Planes de pago, cursos e inscripción rápida**:
+   - **Planes**:
+     - 1 a 12 meses o N clases.
+     - Se asignan a categorías y, si hace falta, a personas.
+   - **Cursos**:
+     - Fechas de inicio rígidas o flexibles, clases a mano o por CSV.
+     - Curso de principiantes (freshmeat) con **try out** al final para pasar a un equipo.
+   - **Inscripción rápida**:
+     - Con nombre y teléfono; un cupón por teléfono.
+     - Botón de WhatsApp para contactar a quien se inscribió.
+   - **Cupones manuales a una persona**: 10, 15, 25, 50 o 100 %, en la pantalla de precios y cupones.
+7. [ ] **Animaciones de inicio**: logo como pantalla nativa y Lottie de intro (esperando los JSON de Victor).
+8. [ ] **Base para varias ligas** (`liga_id`, aislamiento por liga), inicio con Google, revisión legal.
+9. [ ] **Crear tu liga** (asistente, PENDIENTES H):
+   - Sin nombre de liga: solo equipos, y cada equipo es una categoría.
+   - Una liga de un solo equipo puede agregar otro equipo (ej. principiantes) con reglas propias.
+   - Enlace de invitación para copiar y pegar en el grupo. El QR queda como extra para mostrar en persona.
+   - Con configuración rápida, aviso solo a Pivots cada tanto ofreciendo las funciones avanzadas ("Recordarme luego" / "No volver a mostrar").
+10. [ ] **Versión web de Flutter** cuando Android esté completa:
+    - La PWA vieja queda congelada.
+    - Los datos sensibles (emergencia) no estarán en la web.
+11. [ ] **Partidos entre dos ligas**. Después torneos, merch y cronogramas: no olvidar.
+
+## Antes de publicar en Google Play
+- Pasar Supabase, GitHub, OneSignal y Firebase a la cuenta de Google de Pivot.
+- Política de privacidad revisada por abogado.
+
+## Detalles acordados por pantalla (2026-11-12)
+- **Rectificaciones**:
+  - "¿Es correcto?" en la tarjeta y en el detalle.
+  - Mientras espera respuesta, el botón pasa a "Revisión pendiente" con ícono de información; al tocarlo, una hoja explica el estado y cuántos días quedan.
+  - Si se descarta a los 7 días, puede volver a pedirla.
+- **Qué llevar**:
+  - Pill junto al avatar de quien reservó, con lo que reservó.
+  - Aviso a los Pivots elegidos: "Equipamiento a llevar hoy: 3 patines y 2 protecciones". Al tocarlo abre el detalle del evento, con tallas.
+- **Inventario**:
+  - Fotos, etiqueta y quién lo tiene.
+  - Push a los Pivots a cargo a los 7 días con una persona.
+- **Categorías y puntos**: pantalla con ejemplos usando personas reales del equipo, para ver cómo afectaría cada cambio.
+- **Eliminar persona**: último recurso para casos serios. Conserva todos sus movimientos de dinero con nombre y datos.

@@ -34,6 +34,10 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Push `tarea_nueva` (`_avisarTareasNuevas`, equipo activo menos quien la creó; el cron mensual agrupa en un aviso).
 - Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
 
+### Flujo de trabajo (2026-11-12)
+- `HOJA_DE_RUTA.md` = fuente de verdad del trabajo pendiente (etapas aprobadas por Victor). Pedidos nuevos: documento de Claude "Pivot — Bandeja" (https://claude.ai/artifact/9XpNUwdyNTWiDhJQTP53fB). Tarea programada "Pivot — trabajar la Bandeja" cada 2 días a las 2:52 (Ecuador): lee MANIFEST, hoja de ruta y Bandeja, trabaja, publica y deja dudas en la Bandeja.
+- Decidido: "Pivot"/"Pivots" reemplaza a admin/administradorxs en toda la app (etapa 4).
+
 ### Próxima ronda
 - Lista de cambios pedidos el 2026-11-08 en `PENDIENTES_2026-11-12.md` (se trabaja desde el jueves 2026-11-12, 17:00). Al terminarla, borrar ese archivo y pasar lo hecho a este MANIFEST.
 
