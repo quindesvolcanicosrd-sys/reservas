@@ -7,6 +7,7 @@ import '../core/tema.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
+import '../eventos/widgets_comunes.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
 import 'excepciones_panel.dart';
@@ -49,7 +50,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ajustes', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        title: Text('Mi perfil', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
         listenable: Listenable.merge([sesion, eventos]),
@@ -64,7 +65,12 @@ class _AjustesScreenState extends State<AjustesScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
+              // Mi perfil (Victor, 2026-11-12): arriba quién eres y tus datos
+              // de la ficha; después pagos y datos personales; al final, la app.
+              _CabeceraPerfil(sesion: sesion),
+              if (conFicha) MiPerfilEditable(sesion: sesion),
               GrupoAjustes(
+                titulo: 'PAGOS Y EQUIPAMIENTO',
                 filas: [
                   if (pagos)
                     FilaAjuste(
@@ -95,6 +101,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
               if (conFicha)
                 GrupoAjustes(
+                  titulo: 'DATOS PERSONALES',
                   filas: [
                     FilaAjuste(
                       icono: Icons.emergency_rounded,
@@ -115,6 +122,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                   ],
                 ),
               GrupoAjustes(
+                titulo: 'APLICACIÓN',
                 filas: [
                   if (conFicha)
                     FilaAjuste(
@@ -146,6 +154,55 @@ class _AjustesScreenState extends State<AjustesScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Foto, nombre y número, con acceso a tu ficha (estadísticas).
+class _CabeceraPerfil extends StatelessWidget {
+  const _CabeceraPerfil({required this.sesion});
+  final Sesion sesion;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final numero = '${sesion.datos['numeroDerby'] ?? ''}'.trim();
+    final pron = '${sesion.datos['pronombres'] ?? ''}'.trim();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 20),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => cambiarFoto(context, sesion),
+            child: HeroAvatar(
+              tag: 'avatar-${sesion.nombre}',
+              child: AvatarPersona(nombre: sesion.nombreMostrar, foto: sesion.fotoPerfil, tamano: 72),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sesion.nombreMostrar,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: p.texto),
+                ),
+                if (numero.isNotEmpty || pron.isNotEmpty)
+                  Text([if (numero.isNotEmpty) '#$numero', if (pron.isNotEmpty) pron].join(' · '), style: TextStyle(fontSize: 14, color: p.textoSecundario)),
+                const SizedBox(height: 8),
+                if (sesion.datos.isNotEmpty)
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+                    onPressed: () => PersonaScreen.abrir(context, EquipoRepo.de(sesion), sesion.nombre ?? ''),
+                    icon: const Icon(Icons.insights_rounded, size: 18),
+                    label: const Text('Ver mi ficha'),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

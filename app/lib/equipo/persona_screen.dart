@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../ajustes/ajustes_screen.dart';
-import '../ajustes/datos_screens.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
+import '../core/navegacion.dart';
 import 'desglose_screen.dart';
 import 'equipo_repo.dart';
 import '../core/cargando.dart';
@@ -150,7 +150,17 @@ class _Ficha extends StatelessWidget {
             const SizedBox(height: 18),
             _Estadisticas(repo: repo, p: p),
             // Mi perfil vive en tu ficha (como en la web): lo que ve el equipo.
-            if (yo && repo.sesion.datos.isNotEmpty) ...[const SizedBox(height: 24), MiPerfilEditable(sesion: repo.sesion)],
+            // Tus datos se editan en Mi perfil (Victor, 2026-11-12).
+            if (yo && repo.sesion.datos.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Center(
+                child: FilledButton.tonalIcon(
+                  onPressed: () => Navegacion.ir.value = Pestana.perfil,
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text('Editar mi perfil'),
+                ),
+              ),
+            ],
             if (p.fechaIngreso != null) ...[
               const SizedBox(height: 4),
               Text(

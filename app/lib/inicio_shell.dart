@@ -14,8 +14,8 @@ import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
 import 'sesion/sesion.dart';
-import 'tareas/tareas_repo.dart';
-import 'tareas/tareas_screen.dart';
+import 'core/navegacion.dart';
+import 'eventos/widgets_comunes.dart';
 
 /// Estructura principal con la barra de navegación inferior. En esta
 /// primera versión solo Eventos es nativo; el resto abre la web mientras se
@@ -37,6 +37,7 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    Navegacion.ir.addListener(_irAPestana);
     // Datos del perfil pendientes: al entrar, sin tapar el tour de primera vez.
     Future.delayed(const Duration(milliseconds: 2500), _recordarDatos);
   }
@@ -44,12 +45,28 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
   Future<void> _recordarDatos() async {
     if (!mounted || Tour.activo) return;
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('tour.eventos.visto') != true || !mounted) return;
+    if (prefs.getBool('tour.calendario.visto') != true || !mounted) return;
     await DatosPendientes.recordarSiCorresponde(context, widget.sesion, abrir: (clave) => abrirPendiente(context, widget.sesion, clave));
+  }
+
+  /// Otra pantalla pidió abrir una pestaña (ej. Mi perfil desde tu ficha).
+  void _irAPestana() {
+    final p = Navegacion.ir.value;
+    if (p == null || !mounted) return;
+    Navegacion.ir.value = null;
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    setState(
+      () => _indice = switch (p) {
+        Pestana.calendario => 0,
+        Pestana.equipo => 1,
+        Pestana.perfil => widget.sesion.esAdmin ? 3 : 2,
+      },
+    );
   }
 
   @override
   void dispose() {
+    Navegacion.ir.removeListener(_irAPestana);
     WidgetsBinding.instance.removeObserver(this);
     _irAHoy.dispose();
     super.dispose();
@@ -73,8 +90,8 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         // en Eventos lleva a hoy.
         NavigationDestination(
           icon: _IconoHoy(dia: Fechas.hoy().day),
-          label: 'Eventos',
-          tooltip: 'Eventos · tócalo de nuevo para ir a hoy',
+          label: 'Calendario',
+          tooltip: 'Calendario · tócalo de nuevo para ir a hoy',
         ),
         TimelineScreen(repo: widget.repo, irAHoy: _irAHoy),
       ),
@@ -82,16 +99,23 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         const NavigationDestination(icon: Icon(Icons.group_outlined), selectedIcon: Icon(Icons.group), label: 'Equipo'),
         EquipoScreen(repo: EquipoRepo.de(widget.sesion)),
       ),
-      (const NavigationDestination(icon: Icon(Icons.checklist_rounded), label: 'Tareas'), TareasScreen(repo: TareasRepo.de(widget.sesion))),
-      (
-        const NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Ajustes'),
-        AjustesScreen(sesion: widget.sesion, eventos: widget.repo),
-      ),
+      // Mi Liga sigue en la web hasta repartir sus funciones (HOJA_DE_RUTA etapa 3).
       if (widget.sesion.esAdmin)
         (
           const NavigationDestination(icon: Icon(Icons.shield_outlined), selectedIcon: Icon(Icons.shield), label: 'Mi Liga'),
           const _EnLaWeb(titulo: 'Mi Liga', ruta: '/'),
         ),
+      // Mi perfil (Victor, 2026-11-12): reemplaza a Ajustes, con tu avatar.
+      (
+        NavigationDestination(
+          icon: ListenableBuilder(
+            listenable: widget.sesion,
+            builder: (context, _) => AvatarPersona(nombre: widget.sesion.nombreMostrar, foto: widget.sesion.fotoPerfil, tamano: 26),
+          ),
+          label: 'Mi perfil',
+        ),
+        AjustesScreen(sesion: widget.sesion, eventos: widget.repo),
+      ),
     ];
     final indice = _indice.clamp(0, destinos.length - 1);
     ClavesTour.destinos = destinos.length;

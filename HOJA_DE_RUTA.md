@@ -29,15 +29,24 @@ Reglas de siempre:
    - [x] Tomar lista: arriba quienes vinieron ese día de la semana en 3 de las últimas 4 semanas (sale de sugeridos si falta 2 semanas seguidas).
    - [x] Notificaciones en Ajustes abre al instante (configuración guardada).
    - [x] Eventos que se cruzan: permitidos en todo el calendario, con confirmación al crear ("Ya hay un evento a esa hora, ¿crear igual?").
-3. [ ] **Calendario + tareas + Mi perfil** (detalle en PENDIENTES sección A):
-   - Eventos → Calendario, con tareas integradas en el timeline.
-   - Ajustes se une a Mi perfil (pestaña con el avatar).
-   - Mi Liga se reparte:
-     - Bandeja de Pivots en Calendario.
-     - Funciones de personas en la ficha.
-     - Inventario y Comunidad en Equipo.
-     - Ajustes de la liga en Mi perfil.
-   - Nav: Calendario · Equipo · Finanzas (si la liga cobra y hay permiso) · Mi perfil. Decidido por Victor.
+3. [ ] **Calendario + tareas + Mi perfil** (detalle en PENDIENTES sección A)
+   - [x] Eventos → Calendario con tareas integradas (2026-11-12):
+     - Mis tareas en su fecha, con punto cuadrado.
+     - Atrasadas arriba en rojo.
+     - Tareas de otras personas agrupadas por día.
+     - "Para tomar" (línea en Todo, franja en Tareas).
+     - Ícono de tareas con número junto a la lupa.
+     - Filtros Todo · Eventos · Tareas.
+     - Nueva tarea / Proponer tarea en el "+".
+     - Tour actualizado (`tour.calendario.visto`).
+   - [x] Ajustes → Mi perfil (pestaña con el avatar): cabecera con foto y "Ver mi ficha", Mi ficha editable, pagos y equipamiento, datos personales, aplicación. En Equipo, tu ficha tiene "Editar mi perfil" (lleva a la pestaña).
+   - [x] Pestaña Tareas eliminada (el tablero se abre desde Calendario).
+   - [ ] Mi Liga se reparte (sigue en la web por ahora, pestaña solo para Pivots):
+     - [ ] Bandeja de Pivots en Calendario: pagos y reservas, rectificaciones, excepciones, tareas por validar, cambios de categoría.
+     - [ ] Funciones de personas en la ficha: pago manual, "No paga <mes>", permisos.
+     - [ ] Inventario y Comunidad en Equipo.
+     - [ ] Ajustes de la liga en Mi perfil.
+   - [ ] Nav final: Calendario · Equipo · Finanzas (si la liga cobra y hay permiso) · Mi perfil.
 4. [ ] **Pivots y permisos**
    - "Pivot" en vez de admin.
    - Permisos por área, cada uno con explicación de qué habilita.

@@ -34,6 +34,15 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Push `tarea_nueva` (`_avisarTareasNuevas`, equipo activo menos quien la creó; el cron mensual agrupa en un aviso).
 - Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
 
+### Etapa 3 (parte 1): Calendario + tareas + Mi perfil (2026-11-12)
+- Nav: Calendario · Equipo · Mi Liga (Pivots, web) · Mi perfil (ícono = tu avatar). Sin pestaña Tareas. `core/navegacion.dart` (`Navegacion.ir`) permite que otra pantalla cambie de pestaña (ej. "Editar mi perfil" desde tu ficha).
+- Timeline (`eventos/timeline_screen.dart`):
+  - `_Item.mia` (mi tarea en su fecha, `_TarjetaMiTarea`) y `_Item.grupo` (tareas de otras personas por día, `_GrupoTareas` desplegable). Ordenan con `hora` = 23:59 (vencen al final del día) y llevan punto cuadrado.
+  - `_cabeceraTareas`: chips Todo · Eventos · Tareas (`_Vista`), atrasadas (hasta 2, rojas) y "Para tomar" (línea en Todo, `_FranjaParaTomar` en Tareas). Ícono de tareas con número junto a la lupa → `TareasScreen`.
+  - El "+" suma Nueva tarea (Pivots) / Proponer tarea. Usa `TareasRepo.de(sesion)`.
+  - Tour con paso de tareas; preferencia `tour.calendario.visto`.
+- Mi perfil (`ajustes/ajustes_screen.dart`): `_CabeceraPerfil` (foto que se cambia al tocar, nombre, número, "Ver mi ficha") + `MiPerfilEditable` ("MI FICHA") + grupos PAGOS Y EQUIPAMIENTO, DATOS PERSONALES, APLICACIÓN. La ficha propia en Equipo ya no edita: botón "Editar mi perfil".
+
 ### Etapa 2: bugs (2026-11-12)
 - Push 1 h antes: sin nombres ("X personas asistirán hoy."), solo cuenta "Asistiré" de personas que siguen en el equipo (`_soloEnEquipo`; también en el aviso diario). Pivots: "Cancelar" solo con menos de 5 personas; si no, "No asistiré" a quien va. Resumen de equipamiento "Equipamiento a llevar hoy: N patines y M protecciones".
 - App: "No asistiré" desde una notificación abre el evento con confirmación (`DetalleScreen.abrirNoAsistire`); "Asistiré" sigue en segundo plano.

@@ -22,6 +22,12 @@ import 'modelos.dart';
 import 'tomar_asistencia_screen.dart';
 import 'widgets_comunes.dart';
 import '../core/cargando.dart';
+import '../ajustes/componentes.dart';
+import '../tareas/crear_tarea_screen.dart';
+import '../tareas/tarea_screen.dart';
+import '../tareas/tareas_modelos.dart';
+import '../tareas/tareas_repo.dart';
+import '../tareas/tareas_screen.dart' hide PilaAvatares;
 
 /// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
 /// - Barra: "Noviembre ⌄" despliega el calendario del mes hacia abajo (como
@@ -46,14 +52,28 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _Item {
-  _Item.evento(this.evento) : cumple = null, temporada = null;
-  _Item.cumple(this.cumple) : evento = null, temporada = null;
-  _Item.temporada(this.temporada) : evento = null, cumple = null;
+  _Item.evento(this.evento) : cumple = null, temporada = null, mia = null, grupo = null, diaGrupo = null;
+  _Item.cumple(this.cumple) : evento = null, temporada = null, mia = null, grupo = null, diaGrupo = null;
+  _Item.temporada(this.temporada) : evento = null, cumple = null, mia = null, grupo = null, diaGrupo = null;
+  // Calendario + tareas (Victor, 2026-11-12): mis tareas en su fecha y las
+  // tomadas por otras personas agrupadas por día.
+  _Item.mia(this.mia) : evento = null, cumple = null, temporada = null, grupo = null, diaGrupo = null;
+  _Item.grupo(this.grupo, this.diaGrupo) : evento = null, cumple = null, temporada = null, mia = null;
   final Temporada? temporada;
   final Evento? evento;
   final Cumple? cumple;
-  DateTime get fecha => evento?.fecha ?? cumple?.fecha ?? temporada!.desde;
+  final MiTarea? mia;
+  final List<Tarea>? grupo;
+  final DateTime? diaGrupo;
+  bool get esTarea => mia != null || grupo != null;
+  DateTime get fecha => evento?.fecha ?? cumple?.fecha ?? mia?.vence ?? diaGrupo ?? temporada!.desde;
+
+  /// Hora para ordenar dentro del día: las tareas vencen al final del día.
+  String get hora => evento?.horaInicio ?? (esTarea ? '23:59' : '00:00');
 }
+
+/// Qué muestra la línea de tiempo.
+enum _Vista { todo, eventos, tareas }
 
 /// Una fila del timeline: fecha (solo en la primera del día), punto y contenido.
 class _Fila {
@@ -71,6 +91,12 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   final _posiciones = ItemPositionsListener.create();
   final _textoBusqueda = TextEditingController();
   final _focoBusqueda = FocusNode();
+
+  late final TareasRepo _tareas = TareasRepo.de(repo.sesion);
+  _Vista _vista = _Vista.todo;
+  void _alCambiarTareas() {
+    if (mounted) setState(() => _claveFilas = null);
+  }
 
   bool _buscando = false;
   String _consulta = '';
@@ -108,6 +134,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   // Tour guiado de primera vez (como el de la web, `_EV_TOUR_PASOS_*`).
   final _kMes = GlobalKey(debugLabel: 'tour-mes');
   final _kBuscar = GlobalKey(debugLabel: 'tour-buscar');
+  final _kTareas = GlobalKey(debugLabel: 'tour-tareas');
   final _kMas = GlobalKey(debugLabel: 'tour-mas');
   final _kTarjeta = GlobalKey(debugLabel: 'tour-tarjeta');
   final _kLista = GlobalKey(debugLabel: 'tour-lista');
@@ -125,6 +152,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     // Al cambiar cada minuto (y al volver a la app): mueve la línea de
     // "ahora", el resaltado de "En curso" y habilita "Tomar asistencia".
     RelojMinuto.instancia.addListener(_alPasarMinuto);
+    _tareas.addListener(_alCambiarTareas);
+    _tareas.cargar(forzar: _tareas.cargado);
   }
 
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
@@ -172,6 +201,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     _posiciones.itemPositions.removeListener(_alDesplazar);
     widget.irAHoy?.removeListener(_irAHoy);
     RelojMinuto.instancia.removeListener(_alPasarMinuto);
+    _tareas.removeListener(_alCambiarTareas);
     _calCtrl.dispose();
     _tituloMes.dispose();
     _textoBusqueda.dispose();
@@ -206,6 +236,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final q = _consulta.trim().toLowerCase();
     if (q.isEmpty) return true;
     final ev = it.evento;
+    if (it.esTarea) {
+      final t = it.mia?.tarea.titulo ?? it.grupo!.map((x) => x.titulo).join(' ');
+      return q.split(RegExp(r'\s+')).every((palabra) => 'tarea $t'.toLowerCase().contains(palabra));
+    }
     final texto = ev != null
         ? '${ev.tipo} ${ev.lugar} ${ev.descripcion} ${textoEstadoEvento(ev)} ${Fechas.encabezado(ev.fecha)} ${Fechas.mes(ev.fecha)}'
         : it.cumple != null
@@ -218,6 +252,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool _pasaFiltros(_Item it) {
     if (!_coincideTexto(it)) return false;
+    if (it.esTarea) return _filtroLugar == null && _filtroTipo == null;
     final ev = it.evento;
     if (_filtroLugar != null && ev?.lugar != _filtroLugar) return false;
     if (_filtroTipo != null) {
@@ -231,11 +266,34 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   bool get _hayFiltros => _consulta.trim().isNotEmpty || _filtroLugar != null || _filtroTipo != null;
 
   List<_Item> _todos() => [
-    for (final e in repo.eventos) _Item.evento(e),
-    for (final c in repo.cumples) _Item.cumple(c),
-    for (final a in repo.aniversarios) _Item.cumple(a),
-    for (final t in repo.temporadas) _Item.temporada(t),
+    if (_vista != _Vista.tareas) ...[
+      for (final e in repo.eventos) _Item.evento(e),
+      for (final c in repo.cumples) _Item.cumple(c),
+      for (final a in repo.aniversarios) _Item.cumple(a),
+      for (final t in repo.temporadas) _Item.temporada(t),
+    ],
+    if (_vista != _Vista.eventos) ..._itemsTareas(),
   ];
+
+  /// Mis tareas en su fecha (las atrasadas van arriba, fuera de la lista) y
+  /// las tomadas por otras personas, agrupadas por día de vencimiento.
+  List<_Item> _itemsTareas() {
+    final items = <_Item>[];
+    for (final m in _tareas.mias) {
+      if (m.vence == null || _atrasada(m)) continue;
+      items.add(_Item.mia(m));
+    }
+    final porDia = <DateTime, List<Tarea>>{};
+    for (final t in _tareas.tablero) {
+      final v = t.vence;
+      if (v == null || t.personas.isEmpty || t.tiene(_tareas.yo)) continue;
+      porDia.putIfAbsent(Fechas.soloDia(v), () => []).add(t);
+    }
+    porDia.forEach((d, l) => items.add(_Item.grupo(l, d)));
+    return items;
+  }
+
+  static bool _atrasada(MiTarea m) => !m.enRevision && (m.dias ?? 0) < 0;
 
   /// Opciones de los filtros: solo las que existen en lo que ya coincide con
   /// el texto buscado (y con el otro filtro), igual que la web.
@@ -285,12 +343,12 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       final lunes = Fechas.lunesDe(dia);
       if (lunesPrevio != null && lunes != lunesPrevio) filas.add(_Fila(dia: dia, semana: lunes));
       lunesPrevio = lunes;
-      final items = porDia[dia]!..sort((a, b) => (a.evento?.horaInicio ?? '00:00').compareTo(b.evento?.horaInicio ?? '00:00'));
+      final items = porDia[dia]!..sort((a, b) => a.hora.compareTo(b.hora));
       final esHoy = dia == hoy && !_hayFiltros;
       var primera = true;
       var ahoraPuesto = !esHoy;
       for (final it in items) {
-        if (!ahoraPuesto && (it.evento?.horaInicio ?? '00:00').compareTo(ahora) > 0) {
+        if (!ahoraPuesto && it.hora.compareTo(ahora) > 0) {
           filas.add(_Fila(dia: dia, mostrarFecha: primera, ahora: true));
           primera = false;
           ahoraPuesto = true;
@@ -299,7 +357,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         primera = false;
       }
       if (!ahoraPuesto) {
-        final sinMas = items.every((i) => i.evento == null || i.evento!.yaEmpezo);
+        final sinMas = items.every((i) => i.esTarea || i.evento == null || i.evento!.yaEmpezo);
         filas.add(_Fila(dia: dia, mostrarFecha: primera, ahora: true, vacioHoy: sinMas));
       }
     }
@@ -466,6 +524,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           identityHashCode(repo.eventos),
           identityHashCode(repo.cumples),
           repo.eventos.length,
+          Object.hash(identityHashCode(_tareas.mias), identityHashCode(_tareas.tablero), _vista),
           _consulta,
           _filtroLugar,
           _filtroTipo,
@@ -519,6 +578,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                     ),
                     child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
                   ),
+                  if (!_buscando) _cabeceraTareas(context),
                   // Calendario sobre el timeline. Para que abrir/cerrar (también
                   // con el dedo) sea fluido, nada cambia de tamaño mientras se
                   // mueve: el panel baja desde la barra y el timeline se corre
@@ -632,6 +692,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           ),
           const Spacer(),
+          // Tablero de tareas, con el número de tareas para tomar.
+          IconButton(
+            key: _kTareas,
+            tooltip: 'Tareas',
+            icon: Badge(
+              isLabelVisible: _tareas.disponibles.isNotEmpty,
+              backgroundColor: p.marca,
+              label: Text('${_tareas.disponibles.length}'),
+              child: const Icon(Icons.checklist_rounded),
+            ),
+            onPressed: _abrirTablero,
+          ),
           IconButton(
             key: _kBuscar,
             tooltip: _hayFiltros ? 'Buscar (hay filtros activos)' : 'Buscar',
@@ -914,7 +986,14 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       );
     } else {
       punto = _punto(p, f.item!);
-      contenido = f.item!.temporada != null
+      contenido = f.item!.mia != null
+          ? _TarjetaMiTarea(
+              mia: f.item!.mia!,
+              alAbrir: () => _abrirTarea(f.item!.mia!.tarea, mia: f.item!.mia),
+            )
+          : f.item!.grupo != null
+          ? _GrupoTareas(tareas: f.item!.grupo!, alAbrir: (t) => _abrirTarea(t))
+          : f.item!.temporada != null
           ? _TarjetaDescanso(temporada: f.item!.temporada!, repo: repo)
           : f.item!.cumple != null
           ? _TarjetaCumple(cumple: f.item!.cumple!)
@@ -949,6 +1028,125 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool get _esAdmin => repo.sesion.esAdmin && repo.sesion.adminToken != null;
 
+  void _abrirTarea(Tarea t, {MiTarea? mia}) => SubAjustes.abrir(context, TareaScreen(repo: _tareas, tarea: t, mia: mia));
+
+  void _abrirTablero() {
+    _cerrarCalendario();
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => TareasScreen(repo: _tareas)));
+  }
+
+  /// Bajo la barra: Todo · Eventos · Tareas, las tareas atrasadas (fijas,
+  /// en rojo) y el acceso a las que están para tomar.
+  Widget _cabeceraTareas(BuildContext context) {
+    final p = context.pivot;
+    final atrasadas = _vista == _Vista.eventos ? const <MiTarea>[] : _tareas.mias.where(_atrasada).toList();
+    final libres = _tareas.disponibles;
+    final maxPts = libres.fold<int>(0, (a, t) => t.puntos > a ? t.puntos : a);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              for (final (v, t) in const [(_Vista.todo, 'Todo'), (_Vista.eventos, 'Eventos'), (_Vista.tareas, 'Tareas')])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(t),
+                    selected: _vista == v,
+                    visualDensity: VisualDensity.compact,
+                    onSelected: (_) => setState(() {
+                      _vista = v;
+                      _claveFilas = null;
+                    }),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final m in atrasadas.take(2))
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  child: Material(
+                    color: p.suave,
+                    borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                      onTap: () => _abrirTarea(m.tarea, mia: m),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, size: 20, color: p.marcaTexto),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '${m.tarea.titulo} · ${textoVence(m.vence)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.sobreSuave),
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded, color: p.sobreSuave),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (atrasadas.length > 2)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 16, 0),
+                  child: Text('y ${atrasadas.length - 2} atrasadas más', style: TextStyle(fontSize: 12.5, color: p.marcaTexto)),
+                ),
+              if (_vista != _Vista.eventos && libres.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
+                  child: _vista == _Vista.tareas
+                      ? _FranjaParaTomar(tareas: libres, alAbrir: (t) => _abrirTarea(t), alVerTodas: _abrirTablero)
+                      : Material(
+                          color: p.tarjeta,
+                          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                            onTap: _abrirTablero,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add_task_rounded, size: 20, color: p.marcaTexto),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Para tomar · ${libres.length == 1 ? '1 tarea' : '${libres.length} tareas'}${maxPts > 0 ? ' · hasta +$maxPts' : ''}',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.texto),
+                                    ),
+                                  ),
+                                  Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
   void _reservar(TipoReserva t) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -965,6 +1163,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       'Reserva por clase': 'reservar tus clases',
       'Reserva por mes': 'pagar tu mensualidad',
       'Nuevo evento': 'crear eventos',
+      'Nueva tarea': 'crear tareas',
+      'Proponer tarea': 'proponer tareas',
       'Asistencia anticipada': 'marcar tu asistencia a varios entrenamientos de una vez',
     };
     final nombres = [for (final a in _acciones) verbos[a.texto] ?? a.texto.toLowerCase()];
@@ -974,17 +1174,22 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final textoMas = 'Toca aquí para $lista.';
     await Tour.mostrarSiCorresponde(
       context,
-      preferencia: 'tour.eventos.visto',
+      preferencia: 'tour.calendario.visto',
       pasos: [
         PasoTour(clave: _kMas, titulo: tituloMas, texto: textoMas),
         PasoTour(clave: _kMes, titulo: 'Navega por mes', texto: 'Toca el mes o desliza hacia abajo para abrir el calendario y saltar a cualquier fecha.'),
-        PasoTour(clave: _kBuscar, titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares, o filtra por lugar y tipo.'),
+        PasoTour(
+          clave: _kTareas,
+          titulo: 'Tareas del equipo',
+          texto: 'Aquí ves las tareas para tomar. Las tuyas aparecen en el calendario el día que vencen, y las atrasadas, arriba en rojo.',
+        ),
+        PasoTour(clave: _kBuscar, titulo: 'Busca y filtra', texto: 'Busca eventos, tareas, cumpleaños o lugares, o filtra por lugar y tipo.'),
         PasoTour(clave: _kTarjeta, titulo: 'Detalle del evento', texto: 'Toca un evento para ver quiénes van, cambiar tu respuesta y ver cómo llegar.'),
         PasoTour(
           clave: ClavesTour.navegacion,
           ajuste: ClavesTour.primeraPestana,
           titulo: 'Vuelve a hoy',
-          texto: 'El ícono de Eventos muestra la fecha de hoy. Tócalo de nuevo estando aquí para volver a hoy.',
+          texto: 'El ícono de Calendario muestra la fecha de hoy. Tócalo de nuevo estando aquí para volver a hoy.',
         ),
         // Se resalta la parte de arriba de la línea de tiempo (toda la lista
         // no dejaría lugar para la tarjeta y el recorte no se notaría).
@@ -992,7 +1197,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           clave: _kLista,
           ajuste: (r) => Rect.fromLTWH(r.left + 10, r.top + 6, r.width - 20, r.height * 0.5),
           titulo: 'Explora la línea de tiempo',
-          texto: 'Desliza para ver los eventos pasados y los próximos: programados, cancelados, cumpleaños y temporadas de descanso.',
+          texto: 'Desliza para ver lo pasado y lo próximo: eventos, tus tareas, cumpleaños y temporadas de descanso. Arriba eliges ver todo, solo eventos o solo tareas.',
         ),
       ],
     );
@@ -1007,6 +1212,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           ? _Accion(Icons.event_available_outlined, 'Reserva por clase', () => _reservar(t))
           : _Accion(Icons.calendar_month_outlined, 'Reserva por mes', () => _reservar(t)),
     if (_esAdmin) _Accion(Icons.edit_calendar_outlined, 'Nuevo evento', _nuevoEvento),
+    _esAdmin
+        ? _Accion(Icons.add_task_rounded, 'Nueva tarea', () => CrearTareaScreen.abrir(context, repo: _tareas, modo: ModoTarea.crear))
+        : _Accion(Icons.add_task_rounded, 'Proponer tarea', () => CrearTareaScreen.abrir(context, repo: _tareas, modo: ModoTarea.proponer)),
     if (repo.anticipada.disponible)
       _Accion(
         Symbols.event_upcoming_rounded,
@@ -1127,6 +1335,20 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       border: Border.all(color: borde, width: ancho),
     );
     final ev = it.evento;
+    if (it.esTarea) {
+      // Las tareas llevan un punto cuadrado: se distinguen de un vistazo.
+      final mia = it.mia != null;
+      return Container(
+        width: 12,
+        height: 12,
+        margin: const EdgeInsets.all(1),
+        decoration: BoxDecoration(
+          color: mia ? p.marca : p.fondo,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: mia ? p.fondo : p.lineaTimeline, width: 2),
+        ),
+      );
+    }
     final Decoration d;
     if (ev == null) {
       d = deco(p.fondo, p.lineaTimeline, 2.5);
@@ -1696,6 +1918,230 @@ class _MenuAccionesState extends State<_MenuAcciones> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Mi tarea en su fecha de vencimiento: más compacta que un evento, con el
+/// ícono en degradado del área y los puntos.
+class _TarjetaMiTarea extends StatelessWidget {
+  const _TarjetaMiTarea({required this.mia, required this.alAbrir});
+  final MiTarea mia;
+  final VoidCallback alAbrir;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final t = mia.tarea;
+    final (degradado, sobre) = PivotPaleta.seccion(t.areaInfo.seccion, Theme.of(context).brightness);
+    return Material(
+      color: p.tarjeta,
+      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        onTap: alAbrir,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              HeroOpcional(
+                tag: 'tarea-${t.id}',
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(PivotRadios.chip + 2)),
+                  child: Icon(mia.enRevision ? Icons.hourglass_top_rounded : t.areaInfo.icono, size: 18, color: sobre),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tu tarea',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.marcaTexto),
+                    ),
+                    Text(
+                      t.titulo,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                    ),
+                    if (mia.enRevision || mia.notaRechazo.isNotEmpty)
+                      Text(mia.enRevision ? 'En revisión' : 'Con cambios pedidos', style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              PillPuntos(puntos: t.puntos),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tareas que tomaron otras personas y vencen ese día: una línea que se
+/// despliega (así se ve que el equipo trabaja sin tapar los eventos).
+class _GrupoTareas extends StatefulWidget {
+  const _GrupoTareas({required this.tareas, required this.alAbrir});
+  final List<Tarea> tareas;
+  final ValueChanged<Tarea> alAbrir;
+
+  @override
+  State<_GrupoTareas> createState() => _GrupoTareasState();
+}
+
+class _GrupoTareasState extends State<_GrupoTareas> {
+  bool _abierto = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final n = widget.tareas.length;
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(PivotRadios.chip),
+            onTap: () => setState(() => _abierto = !_abierto),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      n == 1 ? '1 tarea del equipo vence este día' : '$n tareas del equipo vencen este día',
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: p.textoSecundario),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _abierto ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.chevron_right_rounded, size: 20, color: p.textoSecundario),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: !_abierto
+                ? const SizedBox(width: double.infinity)
+                : Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+                    child: Column(
+                      children: [for (final t in widget.tareas) FilaTarea(tarea: t, hero: false, alTocar: () => widget.alAbrir(t))],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Franja deslizable con las tareas para tomar (vista Tareas). La última
+/// tarjeta abre el tablero completo.
+class _FranjaParaTomar extends StatelessWidget {
+  const _FranjaParaTomar({required this.tareas, required this.alAbrir, required this.alVerTodas});
+  final List<Tarea> tareas;
+  final ValueChanged<Tarea> alAbrir;
+  final VoidCallback alVerTodas;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final maxPts = tareas.fold<int>(0, (a, t) => t.puntos > a ? t.puntos : a);
+    final orden = [...tareas]..sort((a, b) => b.puntos.compareTo(a.puntos));
+    Widget tarjeta({required Widget child, required VoidCallback alTocar, Color? color}) => SizedBox(
+      width: 150,
+      child: Material(
+        color: color ?? p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: alTocar,
+          child: Padding(padding: const EdgeInsets.all(12), child: child),
+        ),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+          child: Text(
+            'Para tomar · ${tareas.length == 1 ? '1 tarea' : '${tareas.length} tareas'}${maxPts > 0 ? ' · hasta +$maxPts' : ''}',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: p.textoSecundario),
+          ),
+        ),
+        SizedBox(
+          height: 112,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              for (final t in orden.take(8)) ...[
+                tarjeta(
+                  alTocar: () => alAbrir(t),
+                  child: Builder(
+                    builder: (context) {
+                      final (degradado, sobre) = PivotPaleta.seccion(t.areaInfo.seccion, Theme.of(context).brightness);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(PivotRadios.chip)),
+                                child: Icon(t.areaInfo.icono, size: 16, color: sobre),
+                              ),
+                              const Spacer(),
+                              PillPuntos(puntos: t.puntos),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            t.titulo,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: p.texto),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              tarjeta(
+                alTocar: alVerTodas,
+                color: p.suave,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.view_list_rounded, color: p.sobreSuave),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Ver todas',
+                      style: TextStyle(fontWeight: FontWeight.w700, color: p.sobreSuave),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

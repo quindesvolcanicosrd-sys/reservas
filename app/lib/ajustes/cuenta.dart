@@ -89,7 +89,7 @@ class CuentaScreen extends StatelessWidget {
                   alTocar: () async {
                     final m = ScaffoldMessenger.of(context);
                     final prefs = await SharedPreferences.getInstance();
-                    await prefs.remove('tour.eventos.visto');
+                    await prefs.remove('tour.calendario.visto');
                     m.showSnackBar(const SnackBar(content: Text('Tours guiados reestablecidos')));
                   },
                 ),

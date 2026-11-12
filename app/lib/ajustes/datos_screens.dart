@@ -28,7 +28,7 @@ class MiPerfilEditable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             GrupoAjustes(
-              titulo: 'MI PERFIL',
+              titulo: 'MI FICHA',
               filas: [
                 FilaAjuste(
                   icono: Icons.add_a_photo_outlined,
