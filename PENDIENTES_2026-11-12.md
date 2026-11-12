@@ -4,7 +4,7 @@ Antes de empezar: leer MANIFEST.md. Al terminar: actualizar MANIFEST.md y CHANGE
 Reglas de siempre: español neutro (sin voseo), sin pronombres femeninos, "administradorxs" en textos de la app, colores solo en `tema.dart` (`PivotPaleta` / `PivotRadios`), transiciones suaves (fade/slide).
 
 ## Lo primero el jueves (Victor: urgente)
-- [ ] **Prioridad 1 de la auditoría (sección G)**:
+- [x] **Prioridad 1 de la auditoría (sección G)** (hecho 2026-11-12, migración 20261112170000; resultados idénticos a los de antes, verificados contra todos los datos):
   - Dejar de traer `log_asistencias` completa en `_ultimaAsistenciaPorPersonaTodas`, `_ultimaAsistenciaRealPorUsuario` y la racha.
   - Añadir los índices.
   - Probar que "Asistiré" se guarda y se ve igual que antes (web y app).

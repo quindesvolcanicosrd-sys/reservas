@@ -266,48 +266,21 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
 
 async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Record<string, any[]>> {
   if (idsEvento.length === 0) return {};
-  const idsSet = new Set(idsEvento);
-  const { data: todasFilas, error } = await supabase.from('log_asistencias')
-    .select('id_evento, nombre_usuario, origen, estado, marca_temporal')
-    .limit(100000);
-  if (error) console.error('[asist] error query:', JSON.stringify(error));
-  const data = (todasFilas ?? []).filter((f: any) => idsSet.has(f.id_evento));
-  const ultimaPorClave: Record<string, any> = {};
-  // Bug real corregido (pedido explícito de Victor, "asistencia marcada por
-  // el admin se pierde en eventos recientes"): la prioridad de `origen`
-  // agregada el 2026-09-05 (commit 4309d1d, "elección explícita del usuario
-  // gana sobre una regla automática anticipada") solo pensaba en el choque
-  // ENTRE LOS 2 SABORES DE RSVP pre-evento ('Usuario' vs
-  // 'AsistenciaAnticipada') -- pero la comparación real era
-  // `prioridad(o) = o === 'Usuario' ? 1 : 0`, así que 'Admin' (asistencia
-  // REAL tomada post-evento por un admin, un concepto completamente
-  // distinto y siempre más autoritativo que cualquier RSVP de intención)
-  // caía en el mismo bucket de prioridad 0 que 'AsistenciaAnticipada' --
-  // cualquier persona con una fila 'Usuario' (RSVP normal, con frecuencia
-  // hecha DÍAS antes del evento) le ganaba a su propia marca 'Admin'
-  // posterior sin importar el timestamp. Confirmado contra datos reales de
-  // producción (eventos `ev_20260907_cci_2`/`ev_20260912_cumanda`): cada
-  // persona con un RSVP 'Usuario' previo aparecía SIEMPRE como su estado de
-  // RSVP en vez de su asistencia real marcada por el admin, haciendo que el
-  // admin volviera a marcarla una y otra vez sin que nunca "quedara
-  // guardada" -- las 2 únicas personas de esos eventos sin ningún RSVP
-  // 'Usuario' (Kelly/kimberlly) fueron las únicas cuya marca sobrevivió a
-  // la primera. Fix: 'Admin' es su propia categoría, siempre por encima de
-  // cualquier RSVP -- 'Usuario' sigue ganándole a 'AsistenciaAnticipada'
-  // dentro del grupo de RSVPs, como pedía el fix original.
-  data.forEach((fila: any) => {
-    const clave = fila.id_evento + '|' + fila.nombre_usuario;
-    const actual = ultimaPorClave[clave];
-    const prioridad = (o: string) => o === 'Admin' ? 2 : o === 'Usuario' ? 1 : 0;
-    if (!actual || prioridad(fila.origen) > prioridad(actual.origen) || (prioridad(fila.origen) === prioridad(actual.origen) && (!actual.marcaStr || (fila.marca_temporal ?? '') > actual.marcaStr))) {
-      ultimaPorClave[clave] = { idEvento: fila.id_evento, nombre: fila.nombre_usuario, origen: fila.origen, estado: fila.estado, marcaStr: fila.marca_temporal };
-    }
-  });
+  // Auditoría de escalabilidad (2026-11-12): antes se traía `log_asistencias`
+  // COMPLETA (.limit(100000)) y se filtraba en memoria -- al llegar al tope
+  // vuelve el error de "Asistiré no se ve". Ahora la base devuelve solo la
+  // fila vigente de cada (evento, persona) de estos eventos, en un único
+  // JSON (sin límite de filas). La regla de prioridad está documentada en
+  // la función SQL `fn_asistencia_vigente_por_evento` (migración
+  // 20261112170000): 'Admin' (asistencia real) gana siempre a cualquier
+  // RSVP -- bug real corregido el 2026-09, ver CHANGELOG --, 'Usuario' gana
+  // a 'AsistenciaAnticipada' y, a igual prioridad, la marca más reciente.
   const porEvento: Record<string, any[]> = {};
-  for (const k of Object.keys(ultimaPorClave)) {
-    const r = ultimaPorClave[k];
-    if (!porEvento[r.idEvento]) porEvento[r.idEvento] = [];
-    porEvento[r.idEvento].push({ nombre: r.nombre, estado: r.estado, origen: r.origen });
+  const unicos = [...new Set(idsEvento)];
+  for (let k = 0; k < unicos.length; k += 500) {
+    const { data, error } = await supabase.rpc('fn_asistencia_vigente_por_evento', { ids: unicos.slice(k, k + 500) });
+    if (error) { console.error('[asist] error rpc:', JSON.stringify(error)); continue; }
+    Object.assign(porEvento, data ?? {});
   }
   return porEvento;
 }
@@ -338,26 +311,13 @@ async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Re
 // fecha (defensivo) si `fecha_entrenamiento` viniera nula: usa
 // `asistencias.fecha` del mismo `id_evento`.
 async function _ultimaAsistenciaRealPorUsuario(): Promise<Record<string, string>> {
-  const { data: logs } = await supabase.from('log_asistencias')
-    .select('nombre_usuario, fecha_entrenamiento, id_evento')
-    .in('origen', ['Admin', 'Externa']).neq('estado', 'Ninguno').limit(100000);
-  const filas = logs ?? [];
-  const idsSinFecha = filas.filter((l: any) => !l.fecha_entrenamiento).map((l: any) => l.id_evento);
-  const fechaPorEvento: Record<string, string> = {};
-  if (idsSinFecha.length) {
-    const { data: evs } = await supabase.from('asistencias').select('id_evento, fecha').in('id_evento', idsSinFecha);
-    (evs ?? []).forEach((e: any) => { if (e.fecha) fechaPorEvento[e.id_evento] = e.fecha; });
-  }
-  const ultimaPorUsuario: Record<string, string> = {};
-  filas.forEach((l: any) => {
-    const fecha = l.fecha_entrenamiento || fechaPorEvento[l.id_evento];
-    if (!fecha) return;
-    const clave = String(l.nombre_usuario ?? '').trim().toUpperCase();
-    if (!clave) return;
-    const actual = ultimaPorUsuario[clave];
-    if (!actual || fecha > actual) ultimaPorUsuario[clave] = fecha;
-  });
-  return ultimaPorUsuario;
+  // Resuelto en la base (`fn_ultima_asistencia_real_por_usuario`, migración
+  // 20261112170000; mismo criterio de siempre, ver comentario de arriba):
+  // devuelve ya el mapa { USUARIO_NORMALIZADO: fecha } en vez de traer toda
+  // la historia de asistencias reales.
+  const { data, error } = await supabase.rpc('fn_ultima_asistencia_real_por_usuario');
+  if (error) console.error('[asist] error rpc real:', JSON.stringify(error));
+  return (data ?? {}) as Record<string, string>;
 }
 // Lee el mapa de arriba para UNA persona puntual (`username` real, no
 // normalizado) -- devuelve la fecha ISO completa (con hora) tal cual quedó
@@ -367,8 +327,10 @@ function _ultimaAsistenciaDe(mapa: Record<string, string>, username: string): st
   return mapa[String(username ?? '').trim().toUpperCase()] ?? null;
 }
 
-async function _asistenciaEFPorEvento(): Promise<Record<string, any[]>> {
-  const { data } = await supabase.from('asistencias').select('id_evento, a_horario, tarde');
+// Recibe las filas de `asistencias` ya cargadas por quien llama (antes leía
+// la tabla completa en cada llamada; auditoría 2026-11-12).
+function _asistenciaEFPorEvento(data: any[]): Record<string, any[]> {
+
   const porEvento: Record<string, any[]> = {};
   (data ?? []).forEach((fila: any) => {
     const nombres = (s: string) => String(s ?? '').split(',').map((n: string) => n.trim()).filter(Boolean);
@@ -2290,7 +2252,7 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
   const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento, a_horario, tarde').neq('estado', 'Eliminado').gte('fecha', d0).lte('fecha', d1);
   const idsEvento = (data ?? []).map((f: any) => f.id_evento);
   const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre, videoInstructivo] = await Promise.all([
-    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(idsEvento), _asistenciaEFPorEvento(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
+    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(idsEvento), _asistenciaEFPorEvento(data ?? []), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
   ]);
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
@@ -4196,11 +4158,13 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
     usuarios = (equipoRows ?? []).map((r: any) => String(r.username ?? '').trim()).filter(Boolean);
   }
 
-  let queryLogs = supabase.from('log_asistencias')
-    .select('id_evento, nombre_usuario, estado, marca_temporal')
-    .eq('origen', 'Admin');
-  if (soloUsuario) queryLogs = queryLogs.eq('nombre_usuario', soloUsuario);
-  const { data: logsTodos } = await queryLogs;
+    // Última marca 'Admin' por (evento, persona), resuelta en la base
+  // (`fn_ultima_marca_admin`, migración 20261112170000) en vez de traer
+  // todas las filas 'Admin' de la historia y quedarse con la última acá.
+  const { data: ultimasAdmin, error: errorUltimas } = await supabase.rpc('fn_ultima_marca_admin', { solo_usuario: soloUsuario ?? null });
+  if (errorUltimas) console.error('[racha] error rpc:', JSON.stringify(errorUltimas));
+
+
 
   // Última marca real por (evento, persona) -- puede haber más de 1 fila
   // para el mismo evento+persona (re-marcados, rectificaciones aprobadas).
@@ -4208,16 +4172,13 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
   // comentario grande arriba) -- solo las de un evento futuro/inexistente
   // (no entró a `ordenPorEvento` porque `eventos` ya está acotado a
   // `fecha < hoy`, o porque el `id_evento` no existe más en `asistencias`).
-  const ultimaPorClave: Record<string, { estado: string; marca: number }> = {};
-  (logsTodos ?? []).forEach((l: any) => {
-    if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, l.id_evento)) return;
-    const u = String(l.nombre_usuario ?? '').trim();
-    if (!u) return;
-    const clave = l.id_evento + '|' + u;
-    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
-    const actual = ultimaPorClave[clave];
-    if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, marca };
-  });
+    const ultimaPorClave: Record<string, { estado: string; marca: number }> = {};
+  for (const [clave, v] of Object.entries((ultimasAdmin ?? {}) as Record<string, any>)) {
+    const idEvento = clave.substring(0, clave.lastIndexOf('|'));
+    if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, idEvento)) continue;
+    ultimaPorClave[clave] = { estado: v.estado, marca: Number(v.marca) || 0 };
+  }
+
 
   const puntosExtraPorClaveMes: Record<string, number> = {}; // clave 'usuario|anio|mes' -> total del mes
   const rachaFinalPorUsuario: Record<string, number> = {};

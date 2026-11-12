@@ -22,6 +22,10 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Tu grupo va primero en el acordeón (si eres Mirlxs, Mirlxs antes que Quindes). Filtros de la home: solo roles. En la ficha (`_Estadisticas`): arriba asistencia y horas del año (solo las que tienen valor, o "Sin estadísticas del año aún"); abajo "Datos de noviembre ▾" con asistencia y puntos del mes elegido (últimos 12, `EquipoRepo.enMes()` pide `getEquipo` de ese mes una vez; desglose con el mismo mes) o "Sin datos en …". Sin "Puesto X de Y". Estado (admins): selector con ícono y descripción + confirmación. Emergencia nunca sobre tu propia cuenta. Favoritos: estrella redondeada; nombres largos se deslizan con fundido (`TextoDeslizante`). Pronombres viejos "Ella/ella" normalizados (migración `20261108010000` y `normalizarPronombres`). "Copiar link de activación" se quitó (app y web): todas las cuentas ya están migradas. Archivar: si la persona vuelve a ingresar, sale de archivo y queda activx.
 
 ## App Android — Ajustes y Mi perfil (rediseño 2026-11-08)
+### Escalabilidad de asistencias (2026-11-12)
+- `log_asistencias` nunca se trae completa. `_ultimaAsistenciaPorPersonaTodas` → rpc `fn_asistencia_vigente_por_evento(ids)` (lotes de 500 ids; misma prioridad Admin > Usuario > AsistenciaAnticipada y marca más reciente), `_ultimaAsistenciaRealPorUsuario` → rpc `fn_ultima_asistencia_real_por_usuario()`, racha → rpc `fn_ultima_marca_admin(solo_usuario)`. Devuelven un solo JSON (no filas: no aplica el máximo de filas de la API). Índices: (id_evento, nombre_usuario), (nombre_usuario, origen), (origen, fecha_entrenamiento). Migración 20261112170000. `_asistenciaEFPorEvento` usa las filas que ya cargó `getEventosRango`.
+- Regla para código nuevo: nunca traer una tabla completa para filtrar en memoria; filtrar en la base y paginar lo que crece sin techo.
+
 ### Próxima ronda
 - Lista de cambios pedidos el 2026-11-08 en `PENDIENTES_2026-11-12.md` (se trabaja desde el jueves 2026-11-12, 17:00). Al terminarla, borrar ese archivo y pasar lo hecho a este MANIFEST.
 
