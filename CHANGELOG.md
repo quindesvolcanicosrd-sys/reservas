@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — App Android: ícono nuevo de la app.
+
 2026-11-12 — App Android: nueva entrada con el logo de Pivot como pantalla de arranque, animación en bucle mientras carga y animación de entrada que revela la app ya cargada.
 
 2026-11-12 — App Android: Eventos pasa a Calendario con las tareas integradas (tus tareas en su fecha, atrasadas arriba, tareas del equipo por día, "Para tomar", filtros Todo · Eventos · Tareas, crear o proponer tareas desde el "+"); Ajustes pasa a Mi perfil con tu avatar en la barra; se quita la pestaña Tareas.

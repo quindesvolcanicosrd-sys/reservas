@@ -122,15 +122,17 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 # Ícono de la app: el logo de Pivot (icons/icon-512C.png de la web).
-# Adaptable en Android 8+: fondo (degradado rojo) y marca blanca por separado;
-# la marca también se usa como ícono monocromo (íconos temáticos de Android 13+).
+# Adaptable en Android 8+: fondo (degradado claro) y la P por separado;
+# la silueta de la P es el ícono monocromo (íconos temáticos de Android 13+).
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/logo.png"
+  # Ícono nuevo de Victor (2026-11-12, AppLight.svg; Android no tiene ícono
+  # distinto para modo oscuro: AppDark.svg queda guardado en assets/icono).
+  image_path: "assets/icono/completo.png"
   adaptive_icon_background: "assets/icono/fondo.png"
   adaptive_icon_foreground: "assets/icono/marca.png"
-  adaptive_icon_monochrome: "assets/icono/marca.png"
+  adaptive_icon_monochrome: "assets/icono/monocromo.png"
 
 # Pantalla de arranque nativa (Victor, 2026-11-12): logo de Pivot sobre el
 # fondo de la app (mismos valores que PivotPaleta.claro/oscuro.fondo en

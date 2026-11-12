@@ -35,6 +35,7 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
 
 ### Entrada de la app (2026-11-12)
+- Ícono nuevo (AppLight.svg de Victor, guardado en `app/assets/icono/` junto con AppDark.svg): adaptable con fondo (degradado claro), la P reducida a la zona segura y su silueta como ícono monocromo (Android 13+). Android no admite un ícono distinto para modo oscuro. `assets/logo.png` (login y actualización) también es el ícono nuevo. Regenerar con `dart run flutter_launcher_icons`.
 - Pantalla de arranque nativa con el logo de Victor (`assets/splash/`, generada con `dart run flutter_native_splash:create`; colores de fondo = `PivotPaleta.*.fondo`, repetidos en `pubspec.yaml` porque ese archivo no lee Dart).
 - `core/intro.dart` (`IntroPivot`, envuelve toda la app en `main.dart`):
   - Secuencia: logo (0,45 s) → bucle `assets/lottie/loop.json` sobre el rojo de marca mientras carga → `intro.json` hasta el fotograma 44 → hueco en forma de P que crece y revela la app (`_PintorRevelar`).
