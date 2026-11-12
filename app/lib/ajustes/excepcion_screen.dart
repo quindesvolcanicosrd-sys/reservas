@@ -293,11 +293,6 @@ class _ExcepcionScreenState extends State<ExcepcionScreen> {
         ),
       ),
       const SizedBox(height: 6),
-      const AvisoPrivado(
-        texto:
-            'Esta información es absolutamente confidencial y solo pueden leerla administradorxs del equipo. '
-            'Si no quieres que todxs la lean, elige abajo a quiénes confías tu solicitud.',
-      ),
       _SelectorAdmins(admins: _admins, elegidos: _elegidos, alCambiar: () => setState(() {})),
     ],
   );
@@ -409,17 +404,17 @@ class _ExcepcionScreenState extends State<ExcepcionScreen> {
               fila(ausencias ? 'Qué pasó' : 'Tu situación', _texto.text.trim()),
               if (!ausencias) fila('Tu aporte', _compromiso, cambiar: () => _irA(_Paso.aportar)),
               fila('Mes', Fechas.mesAnio(Fechas.hoy())),
-              fila('La leen', todos ? 'Todxs lxs administradorxs' : nombres.join(', '), cambiar: () => _irA(_Paso.detalle)),
+              fila('La leen y aprueban', todos ? 'Todxs lxs administradorxs' : nombres.join(', '), cambiar: () => _irA(_Paso.detalle)),
             ],
           ),
         ),
         const SizedBox(height: 14),
         AvisoPrivado(
           texto: ausencias
-              ? 'Tu solicitud será revisada por administradorxs del equipo y puede ser aprobada o rechazada. Recibirás una notificación con la '
+              ? 'Solo lxs administradorxs que elegiste podrán leer y aprobar tu solicitud. Recibirás una notificación con la '
                     'respuesta. Si se aprueba, se aplica automáticamente un descuento del 50 % en la cuota de este mes. Si lo necesitas otro mes, '
                     'envía una nueva solicitud por cada mes.'
-              : 'Tu solicitud será revisada por administradorxs del equipo y puede ser aprobada o rechazada. Recibirás una notificación con la '
+              : 'Solo lxs administradorxs que elegiste podrán leer y aprobar tu solicitud. Recibirás una notificación con la '
                     'respuesta. Si se aprueba, la subvención se aplica a la cuota de este mes. Si lo necesitas otro mes, envía una nueva solicitud '
                     'por cada mes.',
         ),
@@ -451,16 +446,36 @@ class _SelectorAdmins extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Quiénes pueden leerla',
+          '¿Quiénes pueden leerla y aprobarla?',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.texto),
         ),
         const SizedBox(height: 8),
+        // Un solo recuadro (Victor, 2026-11-08): el aviso de confidencialidad
+        // y la lista de administradorxs juntos.
         Material(
           color: p.tarjeta,
           borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
+              Container(
+                color: p.suave,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.lock_rounded, size: 18, color: p.sobreSuave),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Esta información es confidencial. Solo lxs administradorxs que elijas podrán leer y aprobar tu solicitud.',
+                        style: TextStyle(fontSize: 13.5, height: 1.35, color: p.sobreSuave),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               for (final a in l)
                 CheckboxListTile(
                   value: elegidos.contains('${a['username']}'),

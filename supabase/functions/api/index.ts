@@ -2876,6 +2876,29 @@ async function adminSetEstadoRectificacion(params: Record<string, any>): Promise
 // el cliente), adminGetX/adminSetEstadoX requieren adminToken. `datos` viaja
 // como JSON string en el body form-urlencoded (apiPost()) -- se parsea acá
 // igual que `actualizarDatosPersona()` parsea su propio `datos`.
+// Panel "Excepción de cuota" de la app (Victor, 2026-11-08): las solicitudes
+// propias (con a quiénes se enviaron) y las excepciones que aplican a la
+// persona (aprobadas o puestas a mano por administradorxs), con su mes.
+async function getMisExcepciones(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const [{ data: sols }, { data: exc }, admins] = await Promise.all([
+    supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, admins_destino').eq('nombre', username).order('created_at', { ascending: false }),
+    supabase.from('cuota_excepcion').select('mes, tipo, monto, notas, creado_en').eq('id_miembro', username).order('mes', { ascending: false }),
+    _administradorxs(),
+  ]);
+  const nombre: Record<string, string> = {};
+  admins.forEach((a: any) => { nombre[a.username] = a.nombre ?? a.username; });
+  return {
+    exito: true,
+    solicitudes: (sols ?? []).map((s: any) => ({
+      id: s.id, tipo: s.tipo, estado: s.estado, mes: s.mes_aplicacion, nota: s.nota_admin ?? '', creada: s.created_at,
+      leen: (s.admins_destino ?? []).length ? (s.admins_destino as string[]).map((u) => nombre[u] ?? u) : [],
+    })),
+    excepciones: (exc ?? []).map((e: any) => ({ mes: e.mes, tipo: e.tipo, monto: e.monto, notas: e.notas ?? '', creada: e.creado_en })),
+  };
+}
+
 async function solicitarExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
   const username = await _validarToken(params.token);
   if (!username) return { exito: false, error: 'Sesión inválida.' };
@@ -6961,6 +6984,7 @@ Deno.serve(async (req: Request) => {
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
       case 'adminGetRectificaciones':          return json(await adminGetRectificaciones(params));
       case 'adminSetEstadoRectificacion':      return json(await adminSetEstadoRectificacion(params));
+            case 'getMisExcepciones':                return json(await getMisExcepciones(params));
       case 'solicitarExcepcion':               return json(await solicitarExcepcion(params));
       case 'adminGetExcepciones':              return json(await adminGetExcepciones(params));
       case 'adminSetEstadoExcepcion':          return json(await adminSetEstadoExcepcion(params));

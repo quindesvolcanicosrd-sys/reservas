@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — App Android: emergencia rediseñada (solo datos conocidos, botón grande de emergencias), loader más grande sin cápsula, desgloses de puntos en pantalla completa con barras por semana, panel de excepciones de cuota con historial, aviso push de tareas nuevas, Mi equipamiento en Ajustes y ajustes de textos.
+
 2026-11-12 — Escalabilidad: las respuestas "Asistiré", la última asistencia real y la racha ya no traen la tabla completa de registros de asistencia (que tenía un tope de 100.000 filas); la base devuelve solo lo necesario con 3 funciones SQL e índices nuevos. Mismos resultados, verificados contra todos los datos.
 
 2026-11-08 — App Android: Tareas nativa (tablero, mis tareas, sugeridas, baúl, asistente para crear, editar recurrentes con alcance, pausar o terminar recurrentes, aprobar o devolver desde el detalle) y push de tareas por vencer y revisadas.

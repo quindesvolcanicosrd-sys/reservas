@@ -26,6 +26,14 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - `log_asistencias` nunca se trae completa. `_ultimaAsistenciaPorPersonaTodas` → rpc `fn_asistencia_vigente_por_evento(ids)` (lotes de 500 ids; misma prioridad Admin > Usuario > AsistenciaAnticipada y marca más reciente), `_ultimaAsistenciaRealPorUsuario` → rpc `fn_ultima_asistencia_real_por_usuario()`, racha → rpc `fn_ultima_marca_admin(solo_usuario)`. Devuelven un solo JSON (no filas: no aplica el máximo de filas de la API). Índices: (id_evento, nombre_usuario), (nombre_usuario, origen), (origen, fecha_entrenamiento). Migración 20261112170000. `_asistenciaEFPorEvento` usa las filas que ya cargó `getEventosRango`.
 - Regla para código nuevo: nunca traer una tabla completa para filtrar en memoria; filtrar en la base y paginar lo que crece sin techo.
 
+### Ronda 2026-11-12 (pedida el 2026-11-08)
+- Emergencia (`equipo/emergencia_screen.dart`) rediseñada: cabecera con avatar y alerta (alergias, medicamentos, enfermedades), botón grande en degradado para llamar a emergencias (también si la ficha falla), y solo lo que se sabe: seguro privado, contactos con Llamar/WhatsApp grandes, información médica e identidad con íconos en degradado. Sin filas "Sin dato" ni texto de salud pública.
+- Loader (`core/cargando.dart`): sin la cápsula, formas centradas y 1,75× más grandes; tamaño por defecto 96.
+- Desgloses de puntos (`equipo/desglose_screen.dart`): pantalla completa con total en degradado, cifras clave (a tiempo / tarde / externas, tareas aprobadas o bonos), barras por semana y detalle con ícono por fila.
+- Excepción de cuota: `ajustes/excepciones_panel.dart` (panel: este mes, en revisión, vigentes, historial, explicación si no hay nada; FAB "Pedir una excepción" → asistente) + `getMisExcepciones`. En el asistente: "¿Quiénes pueden leerla y aprobarla?" con el aviso de confidencialidad dentro del mismo recuadro; "La leen y aprueban"; textos "solo lxs administradorxs que elijas".
+- Push `tarea_nueva` (`_avisarTareasNuevas`, equipo activo menos quien la creó; el cron mensual agrupa en un aviso).
+- Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
+
 ### Próxima ronda
 - Lista de cambios pedidos el 2026-11-08 en `PENDIENTES_2026-11-12.md` (se trabaja desde el jueves 2026-11-12, 17:00). Al terminarla, borrar ese archivo y pasar lo hecho a este MANIFEST.
 

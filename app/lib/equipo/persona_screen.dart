@@ -8,6 +8,7 @@ import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
+import 'desglose_screen.dart';
 import 'equipo_repo.dart';
 import '../core/cargando.dart';
 
@@ -382,63 +383,9 @@ class _EstadisticasState extends State<_Estadisticas> {
     ),
   );
 
-  /// Desglose línea por línea (`getDesglosePuntos`) del mes elegido.
-  void _desglose(BuildContext context, String concepto, String titulo) {
-    final mes = _mes;
-    final nombreMes = _nombreMes;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.9,
-        builder: (context, scroll) => FutureBuilder<List<Map<String, dynamic>>>(
-          future: repo.desglose(widget.p.username, concepto, mes: mes),
-          builder: (context, s) {
-            final pal = context.pivot;
-            final filas = s.data;
-            return ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              children: [
-                Text(titulo, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                Text('En $nombreMes', style: TextStyle(color: pal.textoSecundario)),
-                const SizedBox(height: 12),
-                if (s.hasError) Text('No se pudo cargar el desglose.', style: TextStyle(color: pal.textoSecundario)),
-                if (!s.hasData && !s.hasError)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: PivotCargando()),
-                  ),
-                if (filas != null && filas.isEmpty) Text('Todavía no hay puntos por este concepto.', style: TextStyle(color: pal.textoSecundario)),
-                for (final f in filas ?? const <Map<String, dynamic>>[])
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_tituloFila(f)),
-                    subtitle: Text(_subFila(f)),
-                    trailing: Text('+${numero((f['puntos'] as num?)?.toDouble() ?? 0)}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  static String _tituloFila(Map<String, dynamic> f) {
-    final fecha = Fechas.desdeIso(f['fecha']);
-    final base = '${f['titulo'] ?? f['nombre'] ?? f['tarea'] ?? f['estado'] ?? ''}';
-    return fecha == null ? base : '${Fechas.corta(fecha)}${base.isEmpty ? '' : ' · $base'}';
-  }
-
-  static String _subFila(Map<String, dynamic> f) => [
-    if (f['externa'] == true) 'Externa',
-    if ('${f['lugar'] ?? ''}'.isNotEmpty) '${f['lugar']}',
-    if ('${f['mes'] ?? ''}'.isNotEmpty) '${f['mes']}',
-  ].join(' · ');
+  /// Desglose del mes elegido, en pantalla completa (`DesgloseScreen`).
+  void _desglose(BuildContext context, String concepto, String titulo) =>
+      DesgloseScreen.abrir(context, repo: repo, username: widget.p.username, concepto: concepto, titulo: titulo, mes: _mes, nombreMes: _nombreMes);
 }
 
 class _Accion extends StatelessWidget {

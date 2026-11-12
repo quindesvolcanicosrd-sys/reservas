@@ -9,9 +9,9 @@ import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
+import 'excepciones_panel.dart';
 import 'datos_screens.dart';
 import 'cuenta.dart';
-import 'excepcion_screen.dart';
 import 'identidad_screen.dart';
 import 'privacidad_screen.dart';
 import 'salud_screen.dart';
@@ -79,8 +79,8 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       icono: Icons.volunteer_activism_rounded,
                       seccion: 'cuota',
                       titulo: 'Excepción de cuota',
-                      valor: 'Por ausencias justificadas o dificultad económica',
-                      alTocar: () => SubAjustes.abrir(context, ExcepcionScreen(sesion: sesion)),
+                      valor: 'Tus excepciones y solicitudes',
+                      alTocar: () => SubAjustes.abrir(context, ExcepcionesPanelScreen(sesion: sesion)),
                     ),
                   // Junto a la cuota (Victor, 2026-11-08): sale de Mi perfil en Equipo.
                   FilaAjuste(
