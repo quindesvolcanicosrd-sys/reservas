@@ -129,10 +129,7 @@ class _HojaPaisState extends State<_HojaPais> {
               child: TextField(
                 autocorrect: false,
                 onChanged: (v) => setState(() => _q = v),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  hintText: widget.conPrefijo ? 'Busca: Ecuador, EC, ECU o 593' : 'Busca: Ecuador, EC o ECU',
-                ),
+                decoration: InputDecoration(prefixIcon: const Icon(Icons.search_rounded), hintText: widget.conPrefijo ? 'Buscar prefijo' : 'Buscar país'),
               ),
             ),
             Expanded(

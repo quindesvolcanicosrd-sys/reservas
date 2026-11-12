@@ -42,7 +42,7 @@ class SaludEmergenciaScreen extends StatelessWidget {
           const AvisoPrivado(),
           _FichaRapida(sesion: s, alEditar: (clave) => _editar(context, clave)),
           const SizedBox(height: 22),
-          _titulo(context, 'A quién llamar'),
+          _titulo(context, 'Contactos de emergencia'),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -301,14 +301,6 @@ class _TarjetaContacto extends StatelessWidget {
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: PivotPaleta.seccionSalud,
-                        child: Text(
-                          nombre.characters.first.toUpperCase(),
-                          style: const TextStyle(color: PivotPaleta.sobreSeccion, fontWeight: FontWeight.w800),
-                        ),
-                      ),
                       const Spacer(),
                       Text(
                         nombre,

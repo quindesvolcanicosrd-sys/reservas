@@ -2035,8 +2035,35 @@ async function adminCrearTarea(params: Record<string, any>): Promise<any> {
     await supabase.from('asignaciones_tareas').insert(asignarA.map((n: string) => ({ tarea_id: tarea.id, nombre_usuario: n, estado: 'iniciada', es_rescate: false, fecha_vencimiento_personal: tarea.fecha_vencimiento ?? null })));
         await supabase.from('tareas').update({ estado: 'en_progreso' }).eq('id', tarea.id);
   }
+    // Aviso de tarea nueva (Victor, 2026-11-08): solo si quedó algún cupo libre.
+  if (!datos.yaRealizada && asignarA.length < (Number(datos.maxAsignados) || 1)) {
+    await _avisarTareasNuevas([{ titulo: tarea.titulo, puntos: tarea.puntos }], datos.creadoPor ?? null);
+  }
   // Objeto (no el array crudo): la app Android solo acepta respuestas JSON con forma de objeto.
   return { exito: true, idTarea: tarea.id };
+}
+
+// Push "tarea nueva" al equipo activo (sin lesionadxs, ausentes ni de
+// viaje; EQUIPO_ACTIVO_FILTRO), menos a quien la creó. Varias a la vez
+// (cron mensual de recurrentes) = un solo aviso agrupado.
+async function _avisarTareasNuevas(tareas: { titulo: string; puntos: number }[], creadoPor: string | null): Promise<void> {
+  try {
+    if (!tareas.length) return;
+    const { data: equipoRows } = await supabase.from('equipo').select('username, estado_miembro').is('eliminado_en', null);
+    const destinatarios = (equipoRows ?? [])
+      .filter((r: any) => r.username && r.username !== creadoPor && EQUIPO_ACTIVO_FILTRO(r))
+      .map((r: any) => r.username);
+    if (!destinatarios.length) return;
+    const una = tareas.length === 1;
+    const pts = (n: number) => (n === 1 ? '1 punto' : `${n} puntos`);
+    await sendPush({
+      tipo: 'tarea_nueva',
+      include_external_user_ids: destinatarios,
+      headings: { es: una ? 'Nueva tarea disponible' : `${tareas.length} tareas nuevas este mes` },
+      contents: { es: una ? `${tareas[0].titulo}${tareas[0].puntos > 0 ? ' · ' + pts(tareas[0].puntos) : ''}` : tareas.map((t) => t.titulo).join(' · ') },
+      url: APP_URL + '/',
+    });
+  } catch (_) { /* best-effort */ }
 }
 
 async function adminEditarTarea(params: Record<string, any>): Promise<Record<string, any>> {
@@ -2168,9 +2195,11 @@ async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<R
     activa: true, creado_por: datos.creadoPor ?? null,
   }).select();
   if (error) return { exito: false, error: error.message };
-  const plantilla = creada[0];
+    const plantilla = creada[0];
   const { anio, mes } = _mesEcuadorActual();
-  await _generarInstanciaTareaRecurrente(plantilla, anio, mes);
+  if (await _generarInstanciaTareaRecurrente(plantilla, anio, mes)) {
+    await _avisarTareasNuevas([{ titulo: plantilla.titulo, puntos: plantilla.puntos }], datos.creadoPor ?? null);
+  }
   return { exito: true, idPlantilla: plantilla.id };
 }
 
@@ -2236,11 +2265,12 @@ async function cronGenerarTareasRecurrentes(): Promise<Record<string, any>> {
   const { data: plantillas } = await supabase.from('tareas_recurrentes').select('*').eq('activa', true);
   if (!plantillas?.length) return { generadas: 0 };
   const { anio, mes } = _mesEcuadorActual();
-  let generadas = 0;
+    const nuevas: { titulo: string; puntos: number }[] = [];
   for (const p of plantillas) {
-    if (await _generarInstanciaTareaRecurrente(p, anio, mes)) generadas++;
+    if (await _generarInstanciaTareaRecurrente(p, anio, mes)) nuevas.push({ titulo: p.titulo, puntos: p.puntos });
   }
-  return { generadas };
+  await _avisarTareasNuevas(nuevas, null);
+  return { generadas: nuevas.length };
 }
 
 // ─── Acciones: eventos / asistencias ─────────────────────────────────────────
@@ -5444,7 +5474,8 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debes la cuota.', categoria: 'Cuenta' },
     { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
   { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tu excepción de cuota.', categoria: 'Cuenta' },
-    { clave: 'tarea_vence', nombre: 'Tareas por vencer', descripcion: 'Un día antes de que venza una tarea que tomaste.', categoria: 'Tareas' },
+      { clave: 'tarea_nueva', nombre: 'Tareas nuevas', descripcion: 'Cuando se publica una tarea que puedes tomar.', categoria: 'Tareas' },
+  { clave: 'tarea_vence', nombre: 'Tareas por vencer', descripcion: 'Un día antes de que venza una tarea que tomaste.', categoria: 'Tareas' },
   { clave: 'tarea_revisada', nombre: 'Revisión de tus tareas', descripcion: 'Cuando admins aprueban o devuelven una tarea que enviaste.', categoria: 'Tareas' },
   { clave: 'avisos_admin', nombre: 'Avisos para admins', descripcion: 'Resumen antes del entrenamiento, bajas de última hora, solicitudes pendientes y cambios de reservas.', categoria: 'Administración', soloAdmin: true },
 ];

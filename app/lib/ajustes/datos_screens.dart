@@ -29,7 +29,6 @@ class MiPerfilEditable extends StatelessWidget {
           children: [
             GrupoAjustes(
               titulo: 'MI PERFIL',
-              pie: 'Esto lo ve todo el equipo en tu ficha.',
               filas: [
                 FilaAjuste(
                   icono: Icons.add_a_photo_outlined,
@@ -86,33 +85,18 @@ class MiPerfilEditable extends StatelessWidget {
                   },
                 ),
                 FilaAjuste(
-                  icono: Icons.event_outlined,
-                  seccion: 'ingreso',
-                  titulo: 'Entraste al equipo',
-                  valor: fechaLarga(s.datos['fechaIngreso']),
-                  alTocar: () => elegirFechaCampo(context, s, 'fechaIngreso', ayuda: 'Cuándo entraste al equipo', desde: DateTime(2010)),
-                ),
-              ],
-            ),
-            GrupoAjustes(
-              filas: [
-                FilaAjuste(
                   icono: Icons.phone_outlined,
                   seccion: 'telefono',
                   titulo: 'Teléfono',
                   valor: Paises.telefono(valorDe(s, 'prefijo'), tel),
                   alTocar: () => editarTelefono(context, s, 'prefijo', 'telefono', 'Teléfono'),
                 ),
-              ],
-            ),
-            GrupoAjustes(
-              filas: [
                 FilaAjuste(
-                  icono: Icons.roller_skating_outlined,
-                  seccion: 'equipamiento',
-                  titulo: 'Mi equipamiento',
-                  valor: textoEquipamiento(s.datos),
-                  alTocar: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: s)),
+                  icono: Icons.event_outlined,
+                  seccion: 'ingreso',
+                  titulo: 'Entraste al equipo',
+                  valor: fechaLarga(s.datos['fechaIngreso']),
+                  alTocar: () => elegirFechaCampo(context, s, 'fechaIngreso', ayuda: 'Cuándo entraste al equipo', desde: DateTime(2010)),
                 ),
               ],
             ),

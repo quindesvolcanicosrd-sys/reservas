@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'tema.dart';
 
 /// Loader de Pivot (formas de Victor, 2026-11-08; inspirado en las cargas de
-/// Google Home / Google TV): las 6 variaciones de la "P" —cápsula inclinada
-/// con estrella, flor, círculo con estrella o cuenco— se transforman una en
-/// otra en bucle. La cápsula respira e inclina, el acento se encoge y vuelve
-/// a crecer con rebote cuando cambia de forma, las estrellas giran un pico
-/// con ease-in-out y los colores se cruzan entre rojo y vino (rosa en
-/// oscuro). Con "reducir animaciones" queda quieto en la primera forma.
+/// Google Home / Google TV): estrella, flor, círculo con estrella y cuenco se
+/// transforman una en otra en bucle. Sin la cápsula del lado izquierdo y más
+/// grande (Victor, 2026-11-12). La forma se encoge y vuelve a crecer con
+/// rebote cuando cambia, las estrellas giran un pico con ease-in-out y los
+/// colores se cruzan entre rojo y vino (rosa en oscuro). Con "reducir
+/// animaciones" queda quieto en la primera forma.
 class PivotCargando extends StatefulWidget {
-  const PivotCargando({super.key, this.tamano = 48, this.progreso});
+  const PivotCargando({super.key, this.tamano = 96, this.progreso});
   final double tamano;
 
   /// Solo pruebas: dibuja un instante fijo del bucle (0 a 1).
@@ -97,65 +97,43 @@ class _Pintor extends CustomPainter {
     final bruto = ((fase - fase.floor() - 0.3) / 0.7).clamp(0.0, 1.0);
     final t = Curves.easeInOutCubic.transform(bruto);
 
-    // Cápsula: color cruzado, respira e inclina un poco durante el cambio.
-    final colCapsula = Color.lerp(de.capsulaRoja ? rojo : otro, a2.capsulaRoja ? rojo : otro, t)!;
-    final colAcento = Color.lerp(de.capsulaRoja ? otro : rojo, a2.capsulaRoja ? otro : rojo, t)!;
-    final pulso = math.sin(math.pi * t);
-    final capsula = _capsula(1 - 0.07 * pulso, 18 + 8 * pulso);
+    // Colores cruzados entre los dos tonos de la marca.
+    final colForma = Color.lerp(de.capsulaRoja ? otro : rojo, a2.capsulaRoja ? otro : rojo, t)!;
+    final colInterior = Color.lerp(de.capsulaRoja ? rojo : otro, a2.capsulaRoja ? rojo : otro, t)!;
 
-    // Acento: posición interpolada; si cambia de forma, se encoge y crece.
-    final x = _lerp(de.x, a2.x, t), y = _lerp(de.y, a2.y, t);
+    // Sin la cápsula, cada forma va centrada y más grande; conserva un leve
+    // desplazamiento entre cuadros para que el cambio se sienta vivo.
+    double cx(_Cuadro c) => 50 + (c.x - 62) * 0.35;
+    double cy(_Cuadro c) => 50 + (c.y - 38) * 0.35;
+    const escala = 1.75;
+    final x = _lerp(cx(de), cx(a2), t), y = _lerp(cy(de), cy(a2), t);
     final giro = _lerp(de.giro, a2.giro + (a2.giro < de.giro ? 360 : 0), t);
     final cambia = de.tipo != a2.tipo;
     final _Cuadro forma;
     double r;
     if (!cambia) {
       forma = de;
-      r = _lerp(de.r, a2.r, t);
+      r = _lerp(de.r, a2.r, t) * escala;
     } else if (bruto < 0.5) {
       forma = de;
-      r = de.r * (1 - Curves.easeInCubic.transform(bruto * 2));
+      r = de.r * escala * (1 - Curves.easeInCubic.transform(bruto * 2));
     } else {
       forma = a2;
-      r = a2.r * Curves.easeOutBack.transform((bruto - 0.5) * 2);
+      r = a2.r * escala * Curves.easeOutBack.transform((bruto - 0.5) * 2);
     }
-    final fusion = cambia ? (bruto < 0.5 ? de.fusion : a2.fusion) : (t < 0.5 ? de.fusion : a2.fusion);
 
     final pintura = Paint()..isAntiAlias = true;
-    // El cuenco va detrás de la cápsula (la "P").
     if (forma.tipo == _Tipo.cuenco) {
-      canvas.drawPath(_cuenco(x, y, r), pintura..color = colAcento);
-      canvas.drawPath(capsula, pintura..color = colCapsula);
+      canvas.drawPath(_cuenco(x + r * 0.2, y, r), pintura..color = colForma);
       canvas.restore();
       return;
     }
-    canvas.drawPath(capsula, pintura..color = colCapsula);
-    final acento = _acento(forma.tipo, x, y, r, giro);
-    if (fusion) {
-      // Fuera de la cápsula: color de la cápsula; dentro: el contraste.
-      canvas.drawPath(acento, pintura..color = colCapsula);
-      canvas.save();
-      canvas.clipPath(capsula);
-      canvas.drawPath(acento, pintura..color = colAcento);
-      canvas.restore();
-    } else {
-      canvas.drawPath(acento, pintura..color = colAcento);
-    }
+    canvas.drawPath(_acento(forma.tipo, x, y, r, giro), pintura..color = colForma);
     // Círculo con estrella adentro (formas 3 y 4).
     if (forma.tipo == _Tipo.circulo && r > 4) {
-      canvas.drawPath(_estrella(x, y, r * 0.62, giro, 5, 0.55), pintura..color = colCapsula);
+      canvas.drawPath(_estrella(x, y, r * 0.62, giro, 5, 0.55), pintura..color = colInterior);
     }
     canvas.restore();
-  }
-
-  /// Cápsula inclinada (cuerpo de la P), centrada en (44, 58).
-  Path _capsula(double escala, double grados) {
-    const w = 32.0, h = 70.0;
-    final rect = Rect.fromCenter(center: Offset.zero, width: w * escala, height: h * escala);
-    final m = Matrix4.identity()
-      ..translateByDouble(44, 58, 0, 1)
-      ..rotateZ(grados * math.pi / 180);
-    return (Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(w * escala / 2)))).transform(m.storage);
   }
 
   Path _acento(_Tipo tipo, double x, double y, double r, double giro) => switch (tipo) {

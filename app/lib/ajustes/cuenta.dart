@@ -90,7 +90,7 @@ class CuentaScreen extends StatelessWidget {
                     final m = ScaffoldMessenger.of(context);
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove('tour.eventos.visto');
-                    m.showSnackBar(const SnackBar(content: Text('Listo: verás el tour al volver a Eventos.')));
+                    m.showSnackBar(const SnackBar(content: Text('Tours guiados reestablecidos')));
                   },
                 ),
               ],

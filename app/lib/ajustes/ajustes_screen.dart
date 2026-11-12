@@ -9,6 +9,7 @@ import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
+import 'datos_screens.dart';
 import 'cuenta.dart';
 import 'excepcion_screen.dart';
 import 'identidad_screen.dart';
@@ -62,28 +63,35 @@ class _AjustesScreenState extends State<AjustesScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
-              if (pagos || conFicha)
-                GrupoAjustes(
-                  filas: [
-                    if (pagos)
-                      FilaAjuste(
-                        icono: Icons.receipt_long_rounded,
-                        seccion: 'reservas',
-                        titulo: 'Mis pagos y reservas',
-                        valor: debe ? 'Tienes la cuota pendiente' : 'Recibos, reservas y cuota',
-                        pendiente: debe,
-                        alTocar: () => SubAjustes.abrir(context, PagosScreen(repo: eventos)),
-                      ),
-                    if (conFicha)
-                      FilaAjuste(
-                        icono: Icons.volunteer_activism_rounded,
-                        seccion: 'cuota',
-                        titulo: 'Excepción de cuota',
-                        valor: 'Por ausencias justificadas o dificultad económica',
-                        alTocar: () => SubAjustes.abrir(context, ExcepcionScreen(sesion: sesion)),
-                      ),
-                  ],
-                ),
+              GrupoAjustes(
+                filas: [
+                  if (pagos)
+                    FilaAjuste(
+                      icono: Icons.receipt_long_rounded,
+                      seccion: 'reservas',
+                      titulo: 'Mis pagos y reservas',
+                      valor: debe ? 'Tienes la cuota pendiente' : 'Recibos, reservas y cuota',
+                      pendiente: debe,
+                      alTocar: () => SubAjustes.abrir(context, PagosScreen(repo: eventos)),
+                    ),
+                  if (conFicha)
+                    FilaAjuste(
+                      icono: Icons.volunteer_activism_rounded,
+                      seccion: 'cuota',
+                      titulo: 'Excepción de cuota',
+                      valor: 'Por ausencias justificadas o dificultad económica',
+                      alTocar: () => SubAjustes.abrir(context, ExcepcionScreen(sesion: sesion)),
+                    ),
+                  // Junto a la cuota (Victor, 2026-11-08): sale de Mi perfil en Equipo.
+                  FilaAjuste(
+                    icono: Icons.roller_skating_outlined,
+                    seccion: 'equipamiento',
+                    titulo: 'Mi equipamiento',
+                    valor: textoEquipamiento(sesion.datos),
+                    alTocar: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
+                  ),
+                ],
+              ),
               if (conFicha)
                 GrupoAjustes(
                   filas: [

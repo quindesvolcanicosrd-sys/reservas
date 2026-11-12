@@ -8,6 +8,7 @@ import '../core/tema.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
 import '../core/cargando.dart';
+import '../eventos/widgets_comunes.dart';
 
 /// Ficha de emergencia (solo admins, Victor 2026-11-07): de acceso rápido
 /// desde la fila de Equipo o la ficha de la persona. Arriba, a quién llamar
@@ -96,90 +97,259 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
       appBar: AppBar(
         backgroundColor: p.marca,
         foregroundColor: p.sobreMarca,
-        title: Text('Emergencia · ${widget.persona.nombreMostrar}', style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Emergencia', style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 240),
         child: _error != null
             ? Center(
                 key: const ValueKey('error'),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(_error!),
-                    const SizedBox(height: 12),
-                    OutlinedButton(onPressed: _cargar, child: const Text('Reintentar')),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Aunque falle la ficha, llamar a emergencias siempre se puede.
+                      _botonEmergencias(p, numeroPublico, paisNombre),
+                      const SizedBox(height: 20),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: p.textoSecundario),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(onPressed: _cargar, child: const Text('Reintentar')),
+                    ],
+                  ),
                 ),
               )
             : ListView(
                 key: ValueKey(_f == null ? 'cargando' : 'ficha'),
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
                 children: [
-                  // 1. A quién llamar: siempre visible, aunque la ficha todavía cargue.
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: p.marca,
-                      foregroundColor: p.sobreMarca,
-                      minimumSize: const Size.fromHeight(64),
-                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                    ),
-                    onPressed: () => _llamar(numeroPublico),
-                    icon: const Icon(Icons.call_rounded, size: 26),
-                    label: Text('Llamar al $numeroPublico${paisNombre.isEmpty ? '' : ' · $paisNombre'}'),
-                  ),
+                  _cabecera(p),
+                  const SizedBox(height: 16),
+                  // Siempre arriba y siempre visible, aunque la ficha todavía cargue.
+                  _botonEmergencias(p, numeroPublico, paisNombre),
                   if (_f == null)
                     const Padding(
                       padding: EdgeInsets.all(32),
                       child: Center(child: PivotCargando()),
                     ),
-                  if (_f != null) ...[
-                    if (_hay('seguro')) ...[
-                      const SizedBox(height: 10),
-                      _tarjeta(p, Icons.health_and_safety_outlined, 'Seguro de salud', [
-                        _fila(p, 'Seguro', _v('seguro')),
-                        if (_hay('seguro_contacto')) _fila(p, 'Contacto', _v('seguro_contacto')),
-                      ], accion: _hay('seguro_contacto') ? ('Llamar al seguro', () => _llamar(_v('seguro_contacto'))) : null),
-                    ] else
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
-                        child: Text('Sin seguro privado registrado: se usa salud pública.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                      ),
-                    const SizedBox(height: 12),
-                    for (final n in ['1', '2'])
-                      if (_hay('emerg${n}_nombre') || _hay('emerg${n}_telefono'))
-                        _contacto(p, n)
-                      else if (n == '1')
-                        _tarjeta(p, Icons.contact_phone_outlined, 'Contacto de emergencia', [_fila(p, '', 'Sin dato')]),
-                    _tarjeta(p, Icons.medical_information_outlined, 'Ficha médica', [
-                      _fila(p, 'Alergias', [_v('alergias'), _v('alergias_desc')].where((s) => s.isNotEmpty).join(' · ')),
-                      _fila(p, 'Enfermedades', _v('enfermedad')),
-                      _fila(p, 'Antecedentes', _v('antecedentes')),
-                      _fila(p, 'Medicamentos', [_v('medicamentos'), _v('medicamentos_desc')].where((s) => s.isNotEmpty).join(' · ')),
-                      _fila(p, 'Atención médica', _v('atencion_medica')),
-                      _fila(p, 'Dieta', _v('dieta')),
-                    ]),
-                    _tarjeta(p, Icons.badge_outlined, 'Identidad', [
-                      _fila(p, 'Nombre legal', _v('nombre_legal')),
-                      _fila(p, 'Documento', [_v('tipo_documento'), _v('numero_documento')].where((s) => s.isNotEmpty).join(' ')),
-                      _fila(p, 'Edad', _edad()),
-                      _fila(
-                        p,
-                        'Dirección',
-                        [
-                          [_v('calle_principal'), _v('numeracion')].where((s) => s.isNotEmpty).join(' '),
-                          _v('calle_secundaria'),
-                          _v('sector'),
-                          _v('canton'),
-                        ].where((s) => s.isNotEmpty).join(', '),
-                      ),
-                    ]),
-                  ],
+                  if (_f != null) ..._ficha(p),
                 ],
               ),
       ),
     );
   }
+
+  /// Solo lo que se sabe (Victor, 2026-11-12): sin filas "Sin dato"; si no
+  /// hay nada, queda solo el botón de emergencias con una línea que lo dice.
+  List<Widget> _ficha(PivotPaleta p) {
+    final contactos = [
+      for (final n in ['1', '2'])
+        if (_v('emerg${n}_telefono').isNotEmpty) _contacto(p, n),
+    ];
+    final medica = <(String, String)>[
+      (
+        'Alergias',
+        _hay('alergias')
+            ? [_v('alergias'), _v('alergias_desc')].where((s) => s.isNotEmpty && s.toLowerCase() != 'sí' && s.toLowerCase() != 'si').join(' · ')
+            : '',
+      ),
+      (
+        'Medicamentos',
+        _hay('medicamentos')
+            ? [_v('medicamentos'), _v('medicamentos_desc')].where((s) => s.isNotEmpty && s.toLowerCase() != 'sí' && s.toLowerCase() != 'si').join(' · ')
+            : '',
+      ),
+      ('Enfermedades', _hay('enfermedad') ? _v('enfermedad') : ''),
+      ('Antecedentes', _hay('antecedentes') ? _v('antecedentes') : ''),
+      ('Atención médica', _hay('atencion_medica') ? _v('atencion_medica') : ''),
+      ('Dieta', _hay('dieta') ? _v('dieta') : ''),
+    ].where((x) => x.$2.trim().isNotEmpty).toList();
+    final direccion = [
+      [_v('calle_principal'), _v('numeracion')].where((s) => s.isNotEmpty).join(' '),
+      _v('calle_secundaria'),
+      _v('sector'),
+      _v('canton'),
+    ].where((s) => s.isNotEmpty).join(', ');
+    final identidad = <(String, String)>[
+      ('Nombre legal', _v('nombre_legal')),
+      ('Documento', [_v('tipo_documento'), _v('numero_documento')].where((s) => s.isNotEmpty).join(' ')),
+      ('Edad', _edad()),
+      ('Dirección', direccion),
+    ].where((x) => x.$2.trim().isNotEmpty).toList();
+    final seguro = _hay('seguro');
+    if (!seguro && contactos.isEmpty && medica.isEmpty && identidad.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 20, 8, 0),
+          child: Text(
+            'No hay más datos de emergencia registrados.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: p.textoSecundario),
+          ),
+        ),
+      ];
+    }
+    return [
+      if (seguro) ...[
+        const SizedBox(height: 12),
+        _botonGrande(
+          p,
+          icono: Icons.health_and_safety_rounded,
+          titulo: _v('seguro'),
+          subtitulo: _hay('seguro_contacto') ? 'Seguro privado · ${_v('seguro_contacto')}' : 'Seguro privado',
+          alTocar: _hay('seguro_contacto') ? () => _llamar(_v('seguro_contacto')) : null,
+        ),
+      ],
+      if (contactos.isNotEmpty) ...[_subtitulo(p, 'Contactos de emergencia'), ...contactos],
+      if (medica.isNotEmpty) ...[
+        _subtitulo(p, 'Información médica'),
+        _tarjeta(p, 'salud', Icons.medical_information_rounded, [for (final (e, v) in medica) _fila(p, e, v)]),
+      ],
+      if (identidad.isNotEmpty) ...[
+        _subtitulo(p, 'Identidad'),
+        _tarjeta(p, 'identidad', Icons.badge_rounded, [for (final (e, v) in identidad) _fila(p, e, v)]),
+      ],
+    ];
+  }
+
+  Widget _cabecera(PivotPaleta p) {
+    final per = widget.persona;
+    // Lo crítico para quien atiende, a la vista sin bajar.
+    final alerta = _f == null
+        ? ''
+        : [if (_hay('alergias')) 'Alergias', if (_hay('medicamentos')) 'Toma medicamentos', if (_hay('enfermedad')) 'Enfermedades'].join(' · ');
+    return Row(
+      children: [
+        AvatarPersona(nombre: per.nombreMostrar, foto: per.foto, tamano: 56),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                per.nombreMostrar,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: p.texto),
+              ),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                child: alerta.isEmpty
+                    ? const SizedBox(width: double.infinity)
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, size: 18, color: p.marcaTexto),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                alerta,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.marcaTexto),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _botonEmergencias(PivotPaleta p, String numero, String pais) {
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(gradient: PivotPaleta.degradadoMarca, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: () => _llamar(numero),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(color: PivotPaleta.sobreSeccion.withValues(alpha: 0.18), shape: BoxShape.circle),
+                  child: const Icon(Icons.call_rounded, size: 30, color: PivotPaleta.sobreSeccion),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Llamar al $numero',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: PivotPaleta.sobreSeccion),
+                      ),
+                      Text(
+                        pais.isEmpty ? 'Emergencias' : 'Emergencias · $pais',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: PivotPaleta.sobreSeccion.withValues(alpha: 0.85)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Fila grande tocable (seguro privado).
+  Widget _botonGrande(PivotPaleta p, {required IconData icono, required String titulo, required String subtitulo, VoidCallback? alTocar}) {
+    final (degradado, sobre) = PivotPaleta.seccion('salud', Theme.of(context).brightness);
+    return Material(
+      color: p.tarjeta,
+      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        onTap: alTocar,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(PivotRadios.chip + 4)),
+                child: Icon(icono, color: sobre),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: p.texto),
+                    ),
+                    Text(subtitulo, style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
+                  ],
+                ),
+              ),
+              if (alTocar != null) Icon(Icons.call_rounded, color: p.marcaTexto),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _subtitulo(PivotPaleta p, String t) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 22, 8, 8),
+    child: Text(
+      t.toUpperCase(),
+      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 0.4, color: p.textoSecundario),
+    ),
+  );
 
   String _edad() {
     final n = Fechas.desdeIso(_f?['fecha_nacimiento']);
@@ -192,81 +362,88 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
 
   Widget _contacto(PivotPaleta p, String n) {
     final tel = _v('emerg${n}_telefono');
-    // Guardado como "🇪🇨 +593 (Ecuador)" (web y app): solo los dígitos del prefijo.
+    // Guardado como "+593 (Ecuador)" (antes "🇪🇨 +593 (Ecuador)"): solo los dígitos del prefijo.
     final pre = Paises.desdeValor(_v('emerg${n}_prefijo'))?.prefijo ?? _v('emerg${n}_prefijo').replaceAll(RegExp(r'[^0-9]'), '');
-    return _tarjeta(
-      p,
-      Icons.contact_phone_outlined,
-      'Contacto de emergencia${n == '2' ? ' 2' : ''}',
-      [
-        _fila(p, 'Nombre', _v('emerg${n}_nombre')),
-        _fila(p, 'Relación', _v('emerg${n}_relacion')),
-        _fila(p, 'Teléfono', [pre.isEmpty ? '' : '+$pre', tel].where((s) => s.isNotEmpty).join(' ')),
-      ],
-      accion: tel.isEmpty ? null : ('Llamar', () => _llamar(pre.isEmpty ? tel : '+$pre${tel.startsWith('0') ? tel.substring(1) : tel}')),
-      accion2: tel.isEmpty ? null : ('WhatsApp', () => _whatsapp(pre, tel)),
-    );
-  }
-
-  Widget _tarjeta(PivotPaleta p, IconData icono, String titulo, List<Widget> filas, {(String, VoidCallback)? accion, (String, VoidCallback)? accion2}) {
+    final nombre = _v('emerg${n}_nombre'), relacion = _v('emerg${n}_relacion');
+    final numero = [pre.isEmpty ? '' : '+$pre', tel].where((s) => s.isNotEmpty).join(' ');
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            nombre.isEmpty ? numero : nombre,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: p.texto),
+          ),
+          Text([relacion, if (nombre.isNotEmpty) numero].where((s) => s.isNotEmpty).join(' · '), style: TextStyle(fontSize: 14, color: p.textoSecundario)),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Icon(icono, size: 20, color: p.marcaTexto),
-              const SizedBox(width: 8),
-              Text(
-                titulo,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.texto),
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () => _llamar(pre.isEmpty ? tel : '+$pre${tel.startsWith('0') ? tel.substring(1) : tel}'),
+                  icon: const Icon(Icons.call_rounded),
+                  label: const Text('Llamar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () => _whatsapp(pre, tel),
+                  icon: const Icon(Icons.chat_rounded),
+                  label: const Text('WhatsApp'),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          ...filas,
-          if (accion != null || accion2 != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (accion != null)
-                  Expanded(
-                    child: FilledButton.icon(onPressed: accion.$2, icon: const Icon(Icons.call_rounded, size: 18), label: Text(accion.$1)),
-                  ),
-                if (accion != null && accion2 != null) const SizedBox(width: 8),
-                if (accion2 != null)
-                  Expanded(
-                    child: OutlinedButton.icon(onPressed: accion2.$2, icon: const Icon(Icons.chat_outlined, size: 18), label: Text(accion2.$1)),
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
     );
   }
 
-  /// "Sin dato" en vez de esconder la fila: así se sabe que no existe.
-  Widget _fila(PivotPaleta p, String etiqueta, String valor) {
-    final vacio = valor.trim().isEmpty;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+  Widget _tarjeta(PivotPaleta p, String seccion, IconData icono, List<Widget> filas) {
+    final (degradado, sobre) = PivotPaleta.seccion(seccion, Theme.of(context).brightness);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (etiqueta.isNotEmpty)
-            SizedBox(
-              width: 118,
-              child: Text(etiqueta, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-            ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(PivotRadios.chip + 2)),
+            child: Icon(icono, size: 20, color: sobre),
+          ),
+          const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              vacio ? 'Sin dato' : valor,
-              style: TextStyle(fontSize: 14.5, fontWeight: vacio ? FontWeight.w400 : FontWeight.w600, color: vacio ? p.textoSecundario : p.texto),
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: filas),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fila(PivotPaleta p, String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(etiqueta, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
+          Text(
+            valor,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: p.texto),
           ),
         ],
       ),
