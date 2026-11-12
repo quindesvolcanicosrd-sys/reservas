@@ -660,6 +660,29 @@ class EventosRepo extends ChangeNotifier {
     await cargar(forzar: true);
   }
 
+  /// Quienes suelen venir ese día de la semana (3 de las últimas 4 semanas).
+  /// Sin señal o con error, vacío: es solo una ayuda.
+  Future<Set<String>> sugeridosAsistencia(Evento ev) async {
+    try {
+      final r = await _api.get('adminSugeridosAsistencia', {'adminToken': _adminToken, 'fecha': Fechas.iso(ev.fecha)});
+      return {for (final u in (r['sugeridos'] as List? ?? const [])) '$u'.trim().toUpperCase()};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Admins cambian o quitan (null) la respuesta de una persona (2026-11-12).
+  Future<void> cambiarRespuesta(Evento ev, Persona persona, EstadoRsvp? estado) async {
+    final res = await _api.post('adminCambiarRespuesta', {
+      'adminToken': _adminToken,
+      'idEvento': ev.id,
+      'nombre': persona.username,
+      'estado': estado?.valor ?? '',
+    });
+    if (res['exito'] == false) throw ApiException((res['error'] ?? 'No se pudo cambiar la respuesta.').toString());
+    await cargar(forzar: true);
+  }
+
   Future<void> eliminar(Evento ev) async {
     final res = await _api.get('adminBorrarEvento', {'adminToken': _adminToken, 'idEvento': ev.id});
     if (res['exito'] == false) throw ApiException((res['error'] ?? 'Este evento no pudo ser eliminado.').toString());

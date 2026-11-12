@@ -141,7 +141,42 @@ class _CrearEventoScreenState extends State<CrearEventoScreen> {
     return _cantidad == 1 ? 'El evento ocurrirá todos los días.' : 'El evento ocurrirá cada $_cantidad días.';
   }
 
+  /// Eventos que se cruzan (Victor, 2026-11-12): se permiten (dos equipos
+  /// pueden entrenar a la vez), pero se pide confirmar por si es un error.
+  Future<bool> _confirmarCruce() async {
+    final f = _fecha;
+    if (_recurrente != false || f == null) return true;
+    int min(String hhmm) {
+      final p = hhmm.split(':');
+      return (int.tryParse(p.first) ?? 0) * 60 + (p.length > 1 ? int.tryParse(p[1]) ?? 0 : 0);
+    }
+
+    final ini = _inicio.hour * 60 + _inicio.minute;
+    final fin = _fin == null ? ini + 120 : _fin!.hour * 60 + _fin!.minute;
+    final cruces = widget.repo.eventos.where((e) {
+      if (e.cancelado || Fechas.soloDia(e.fecha) != Fechas.soloDia(f)) return false;
+      final a = min(e.horaInicio), b = e.horaFin.isEmpty ? a + 120 : min(e.horaFin);
+      return a < fin && ini < b;
+    }).toList();
+    if (cruces.isEmpty) return true;
+    final e = cruces.first;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Ya hay un evento a esa hora'),
+        content: Text('${e.tipo} · ${e.rangoHorario} · ${e.lugar}${cruces.length > 1 ? ' (y ${cruces.length - 1} más)' : ''}.\n¿Crear este evento igual?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Revisar')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Crear igual')),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _guardar() async {
+    if (!await _confirmarCruce()) return;
+    if (!mounted) return;
     setState(() => _guardando = true);
     try {
       final primera = await widget.repo.crear(

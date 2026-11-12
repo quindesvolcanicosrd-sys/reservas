@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/fechas.dart';
+import '../core/reloj.dart';
 import '../core/tema.dart';
 import '../reservas/gestionar_reserva.dart';
 import '../reservas/reserva_screen.dart';
@@ -23,13 +24,16 @@ import '../core/cargando.dart';
 enum _Grupo { asisten, noAsisten, noJugador, sinRespuesta }
 
 class DetalleScreen extends StatefulWidget {
-  const DetalleScreen({super.key, required this.repo, required this.eventoId, this.abrirCancelar = false});
+  const DetalleScreen({super.key, required this.repo, required this.eventoId, this.abrirCancelar = false, this.abrirNoAsistire = false});
   final EventosRepo repo;
   final String eventoId;
 
   /// Llega desde el botón "Cancelar entrenamiento" de una notificación:
   /// abre la confirmación apenas carga el evento (nunca cancela sola).
   final bool abrirCancelar;
+
+  /// Llega desde el botón "No asistiré" de una notificación: pide confirmar.
+  final bool abrirNoAsistire;
 
   @override
   State<DetalleScreen> createState() => _DetalleScreenState();
@@ -164,7 +168,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: repo,
+      listenable: Listenable.merge([repo, RelojMinuto.instancia]),
       builder: (context, _) {
         final ev = repo.porId(widget.eventoId);
         if (ev == null) {
@@ -176,6 +180,23 @@ class _DetalleScreenState extends State<DetalleScreen> {
                   : const Padding(padding: EdgeInsets.all(32), child: Text('No encontramos este evento. Puede que lo hayan eliminado.')),
             ),
           );
+        }
+        if (widget.abrirNoAsistire && !_confirmacionPedida) {
+          _confirmacionPedida = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            final ok = await _confirmar(
+              titulo: '¿No asistirás?',
+              texto: '${Fechas.encabezado(ev.fecha)} · ${ev.rangoHorario}\nTu respuesta cambia a "No asistiré".',
+              si: 'Sí, no asistiré',
+            );
+            if (!ok || !mounted) return;
+            try {
+              final sinSenal = await repo.marcar(ev, EstadoRsvp.noAsistire);
+              _avisar(sinSenal ? 'Sin señal: tu respuesta quedó guardada y se sube sola cuando vuelva la conexión.' : 'Listo: no asistirás.');
+            } catch (e) {
+              _avisar(e.toString());
+            }
+          });
         }
         if (widget.abrirCancelar && !_confirmacionPedida) {
           _confirmacionPedida = true;
@@ -227,9 +248,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
                     ),
                   ),
                 ),
-              _tuAsistencia(context, ev),
-              _tuReserva(context, ev),
-              _equipo(context, ev),
+              // Pasado o cancelado (Victor, 2026-11-12): sin botones de respuesta.
+              if (!ev.finalizado && !ev.cancelado) _tuAsistencia(context, ev),
+              if (!ev.cancelado) _tuReserva(context, ev),
+              if (ev.cancelado) _ibanAIr(context, ev) else if (ev.finalizado) _quienesFueron(context, ev) else _equipo(context, ev),
             ],
           ),
         );
@@ -476,6 +498,126 @@ class _DetalleScreenState extends State<DetalleScreen> {
     );
   }
 
+  /// Admins: cambiar o quitar la respuesta de alguien (Victor, 2026-11-12).
+  Future<void> _cambiarRespuesta(Evento ev, Persona per) async {
+    final actual = ev.rsvps.where((r) => r.persona.username == per.username).firstOrNull?.estado;
+    final elegido = await showModalBottomSheet<(EstadoRsvp?,)>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text('Respuesta de ${per.nombreMostrar}', style: Theme.of(c).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+            for (final e in EstadoRsvp.values)
+              ListTile(
+                leading: Icon(iconoMiEstado(e)),
+                title: Text(e.valor),
+                trailing: e == actual ? const Icon(Icons.check_rounded) : null,
+                onTap: () => Navigator.pop(c, (e,)),
+              ),
+            ListTile(leading: const Icon(Icons.remove_circle_outline_rounded), title: const Text('Quitar respuesta'), onTap: () => Navigator.pop(c, (null,))),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (elegido == null || elegido.$1 == actual || !mounted) return;
+    try {
+      await repo.cambiarRespuesta(ev, per, elegido.$1);
+      _avisar(elegido.$1 == null ? 'Respuesta quitada.' : 'Respuesta cambiada a "${elegido.$1!.valor}".');
+    } catch (e) {
+      _avisar(e.toString());
+    }
+  }
+
+  /// Evento pasado: quién fue y cómo llegó (Victor, 2026-11-12).
+  Widget _quienesFueron(BuildContext context, Evento ev) {
+    final p = context.pivot;
+    final fueron = [...ev.asistentes]..sort((a, b) => a.persona.nombreMostrar.toLowerCase().compareTo(b.persona.nombreMostrar.toLowerCase()));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              fueron.isEmpty ? 'Asistencia' : 'Quiénes fueron · ${fueron.length}',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (fueron.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text('Todavía no se tomó asistencia de este evento.', style: TextStyle(color: p.textoSecundario)),
+            )
+          else
+            for (final a in fueron)
+              InkWell(
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                onTap: () => PersonaScreen.abrir(context, EquipoRepo.de(repo.sesion), a.persona.username),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  child: Row(
+                    children: [
+                      HeroAvatar(
+                        tag: 'avatar-${a.persona.username}',
+                        child: AvatarPersona(nombre: a.persona.nombreMostrar, foto: a.persona.fotoPerfil),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          a.persona.nombreMostrar,
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
+                        ),
+                      ),
+                      Etiqueta(texto: a.estado.etiqueta, icono: a.estado == EstadoReal.aTiempo ? Icons.check_rounded : Icons.schedule_rounded),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  /// Evento cancelado: a lo sumo, quién había dicho que iba.
+  Widget _ibanAIr(BuildContext context, Evento ev) {
+    final p = context.pivot;
+    final iban = ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
+    if (iban.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Habían dicho que irían · ${iban.length}',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: p.textoSecundario),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final per in iban)
+                Chip(
+                  avatar: AvatarPersona(nombre: per.nombreMostrar, foto: per.fotoPerfil, tamano: 24),
+                  label: Text(per.nombreMostrar),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _equipo(BuildContext context, Evento ev) {
     final p = context.pivot;
     final grupos = <(_Grupo, String, List<Persona>?)>[
@@ -568,6 +710,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                         marcadxs.contains(per.username.trim().toLowerCase()) &&
                                         per.username.toLowerCase() != (repo.sesion.nombre ?? '').toLowerCase())
                                       PildoraEmergencia(alTocar: () => _emergencia(per))
+                                    else if (_esAdmin && elegido.$1 != _Grupo.sinRespuesta && !ev.yaEmpezo)
+                                      IconButton(
+                                        tooltip: 'Cambiar respuesta',
+                                        icon: Icon(Icons.edit_note_rounded, color: p.textoSecundario),
+                                        onPressed: () => _cambiarRespuesta(ev, per),
+                                      )
                                     else
                                       Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
                                   ],

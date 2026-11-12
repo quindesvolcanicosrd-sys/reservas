@@ -107,7 +107,7 @@ class _RaizState extends State<_Raiz> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _navegador.currentState?.push(
         MaterialPageRoute(
-          builder: (_) => DetalleScreen(repo: _repo, eventoId: a.eventoId, abrirCancelar: a.accion == 'cancelar'),
+          builder: (_) => DetalleScreen(repo: _repo, eventoId: a.eventoId, abrirCancelar: a.accion == 'cancelar', abrirNoAsistire: a.accion == 'no-asistire'),
         ),
       );
     });

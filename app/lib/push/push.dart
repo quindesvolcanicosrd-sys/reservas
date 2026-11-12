@@ -150,9 +150,10 @@ class Push {
         final id = (b['id'] ?? '').toString();
         final texto = (b['texto'] ?? '').toString();
         if (id.isEmpty || texto.isEmpty) continue;
-        // Asistiré / No asistiré se guardan sin abrir la app; "cancelar"
-        // abre la app en la confirmación (nunca cancela sola).
-        final abreApp = id == 'cancelar';
+        // Asistiré se guarda sin abrir la app. "No asistiré" y "cancelar"
+        // abren la app en una confirmación (Victor, 2026-11-12: evitar
+        // toques accidentales).
+        final abreApp = id == 'cancelar' || id == 'no-asistire';
         botones.add(AndroidNotificationAction(id, texto, showsUserInterface: abreApp, cancelNotification: true));
       }
     } catch (_) {}
@@ -199,7 +200,7 @@ class Push {
   }
 
   static void _alTocar(NotificationResponse r) {
-    if (r.actionId == 'asistire' || r.actionId == 'no-asistire') {
+    if (r.actionId == 'asistire') {
       procesarBoton(r);
       return;
     }
@@ -212,7 +213,7 @@ class Push {
       final p = jsonDecode(r.payload ?? '{}') as Map<String, dynamic>;
       final id = (p['evento_id'] ?? '').toString();
       if (id.isEmpty) return null;
-      return AperturaPush(eventoId: id, accion: r.actionId == 'cancelar' ? 'cancelar' : null);
+      return AperturaPush(eventoId: id, accion: r.actionId == 'cancelar' || r.actionId == 'no-asistire' ? r.actionId : null);
     } catch (_) {
       return null;
     }

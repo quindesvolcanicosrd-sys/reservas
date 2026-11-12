@@ -41,6 +41,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
   void initState() {
     super.initState();
     if (eventos.cuota == null) eventos.recargarCuota();
+    NotificacionesScreen.precargar(sesion.api);
   }
 
   @override

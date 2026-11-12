@@ -22,6 +22,7 @@ class TomarAsistenciaScreen extends StatefulWidget {
 
 class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
   List<MiembroRoster>? _roster;
+  Set<String> _sugeridos = const {};
   String? _error;
   String _busqueda = '';
 
@@ -39,6 +40,11 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     try {
       final r = await widget.repo.roster(forzar: true);
       if (mounted) setState(() => _roster = r);
+      final ev = widget.repo.porId(widget.eventoId);
+      if (ev != null) {
+        final s = await widget.repo.sugeridosAsistencia(ev);
+        if (mounted) setState(() => _sugeridos = s);
+      }
     } catch (_) {
       if (mounted) setState(() => _error = 'No se pudo cargar el equipo.');
     }
@@ -126,9 +132,12 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     if (_roster == null) return const Center(child: PivotCargando());
     final q = _busqueda.trim().toLowerCase();
     bool coincide(MiembroRoster m) => q.isEmpty || m.persona.nombreMostrar.toLowerCase().contains(q) || m.persona.username.toLowerCase().contains(q);
-    final activos = _roster!.where((m) => !m.inactivo && coincide(m)).toList();
+    bool sugerido(MiembroRoster m) => _sugeridos.contains(m.persona.username.trim().toUpperCase());
+    // Arriba, quienes suelen venir ese día de la semana (Victor, 2026-11-12).
+    final suelen = q.isEmpty ? _roster!.where((m) => sugerido(m) && coincide(m)).toList() : const <MiembroRoster>[];
+    final activos = _roster!.where((m) => !m.inactivo && coincide(m) && !suelen.contains(m)).toList();
     final inactivos = _roster!.where((m) => m.inactivo && coincide(m)).toList();
-    if (activos.isEmpty && inactivos.isEmpty) {
+    if (suelen.isEmpty && activos.isEmpty && inactivos.isEmpty) {
       return Center(
         child: Text('Sin resultados.', style: TextStyle(color: p.textoSecundario)),
       );
@@ -136,6 +145,11 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       children: [
+        if (suelen.isNotEmpty) ...[
+          _separador(p, 'Suelen venir los ${Fechas.dia(ev.fecha).toLowerCase()}'),
+          for (final m in suelen) _fila(context, ev, m, marcados),
+          _separador(p, 'Resto del equipo'),
+        ],
         for (final m in activos) _fila(context, ev, m, marcados),
         if (inactivos.isNotEmpty) ...[
           Padding(
@@ -159,6 +173,23 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
       ],
     );
   }
+
+  Widget _separador(PivotPaleta p, String texto) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    child: Row(
+      children: [
+        Expanded(child: Divider(color: p.tarjetaBorde)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text(
+            texto,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: p.textoSecundario),
+          ),
+        ),
+        Expanded(child: Divider(color: p.tarjetaBorde)),
+      ],
+    ),
+  );
 
   Widget _fila(BuildContext context, Evento ev, MiembroRoster m, Map<String, EstadoReal> marcados) {
     final p = context.pivot;

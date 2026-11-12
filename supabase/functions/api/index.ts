@@ -2556,6 +2556,59 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
   return { exito: true, ...reactivacion };
 }
 
+// Sugeridos al tomar lista (Victor, 2026-11-12): quienes vinieron el mismo
+// día de la semana en al menos 3 de las últimas 4 semanas y no faltaron las
+// 2 últimas seguidas. Solo lee los eventos de esas 4 fechas.
+async function adminSugeridosAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  const base = String(params.fecha ?? '').substring(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(base)) return { exito: false, error: 'Fecha inválida.' };
+  const fechas = [7, 14, 21, 28].map((d) => {
+    const x = new Date(base + 'T12:00:00Z');
+    x.setUTCDate(x.getUTCDate() - d);
+    return x.toISOString().substring(0, 10);
+  });
+  const { data: evs } = await supabase.from('asistencias').select('id_evento, fecha').in('fecha', fechas)
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
+  const semanaDe: Record<string, number> = {};
+  (evs ?? []).forEach((e: any) => { semanaDe[e.id_evento] = fechas.indexOf(e.fecha); });
+  const ids = Object.keys(semanaDe);
+  if (!ids.length) return { exito: true, sugeridos: [] };
+  const { data: vigente } = await supabase.rpc('fn_asistencia_vigente_por_evento', { ids });
+  const semanas: Record<string, Set<number>> = {};
+  for (const [idEv, filas] of Object.entries((vigente ?? {}) as Record<string, any[]>)) {
+    for (const f of filas) {
+      if (f.origen !== 'Admin' || (f.estado !== 'A tiempo' && f.estado !== 'Tarde')) continue;
+      (semanas[f.nombre] ??= new Set()).add(semanaDe[idEv]);
+    }
+  }
+  const sugeridos = Object.entries(semanas)
+    .filter(([, s]) => s.size >= 3 && (s.has(0) || s.has(1)))
+    .map(([u]) => u);
+  return { exito: true, sugeridos };
+}
+
+// Admins cambian o quitan la respuesta (Asistiré / No asistiré / No jugador)
+// de una persona en un evento (Victor, 2026-11-12). `estado` vacío = quitar.
+// Queda como respuesta de la persona (origen 'Usuario'), igual que si la
+// hubiera marcado; la asistencia real ('Admin') no se toca.
+async function adminCambiarRespuesta(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  const idEvento = String(params.idEvento ?? '').trim();
+  const nombre = String(params.nombre ?? '').trim();
+  const estado = String(params.estado ?? '').trim();
+  if (!idEvento || !nombre) return { exito: false, error: 'Faltan datos.' };
+  if (estado && !ESTADOS_RSVP.includes(estado)) return { exito: false, error: 'Estado inválido.' };
+  const { error: errBorrar } = await supabase.from('log_asistencias').delete()
+    .eq('id_evento', idEvento).eq('nombre_usuario', nombre).in('origen', ['Usuario', 'AsistenciaAnticipada']);
+  if (errBorrar) return { exito: false, error: 'No se pudo guardar.' };
+  if (estado) {
+    const { error } = await _agregarFilaLogAsistencia(idEvento, nombre, 'Usuario', estado);
+    if (error) return { exito: false, error: 'No se pudo guardar: ' + error };
+  }
+  return { exito: true };
+}
+
 const ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ninguno'];
 // Bug real corregido de paso (encontrado al probar el wizard de pagos
 // manuales, que reusa esta acción -- mismo patrón de hueco de seguridad ya
@@ -5969,6 +6022,16 @@ async function _eventosEnVentana(desdeMs: number, hastaMs: number, diasCandidato
     return t !== null && t >= desdeMs && t <= hastaMs;
   });
 }
+// Solo cuentan respuestas de personas que siguen en el equipo (Victor,
+// 2026-11-12: el número salía inflado por asistencias anticipadas de
+// personas archivadas o eliminadas).
+async function _soloEnEquipo(usernames: string[]): Promise<string[]> {
+  if (!usernames.length) return [];
+  const { data } = await supabase.from('equipo').select('username').in('username', [...new Set(usernames)]).is('eliminado_en', null);
+  const vigentes = new Set((data ?? []).map((r: any) => r.username));
+  return usernames.filter((u) => vigentes.has(u));
+}
+const _textoAsistiran = (n: number) => (n === 0 ? 'Todavía nadie confirmó que asistirá.' : n === 1 ? '1 persona asistirá hoy.' : `${n} personas asistirán hoy.`);
 const _BTN_ASISTIRE = { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' };
 const _BTN_NO_ASISTIRE = { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' };
 
@@ -5989,18 +6052,14 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
   const admins = new Set(await _adminDestinatariosPush());
   let enviados = 0;
   for (const ev of enVentana) {
-    const filas = asistPorEvento[ev.id_evento] ?? [];
-    const asisten: string[] = filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
-    const noJugador: string[] = filas.filter((a: any) => a.estado === 'No jugador').map((a: any) => a.nombre);
+        const filas = asistPorEvento[ev.id_evento] ?? [];
+    const asisten: string[] = await _soloEnEquipo(filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre));
+    const noJugador: string[] = await _soloEnEquipo(filas.filter((a: any) => a.estado === 'No jugador').map((a: any) => a.nombre));
     const destinatarios = [...asisten, ...noJugador].filter((u) => !admins.has(u));
     if (!destinatarios.length) continue;
-    const nombres = await _nombresMostrarPorUsername([...asisten, ...noJugador]);
     const tipo = _tipoEventoMin(ev.tipo_evento);
-    const n = asisten.length;
-    let cuerpo = n === 0 ? 'Todavía nadie confirmó que asistirá.'
-      : `${n === 1 ? 'Asistirá 1 persona' : `Asistirán ${n} personas`}: ${_listaNombresEs(asisten.map((u) => nombres[u]))}.`;
-    if (noJugador.length) cuerpo += ` Como no jugador: ${_listaNombresEs(noJugador.map((u) => nombres[u]))}.`;
-    cuerpo += ' ¿Ya no puedes ir? Cambia tu estado:';
+    // Sin nombres (Victor, 2026-11-12): solo cuántas personas van.
+    const cuerpo = _textoAsistiran(asisten.length) + ' ¿Ya no puedes ir? Cambia tu estado:';
     const url = _urlEvento(String(ev.id_evento));
     await Promise.allSettled(destinatarios.map(async (username: string) => {
       const token = await _firmarTokenAccion(username, String(ev.id_evento));
@@ -6083,45 +6142,60 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   if (!adminDestinatarios.length) return { exito: true, eventos: enVentana.length, enviados: 0 };
   let enviados = 0;
   for (const ev of enVentana) {
-    const filas = asistPorEvento[ev.id_evento] ?? [];
-    const asisten: string[] = filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
-    const noJugador: string[] = filas.filter((a: any) => a.estado === 'No jugador').map((a: any) => a.nombre);
+        const filas = asistPorEvento[ev.id_evento] ?? [];
+    const asisten: string[] = await _soloEnEquipo(filas.filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre));
 
     const { data: equipoRows } = asisten.length ? await supabase.from('equipo')
       .select('username, nombre_derby, necesita_patines, necesita_protecciones, talla')
       .in('username', asisten).is('eliminado_en', null) : { data: [] as any[] };
     const porUsername: Record<string, any> = {};
     (equipoRows ?? []).forEach((r: any) => { porUsername[r.username] = r; });
-    const nombres = await _nombresMostrarPorUsername([...asisten, ...noJugador]);
-
-    const equipamiento: string[] = [];
+        // Resumen corto (Victor, 2026-11-12): cuántas personas y qué llevar; el
+    // detalle con tallas está en el evento.
+    let patines = 0, protecciones = 0;
     asisten.forEach((u) => {
       const r = porUsername[u];
-      if (!r) return;
-      const necesita: string[] = [];
-      if (r.necesita_patines === 'Sí') necesita.push(`patines${r.talla ? ' talla ' + r.talla : ''}`);
-      if (r.necesita_protecciones === 'Sí') necesita.push('protecciones');
-      if (necesita.length) equipamiento.push(`${nombres[u]}: ${necesita.join(', ')}`);
+      if (r?.necesita_patines === 'Sí') patines++;
+      if (r?.necesita_protecciones === 'Sí') protecciones++;
     });
+    const llevar = [patines ? `${patines} ${patines === 1 ? 'patín' : 'patines'}` : '', protecciones ? `${protecciones} ${protecciones === 1 ? 'protección' : 'protecciones'}` : ''].filter(Boolean);
 
     const tipo = _tipoEventoMin(ev.tipo_evento);
     const n = asisten.length;
-    const partes = [n === 0 ? 'Todavía nadie confirmó que asistirá.'
-      : `${n === 1 ? 'Asistirá 1 persona' : `Asistirán ${n} personas`}: ${_listaNombresEs(asisten.map((u) => nombres[u]))}.`];
-    if (noJugador.length) partes.push(`Como no jugador: ${_listaNombresEs(noJugador.map((u) => nombres[u]))}.`);
-    if (equipamiento.length) partes.push(`Equipamiento a prestar: ${equipamiento.join('; ')}.`);
-    if (n <= 3) partes.push('Si son muy pocas personas, puedes cancelarlo:');
+    const partes = [_textoAsistiran(n)];
+    if (llevar.length) partes.push(`Equipamiento a llevar hoy: ${llevar.join(' y ')}.`);
+    // "Cancelar" solo con menos de 5 personas; si no, el admin que asiste ve
+    // "No asistiré". Cualquiera de los dos abre la app para confirmar.
+    const pocos = n < 5;
+    if (pocos) partes.push('Son pocas personas: puedes cancelarlo.');
 
     const url = _urlEvento(String(ev.id_evento));
-    await sendPush({
-      tipo: 'avisos_admin',
-      include_external_user_ids: adminDestinatarios,
-      headings: { es: `El ${tipo} ${_cuandoEvento(ev.fecha)} empieza en 1 hora` },
-      contents: { es: partes.join(' ') },
-      url,
-      data: { url },
-      web_buttons: [{ id: 'cancelar', text: `Cancelar ${tipo}`, url: _urlEvento(String(ev.id_evento), '&accion=cancelar') }],
-    });
+    const titulo = `El ${tipo} ${_cuandoEvento(ev.fecha)} empieza en 1 hora`;
+    if (pocos) {
+      await sendPush({
+        tipo: 'avisos_admin',
+        include_external_user_ids: adminDestinatarios,
+        headings: { es: titulo },
+        contents: { es: partes.join(' ') },
+        url,
+        data: { url, evento_id: String(ev.id_evento) },
+        web_buttons: [{ id: 'cancelar', text: `Cancelar ${tipo}`, url: _urlEvento(String(ev.id_evento), '&accion=cancelar') }],
+      });
+    } else {
+      await Promise.allSettled(adminDestinatarios.map(async (admin: string) => {
+        const va = asisten.includes(admin);
+        const token = va ? await _firmarTokenAccion(admin, String(ev.id_evento)) : null;
+        await sendPush({
+          tipo: 'avisos_admin',
+          include_external_user_ids: [admin],
+          headings: { es: titulo },
+          contents: { es: partes.join(' ') },
+          url,
+          data: token ? { url, token, evento_id: String(ev.id_evento) } : { url, evento_id: String(ev.id_evento) },
+          web_buttons: token ? [_BTN_NO_ASISTIRE] : undefined,
+        });
+      }));
+    }
     enviados++;
   }
   return { exito: true, eventos: enVentana.length, enviados };
@@ -6628,7 +6702,7 @@ async function cronDiario(): Promise<Record<string, any>> {
   const idsHoy = (eventosHoy ?? []).map((e: any) => e.id_evento);
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(idsHoy);
   for (const ev of (eventosHoy ?? [])) {
-    const asistentes = (asistPorEvento[ev.id_evento] ?? []).filter((a: any) => a.estado === 'Asistiré').length;
+        const asistentes = (await _soloEnEquipo((asistPorEvento[ev.id_evento] ?? []).filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre))).length;
     await sendPush({
       tipo: 'entrenamiento_hoy',
       broadcastEquipo: true,
@@ -6974,6 +7048,8 @@ Deno.serve(async (req: Request) => {
       case 'eliminarDispositivoPush':         return json(await eliminarDispositivoPush(params));
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
+                  case 'adminSugeridosAsistencia':        return json(await adminSugeridosAsistencia(params));
+      case 'adminCambiarRespuesta':           return json(await adminCambiarRespuesta(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
       case 'adminActualizarEstadoViaje':      return json(await adminActualizarEstadoViaje(params));
       case 'adminCancelarViaje':              return json(await adminCancelarViaje(params));

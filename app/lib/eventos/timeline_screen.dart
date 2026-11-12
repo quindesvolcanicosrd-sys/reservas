@@ -7,6 +7,7 @@ import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/fechas.dart';
+import '../core/reloj.dart';
 import '../core/tema.dart';
 import '../core/tour.dart';
 import '../reservas/gestionar_reserva.dart';
@@ -93,7 +94,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   // Se guarda qué fila estaba arriba y se vuelve a ella sin animación.
   Object? _firmaDatos;
   bool _desplazandoProgramado = false;
-  Timer? _reloj;
+  void _alPasarMinuto() {
+    if (mounted) setState(() {});
+  }
+
   List<_Fila> _filas = const [];
   int? _claveFilas;
   bool _saltoInicialHecho = false;
@@ -118,10 +122,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     _posiciones.itemPositions.addListener(_alDesplazar);
     widget.irAHoy?.addListener(_irAHoy);
     _cargarFiltros();
-    // Cada minuto: mueve la línea de "ahora" y el resaltado de "En curso".
-    _reloj = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
-    });
+    // Al cambiar cada minuto (y al volver a la app): mueve la línea de
+    // "ahora", el resaltado de "En curso" y habilita "Tomar asistencia".
+    RelojMinuto.instancia.addListener(_alPasarMinuto);
   }
 
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
@@ -168,7 +171,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void dispose() {
     _posiciones.itemPositions.removeListener(_alDesplazar);
     widget.irAHoy?.removeListener(_irAHoy);
-    _reloj?.cancel();
+    RelojMinuto.instancia.removeListener(_alPasarMinuto);
     _calCtrl.dispose();
     _tituloMes.dispose();
     _textoBusqueda.dispose();
@@ -1152,6 +1155,15 @@ class _TarjetaEvento extends StatelessWidget {
     final pedirRespuesta = !apagado && ev.miEstado == null && repo.motivoSinRespuesta(ev) == null;
     // Después de empezar se muestran quienes asistieron de verdad (si ya se tomó asistencia).
     final reales = ev.yaEmpezo && ev.asistentes.isNotEmpty;
+    // Mi asistencia real en eventos que ya terminaron y tienen la lista tomada.
+    final yo = repo.sesion.nombre ?? '';
+    final (String, IconData)? miReal = !apagado && ev.finalizado && ev.asistentes.isNotEmpty
+        ? switch (ev.asistentes.where((a) => a.persona.username.toLowerCase() == yo.toLowerCase()).firstOrNull?.estado) {
+            EstadoReal.aTiempo => ('Llegaste a horario', Icons.check_circle_rounded),
+            EstadoReal.tarde => ('Llegaste tarde', Icons.schedule_rounded),
+            null => ('No asististe', Icons.cancel_outlined),
+          }
+        : null;
     final asisten = reales ? ev.asistentes.map((a) => a.persona).toList() : ev.con(EstadoRsvp.asistire).map((r) => r.persona).toList();
     final esAdmin = repo.sesion.esAdmin && repo.sesion.adminToken != null;
     final tomarAsistencia = esAdmin && ev.sePuedeTomarAsistencia;
@@ -1202,7 +1214,10 @@ class _TarjetaEvento extends StatelessWidget {
                   ),
                   if (apagado)
                     Etiqueta(texto: textoEstadoEvento(ev), apagada: true)
-                  else if (ev.miEstado != null)
+                  else if (miReal != null)
+                    // Evento pasado con asistencia tomada (Victor, 2026-11-12): lo que pasó de verdad.
+                    Etiqueta(texto: miReal.$1, icono: miReal.$2)
+                  else if (ev.miEstado != null && !ev.finalizado)
                     Etiqueta(texto: textoMiEstado(ev.miEstado!), icono: iconoMiEstado(ev.miEstado!)),
                 ],
               ),

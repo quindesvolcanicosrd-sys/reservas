@@ -15,20 +15,20 @@ Reglas de siempre:
 ## Etapas (orden aprobado 2026-11-12)
 
 1. [x] Consultas de asistencia escalables + ronda de 11 cambios (2026-11-12).
-2. [ ] **Bugs reportados**
-   - [ ] Push de 1 h antes:
+2. [x] **Bugs reportados** (2026-11-12)
+   - [x] Push de 1 h antes:
      - Los botones abren la app con confirmación.
      - "Cancelar entrenamiento" solo para Pivots y con menos de 5 personas; si no, "No asistiré".
      - Contar solo "Asistiré" y sin nombres: "X personas asistirán hoy".
-   - [ ] Timeline: la línea de "ahora" avanza cada minuto; "Tomar asistencia" se activa al llegar la hora con la app abierta.
-   - [ ] Eventos pasados:
+   - [x] Timeline: la línea de "ahora" avanza cada minuto; "Tomar asistencia" se activa al llegar la hora con la app abierta.
+   - [x] Eventos pasados:
      - La tarjeta muestra tu asistencia real (a horario, tarde, no asististe).
      - El detalle muestra quién fue y cómo llegó; sin botones de respuesta.
-   - [ ] Eventos cancelados: solo el aviso y, a lo sumo, quién había dicho que iba.
-   - [ ] Pivots pueden cambiar o quitar la respuesta de una persona desde el detalle del evento.
-   - [ ] Tomar lista: arriba quienes vinieron ese día de la semana en 3 de las últimas 4 semanas (sale de sugeridos si falta 2 semanas seguidas).
-   - [ ] Notificaciones en Ajustes abre al instante (configuración guardada).
-   - [ ] Eventos que se cruzan: permitidos en todo el calendario, con confirmación al crear ("Ya hay un evento a esa hora, ¿crear igual?").
+   - [x] Eventos cancelados: solo el aviso y, a lo sumo, quién había dicho que iba.
+   - [x] Pivots pueden cambiar o quitar la respuesta de una persona desde el detalle del evento.
+   - [x] Tomar lista: arriba quienes vinieron ese día de la semana en 3 de las últimas 4 semanas (sale de sugeridos si falta 2 semanas seguidas).
+   - [x] Notificaciones en Ajustes abre al instante (configuración guardada).
+   - [x] Eventos que se cruzan: permitidos en todo el calendario, con confirmación al crear ("Ya hay un evento a esa hora, ¿crear igual?").
 3. [ ] **Calendario + tareas + Mi perfil** (detalle en PENDIENTES sección A):
    - Eventos → Calendario, con tareas integradas en el timeline.
    - Ajustes se une a Mi perfil (pestaña con el avatar).

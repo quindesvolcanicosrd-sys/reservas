@@ -34,6 +34,16 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Push `tarea_nueva` (`_avisarTareasNuevas`, equipo activo menos quien la creó; el cron mensual agrupa en un aviso).
 - Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
 
+### Etapa 2: bugs (2026-11-12)
+- Push 1 h antes: sin nombres ("X personas asistirán hoy."), solo cuenta "Asistiré" de personas que siguen en el equipo (`_soloEnEquipo`; también en el aviso diario). Pivots: "Cancelar" solo con menos de 5 personas; si no, "No asistiré" a quien va. Resumen de equipamiento "Equipamiento a llevar hoy: N patines y M protecciones".
+- App: "No asistiré" desde una notificación abre el evento con confirmación (`DetalleScreen.abrirNoAsistire`); "Asistiré" sigue en segundo plano.
+- `core/reloj.dart` (`RelojMinuto`): avisa al cambiar cada minuto y al volver a la app; lo usan el timeline y el detalle (línea de ahora, "En curso", "Tomar asistencia"). El temporizador solo corre con oyentes.
+- Eventos pasados: la tarjeta muestra tu asistencia real (Llegaste a horario / tarde / No asististe) si se tomó lista; el detalle muestra "Quiénes fueron" con su estado y sin botones de respuesta. Cancelados: solo "Habían dicho que irían".
+- Pivots cambian o quitan la respuesta de alguien desde el detalle (`adminCambiarRespuesta`, queda como respuesta de la persona).
+- Tomar lista: "Suelen venir los <día>" arriba (`adminSugeridosAsistencia`: 3 de las últimas 4 semanas ese día y alguna de las 2 últimas).
+- Notificaciones (Ajustes) abre al instante: copia en memoria precargada al abrir Ajustes.
+- Crear evento: si se cruza con otro el mismo día, pide confirmar ("Crear igual").
+
 ### Flujo de trabajo (2026-11-12)
 - `HOJA_DE_RUTA.md` = fuente de verdad del trabajo pendiente (etapas aprobadas por Victor). Pedidos nuevos: documento de Claude "Pivot — Bandeja" (https://claude.ai/artifact/9XpNUwdyNTWiDhJQTP53fB). Tarea programada "Pivot — trabajar la Bandeja" cada 2 días a las 2:52 (Ecuador): lee MANIFEST, hoja de ruta y Bandeja, trabaja, publica y deja dudas en la Bandeja.
 - Decidido: "Pivot"/"Pivots" reemplaza a admin/administradorxs en toda la app (etapa 4).

@@ -12,6 +12,9 @@ class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({super.key, required this.sesion});
   final Sesion sesion;
 
+  /// Se llama al abrir Ajustes para que esta pantalla abra al instante.
+  static Future<void> precargar(Api api) => _NotificacionesScreenState.precargar(api).catchError((_) {});
+
   @override
   State<NotificacionesScreen> createState() => _NotificacionesScreenState();
 }
@@ -24,9 +27,20 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
 
   Api get _api => widget.sesion.api;
 
+  // Copia en memoria (Victor, 2026-11-12: la pantalla mostraba carga cada
+  // vez). Se precarga al abrir Ajustes y se refresca en segundo plano.
+  static List<Map<String, dynamic>>? _cacheTipos;
+  static Map<String, bool> _cachePrefs = {};
+  static bool _cacheActivas = true;
+
   @override
   void initState() {
     super.initState();
+    if (_cacheTipos != null) {
+      _tipos = _cacheTipos;
+      _prefs = Map.of(_cachePrefs);
+      _activas = _cacheActivas;
+    }
     _cargar();
   }
 
@@ -35,24 +49,33 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     return c.contains('admin') || c.contains('cuenta');
   }
 
+  /// Trae catálogo y preferencias y los deja en la copia en memoria.
+  static Future<void> precargar(Api api) async {
+    final r = await Future.wait([api.get('getCatalogoNotificaciones'), api.get('getPreferenciasPush')]);
+    final c = r[0], p = r[1];
+    if (p['exito'] == false) throw ApiException('${p['error']}');
+    _cacheTipos = [
+      for (final t in (c['tipos'] as List? ?? const []))
+        // Administración y Cuenta no se pueden apagar (Victor, 2026-11-08).
+        if (t is Map<String, dynamic> && t['soloAdmin'] != true && !_fija('${t['categoria'] ?? ''}')) t,
+    ];
+    _cacheActivas = p['activas'] != false;
+    _cachePrefs = {for (final e in ((p['preferencias'] as Map?) ?? const {}).entries) '${e.key}': e.value == true};
+  }
+
   Future<void> _cargar() async {
     setState(() => _error = null);
     try {
-      final c = await _api.get('getCatalogoNotificaciones');
-      final p = await _api.get('getPreferenciasPush');
-      if (p['exito'] == false) throw ApiException('${p['error']}');
+      await precargar(_api);
       if (!mounted) return;
       setState(() {
-        _tipos = [
-          for (final t in (c['tipos'] as List? ?? const []))
-            // Administración y Cuenta no se pueden apagar (Victor, 2026-11-08).
-            if (t is Map<String, dynamic> && t['soloAdmin'] != true && !_fija('${t['categoria'] ?? ''}')) t,
-        ];
-        _activas = p['activas'] != false;
-        _prefs = {for (final e in ((p['preferencias'] as Map?) ?? const {}).entries) '${e.key}': e.value == true};
+        _tipos = _cacheTipos;
+        _activas = _cacheActivas;
+        _prefs = Map.of(_cachePrefs);
       });
     } catch (_) {
-      if (mounted) setState(() => _error = 'No se pudieron cargar tus preferencias. Revisa tu conexión.');
+      // Con copia en pantalla, el error no tapa nada.
+      if (mounted && _tipos == null) setState(() => _error = 'No se pudieron cargar tus preferencias. Revisa tu conexión.');
     }
   }
 
@@ -61,6 +84,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     try {
       final r = await _api.post('guardarPreferenciasPush', params);
       if (r['exito'] != true) throw ApiException('${r['error'] ?? ''}');
+      _cachePrefs = Map.of(_prefs);
+      _cacheActivas = _activas;
     } catch (_) {
       if (!mounted) return;
       setState(revertir);

@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — Bugs: avisos de 1 h antes sin nombres y con conteo correcto, "No asistiré" desde la notificación pide confirmar, el timeline se actualiza cada minuto, eventos pasados muestran tu asistencia real y quiénes fueron, cancelados sin botones, Pivots pueden cambiar respuestas, sugeridos al tomar lista, Notificaciones abre al instante y aviso al crear eventos que se cruzan.
+
 2026-11-12 — App Android: emergencia rediseñada (solo datos conocidos, botón grande de emergencias), loader más grande sin cápsula, desgloses de puntos en pantalla completa con barras por semana, panel de excepciones de cuota con historial, aviso push de tareas nuevas, Mi equipamiento en Ajustes y ajustes de textos.
 
 2026-11-12 — Escalabilidad: las respuestas "Asistiré", la última asistencia real y la racha ya no traen la tabla completa de registros de asistencia (que tenía un tope de 100.000 filas); la base devuelve solo lo necesario con 3 funciones SQL e índices nuevos. Mismos resultados, verificados contra todos los datos.
