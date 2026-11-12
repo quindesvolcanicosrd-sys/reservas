@@ -34,6 +34,13 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Push `tarea_nueva` (`_avisarTareasNuevas`, equipo activo menos quien la creó; el cron mensual agrupa en un aviso).
 - Mi equipamiento pasa a Ajustes junto a Excepción de cuota; teléfono dentro del grupo Mi perfil sin el pie "Esto lo ve todo el equipo"; contactos de emergencia sin avatar y con título "Contactos de emergencia"; buscadores "Buscar país" / "Buscar prefijo"; aviso "Tours guiados reestablecidos".
 
+### Entrada de la app (2026-11-12)
+- Pantalla de arranque nativa con el logo de Victor (`assets/splash/`, generada con `dart run flutter_native_splash:create`; colores de fondo = `PivotPaleta.*.fondo`, repetidos en `pubspec.yaml` porque ese archivo no lee Dart).
+- `core/intro.dart` (`IntroPivot`, envuelve toda la app en `main.dart`):
+  - Secuencia: logo (0,45 s) → bucle `assets/lottie/loop.json` sobre el rojo de marca mientras carga → `intro.json` hasta el fotograma 44 → hueco en forma de P que crece y revela la app (`_PintorRevelar`).
+  - El reproductor de Lottie de Flutter no dibuja la máscara invertida del archivo, por eso el hueco se dibuja en código. El relleno del Lottie toma `p.marca` por `ValueDelegate`.
+  - `IntroPivot.listo` lo marca `_RaizState` cuando la sesión y los eventos ya cargaron (o no hay sesión), con un tope de 6 s. Si los datos están al terminar el logo, se salta el bucle. Con "reducir animaciones", solo un fundido.
+
 ### Etapa 3 (parte 1): Calendario + tareas + Mi perfil (2026-11-12)
 - Nav: Calendario · Equipo · Mi Liga (Pivots, web) · Mi perfil (ícono = tu avatar). Sin pestaña Tareas. `core/navegacion.dart` (`Navegacion.ir`) permite que otra pantalla cambie de pestaña (ej. "Editar mi perfil" desde tu ficha).
 - Timeline (`eventos/timeline_screen.dart`):

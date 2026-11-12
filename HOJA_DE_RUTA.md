@@ -80,7 +80,7 @@ Reglas de siempre:
      - Con nombre y teléfono; un cupón por teléfono.
      - Botón de WhatsApp para contactar a quien se inscribió.
    - **Cupones manuales a una persona**: 10, 15, 25, 50 o 100 %, en la pantalla de precios y cupones.
-7. [ ] **Animaciones de inicio**: logo como pantalla nativa y Lottie de intro (esperando los JSON de Victor).
+7. [x] **Animaciones de inicio** (2026-11-12): logo como pantalla nativa, bucle Lottie mientras carga, intro con revelado y carga de datos en paralelo.
 8. [ ] **Base para varias ligas** (`liga_id`, aislamiento por liga), inicio con Google, revisión legal.
 9. [ ] **Crear tu liga** (asistente, PENDIENTES H):
    - Sin nombre de liga: solo equipos, y cada equipo es una categoría.

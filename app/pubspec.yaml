@@ -58,6 +58,7 @@ dependencies:
   image_picker: ^1.1.2
   image: ^4.2.0
   country_flags: ^4.1.2
+  lottie: ^3.8.2
 
 
 
@@ -72,6 +73,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -80,6 +82,8 @@ dev_dependencies:
 flutter:
   assets:
     - assets/logo.png
+    - assets/lottie/
+    - assets/splash/logo_ancho.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -127,3 +131,20 @@ flutter_launcher_icons:
   adaptive_icon_background: "assets/icono/fondo.png"
   adaptive_icon_foreground: "assets/icono/marca.png"
   adaptive_icon_monochrome: "assets/icono/marca.png"
+
+# Pantalla de arranque nativa (Victor, 2026-11-12): logo de Pivot sobre el
+# fondo de la app (mismos valores que PivotPaleta.claro/oscuro.fondo en
+# lib/core/tema.dart; este archivo no puede leer Dart). Regenerar con
+# `dart run flutter_native_splash:create`.
+flutter_native_splash:
+  color: "#FFFBFA"
+  image: assets/splash/logo_ancho.png
+  color_dark: "#0E0E0E"
+  image_dark: assets/splash/logo_ancho.png
+  android_12:
+    image: assets/splash/logo_android12.png
+    color: "#FFFBFA"
+    image_dark: assets/splash/logo_android12.png
+    color_dark: "#0E0E0E"
+  ios: false
+  web: false

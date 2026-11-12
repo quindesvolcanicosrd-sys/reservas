@@ -13,6 +13,7 @@ import 'push/push.dart';
 import 'sesion/login_screen.dart';
 import 'sesion/sesion.dart';
 import 'core/cargando.dart';
+import 'core/intro.dart';
 
 final _navegador = GlobalKey<NavigatorState>();
 
@@ -51,7 +52,7 @@ class PivotApp extends StatelessWidget {
         return const Locale('es');
       },
       // Actualización obligatoria: tapa toda la app si hay versión nueva.
-      builder: (context, child) => ControlActualizacion(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => ControlActualizacion(child: IntroPivot(child: child ?? const SizedBox.shrink())),
       home: _Raiz(sesion: sesion),
     );
   }
@@ -79,12 +80,25 @@ class _RaizState extends State<_Raiz> {
       _abrirPendiente();
     });
     widget.sesion.addListener(_alCambiarSesion);
+    widget.sesion.addListener(_revisarListo);
+    _repo.addListener(_revisarListo);
+  }
+
+  /// La animación de entrada revela la app cuando la primera pantalla ya
+  /// tiene sus datos (o se sabe que no hay sesión).
+  void _revisarListo() {
+    if (IntroPivot.listo.value) return;
+    final s = widget.sesion;
+    if (s.cargando) return;
+    if (!s.activa || (!_repo.cargando && (_repo.eventos.isNotEmpty || _repo.error != null))) IntroPivot.listo.value = true;
   }
 
   @override
   void dispose() {
     _sub?.cancel();
     widget.sesion.removeListener(_alCambiarSesion);
+    widget.sesion.removeListener(_revisarListo);
+    _repo.removeListener(_revisarListo);
     super.dispose();
   }
 
