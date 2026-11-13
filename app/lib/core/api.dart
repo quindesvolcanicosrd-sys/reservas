@@ -34,6 +34,9 @@ class Api {
   final http.Client _client;
   String? token;
 
+  /// Sesión de Pivot, para `escrituraDirecta` (la pone Sesion).
+  String? adminToken;
+
   static const _timeout = Duration(seconds: 20);
 
   Map<String, String> get _headers => {'apikey': ApiConfig.anonKey, 'Authorization': 'Bearer ${ApiConfig.anonKey}'};
@@ -82,46 +85,26 @@ class Api {
     return const [];
   }
 
-  Future<void> restPost(String ruta, Map<String, Object?> cuerpo) async {
-    final resp = await _client
-        .post(
-          Uri.parse('${ApiConfig.rest}/$ruta'),
-          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-          body: jsonEncode(cuerpo),
-        )
-        .timeout(_timeout);
-    if (resp.statusCode >= 300) throw ApiException('No se pudo guardar (${resp.statusCode}).');
+  // Escrituras: ya no van directo a la base (la clave pública no puede
+  // escribir desde 2026-11-13). Pasan por `escrituraDirecta`, que valida
+  // quién escribe, con la misma ruta de PostgREST.
+  Future<List<dynamic>> _escribir(String ruta, String metodo, [Object? cuerpo]) async {
+    final r = await post('escrituraDirecta', {'ruta': ruta, 'metodo': metodo, 'cuerpo': cuerpo == null ? null : jsonEncode(cuerpo), 'adminToken': adminToken});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo guardar.'}');
+    return (r['filas'] as List?) ?? const [];
   }
+
+  Future<void> restPost(String ruta, Map<String, Object?> cuerpo) => _escribir(ruta, 'POST', cuerpo);
 
   /// POST que devuelve la fila creada.
   Future<Map<String, dynamic>> restPostDevolver(String ruta, Map<String, Object?> cuerpo) async {
-    final resp = await _client
-        .post(
-          Uri.parse('${ApiConfig.rest}/$ruta'),
-          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=representation'},
-          body: jsonEncode(cuerpo),
-        )
-        .timeout(_timeout);
-    if (resp.statusCode >= 300) throw ApiException('No se pudo guardar (${resp.statusCode}).');
-    final d = jsonDecode(utf8.decode(resp.bodyBytes));
-    return d is List && d.isNotEmpty ? Map<String, dynamic>.from(d.first as Map) : <String, dynamic>{};
+    final d = await _escribir(ruta, 'POST', cuerpo);
+    return d.isNotEmpty ? Map<String, dynamic>.from(d.first as Map) : <String, dynamic>{};
   }
 
-  Future<void> restDelete(String ruta) async {
-    final resp = await _client.delete(Uri.parse('${ApiConfig.rest}/$ruta'), headers: _headers).timeout(_timeout);
-    if (resp.statusCode >= 300) throw ApiException('No se pudo eliminar (${resp.statusCode}).');
-  }
+  Future<void> restDelete(String ruta) => _escribir(ruta, 'DELETE');
 
-  Future<void> restPatch(String ruta, Map<String, Object?> cuerpo) async {
-    final resp = await _client
-        .patch(
-          Uri.parse('${ApiConfig.rest}/$ruta'),
-          headers: {..._headers, 'Content-Type': 'application/json', 'Prefer': 'return=minimal'},
-          body: jsonEncode(cuerpo),
-        )
-        .timeout(_timeout);
-    if (resp.statusCode >= 300) throw ApiException('No se pudieron guardar los cambios (${resp.statusCode}).');
-  }
+  Future<void> restPatch(String ruta, Map<String, Object?> cuerpo) => _escribir(ruta, 'PATCH', cuerpo);
 
   Map<String, dynamic> _decodificar(http.Response resp) {
     Map<String, dynamic> data;

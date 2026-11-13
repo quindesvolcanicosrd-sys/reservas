@@ -26,7 +26,14 @@ class Sesion extends ChangeNotifier {
   final _almacen = const FlutterSecureStorage();
 
   String? nombre; // username
-  String? adminToken;
+  String? _adminToken;
+  String? get adminToken => _adminToken;
+  // La Api también lo necesita para las escrituras que antes iban directo a la base.
+  set adminToken(String? v) {
+    _adminToken = v;
+    api.adminToken = v;
+  }
+
   bool esAdmin = false;
   Map<String, dynamic> datos = const {};
   bool cargando = true;

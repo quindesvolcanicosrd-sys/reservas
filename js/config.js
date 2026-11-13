@@ -29,3 +29,37 @@ function sha256Hex(str) {
     }).join('');
   });
 }
+
+// Escrituras directas a la base (seguridad, 2026-11-13): la clave pública ya
+// no puede escribir. Todo fetch que no sea lectura a `/rest/v1/` se manda a
+// la API (`escrituraDirecta`), que valida quién escribe, y la respuesta se
+// devuelve con la misma forma que PostgREST para no tocar cada pantalla.
+(function () {
+  var _fetchOriginal = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    try {
+      var u = String((url && url.url) || url || '');
+      var metodo = String((opts && opts.method) || 'GET').toUpperCase();
+      var base = SUPABASE_URL + '/rest/v1/';
+      if (u.indexOf(base) === 0 && ['POST', 'PATCH', 'DELETE'].indexOf(metodo) !== -1) {
+        var cuerpo = new URLSearchParams();
+        cuerpo.set('action', 'escrituraDirecta');
+                cuerpo.set('ruta', u.substring(base.length)); // la API decodifica la consulta
+        cuerpo.set('metodo', metodo);
+        if (opts && opts.body) cuerpo.set('cuerpo', typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body));
+        if (typeof _token !== 'undefined' && _token) cuerpo.set('token', _token);
+        if (typeof _adminToken !== 'undefined' && _adminToken) cuerpo.set('adminToken', _adminToken);
+        return _fetchOriginal(BACKEND, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: cuerpo.toString() })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            var ok = j && j.exito !== false;
+            return new Response(JSON.stringify(ok ? (j.filas || []) : j), {
+              status: ok ? (metodo === 'POST' ? 201 : 200) : 403,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          });
+      }
+    } catch (e) { /* si algo falla, sigue el camino normal */ }
+    return _fetchOriginal(url, opts);
+  };
+})();

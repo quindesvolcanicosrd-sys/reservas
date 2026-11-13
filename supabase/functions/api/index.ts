@@ -2010,6 +2010,75 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   return { exito: true, total, ...items };
 }
 
+// ─── Escrituras que la web y la app hacían directo a la base ───────────
+// (seguridad, 2026-11-13). La clave pública ya no puede escribir: estas
+// escrituras pasan por aquí con el mismo formato de PostgREST
+// (`tabla?col=eq.valor&col2=gte.valor`) y se valida quién escribe:
+// - reglas_asistencia: la persona, solo las suyas.
+// - asistencias, venues, log_asistencias: solo Pivots.
+const ESCRITURA_TABLAS_PIVOT = ['asistencias', 'venues', 'log_asistencias'];
+
+function _filtrosPostgrest(q: any, qs: URLSearchParams): { q: any; n: number } {
+  let n = 0;
+  for (const [col, expr] of qs.entries()) {
+    if (['select', 'order', 'limit'].includes(col)) continue;
+    if (!/^[a-z_]+$/.test(col)) throw new Error('Columna inválida');
+    const p = expr.indexOf('.');
+    const op = expr.slice(0, p), val = expr.slice(p + 1);
+    if (op === 'eq') q = q.eq(col, val);
+    else if (op === 'neq') q = q.neq(col, val);
+    else if (op === 'gte') q = q.gte(col, val);
+    else if (op === 'lte') q = q.lte(col, val);
+    else if (op === 'gt') q = q.gt(col, val);
+    else if (op === 'lt') q = q.lt(col, val);
+    else if (op === 'in') {
+      const lista = val.replace(/^\(|\)$/g, '').split(',').map((x) => x.trim().replace(/^"|"$/g, ''));
+      q = q.in(col, lista);
+    } else throw new Error('Filtro inválido');
+    n++;
+  }
+  return { q, n };
+}
+
+async function escrituraDirecta(params: Record<string, any>): Promise<Record<string, any>> {
+  const ruta = String(params.ruta ?? '');
+  const metodo = String(params.metodo ?? '').toUpperCase();
+  const [tabla, consulta = ''] = ruta.split('?');
+  const qs = new URLSearchParams(consulta);
+  let cuerpo: any = null;
+  if (params.cuerpo) { try { cuerpo = JSON.parse(String(params.cuerpo)); } catch { return { exito: false, error: 'Datos inválidos.' }; } }
+  if (!['POST', 'PATCH', 'DELETE'].includes(metodo)) return { exito: false, error: 'Operación inválida.' };
+
+  if (tabla === 'reglas_asistencia') {
+    const yo = await _validarToken(String(params.token ?? ''));
+    if (!yo) return { exito: false, error: 'Inicia sesión de nuevo.' };
+    if (metodo === 'POST') {
+      const filas = (Array.isArray(cuerpo) ? cuerpo : [cuerpo]).map((f: any) => ({ ...f, nombre: yo }));
+      const { data, error } = await supabase.from('reglas_asistencia').insert(filas).select();
+      return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true, filas: data ?? [] };
+    }
+    // Editar o borrar: solo reglas propias.
+    let q: any = metodo === 'DELETE' ? supabase.from('reglas_asistencia').delete() : supabase.from('reglas_asistencia').update({ ...(cuerpo ?? {}), nombre: yo });
+    try { const r = _filtrosPostgrest(q, qs); if (!r.n) return { exito: false, error: 'Falta el filtro.' }; q = r.q; } catch { return { exito: false, error: 'Filtro inválido.' }; }
+    const { data, error } = await q.eq('nombre', yo).select();
+    return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true, filas: data ?? [] };
+  }
+
+  if (ESCRITURA_TABLAS_PIVOT.includes(tabla)) {
+    if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión admin inválida.' };
+    if (tabla === 'log_asistencias' && metodo !== 'DELETE') return { exito: false, error: 'Operación inválida.' };
+    if (metodo === 'POST') {
+      const { data, error } = await supabase.from(tabla).insert(cuerpo).select();
+      return error ? { exito: false, error: error.message } : { exito: true, filas: data ?? [] };
+    }
+    let q: any = metodo === 'DELETE' ? supabase.from(tabla).delete() : supabase.from(tabla).update(cuerpo ?? {});
+    try { const r = _filtrosPostgrest(q, qs); if (!r.n) return { exito: false, error: 'Falta el filtro.' }; q = r.q; } catch { return { exito: false, error: 'Filtro inválido.' }; }
+    const { data, error } = await q.select();
+    return error ? { exito: false, error: error.message } : { exito: true, filas: data ?? [] };
+  }
+  return { exito: false, error: 'Tabla no permitida.' };
+}
+
 // ─── Inventario para todo el equipo (Victor, 2026-11-12) ───────────────
 // Todas las personas ven cuánto hay por talla y cuánto queda libre en la
 // próxima clase, y quién tiene cosas del equipo. Solo Pivots ven quién
@@ -7486,6 +7555,7 @@ Deno.serve(async (req: Request) => {
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
       case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
+      case 'escrituraDirecta':                return json(await escrituraDirecta(params));
       case 'getInventario':                   return json(await getInventario(params));
       case 'pedirPrestamo':                   return json(await pedirPrestamo(params));
       case 'adminPrestamo':                   return json(await adminPrestamo(params));
