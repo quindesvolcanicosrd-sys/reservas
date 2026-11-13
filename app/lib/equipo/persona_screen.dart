@@ -5,6 +5,7 @@ import '../core/config_liga.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
+import '../pivots/pivots_screen.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
 import 'estadisticas.dart';
@@ -527,25 +528,26 @@ class _AdministracionState extends State<_Administracion> {
                   value: !p.exentaCuota,
                   onChanged: (v) => _hacer(() => repo.cambiarPagaCuota(p, v), v ? 'Ahora paga cuota' : 'Ya no paga cuota'),
                 ),
-                // En tu propia ficha no puedes quitarte el acceso.
-                if (!repo.esYo(p))
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Acceso de administradorx'),
-                    value: p.esAdminMiembro,
-                    onChanged: p.email.isEmpty
-                        ? null
-                        : (v) async {
-                            if (!await _confirmar(
-                              v ? '¿Dar acceso de administradorx?' : '¿Quitar acceso de administradorx?',
-                              v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
-                              v ? 'Dar acceso' : 'Quitar acceso',
-                            )) {
-                              return;
-                            }
-                            _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso de administradorx otorgado' : 'Acceso de administradorx quitado');
-                          },
+                // Acceso de Pivot (Victor, 2026-11-13): se gestiona en Mi Liga →
+                // Pivots y permisos; aquí queda solo un atajo.
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.admin_panel_settings_outlined, color: pal.marcaTexto),
+                  title: Text(p.esAdminMiembro ? 'Pivot' : 'Nombrar Pivot'),
+                  subtitle: Text(
+                    p.esAdminMiembro ? 'Ver sus áreas y permisos' : (p.email.isEmpty ? 'Necesita un correo para ser Pivot' : 'Elegir qué áreas gestiona'),
                   ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  enabled: p.esAdminMiembro || p.email.isNotEmpty,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PivotsScreen(sesion: repo.sesion, persona: p),
+                      ),
+                    );
+                    repo.cargar(forzar: true);
+                  },
+                ),
 
                 // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
                 if (p.deViaje)

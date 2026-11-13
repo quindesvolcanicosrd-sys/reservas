@@ -191,6 +191,37 @@ const ACCIONES_SOLO_PIVOTS = new Set([
       'adminGetAdmins', 'adminGetReservas', 'adminGetSolicitudesPago', 'adminResolverSolicitudPago', 'adminGetTareasPendientesValidacion',
 ]);
 
+// ─── Pivots y permisos por área (Victor, 2026-11-13) ────────────────────────
+// admins.areas null = todas. El Pivot principal siempre tiene todas.
+const AREAS_PIVOT = ['finanzas', 'asistencia', 'equipo', 'salud', 'inventario', 'tareas', 'liga'];
+const AREA_DE_ACCION: Record<string, string> = {};
+for (const [area, acciones] of Object.entries({
+  finanzas: ['adminGetEstadoPagosMes', 'adminGetPagosAnual', 'adminGetBalanceFinanciero', 'adminRegistrarEgreso', 'adminRegistrarIngreso', 'adminRegistrarPago',
+    'adminResolverSolicitudPago', 'adminGetSolicitudesPago', 'adminSetExentaCuota', 'adminSetPreciosClases', 'adminSetFondosViajeConfig', 'adminToggleCupon',
+    'adminGetExcepciones', 'adminGetExcepcionesVigentes', 'adminSetEstadoExcepcion', 'adminCancelarExcepcion', 'adminSetEstadoReserva', 'adminTesoreria'],
+  asistencia: ['adminMarcarAsistencia', 'adminCambiarRespuesta', 'adminGetRectificaciones', 'adminSetEstadoRectificacion', 'adminSugeridosAsistencia',
+    'adminRegistrarAsistenciaExterna', 'adminEliminarAsistenciaExterna', 'adminGetAsistenciasExternas', 'adminRecalcularPuntosAsistencia', 'adminBorrarEvento',
+    'adminCancelarEvento', 'adminRegenerarVentanaAsistencias', 'adminCrearVenue', 'adminEditarVenue', 'adminEliminarVenue'],
+  equipo: ['adminSetCategoria', 'adminSetTierModo', 'upsertTier', 'deleteTier', 'adminDatosCategorias', 'adminSetEstadoMiembro', 'adminActualizarEstadoViaje',
+    'adminCancelarViaje', 'adminEliminarUsuario', 'adminRestaurarUsuario', 'adminRolesEquipo', 'adminGuardarTemporadaDescanso', 'adminEliminarTemporadaDescanso',
+    'adminBackfillHistorialTier', 'adminRecalcularStats', 'adminReglasLiga'],
+  salud: ['adminFichaEmergencia', 'adminAprobarLesion', 'adminRechazarLesion', 'adminGetSolicitudesLesion'],
+  inventario: ['adminInventarioLista', 'adminPrestamo', 'adminReglaPrestamo', 'adminGuardarEquipamiento'],
+  tareas: ['adminCrearTarea', 'adminEditarTarea', 'adminEliminarTarea', 'adminArchivarTarea', 'adminEliminarTareaArchivada', 'adminValidarTarea', 'adminDesvalidarTarea',
+    'adminEditarAsignacionesTarea', 'adminCrearTareaRecurrente', 'adminEditarTareaRecurrente', 'adminEstadoTareaRecurrente', 'adminAplicarTareaRecurrenteHistorico'],
+  liga: ['adminGuardarConfigLiga', 'adminGuardarComunidad', 'adminAgregarAdmin', 'adminQuitarAdmin', 'adminEnviarPush'],
+})) for (const a of acciones) AREA_DE_ACCION[a] = area;
+
+/** Áreas de un Pivot por email (todas si es el principal, el sistema o no tiene límite). */
+async function _areasDe(email: string): Promise<string[]> {
+  const e = String(email ?? '').toLowerCase();
+  if (!e) return [];
+  if (e === ADMIN_PRINCIPAL.toLowerCase() || e === _EMAIL_SISTEMA) return AREAS_PIVOT;
+  const { data } = await supabase.from('admins').select('areas').ilike('email', e).maybeSingle();
+  if (!data) return [];
+  return Array.isArray(data.areas) ? data.areas.filter((a: string) => AREAS_PIVOT.includes(a)) : AREAS_PIVOT;
+}
+
 async function _esAdmin(email: string): Promise<boolean> {
   if (!email) return false;
   if (email.toLowerCase() === ADMIN_PRINCIPAL.toLowerCase()) return true;
@@ -2099,8 +2130,12 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
       tarea: ta[a.tarea_id] ? { idTarea: a.tarea_id, titulo: ta[a.tarea_id].titulo, puntos: Number(ta[a.tarea_id].puntos) || 0, area: ta[a.tarea_id].area ?? '' } : null,
     })),
   };
+    // Cada Pivot ve solo lo de sus áreas (2026-11-13).
+  const areas = await _areasDe(adminEmail);
+  const areaDe: Record<string, string> = { reservas: 'finanzas', excepciones: 'finanzas', rectificaciones: 'asistencia', lesiones: 'salud', prestamos: 'inventario', tareas: 'tareas' };
+  for (const k of Object.keys(items)) if (!areas.includes(areaDe[k])) (items as Record<string, any[]>)[k] = [];
   const total = Object.values(items).reduce((n, l) => n + l.length, 0);
-  return { exito: true, total, ...items };
+  return { exito: true, total, ...items, areas };
 }
 
 // ─── Escrituras que la web y la app hacían directo a la base ───────────
@@ -2390,7 +2425,7 @@ async function pedirPrestamo(params: Record<string, any>): Promise<Record<string
   const { data: f } = await supabase.from('equipo').select('nombre_derby').eq('username', yo).maybeSingle();
   const quien = f?.nombre_derby || yo;
   await sendPush({
-    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined),
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'inventario'),
     headings: { es: 'Equipamiento del equipo' },
     contents: { es: tipo === 'uso' ? `${quien} pide usar ${r.fila!.detalle}. Decide en la Bandeja.` : `${quien} avisa que se llevó ${r.fila!.detalle}. Apruébalo en la Bandeja.` },
     url: APP_URL + '/',
@@ -2535,7 +2570,7 @@ async function registrarUsoInventario(params: Record<string, any>): Promise<Reco
   const { data: l } = await supabase.from('inventario_listas').select('nombre').eq('id', listaId).maybeSingle();
   if (f.minimo != null && queda <= Number(f.minimo)) {
     await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(), headings: { es: `Reponer: ${variante}` },
+      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'inventario'), headings: { es: `Reponer: ${variante}` },
       contents: { es: `En ${l?.nombre ?? 'el inventario'} quedan ${queda} de ${variante} (mínimo ${f.minimo}).` }, url: APP_URL + '/',
     });
   }
@@ -2554,7 +2589,7 @@ async function responderPrestamo(params: Record<string, any>): Promise<Record<st
     await supabase.from('inventario_prestamos').update({ estado: 'devuelto', devuelto_en: ahora }).eq('id', p.id);
     const { data: f } = await supabase.from('equipo').select('nombre_derby, email').eq('username', yo).maybeSingle();
     await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(f?.email ?? undefined), headings: { es: 'Equipamiento del equipo' },
+      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(f?.email ?? undefined, 'inventario'), headings: { es: 'Equipamiento del equipo' },
       contents: { es: `${f?.nombre_derby || yo} avisa que devolvió ${p.detalle ?? 'el equipamiento'}.` }, url: APP_URL + '/',
     });
   } else {
@@ -2645,7 +2680,7 @@ async function _avisarPrestamosLargos(): Promise<void> {
   const usuarios = [...new Set((activos ?? []).map((p: any) => p.username))];
   const { data: per } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby').in('username', usuarios) : { data: [] as any[] };
   const nom: Record<string, string> = {}; (per ?? []).forEach((p: any) => { nom[p.username] = p.nombre_derby || p.username; });
-  const pivots = await _adminDestinatariosPush();
+  const pivots = await _adminDestinatariosPush(undefined, 'inventario');
   const avisar = async (p: any, persona: string, aPivots: string) => {
     await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' }, contents: { es: persona }, url: APP_URL + '/' });
     await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Equipamiento del equipo' }, contents: { es: aPivots }, url: APP_URL + '/' });
@@ -3450,7 +3485,7 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
       const esHoy = ev.fecha === _hoyEcuadorISO();
       await sendPush({
         tipo: 'avisos_admin',
-        include_external_user_ids: await _adminDestinatariosPush(),
+        include_external_user_ids: await _adminDestinatariosPush(undefined, 'asistencia'),
         headings: { es: 'Baja de asistencia' },
         contents: { es: `${nombre} no asistirá al ${ev.tipo_evento || 'evento'} de ${esHoy ? 'hoy' : _fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
         url: APP_URL + '/?tab=eventos',
@@ -3818,7 +3853,7 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
   const { data: fila } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined),
+    include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'asistencia'),
     headings: { es: 'Revisión de asistencia' },
     contents: { es: `${fila?.nombre_derby || username} pide corregir su asistencia${ev?.fecha ? ' del ' + ev.fecha : ''}: ${estadoSolicitado}.` },
     url: APP_URL + '/',
@@ -3958,7 +3993,7 @@ async function solicitarExcepcion(params: Record<string, any>): Promise<Record<s
     await adminSetEstadoExcepcion({ adminToken: _TOKEN_INTERNO, id: data.id, estado: 'aprobada' });
     return { exito: true, id: data.id, aprobada: true };
   }
-  const todos = await _adminDestinatariosPush(pivot.email ?? undefined);
+  const todos = await _adminDestinatariosPush(pivot.email ?? undefined, 'finanzas');
   await sendPush({
     tipo: 'avisos_admin',
     include_external_user_ids: destino.length ? todos.filter((u) => destino.includes(u)) : todos,
@@ -4291,7 +4326,7 @@ async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: st
   if (r?.tipo !== 'mensual') return;
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas'),
     headings: { es: accion === 'cancelar' ? 'Reserva cancelada' : 'Reserva reagendada' },
     contents: { es: `${nombre} ${accion === 'cancelar' ? 'canceló' : 'reagendó'} su reserva mensual.` },
     url: APP_URL + '/?tab=miliga',
@@ -4309,7 +4344,7 @@ async function avisarPagoPendiente(params: Record<string, any>): Promise<Record<
   const detalle = String(params.detalle ?? '').trim();
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas'),
     headings: { es: 'Pago pendiente de revisión' },
     contents: { es: `${nombre} registró un pago de $${monto.toFixed(2)}${detalle ? ` (${detalle})` : ''}. Revísalo para aprobar la reserva.` },
     url: APP_URL + '/?tab=miliga',
@@ -5780,9 +5815,69 @@ async function adminAgregarAdmin(params: Record<string, any>): Promise<Record<st
 async function adminQuitarAdmin(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
-  if (params.email.toLowerCase() === ADMIN_PRINCIPAL.toLowerCase()) return { exito: false, error: 'No se puede quitar al admin principal.' };
+    if (params.email.toLowerCase() === ADMIN_PRINCIPAL.toLowerCase()) return { exito: false, error: 'No se puede quitar al admin principal.' };
+  if ((await _administradorxs()).length <= 1) return { exito: false, error: 'La liga no puede quedarse sin Pivots.' };
   await supabase.from('admins').delete().ilike('email', params.email);
   return { exito: true };
+}
+
+/**
+ * Pivots y permisos (Mi Liga, 2026-11-13). Acciones:
+ * - listar: Pivots con sus áreas (+ misAreas). Cualquier Pivot.
+ * - misAreas: solo las áreas de quien pregunta.
+ * - guardar {username, areas}: nombra o cambia áreas (requiere área 'liga').
+ * - quitar {username}: nunca el principal, ni a sí mismx, ni al último Pivot.
+ */
+async function adminPivots(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const misAreas = await _areasDe(email);
+  const accion = String(params.accion ?? 'listar');
+  if (accion === 'misAreas') return { exito: true, misAreas, areas: AREAS_PIVOT };
+  if (accion === 'listar') {
+    const [pivots, filas] = await Promise.all([_administradorxs(), supabase.from('admins').select('email, areas')]);
+    const areasPor: Record<string, string[] | null> = {};
+    (filas.data ?? []).forEach((r: any) => { areasPor[String(r.email).toLowerCase()] = Array.isArray(r.areas) ? r.areas : null; });
+    return {
+      exito: true, misAreas, areas: AREAS_PIVOT,
+      pivots: pivots.map((p) => ({
+        username: p.username, nombre: p.nombre, foto: p.foto,
+        principal: p.email === ADMIN_PRINCIPAL.toLowerCase(), yo: p.email === email.toLowerCase(),
+        areas: p.email === ADMIN_PRINCIPAL.toLowerCase() ? AREAS_PIVOT : (areasPor[p.email] ?? AREAS_PIVOT),
+      })),
+    };
+  }
+  if (!misAreas.includes('liga')) return { exito: false, error: 'Necesitas el área "Liga y Pivots" para cambiar permisos.' };
+  const { data: persona } = await supabase.from('equipo').select('username, email, nombre_derby').eq('username', String(params.username ?? '')).maybeSingle();
+  if (!persona?.email) return { exito: false, error: 'Esa persona no tiene correo; sin correo no puede ser Pivot.' };
+  const pe = String(persona.email).toLowerCase();
+  if (accion === 'guardar') {
+    if (pe === ADMIN_PRINCIPAL.toLowerCase()) return { exito: false, error: 'El Pivot principal tiene todas las áreas.' };
+    let areas: string[] = [];
+    try { areas = (Array.isArray(params.areas) ? params.areas : JSON.parse(String(params.areas ?? '[]'))).filter((a: string) => AREAS_PIVOT.includes(a)); } catch { areas = []; }
+    if (!areas.length) return { exito: false, error: 'Elige al menos un área.' };
+    const valor = areas.length === AREAS_PIVOT.length ? null : areas;
+    const { data: ya } = await supabase.from('admins').select('email').ilike('email', pe).maybeSingle();
+    const { error } = ya
+      ? await supabase.from('admins').update({ areas: valor }).ilike('email', pe)
+      : await supabase.from('admins').insert({ email: pe, invited_by: email, areas: valor });
+    if (error) return { exito: false, error: error.message };
+    if (!ya) {
+      await sendPush({
+        tipo: 'avisos_admin', include_external_user_ids: [persona.username],
+        headings: { es: 'Ahora eres Pivot' }, contents: { es: 'Ya puedes ver y gestionar tus áreas en la app.' }, url: APP_URL,
+      }).catch(() => {});
+    }
+    return { exito: true };
+  }
+  if (accion === 'quitar') {
+    if (pe === ADMIN_PRINCIPAL.toLowerCase()) return { exito: false, error: 'No se puede quitar al Pivot principal.' };
+    if (pe === email.toLowerCase()) return { exito: false, error: 'No puedes quitarte a ti mismx. Pídeselo a otro Pivot.' };
+    if ((await _administradorxs()).length <= 1) return { exito: false, error: 'La liga no puede quedarse sin Pivots.' };
+    await supabase.from('admins').delete().ilike('email', pe);
+    return { exito: true };
+  }
+  return { exito: false, error: 'Acción desconocida.' };
 }
 
 async function adminGetCandidatosAdmin(): Promise<any[]> {
@@ -6994,7 +7089,9 @@ async function guardarPreferenciasPush(params: Record<string, any>): Promise<Rec
   if (params.activas !== undefined) update.push_notificaciones_activas = (params.activas === 'true' || params.activas === true);
   if (params.clave !== undefined) {
     const clave = String(params.clave);
-    if (!CATALOGO_CLAVES.has(clave)) return { exito: false, error: 'Tipo de notificación inválido.' };
+        // Avisos de Pivot por área (pivot_<area>, 2026-11-13).
+    const esAreaPivot = clave.startsWith('pivot_') && AREAS_PIVOT.includes(clave.slice(6));
+    if (!CATALOGO_CLAVES.has(clave) && !esAreaPivot) return { exito: false, error: 'Tipo de notificación inválido.' };
     const { data: fila } = await supabase.from('equipo').select('push_preferencias').eq('username', username).maybeSingle();
     const prefs: Record<string, boolean> = (fila?.push_preferencias as Record<string, boolean>) || {};
     prefs[clave] = (params.valor === 'true' || params.valor === true);
@@ -7019,10 +7116,17 @@ async function guardarPreferenciasPush(params: Record<string, any>): Promise<Rec
 // include_external_user_ids: ... })`. `excluirEmail` -- quien disparó el
 // cambio que motiva el aviso, para no notificarle de su propia acción (si
 // además es admin).
-async function _adminDestinatariosPush(excluirEmail?: string): Promise<string[]> {
-  const { data: adminsRows } = await supabase.from('admins').select('email');
+async function _adminDestinatariosPush(excluirEmail?: string, area?: string): Promise<string[]> {
+  const { data: adminsRows } = await supabase.from('admins').select('email, areas');
   const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsRows ?? []).map((a: any) => String(a.email).toLowerCase())]);
   if (excluirEmail) emails.delete(excluirEmail.toLowerCase());
+  // Avisos de Pivot por área (2026-11-13): solo quien tiene el área y no
+  // apagó ese aviso (push_preferencias.pivot_<area>, encendido por defecto).
+  if (area) {
+    (adminsRows ?? []).forEach((a: any) => {
+      if (Array.isArray(a.areas) && !a.areas.includes(area)) emails.delete(String(a.email).toLowerCase());
+    });
+  }
   // Sin filtrar `eliminado_en` en el `.select()` a propósito -- mismo
   // motivo que en `sendPush()` (ver ese comentario): si se filtrara acá, un
   // admin archivado perdería su fila de `porEmail` y caería al fallback
@@ -7037,9 +7141,13 @@ async function _adminDestinatariosPush(excluirEmail?: string): Promise<string[]>
   emails.forEach((email) => {
     const fila = porEmail[email];
     if (_estaArchivado(fila)) return;
-    if (!_personaQuierePush(fila, 'avisos_admin')) return;
+        if (!_personaQuierePush(fila, 'avisos_admin')) return;
+        if (area && !_personaQuierePush(fila, 'pivot_' + area)) return;
     out.push(fila ? fila.username : 'admin_' + email);
   });
+  // Nunca se pierde un aviso: si nadie con esa área lo tiene encendido, va a
+  // todos los Pivots que reciben avisos.
+  if (area && !out.length) return _adminDestinatariosPush(excluirEmail);
   return out;
 }
 
@@ -7537,7 +7645,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
-  const adminDestinatarios = await _adminDestinatariosPush();
+  const adminDestinatarios = await _adminDestinatariosPush(undefined, 'asistencia');
   if (!adminDestinatarios.length) return { exito: true, eventos: enVentana.length, enviados: 0 };
   let enviados = 0;
   for (const ev of enVentana) {
@@ -7656,7 +7764,7 @@ async function pushSolicitudPendiente(params: Record<string, any>): Promise<Reco
     : APP_URL;
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, ({ reserva: 'finanzas', pago: 'finanzas', excepcion: 'finanzas', lesion: 'salud', tarea: 'tareas', rectificacion: 'asistencia' } as Record<string, string>)[String(tipoSolicitud)]),
     headings: { es: 'Nueva solicitud pendiente' },
     contents: { es: String(descripcionBreve) },
     url: urlFinal,
@@ -7797,7 +7905,7 @@ async function _notificarCambioAsistenciaCore(username: string, idEventoRaw: unk
   const url = _urlEvento(idEvento);
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(quien?.email),
+    include_external_user_ids: await _adminDestinatariosPush(quien?.email, 'asistencia'),
     headings: { es: estadoAnterior ? 'Cambio de asistencia' : 'Nueva asistencia' },
     contents: { es: texto },
     url,
@@ -8330,8 +8438,16 @@ Deno.serve(async (req: Request) => {
 
     // Acciones de Pivots que antes no pedían sesión (revisión 2026-11-12):
     // sin un adminToken válido no se ejecutan. La web y la app siempre lo mandan.
-    if (ACCIONES_SOLO_PIVOTS.has(String(action)) && !(await _validarAdminToken(String(params.adminToken ?? '')))) {
+        if (ACCIONES_SOLO_PIVOTS.has(String(action)) && !(await _validarAdminToken(String(params.adminToken ?? '')))) {
       return json({ exito: false, error: 'Sesión admin inválida.' });
+    }
+    // Permisos por área: un Pivot sin esa área no puede usar la acción.
+    const areaAccion = AREA_DE_ACCION[String(action)];
+    if (areaAccion && params.adminToken) {
+      const em = await _validarAdminToken(String(params.adminToken));
+      if (em && !(await _areasDe(em)).includes(areaAccion)) {
+        return json({ exito: false, error: 'No tienes permiso para esta área. Otro Pivot te la puede dar en Mi Liga → Pivots y permisos.' });
+      }
     }
 
     switch (action) {
@@ -8388,7 +8504,8 @@ Deno.serve(async (req: Request) => {
       case 'adminGetTareasRecurrentes':       return json(await adminGetTareasRecurrentes(params));
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
             case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
-            case 'adminBandeja':                    return json(await adminBandeja(params));
+                        case 'adminBandeja':                    return json(await adminBandeja(params));
+            case 'adminPivots':                     return json(await adminPivots(params));
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
       case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));

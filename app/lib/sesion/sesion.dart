@@ -35,6 +35,24 @@ class Sesion extends ChangeNotifier {
   }
 
   bool esAdmin = false;
+
+  /// Áreas de este Pivot (Mi Liga → Pivots y permisos). Vacío = aún no se
+  /// cargaron: se asume todas para no esconder nada por un fallo de red; el
+  /// servidor igual bloquea lo que no corresponde.
+  List<String> areasPivot = const [];
+  bool tieneArea(String a) => esAdmin && adminToken != null && (areasPivot.isEmpty || areasPivot.contains(a));
+
+  Future<void> cargarAreas() async {
+    if (!esAdmin || adminToken == null) return;
+    try {
+      final r = await api.get('adminPivots', {'adminToken': adminToken, 'accion': 'misAreas'});
+      if (r['exito'] != false) {
+        areasPivot = [for (final a in (r['misAreas'] as List? ?? const [])) '$a'];
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   Map<String, dynamic> datos = const {};
   bool cargando = true;
 
@@ -118,6 +136,7 @@ class Sesion extends ChangeNotifier {
     nombre = null;
     adminToken = null;
     esAdmin = false;
+    areasPivot = const [];
     datos = const {};
     await _almacen.delete(key: 'sesion');
     try {
@@ -234,5 +253,6 @@ class Sesion extends ChangeNotifier {
     if (res['datos'] is Map<String, dynamic>) datos = res['datos'] as Map<String, dynamic>;
     esAdmin = res['esAdmin'] == true;
     adminToken = res['adminToken'] as String?;
+    cargarAreas();
   }
 }

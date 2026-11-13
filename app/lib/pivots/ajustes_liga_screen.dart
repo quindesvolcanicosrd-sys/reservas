@@ -9,6 +9,7 @@ import '../core/paises.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import 'categorias_screen.dart';
+import 'pivots_screen.dart';
 
 /// Mi perfil → Ajustes de la liga (solo Pivots, Victor 2026-11-13): un solo
 /// lugar para lo que configura la liga. Los roles se editan desde la hoja de
@@ -124,6 +125,13 @@ class AjustesLigaScreen extends StatelessWidget {
                   titulo: 'Equipos y puntos',
                   valor: 'Qué pide cada una para mantenerse o subir',
                   alTocar: () => SubAjustes.abrir(context, CategoriasScreen(sesion: sesion)),
+                ),
+                FilaAjuste(
+                  icono: Icons.admin_panel_settings_outlined,
+                  seccion: 'roles',
+                  titulo: 'Pivots y permisos',
+                  valor: 'Quién es Pivot y qué áreas gestiona',
+                  alTocar: () => SubAjustes.abrir(context, PivotsScreen(sesion: sesion)),
                 ),
                 FilaAjuste(
                   icono: Icons.verified_user_outlined,

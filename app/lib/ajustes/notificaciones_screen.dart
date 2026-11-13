@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../pivots/pivots_screen.dart' show areasPivot;
+
 import '../core/api.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
@@ -115,6 +117,41 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     }
   }
 
+  Widget _avisosPivot(BuildContext context) {
+    final p = context.pivot;
+    final mias = widget.sesion.areasPivot.isEmpty ? areasPivot.keys.toList() : widget.sesion.areasPivot;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: Icon(Icons.admin_panel_settings_outlined, color: p.marcaTexto),
+              title: const Text('Avisos de Pivot', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('Solo de tus áreas. Si nadie de un área lo tiene encendido, el aviso llega a todos los Pivots.'),
+            ),
+            for (final a in areasPivot.entries)
+              if (mias.contains(a.key))
+                SwitchListTile(
+                  secondary: Icon(a.value.$3),
+                  title: Text(a.value.$1),
+                  value: _prefs['pivot_${a.key}'] != false,
+                  onChanged: (v) {
+                    final k = 'pivot_${a.key}';
+                    final antes = _prefs[k];
+                    _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
+                  },
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
   static IconData _iconoCategoria(String c) {
     final x = c.toLowerCase();
     if (x.contains('evento') || x.contains('entren')) return Icons.event_rounded;
@@ -211,6 +248,9 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
                                 _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
                               },
                             ),
+                          // Avisos de Pivot por área (Victor, 2026-11-13): solo las
+                          // áreas que tiene; encendidos por defecto.
+                          if (widget.sesion.esAdmin && widget.sesion.adminToken != null) _avisosPivot(context),
                         ],
                       ),
                     ),

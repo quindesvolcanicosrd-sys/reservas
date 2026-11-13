@@ -188,7 +188,7 @@ class InventarioRepo {
   InventarioRepo(this.sesion);
   final Sesion sesion;
   Api get _api => sesion.api;
-  bool get esPivot => sesion.esAdmin && sesion.adminToken != null;
+  bool get esPivot => sesion.tieneArea('inventario');
   Map<String, Object?> get _admin => {'adminToken': sesion.adminToken};
 
   List<ListaInventario> listas = [];
