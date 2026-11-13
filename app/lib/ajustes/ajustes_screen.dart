@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../equipo/comunidad_screen.dart';
+import '../equipo/inventario_screen.dart';
 import '../equipo/roles_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
@@ -133,6 +135,20 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       titulo: 'Roles del equipo',
                       valor: 'Crear, renombrar o borrar roles',
                       alTocar: () => SubAjustes.abrir(context, RolesScreen(repo: EquipoRepo.de(sesion))),
+                    ),
+                    FilaAjuste(
+                      icono: Icons.groups_2_rounded,
+                      seccion: 'notificaciones',
+                      titulo: 'Comunidad',
+                      valor: 'Grupos y redes que ve el equipo',
+                      alTocar: () => SubAjustes.abrir(context, ComunidadScreen(repo: ComunidadRepo.de(sesion))),
+                    ),
+                    FilaAjuste(
+                      icono: Icons.roller_skating_rounded,
+                      seccion: 'equipamiento',
+                      titulo: 'Inventario',
+                      valor: 'Patines y protecciones que presta la liga',
+                      alTocar: () => SubAjustes.abrir(context, InventarioScreen(sesion: sesion)),
                     ),
                   ],
                 ),

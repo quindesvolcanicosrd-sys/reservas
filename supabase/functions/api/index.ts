@@ -179,7 +179,7 @@ const ACCIONES_SOLO_PIVOTS = new Set([
   'adminGetEquipamiento', 'adminGuardarEquipamiento', 'adminGetTareasActivas', 'adminBuscarPersonasParaEvento',
   'adminGetEstadoPagosMes', 'adminGetPagosAnual', 'adminGetBalanceFinanciero', 'adminGetUsuarios',
   'adminGetCandidatosAdmin', 'adminGetRosterEquipo', 'adminGetQueLlevar', 'adminEnviarPush',
-  'adminGetReservas', 'adminGetSolicitudesPago', 'adminResolverSolicitudPago',
+      'adminGetAdmins', 'adminGetReservas', 'adminGetSolicitudesPago', 'adminResolverSolicitudPago', 'adminGetTareasPendientesValidacion',
 ]);
 
 async function _esAdmin(email: string): Promise<boolean> {
@@ -1495,7 +1495,7 @@ async function adminGuardarEquipamiento(params: Record<string, any>): Promise<Re
   const tallasValidas = (tallas ?? []).filter((t: any) => t.talla).map((t: any) => ({ talla: t.talla, cantidad: parseInt(t.cantidad, 10) || 0 }));
   const nombresVistos = new Set<string>();
   for (const t of tallasValidas) {
-    if (nombresVistos.has(t.talla)) return { exito: false, error: 'Esa talla ya está cargada. Usá + para aumentar la cantidad.' };
+    if (nombresVistos.has(t.talla)) return { exito: false, error: 'Esa talla ya está cargada. Usa + para aumentar la cantidad.' };
     nombresVistos.add(t.talla);
   }
 
@@ -1936,6 +1936,93 @@ async function adminEditarTareaRecurrente(params: Record<string, any>): Promise<
   if (error) return { exito: false, error: 'No se pudo guardar.' };
   await supabase.from('tareas').update(cambios).eq('tarea_recurrente_id', params.idPlantilla).in('estado', ['no_iniciada', 'en_progreso', 'expirada']);
   return { exito: true };
+}
+
+// ─── Bandeja de Pivots (etapa 3, Victor 2026-11-12) ───────────────────
+// Todo lo que espera una decisión de un Pivot, en una sola llamada: pagos
+// y reservas pendientes, rectificaciones de asistencia, excepciones de
+// cuota (solo las dirigidas a este Pivot), lesiones y tareas por validar.
+// Cada parte filtra en la base (nunca la tabla completa).
+async function adminBandeja(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const [res, rect, exc, les, asig] = await Promise.all([
+    supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
+    supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente').order('created_at', { ascending: true }),
+    supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
+    supabase.from('equipo').select('username').eq('solicitud_lesion_pendiente', true).is('eliminado_en', null),
+    supabase.from('asignaciones_tareas').select('id, tarea_id, nombre_usuario, fecha_envio').eq('estado', 'pendiente_revision').order('fecha_envio', { ascending: true }),
+  ]);
+  const excVisibles: any[] = [];
+  for (const r of exc.data ?? []) if (await _puedeVerExcepcion(adminEmail, r.admins_destino)) excVisibles.push(r);
+
+  // Datos de apoyo: eventos, tareas y personas mencionadas.
+  const idsEv = [...new Set([...(res.data ?? []).map((r: any) => r.id_evento), ...(rect.data ?? []).map((r: any) => r.id_evento)].filter(Boolean))];
+  const idsTarea = [...new Set((asig.data ?? []).map((a: any) => a.tarea_id))];
+  const nombres = [...new Set([
+    ...(res.data ?? []).map((r: any) => r.nombre_usuario), ...(rect.data ?? []).map((r: any) => r.nombre),
+    ...excVisibles.map((r: any) => r.nombre), ...(les.data ?? []).map((r: any) => r.username), ...(asig.data ?? []).map((a: any) => a.nombre_usuario),
+  ].filter(Boolean))];
+  const [evs, tareas, personas] = await Promise.all([
+    idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, donde, inicia, tipo').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
+    idsTarea.length ? supabase.from('tareas').select('id, titulo, puntos, area').in('id', idsTarea) : Promise.resolve({ data: [] as any[] }),
+    nombres.length ? supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria').in('username', nombres) : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const ev: Record<string, any> = {}; (evs.data ?? []).forEach((e: any) => { ev[e.id_evento] = e; });
+  const ta: Record<string, any> = {}; (tareas.data ?? []).forEach((t: any) => { ta[t.id] = t; });
+  const pe: Record<string, any> = {}; (personas.data ?? []).forEach((p: any) => { pe[p.username] = p; });
+  const persona = (u: string) => ({ nombre: u, nombreMostrar: pe[u]?.nombre_derby || u, foto: pe[u]?.foto_perfil || '', categoria: pe[u]?.categoria || '' });
+  const evento = (id: string) => ev[id] ? { idEvento: id, fecha: ev[id].fecha, lugar: ev[id].donde ?? '', hora: String(ev[id].inicia ?? '').substring(0, 5), tipo: ev[id].tipo ?? '' } : null;
+
+  const items = {
+    reservas: (res.data ?? []).map((r: any) => ({
+      id: r.id, ...persona(r.nombre_usuario), tipo: r.tipo, mesTexto: r.mes_texto ?? '', talla: r.talla ?? '', protecciones: r.protecciones ?? '',
+      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento),
+    })),
+    rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
+    excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
+    lesiones: (les.data ?? []).map((r: any) => ({ ...persona(r.username) })),
+    tareas: (asig.data ?? []).map((a: any) => ({
+      idAsignacion: a.id, ...persona(a.nombre_usuario), enviada: a.fecha_envio,
+      tarea: ta[a.tarea_id] ? { idTarea: a.tarea_id, titulo: ta[a.tarea_id].titulo, puntos: Number(ta[a.tarea_id].puntos) || 0, area: ta[a.tarea_id].area ?? '' } : null,
+    })),
+  };
+  const total = Object.values(items).reduce((n, l) => n + l.length, 0);
+  return { exito: true, total, ...items };
+}
+
+// ─── Comunidad (Victor, 2026-11-08 / etapa 3): redes y grupos de la liga ──
+// Lista en `config_app.comunidad` (JSON): {red, nombre, url}. Toda persona
+// con sesión la ve en Equipo; Pivots la editan en Mi perfil → Ajustes de la liga.
+const REDES_COMUNIDAD = ['whatsapp', 'instagram', 'facebook', 'messenger', 'tiktok', 'youtube', 'web', 'correo', 'otro'];
+
+async function getComunidad(params: Record<string, any>): Promise<Record<string, any>> {
+  const esPivot = !!(await _validarAdminToken(String(params.adminToken ?? '')));
+  if (!esPivot && !(await _validarToken(String(params.token ?? '')))) return { exito: false, error: 'Inicia sesión.' };
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'comunidad').maybeSingle();
+  let enlaces: any[] = [];
+  try { const l = JSON.parse(String(data?.value ?? '[]')); if (Array.isArray(l)) enlaces = l; } catch (_) { /* vacío */ }
+  return { exito: true, enlaces };
+}
+
+async function adminGuardarComunidad(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  let lista: any = params.enlaces;
+  if (typeof lista === 'string') { try { lista = JSON.parse(lista); } catch (_) { lista = null; } }
+  if (!Array.isArray(lista) || lista.length > 20) return { exito: false, error: 'Lista inválida.' };
+  const limpia = [];
+  for (const e of lista) {
+    const red = REDES_COMUNIDAD.includes(String(e?.red)) ? String(e.red) : 'otro';
+    const nombre = String(e?.nombre ?? '').trim().slice(0, 60);
+    let url = String(e?.url ?? '').trim().slice(0, 500);
+    if (red === 'correo' && url && !url.startsWith('mailto:')) url = 'mailto:' + url;
+    if (red !== 'correo' && url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (!nombre || !url) return { exito: false, error: 'Cada enlace necesita nombre y dirección.' };
+    limpia.push({ red, nombre, url });
+  }
+  const { error } = await supabase.from('config_app').upsert({ key: 'comunidad', value: JSON.stringify(limpia) }, { onConflict: 'key' });
+  if (error) return { exito: false, error: 'No se pudo guardar.' };
+  return { exito: true, enlaces: limpia };
 }
 
 // ─── Catálogo de roles de la liga (Victor, 2026-11-12) ──────────────────
@@ -3430,10 +3517,10 @@ async function adminRegistrarPago(params: Record<string, any>): Promise<any> {
     notas: datos.notas ?? null, fecha: datos.fecha ?? null,
     tipo: datos.tipo === 'clase' ? 'clase' : 'mensual',
     es_manual: datos.esManual !== false,
-    id_evento: datos.tipo === 'clase' ? (datos.idEvento ?? null) : null,
+        id_evento: datos.tipo === 'clase' ? (datos.idEvento ?? null) : null,
   }).select();
   if (error) return { exito: false, error: error.message };
-  return data;
+  return { exito: true, pago: data?.[0] ?? null };
 }
 
 async function adminRegistrarIngreso(params: Record<string, any>): Promise<any> {
@@ -3982,9 +4069,15 @@ async function adminSetExentaCuota(params: Record<string, any>): Promise<Record<
 // acción de solo lectura de este archivo exige sesión.
 async function listarExcepcionesCuota(params: Record<string, any>): Promise<Record<string, any>> {
   const mes = String(params.mes ?? '').trim();
-  const { data, error } = mes
-    ? await supabase.from('cuota_excepcion').select('id_miembro, mes, tipo, monto, notas, creado_en').eq('mes', mes)
-    : await supabase.from('cuota_excepcion').select('id_miembro, mes, tipo, monto, notas, creado_en');
+  // Pivots ven todas; el resto solo las propias (antes cualquiera veía las
+  // de todo el equipo, con montos y notas -- arreglo 2026-11-12).
+  const esPivot = !!(await _validarAdminToken(String(params.adminToken ?? '')));
+  const yo = esPivot ? null : await _validarToken(String(params.token ?? ''));
+  if (!esPivot && !yo) return { excepciones: [] };
+  let q = supabase.from('cuota_excepcion').select('id_miembro, mes, tipo, monto, notas, creado_en');
+  if (mes) q = q.eq('mes', mes);
+  if (!esPivot) q = q.eq('id_miembro', yo);
+  const { data, error } = await q;
   if (error) return { error: error.message };
   return {
     excepciones: (data ?? []).map((r: any) => ({
@@ -5570,7 +5663,8 @@ async function adminGetQueLlevar(): Promise<any[]> {
   const eventosPorId: Record<string, any> = {};
   (eventos ?? []).forEach((e: any) => { eventosPorId[e.id_evento] = e; });
 
-  const { data: equipo } = await supabase.from('equipo').select('username, pronombres, prefijo, telefono').is('eliminado_en', null);
+    const usuarios = [...new Set(pendientes.map((r: any) => r.nombre_usuario).filter(Boolean))];
+  const { data: equipo } = await supabase.from('equipo').select('username, pronombres, prefijo, telefono').in('username', usuarios).is('eliminado_en', null);
   const pronMap: Record<string, string> = {}, waMap: Record<string, string> = {};
   (equipo ?? []).forEach((r: any) => {
     pronMap[r.username] = r.pronombres ?? '';
@@ -7061,6 +7155,9 @@ Deno.serve(async (req: Request) => {
       case 'adminGetTareasRecurrentes':       return json(await adminGetTareasRecurrentes(params));
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
             case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
+            case 'adminBandeja':                    return json(await adminBandeja(params));
+            case 'getComunidad':                    return json(await getComunidad(params));
+      case 'adminGuardarComunidad':           return json(await adminGuardarComunidad(params));
       case 'getRolesEquipo':                  return json(await getRolesEquipo());
       case 'adminRolesEquipo':                return json(await adminRolesEquipo(params));
       case 'cronRecordatorioTareas': {

@@ -28,6 +28,8 @@ import '../tareas/tarea_screen.dart';
 import '../tareas/tareas_modelos.dart';
 import '../tareas/tareas_repo.dart';
 import '../tareas/tareas_screen.dart' hide PilaAvatares;
+import '../pivots/bandeja_repo.dart';
+import '../pivots/bandeja_screen.dart';
 
 /// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
 /// - Barra: "Noviembre ⌄" despliega el calendario del mes hacia abajo (como
@@ -93,6 +95,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   final _focoBusqueda = FocusNode();
 
   late final TareasRepo _tareas = TareasRepo.de(repo.sesion);
+  late final BandejaRepo _bandeja = BandejaRepo.de(repo.sesion);
   _Vista _vista = _Vista.todo;
   void _alCambiarTareas() {
     if (mounted) setState(() => _claveFilas = null);
@@ -155,6 +158,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     RelojMinuto.instancia.addListener(_alPasarMinuto);
     _tareas.addListener(_alCambiarTareas);
     _tareas.cargar(forzar: _tareas.cargado);
+    _bandeja.addListener(_alPasarMinuto);
+    _bandeja.cargar(forzar: true);
   }
 
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
@@ -212,6 +217,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     widget.irAHoy?.removeListener(_irAHoy);
     RelojMinuto.instancia.removeListener(_alPasarMinuto);
     _tareas.removeListener(_alCambiarTareas);
+    _bandeja.removeListener(_alPasarMinuto);
     _calCtrl.dispose();
     _tituloMes.dispose();
     _textoBusqueda.dispose();
@@ -722,6 +728,21 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           ),
           const Spacer(),
+          // Bandeja de Pivots: lo que espera una decisión (etapa 3).
+          if (_bandeja.esPivot)
+            IconButton(
+              tooltip: _bandeja.total > 0 ? 'Bandeja de Pivots (${_bandeja.total} pendientes)' : 'Bandeja de Pivots',
+              icon: Badge(
+                isLabelVisible: _bandeja.total > 0,
+                backgroundColor: p.marca,
+                label: Text('${_bandeja.total}'),
+                child: const Icon(Icons.inbox_rounded),
+              ),
+              onPressed: () {
+                _cerrarCalendario();
+                SubAjustes.abrir(context, BandejaPivotsScreen(repo: _bandeja));
+              },
+            ),
           // Tablero de tareas, con el número de tareas para tomar.
           IconButton(
             key: _kTareas,
@@ -1011,7 +1032,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       onNotification: _alScrollearTimeline,
       child: RefreshIndicator(
         key: _kLista,
-        onRefresh: () => repo.cargar(forzar: true),
+        onRefresh: () => Future.wait([repo.cargar(forzar: true), _bandeja.cargar(forzar: true)]),
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -193,6 +194,35 @@ class EquipoRepo extends ChangeNotifier {
       _admin(admin ? 'adminAgregarAdmin' : 'adminQuitarAdmin', {'email': p.email, if (admin) 'nombre': p.username});
   Future<void> cambiarEstado(Integrante p, String estado) => _admin('adminSetEstadoMiembro', {'nombre': p.username, 'estadoMiembro': estado});
   Future<void> archivar(Integrante p) => _admin('adminEliminarUsuario', {'nombre': p.username});
+
+  /// Pago de cuota registrado a mano (efectivo, De Una o banco).
+  Future<void> registrarPago(Integrante p, {required DateTime mes, required double monto, required String forma, String notas = ''}) =>
+      _admin('adminRegistrarPago', {
+        'datosJson': jsonEncode({
+          'nombre': p.username,
+          'mes': mes.month,
+          'anio': mes.year,
+          'monto': monto,
+          'formaPago': forma,
+          'tipo': 'mensual',
+          'esManual': true,
+          'fecha': Fechas.iso(Fechas.hoy()),
+          if (notas.trim().isNotEmpty) 'notas': notas.trim(),
+        }),
+      });
+
+  /// "No paga (mes)": excepción manual de ese mes, queda en su historial.
+  Future<void> noPagaMes(Integrante p, DateTime mes, {String notas = ''}) => _admin('guardarExcepcionCuota', {
+    'idMiembro': p.username,
+    'mes': '${mes.year}-${mes.month.toString().padLeft(2, '0')}',
+    'tipo': 'exenta',
+    if (notas.trim().isNotEmpty) 'notas': notas.trim(),
+  });
+
+  Future<double> precioMensual() async {
+    final r = await _api.get('getPreciosClases');
+    return double.tryParse('${r['precioMensual'] ?? ''}') ?? 0;
+  }
 
   /// Asistencia fuera de la liga (web `_eqRegistrarAsistExterna()`); recalcula puntos.
   Future<void> registrarAsistenciaExterna(Integrante p, DateTime fecha, String lugar) =>

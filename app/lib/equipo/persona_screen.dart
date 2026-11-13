@@ -544,6 +544,123 @@ class _AdministracionState extends State<_Administracion> {
     return 'De viaje del ${Fechas.corta(d)} al ${Fechas.corta(h)}';
   }
 
+  /// Mes anterior, este y el siguiente.
+  static List<DateTime> _mesesCerca() {
+    final h = Fechas.hoy();
+    return [DateTime(h.year, h.month - 1), DateTime(h.year, h.month), DateTime(h.year, h.month + 1)];
+  }
+
+  Future<void> _registrarPago() async {
+    final p = widget.p;
+    final precio = await widget.repo.precioMensual().catchError((_) => 0.0);
+    if (!mounted) return;
+    var mes = _mesesCerca()[1];
+    var forma = 'Efectivo';
+    final monto = TextEditingController(text: precio > 0 ? precio.toStringAsFixed(2) : '');
+    final notas = TextEditingController();
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (hoja) => StatefulBuilder(
+        builder: (hoja, refrescar) {
+          final pal = hoja.pivot;
+          Text titulo(String t) => Text(
+            t,
+            style: TextStyle(fontWeight: FontWeight.w700, color: pal.texto),
+          );
+          final valor = double.tryParse(monto.text.replaceAll(',', '.')) ?? 0;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(hoja).bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Pago de ${p.nombreMostrar}', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                titulo('Mes'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final m in _mesesCerca()) ChoiceChip(label: Text(Fechas.mesAnio(m)), selected: m == mes, onSelected: (_) => refrescar(() => mes = m)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                titulo('Medio de pago'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final f in const ['Efectivo', 'De Una', 'Transferencia'])
+                      ChoiceChip(label: Text(f), selected: f == forma, onSelected: (_) => refrescar(() => forma = f)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: monto,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                  onChanged: (_) => refrescar(() {}),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notas,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(labelText: 'Notas (opcional)'),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: valor <= 0 ? null : () => Navigator.of(hoja).pop(true),
+                  child: Text('Registrar \$${valor.toStringAsFixed(2)} de ${Fechas.mes(mes)}'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final valor = double.tryParse(monto.text.replaceAll(',', '.')) ?? 0;
+    await _hacer(() => widget.repo.registrarPago(p, mes: mes, monto: valor, forma: forma, notas: notas.text), 'Pago registrado');
+  }
+
+  Future<void> _noPagaMes() async {
+    final p = widget.p;
+    final mes = await showModalBottomSheet<DateTime>(
+      context: context,
+      showDragHandle: true,
+      builder: (hoja) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('¿Qué mes no paga ${p.nombreMostrar}?', style: Theme.of(hoja).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+            for (final m in _mesesCerca())
+              ListTile(
+                leading: const Icon(Icons.event_busy_outlined),
+                title: Text('No paga ${Fechas.mes(m)} ${m.year}'),
+                onTap: () => Navigator.of(hoja).pop(m),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (mes == null || !mounted) return;
+    if (!await _confirmar(
+      '¿No paga ${Fechas.mes(mes)} ${mes.year}?',
+      '${p.nombreMostrar} no deberá la cuota de ese mes. Queda registrado en su historial.',
+      'Confirmar',
+    )) {
+      return;
+    }
+    await _hacer(() => widget.repo.noPagaMes(p, mes), 'Listo: no paga ${Fechas.mes(mes)} ${mes.year}');
+  }
+
   Future<void> _marcarViaje() async {
     final hoy = Fechas.hoy();
     final r = await showDateRangePicker(
@@ -743,6 +860,23 @@ class _AdministracionState extends State<_Administracion> {
                     subtitle: const Text('Mientras esté de viaje no cuenta como inactividad.'),
                     onTap: _marcarViaje,
                   ),
+                // Pagos desde la ficha (etapa 3, Victor 2026-11-12).
+                if (!p.exentaCuota) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.payments_outlined, color: pal.marcaTexto),
+                    title: const Text('Registrar pago'),
+                    subtitle: const Text('Cuota pagada en efectivo, De Una o transferencia.'),
+                    onTap: _registrarPago,
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.event_busy_outlined, color: pal.marcaTexto),
+                    title: const Text('No paga un mes'),
+                    subtitle: const Text('Excepción de ese mes. Queda en su historial.'),
+                    onTap: _noPagaMes,
+                  ),
+                ],
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.add_task_rounded, color: pal.marcaTexto),

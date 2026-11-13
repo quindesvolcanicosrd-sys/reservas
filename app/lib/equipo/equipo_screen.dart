@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
+import '../ajustes/componentes.dart';
 import 'buscador_equipo.dart';
+import 'comunidad_screen.dart';
+import 'inventario_screen.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
@@ -196,6 +199,8 @@ class _EquipoScreenState extends State<EquipoScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (repo.hayFiltros) SliverToBoxAdapter(child: _filtrosActivos(p)),
+          // Comunidad (todo el equipo) e Inventario (Pivots), etapa 3.
+          if (!repo.hayFiltros) SliverToBoxAdapter(child: _accesos(context)),
           if (favoritos.isNotEmpty && !repo.hayFiltros) ...[
             _encabezado(p, 'Favoritos', favoritos.length),
             SliverToBoxAdapter(
@@ -254,6 +259,79 @@ class _EquipoScreenState extends State<EquipoScreen> {
               ),
             ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+      ),
+    );
+  }
+
+  Widget _accesos(BuildContext context) {
+    final p = context.pivot;
+    Widget acceso(IconData icono, String seccion, String titulo, String sub, VoidCallback alTocar) {
+      final (degradado, sobre) = PivotPaleta.seccion(seccion, Theme.of(context).brightness);
+      return Expanded(
+        child: Material(
+          color: p.tarjeta,
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            onTap: alTocar,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(10)),
+                    child: Icon(icono, size: 20, color: sobre),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          titulo,
+                          style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                        ),
+                        Text(
+                          sub,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          acceso(
+            Icons.groups_2_rounded,
+            'notificaciones',
+            'Comunidad',
+            'Grupos y redes',
+            () => SubAjustes.abrir(context, ComunidadScreen(repo: ComunidadRepo.de(repo.sesion))),
+          ),
+          if (repo.esAdmin) ...[
+            const SizedBox(width: 10),
+            acceso(
+              Icons.roller_skating_rounded,
+              'privacidad',
+              'Inventario',
+              'Equipamiento',
+              () => SubAjustes.abrir(context, InventarioScreen(sesion: repo.sesion)),
+            ),
+          ],
         ],
       ),
     );

@@ -105,7 +105,7 @@ class BuscadorEquipo {
     // Rol.
     final rol = _roles[s] ?? _roles[t];
     if (rol != null) return p.roles.contains(rol) ? (p.roles.join(' · '), sinOrden) : null;
-        if (s == 'rol') return p.roles.isEmpty ? null : (p.roles.join(' · '), sinOrden);
+    if (s == 'rol') return p.roles.isEmpty ? null : (p.roles.join(' · '), sinOrden);
     // Roles propios de la liga (catálogo editable): si la persona lo tiene.
     if (p.roles.any((r) => normalizar(r) == t || normalizar(r) == s)) return (p.roles.join(' · '), sinOrden);
 

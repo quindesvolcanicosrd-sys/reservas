@@ -129,7 +129,7 @@ class _RolesScreenState extends State<RolesScreen> {
               ),
             ),
             itemCount: roles.length,
-                        onReorderItem: (de, a) {
+            onReorderItem: (de, a) {
               final l = [...roles];
               final r = l.removeAt(de);
               l.insert(a, r);
