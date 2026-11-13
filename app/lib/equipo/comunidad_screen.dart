@@ -128,8 +128,9 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
     try {
       await repo.guardar(nueva);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.')));
+      }
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
