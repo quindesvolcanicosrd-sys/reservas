@@ -226,7 +226,7 @@ Deno.serve(async (req: Request) => {
     const inicioFetch = new Date(primerDiaMesesAtras(maxVentana).getTime() - diasExclusion * DIA_MS);
     const { data: asistData, error: asistError } = await supabase
       .from('asistencias')
-      .select('fecha, a_horario, tarde')
+            .select('fecha, a_horario, tarde, tipo_evento')
       .not('estado', 'in', '("Evento Cancelado","No se entrena")')
       .gte('fecha', fechaISO(inicioFetch))
       .lt('fecha', fechaISO(new Date()));
@@ -272,6 +272,15 @@ Deno.serve(async (req: Request) => {
 
         // Clases y puntos en el período del Equipo (`periodoTier`). Con viaje
     // (modo soloUsuario) el inicio se corre hacia atrás los días de viaje.
+        // Qué cuenta como clase (Mi Liga → reglas, 2026-11-13): todo suma o solo
+    // algunos tipos de evento; si llegar tarde cuenta como clase.
+    const { data: reglasFila } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
+    let reglasLiga: Record<string, any> = {};
+    try { reglasLiga = JSON.parse(String(reglasFila?.value ?? '{}')) ?? {}; } catch { reglasLiga = {}; }
+    const tiposCuentan: string[] | null = Array.isArray(reglasLiga.tiposCuentan) ? reglasLiga.tiposCuentan.map(String) : null;
+    const tardeCuentaClase = reglasLiga.tardeCuentaClase !== false;
+    const cuentaTipo = (t: unknown) => !tiposCuentan || tiposCuentan.includes(String(t || 'Entrenamiento'));
+
     function contarClases(username: string, tier: any): number {
       const p = periodoTier(tier);
       const extra = diasExtraVentana(username, Number(tier.ventana_meses) || 1);
@@ -279,13 +288,15 @@ Deno.serve(async (req: Request) => {
       const u = username.trim().toUpperCase();
       let n = 0;
       for (const fila of asistData ?? []) {
-        if (!fila.fecha || fila.fecha < desde || fila.fecha >= p.hasta) continue;
-        if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) n++;
+                if (!fila.fecha || fila.fecha < desde || fila.fecha >= p.hasta) continue;
+        if (!cuentaTipo(fila.tipo_evento)) continue;
+        if (nombresDe(fila.a_horario).includes(u) || (tardeCuentaClase && nombresDe(fila.tarde).includes(u))) n++;
       }
       // + asistencias externas del mismo período (ver `externasData` arriba).
       for (const ext of externasData ?? []) {
         const fechaExt = String(ext.fecha_entrenamiento ?? '').slice(0, 10);
-        if (!fechaExt || fechaExt < desde || fechaExt >= p.hasta) continue;
+                if (!fechaExt || fechaExt < desde || fechaExt >= p.hasta) continue;
+        if (tiposCuentan && !tiposCuentan.includes('Externa')) continue;
         if (String(ext.nombre_usuario ?? '').trim().toUpperCase() === u) n++;
       }
       return n;
@@ -367,7 +378,23 @@ Deno.serve(async (req: Request) => {
     // "aaaa-mm" del mes en curso (hora del server, UTC) -- clave de
     // `historial_tier` para esta corrida. Ver el comentario grande en la
     // migración sobre por qué se escribe SIEMPRE (cambie o no el tier).
-    const mesActualStr = hoy.getUTCFullYear() + '-' + String(hoy.getUTCMonth() + 1).padStart(2, '0');
+        const mesActualStr = hoy.getUTCFullYear() + '-' + String(hoy.getUTCMonth() + 1).padStart(2, '0');
+    // Corte de equipos (Victor, 2026-11-13): "revisar" (por defecto) deja cada
+    // cambio de equipo pendiente hasta el día de corte; "auto" lo aplica ya.
+    const { data: corteFila } = await supabase.from('config_app').select('value').eq('key', 'equipos_corte').maybeSingle();
+    let corte: { modo: string; dia: number } = { modo: 'revisar', dia: 1 };
+    try { corte = { ...corte, ...JSON.parse(String(corteFila?.value ?? '{}')) }; } catch { /* por defecto */ }
+    const diaCorte = Math.min(28, Math.max(1, Number(corte.dia) || 1));
+    const fechaCorte = hoy.getUTCDate() < diaCorte
+      ? new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), diaCorte))
+      : new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, diaCorte));
+    const mesCorte = fechaCorte.getUTCFullYear() + '-' + String(fechaCorte.getUTCMonth() + 1).padStart(2, '0');
+    const revisar = corte.modo !== 'auto' && !soloUsuario;
+    const { data: propuestasData } = revisar
+      ? await supabase.from('cambios_equipo').select('username, a, estado').eq('mes', mesCorte)
+      : { data: [] as any[] };
+    const propuestas: Record<string, { a: string; estado: string }> = {};
+    (propuestasData ?? []).forEach((p: any) => { propuestas[p.username] = p; });
 
     // Bug real corregido (ver MANIFEST.md -- "meses_consecutivos_cumplidos
     // sumaba 1 por corrida"): este recálculo corre muchas veces por mes (cron
@@ -535,8 +562,34 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const termometroPct = calcularTermometroPct(username);
+            const termometroPct = calcularTermometroPct(username);
       const update: Record<string, any> = { categoria: categoriaAsignada, termometro_pct: termometroPct };
+      // Modo "Revisar antes": si cambia de equipo, queda como propuesta (con
+      // todo lo que se guardaría) y la persona sigue igual hasta el corte.
+      const categoriaPrevia = m.categoria || tierDefault.nombre;
+      if (revisar && categoriaAsignada !== categoriaPrevia) {
+        const ya = propuestas[username];
+        if (nuevoRiesgoDesde !== undefined) update.tier_riesgo_desde = nuevoRiesgoDesde;
+        if (nuevoRiesgoHasta !== undefined) update.tier_riesgo_hasta = nuevoRiesgoHasta;
+        if (nuevoRiesgoObjetivo !== undefined) update.tier_riesgo_objetivo = nuevoRiesgoObjetivo;
+        if (nuevosMesesConsecutivos !== undefined) update.meses_consecutivos_cumplidos = nuevosMesesConsecutivos;
+        if (nuevoUltimoMes !== undefined) update.meses_consecutivos_ultimo_mes = nuevoUltimoMes;
+        // Rechazado este mes con el mismo destino: no se vuelve a proponer.
+        if (!(ya && ya.a === categoriaAsignada && ya.estado !== 'pendiente')) {
+          await supabase.from('cambios_equipo').upsert({
+            username, de: categoriaPrevia, a: categoriaAsignada, mes: mesCorte, actualizacion: update,
+            estado: 'pendiente', updated_at: new Date().toISOString(),
+          }, { onConflict: 'username,mes' });
+        }
+        await supabase.from('equipo').update({ termometro_pct: termometroPct }).eq('username', username);
+        await supabase.from('historial_tier').upsert({ username, mes: mesActualStr, tier_nombre: categoriaPrevia }, { onConflict: 'username,mes' });
+        resultados.push({ username, categoria: categoriaPrevia, enRiesgo: false });
+        continue;
+      }
+      // Ya no cambia (volvió a cumplir): se descarta la propuesta pendiente.
+      if (revisar && propuestas[username]?.estado === 'pendiente') {
+        await supabase.from('cambios_equipo').delete().eq('username', username).eq('mes', mesCorte).eq('estado', 'pendiente');
+      }
       if (nuevoRiesgoDesde !== undefined) update.tier_riesgo_desde = nuevoRiesgoDesde;
       if (nuevoRiesgoHasta !== undefined) update.tier_riesgo_hasta = nuevoRiesgoHasta;
       if (nuevoRiesgoObjetivo !== undefined) update.tier_riesgo_objetivo = nuevoRiesgoObjetivo;

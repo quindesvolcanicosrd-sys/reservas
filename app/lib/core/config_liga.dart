@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +25,16 @@ class ConfigLiga extends ChangeNotifier {
   String zonaHoraria = 'America/Guayaquil';
   num? precioPorClase;
   num? precioMensual;
+  String logo = '';
+
+  /// Reglas que un Pivot cambia en Mi Liga (`reglas_liga`).
+  Map<String, dynamic> reglas = const {};
+  int get toleranciaMin => (reglas['toleranciaMin'] as num?)?.toInt() ?? 15;
+  int get rectificacionDias => (reglas['rectificacionDias'] as num?)?.toInt() ?? 7;
+  int get eventosMinPersonas => (reglas['eventosMinPersonas'] as num?)?.toInt() ?? 5;
+
+  /// Días sin venir para verse como inactivx (lo usan Equipo y Calendario).
+  static int diasInactividad = 30;
   bool cargado = false;
 
   void _leer(Map<String, dynamic> r) {
@@ -32,6 +44,9 @@ class ConfigLiga extends ChangeNotifier {
     zonaHoraria = '${r['zonaHoraria'] ?? zonaHoraria}';
     precioPorClase = num.tryParse('${r['precioPorClase']}');
     precioMensual = num.tryParse('${r['precioMensual']}');
+    logo = '${r['logo'] ?? ''}';
+    if (r['reglas'] is Map<String, dynamic>) reglas = r['reglas'] as Map<String, dynamic>;
+    diasInactividad = (reglas['inactividadDias'] as num?)?.toInt() ?? 30;
     cargado = true;
     notifyListeners();
   }
@@ -41,6 +56,15 @@ class ConfigLiga extends ChangeNotifier {
       final r = await sesion.api.get('getConfigLiga', {if (sesion.adminToken != null) 'adminToken': sesion.adminToken});
       if (r['exito'] != false) _leer(r);
     } catch (_) {}
+  }
+
+  /// Guarda reglas de la liga (`adminReglasLiga`). Lanza ApiException si falla.
+  Future<void> guardarReglas(Map<String, Object?> cambios) async {
+    final r = await sesion.api.post('adminReglasLiga', {'adminToken': sesion.adminToken, 'reglas': jsonEncode(cambios)});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo guardar.'}');
+    if (r['reglas'] is Map<String, dynamic>) reglas = r['reglas'] as Map<String, dynamic>;
+    diasInactividad = (reglas['inactividadDias'] as num?)?.toInt() ?? 30;
+    notifyListeners();
   }
 
   /// Guarda solo lo que se pasa. Lanza ApiException si falla.

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/config_liga.dart';
 import '../core/api.dart';
 import '../core/cola_offline.dart';
 import '../core/fechas.dart';
@@ -413,7 +414,7 @@ class EventosRepo extends ChangeNotifier {
       if (respondieron.contains(nombre.trim().toUpperCase())) continue;
       if (m['estadoMiembro'] == 'Ausente') continue;
       final ultima = DateTime.tryParse((m['ultimaAsistencia'] ?? '').toString());
-      if (ultima == null || hoy.difference(ultima).inDays >= 30) continue;
+      if (ultima == null || hoy.difference(ultima).inDays >= ConfigLiga.diasInactividad) continue;
       out.add(Persona(username: nombre, nombreDerby: (m['nombreDerby'] ?? '').toString(), fotoPerfil: (m['fotoPerfil'] ?? '').toString()));
     }
     out.sort((a, b) => a.nombreMostrar.toLowerCase().compareTo(b.nombreMostrar.toLowerCase()));
@@ -539,7 +540,7 @@ class EventosRepo extends ChangeNotifier {
             ),
             inactivo: () {
               final u = DateTime.tryParse((p['ultimaAsistencia'] ?? '').toString());
-              return u != null && hoy.difference(u).inDays >= 30;
+              return u != null && hoy.difference(u).inDays >= ConfigLiga.diasInactividad;
             }(),
           ),
     ]..sort((a, b) => a.persona.nombreMostrar.toLowerCase().compareTo(b.persona.nombreMostrar.toLowerCase()));

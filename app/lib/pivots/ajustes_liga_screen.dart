@@ -8,6 +8,7 @@ import '../core/config_liga.dart';
 import '../core/paises.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
+import '../core/selector_plazo.dart';
 import 'categorias_screen.dart';
 import 'pivots_screen.dart';
 
@@ -104,6 +105,40 @@ class AjustesLigaScreen extends StatelessWidget {
     if (n != null && context.mounted) await _guardar(context, c, {clave: n});
   }
 
+  Future<void> _numero(BuildContext context, ConfigLiga c, String titulo, String clave, int actual, int min, int max, String etiqueta) async {
+    var v = actual;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(titulo, style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                SelectorNumero(valor: v, min: min, max: max, paso: max > 100 ? 5 : 1, etiqueta: etiqueta, alCambiar: (n) => set(() => v = n.toInt())),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || v == actual || !context.mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await c.guardarReglas({clave: v});
+      m.showSnackBar(const SnackBar(content: Text('Guardado')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = ConfigLiga.de(sesion);
@@ -196,9 +231,62 @@ class AjustesLigaScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             GrupoAjustes(
+              titulo: 'Reglas',
+              pie: 'Los cambios quedan en el historial de Equipos y puntos.',
+              filas: [
+                FilaAjuste(
+                  icono: Icons.timer_outlined,
+                  seccion: 'entrenamientos',
+                  titulo: 'Tolerancia de llegada',
+                  valor: '${c.toleranciaMin} minutos: después se sugiere marcar Tarde',
+                  alTocar: () => _numero(context, c, 'Tolerancia de llegada', 'toleranciaMin', c.toleranciaMin, 0, 120, 'minutos'),
+                ),
+                FilaAjuste(
+                  icono: Icons.fact_check_outlined,
+                  seccion: 'entrenamientos',
+                  titulo: 'Rectificaciones',
+                  valor: 'Los Pivots tienen ${c.rectificacionDias} días para revisarlas',
+                  alTocar: () => _numero(context, c, 'Días para revisar una rectificación', 'rectificacionDias', c.rectificacionDias, 1, 60, 'días'),
+                ),
+                FilaAjuste(
+                  icono: Icons.groups_2_outlined,
+                  seccion: 'entrenamientos',
+                  titulo: 'Pocas personas en un evento',
+                  valor: c.eventosMinPersonas == 0 ? 'No se sugiere cancelar' : 'Con menos de ${c.eventosMinPersonas}, se sugiere cancelar',
+                  alTocar: () => _numero(context, c, 'Sugerir cancelar con menos de', 'eventosMinPersonas', c.eventosMinPersonas, 0, 200, 'personas'),
+                ),
+                FilaAjuste(
+                  icono: Icons.hourglass_empty_rounded,
+                  seccion: 'entrenamientos',
+                  titulo: 'Inactividad',
+                  valor: '${ConfigLiga.diasInactividad} días sin venir',
+                  alTocar: () => _numero(context, c, 'Inactivx después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GrupoAjustes(
               titulo: 'Datos de la liga',
               pie: 'El país define el prefijo de teléfono y los números de emergencia. La zona horaria se guarda y se aplicará a los horarios cuando la app admita varias ligas; por ahora todo usa la hora de Ecuador.',
               filas: [
+                FilaAjuste(
+                  icono: Icons.shield_outlined,
+                  seccion: 'identidad',
+                  titulo: 'Logo de la liga',
+                  valor: c.logo.isEmpty ? 'Sin logo' : 'Toca para cambiarlo',
+                  alTocar: () async {
+                    final m = ScaffoldMessenger.of(context);
+                    try {
+                      final u = await elegirYSubirLogo(context, sesion, 'liga');
+                      if (u != null) {
+                        await c.cargar();
+                        m.showSnackBar(const SnackBar(content: Text('Logo actualizado')));
+                      }
+                    } catch (e) {
+                      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo subir el logo.')));
+                    }
+                  },
+                ),
                 FilaAjuste(
                   icono: Icons.flag_outlined,
                   seccion: 'identidad',

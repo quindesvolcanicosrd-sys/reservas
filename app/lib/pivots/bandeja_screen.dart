@@ -117,6 +117,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     (TipoPedido.lesion, 'Lesiones', Icons.healing_outlined),
     (TipoPedido.tarea, 'Tareas por validar', Icons.task_alt_rounded),
     (TipoPedido.prestamo, 'Equipamiento', Icons.content_paste_rounded),
+    (TipoPedido.equipo, 'Cambios de equipo', Icons.swap_vert_rounded),
   ];
 
   Future<void> _resolver(Pedido p, bool aprobar) async {
@@ -150,7 +151,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       await repo.resolver(p, aprobar: aprobar, nota: nota, extra: extra);
       m
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(aprobar ? 'Aprobado' : 'Rechazado')));
+        ..showSnackBar(SnackBar(content: Text(aprobar ? 'Aprobado' : (p.tipo == TipoPedido.equipo ? 'Se queda en su equipo este mes' : 'Rechazado'))));
     } catch (e) {
       m
         ..hideCurrentSnackBar()
@@ -213,6 +214,8 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
             final l = repo.pedidos.where((x) => x.tipo == tipo).toList();
             if (l.isEmpty) continue;
             hijos.add(_Encabezado(titulo: titulo, icono: icono, cantidad: l.length));
+            // Cambios de equipo: cuenta regresiva hasta el corte (Victor, 2026-11-13).
+            if (tipo == TipoPedido.equipo) hijos.add(_CuentaCorte(corte: DateTime.tryParse('${l.first.m['corte'] ?? ''}')));
             for (final x in l) {
               final c = _clave(x);
               hijos.add(
@@ -334,6 +337,28 @@ class _Encabezado extends StatelessWidget {
   }
 }
 
+/// "Se aplicarán automáticamente el 1 de diciembre · faltan 3 días".
+class _CuentaCorte extends StatelessWidget {
+  const _CuentaCorte({required this.corte});
+  final DateTime? corte;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final c = corte;
+    if (c == null) return const SizedBox.shrink();
+    final dias = Fechas.diasEntre(Fechas.hoy(), c);
+    final falta = dias <= 0 ? 'hoy' : (dias == 1 ? 'mañana' : 'en $dias días');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+      child: Text(
+        'Lo que no revises se aplicará automáticamente el ${Fechas.corta(c)} ($falta).',
+        style: TextStyle(fontSize: 13, color: dias <= 1 ? p.marcaTexto : p.textoSecundario, fontWeight: dias <= 1 ? FontWeight.w700 : null),
+      ),
+    );
+  }
+}
+
 /// Qué pide cada tarjeta, en una o dos líneas.
 (String, String?) describirPedido(Pedido x) {
   final m = x.m;
@@ -395,6 +420,11 @@ class _Encabezado extends StatelessWidget {
       );
     case TipoPedido.lesion:
       return ('Pidió pasar a Lesionadx', 'Mientras dure no cuenta para la asistencia ni paga cuota.');
+    case TipoPedido.equipo:
+      return (
+        m['sube'] == true ? 'Sube de ${v('de')} a ${v('a')}' : 'Baja de ${v('de')} a ${v('a')}',
+        'Aprobar lo aplica ahora. "Dejar como está" lo mantiene este mes.',
+      );
     case TipoPedido.tarea:
       final t = x.tarea;
       return (
@@ -458,7 +488,10 @@ class _TarjetaPedido extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(onPressed: alResolver == null ? null : () => alResolver!(false), child: const Text('Rechazar')),
+                    TextButton(
+                      onPressed: alResolver == null ? null : () => alResolver!(false),
+                      child: Text(pedido.tipo == TipoPedido.equipo ? 'Dejar como está' : 'Rechazar'),
+                    ),
                     const SizedBox(width: 8),
                     FilledButton(onPressed: alResolver == null ? null : () => alResolver!(true), child: const Text('Aprobar')),
                   ],

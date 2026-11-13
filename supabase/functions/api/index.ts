@@ -204,12 +204,12 @@ for (const [area, acciones] of Object.entries({
     'adminCancelarEvento', 'adminRegenerarVentanaAsistencias', 'adminCrearVenue', 'adminEditarVenue', 'adminEliminarVenue'],
   equipo: ['adminSetCategoria', 'adminSetTierModo', 'upsertTier', 'deleteTier', 'adminDatosCategorias', 'adminSetEstadoMiembro', 'adminActualizarEstadoViaje',
     'adminCancelarViaje', 'adminEliminarUsuario', 'adminRestaurarUsuario', 'adminRolesEquipo', 'adminGuardarTemporadaDescanso', 'adminEliminarTemporadaDescanso',
-    'adminBackfillHistorialTier', 'adminRecalcularStats', 'adminReglasLiga'],
+        'adminBackfillHistorialTier', 'adminRecalcularStats', 'adminReglasLiga', 'adminCambiosEquipo'],
   salud: ['adminFichaEmergencia', 'adminAprobarLesion', 'adminRechazarLesion', 'adminGetSolicitudesLesion'],
   inventario: ['adminInventarioLista', 'adminPrestamo', 'adminReglaPrestamo', 'adminGuardarEquipamiento'],
   tareas: ['adminCrearTarea', 'adminEditarTarea', 'adminEliminarTarea', 'adminArchivarTarea', 'adminEliminarTareaArchivada', 'adminValidarTarea', 'adminDesvalidarTarea',
     'adminEditarAsignacionesTarea', 'adminCrearTareaRecurrente', 'adminEditarTareaRecurrente', 'adminEstadoTareaRecurrente', 'adminAplicarTareaRecurrenteHistorico'],
-  liga: ['adminGuardarConfigLiga', 'adminGuardarComunidad', 'adminAgregarAdmin', 'adminQuitarAdmin', 'adminEnviarPush'],
+    liga: ['adminSubirLogo', 'adminGuardarConfigLiga', 'adminGuardarComunidad', 'adminAgregarAdmin', 'adminQuitarAdmin', 'adminEnviarPush'],
 })) for (const a of acciones) AREA_DE_ACCION[a] = area;
 
 /** Áreas de un Pivot por email (todas si es el principal, el sistema o no tiene límite). */
@@ -844,11 +844,183 @@ async function _pedidoDePivot(username: string): Promise<{ auto: boolean; email:
   return { auto: (await _configLiga()).solicitudesPivots === 'auto', email: yo.email };
 }
 
+// ─── Reglas de la liga (Mi Liga, Victor 2026-11-13) ─────────────────────────
+// Todo lo que antes estaba fijo en el código y un Pivot puede cambiar.
+// config_app: `reglas_liga` (JSON), `equipos_corte` (JSON), `valores_puntos`
+// (versiones con fecha de inicio: regla de oro, nunca tocan puntos ya ganados).
+const REGLAS_LIGA_BASE: Record<string, any> = {
+  tiposCuentan: null,        // null = todo suma; si no, tipos de evento que cuentan como clase ('Externa' incluido)
+  tardeCuentaClase: true,    // llegar tarde cuenta como clase
+  toleranciaMin: 15,         // minutos: al tomar lista después de esto se sugiere "Tarde" (nunca se fuerza)
+  rectificacionDias: 7,      // días para pedir una rectificación de asistencia
+  eventosMinPersonas: 5,     // con menos confirmadas, el aviso de 1 hora antes sugiere cancelar (0 = nunca)
+  inactividadDias: 30,       // días sin venir para verse como inactivx
+};
+async function _reglasLiga(): Promise<Record<string, any>> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
+  let r: Record<string, any> = {};
+  try { r = JSON.parse(String(data?.value ?? '{}')) ?? {}; } catch { r = {}; }
+  return { ...REGLAS_LIGA_BASE, ...r };
+}
+
+/** Próximo corte de equipos (estrictamente después de hoy) y cuándo llega la lista. */
+async function _corteEquipos(): Promise<{ modo: string; dia: number; avisoDias: number; fecha: string; mes: string; llega: string }> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'equipos_corte').maybeSingle();
+  let c: Record<string, any> = {};
+  try { c = JSON.parse(String(data?.value ?? '{}')) ?? {}; } catch { c = {}; }
+  const modo = c.modo === 'auto' ? 'auto' : 'revisar';
+  const dia = Math.min(28, Math.max(1, Number(c.dia) || 1));
+  const avisoDias = Math.min(20, Math.max(1, Number(c.avisoDias) || 3));
+  const hoy = _hoyEcuadorISO();
+  const y = Number(hoy.slice(0, 4)), m = Number(hoy.slice(5, 7)) - 1, d = Number(hoy.slice(8, 10));
+  const f = d < dia ? new Date(Date.UTC(y, m, dia)) : new Date(Date.UTC(y, m + 1, dia));
+  const fecha = f.toISOString().slice(0, 10);
+  return { modo, dia, avisoDias, fecha, mes: fecha.slice(0, 7), llega: new Date(f.getTime() - avisoDias * 86400000).toISOString().slice(0, 10) };
+}
+
+async function _registrarAjuste(clave: string, antes: unknown, despues: unknown, email: string): Promise<void> {
+  await supabase.from('historial_ajustes_liga').insert({ clave, antes: antes ?? null, despues: despues ?? null, por: email });
+}
+
+async function getReglasLiga(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const hoy = _hoyEcuadorISO();
+  const [reglas, corte, versiones, { data: hist }, pivots] = await Promise.all([
+    _reglasLiga(), _corteEquipos(), _versionesPuntos(),
+    supabase.from('historial_ajustes_liga').select('clave, antes, despues, por, created_at')
+      .gte('created_at', new Date(Date.now() - 183 * 86400000).toISOString()).order('created_at', { ascending: false }).limit(200),
+    _administradorxs(),
+  ]);
+  const nombre: Record<string, string> = {};
+  pivots.forEach((p) => { nombre[p.email] = p.nombre; });
+  return {
+    exito: true, reglas, corte,
+    puntos: { actual: _versionEn(hoy, versiones), proxima: versiones.find((v) => v.desde > hoy) ?? null },
+    historial: (hist ?? []).map((h: any) => ({ clave: h.clave, antes: h.antes, despues: h.despues, por: nombre[String(h.por ?? '').toLowerCase()] ?? (h.por === _EMAIL_SISTEMA ? 'Automático' : 'Un Pivot'), fecha: h.created_at })),
+  };
+}
+
+async function adminReglasLiga(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const leer = (v: unknown) => { if (v == null || v === '') return null; if (typeof v === 'object') return v as Record<string, any>; try { return JSON.parse(String(v)); } catch { return null; } };
+  const hoy = _hoyEcuadorISO();
+  const reglasNuevas = leer(params.reglas);
+  if (reglasNuevas) {
+    const antes = await _reglasLiga();
+    const r: Record<string, any> = { ...antes };
+    const entero = (k: string, min: number, max: number) => {
+      if (reglasNuevas[k] === undefined) return;
+      const n = Math.round(Number(reglasNuevas[k]));
+      if (Number.isFinite(n)) r[k] = Math.min(max, Math.max(min, n));
+    };
+    entero('toleranciaMin', 0, 120); entero('rectificacionDias', 1, 60); entero('eventosMinPersonas', 0, 200); entero('inactividadDias', 7, 365);
+    if (reglasNuevas.tardeCuentaClase !== undefined) r.tardeCuentaClase = reglasNuevas.tardeCuentaClase !== false && reglasNuevas.tardeCuentaClase !== 'false';
+    if (reglasNuevas.tiposCuentan !== undefined) {
+      r.tiposCuentan = Array.isArray(reglasNuevas.tiposCuentan) && reglasNuevas.tiposCuentan.length ? reglasNuevas.tiposCuentan.map(String).slice(0, 20) : null;
+    }
+    await supabase.from('config_app').upsert({ key: 'reglas_liga', value: JSON.stringify(r) }, { onConflict: 'key' });
+    for (const k of Object.keys(r)) if (JSON.stringify(antes[k]) !== JSON.stringify(r[k])) await _registrarAjuste(k, antes[k], r[k], email);
+  }
+  const corteNuevo = leer(params.corte);
+  if (corteNuevo) {
+    const a = await _corteEquipos();
+    const c = {
+      modo: corteNuevo.modo === 'auto' ? 'auto' : 'revisar',
+      dia: Math.min(28, Math.max(1, Number(corteNuevo.dia ?? a.dia) || 1)),
+      avisoDias: Math.min(20, Math.max(1, Number(corteNuevo.avisoDias ?? a.avisoDias) || 3)),
+    };
+    await supabase.from('config_app').upsert({ key: 'equipos_corte', value: JSON.stringify(c) }, { onConflict: 'key' });
+    await _registrarAjuste('corte', { modo: a.modo, dia: a.dia, avisoDias: a.avisoDias }, c, email);
+  }
+  const puntosNuevos = leer(params.puntos);
+  if (puntosNuevos) {
+    // Regla de oro: empieza siempre después de hoy.
+    const desde = String(puntosNuevos.desde ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || desde <= hoy) return { exito: false, error: 'El cambio de puntos empieza desde mañana o después: nunca cambia puntos ya ganados.' };
+    const num = (v: unknown, def: number) => { const n = Number(v); return Number.isFinite(n) && n >= 0 && n <= 100 ? n : def; };
+    const v: VersionPuntos = { desde, aTiempo: num(puntosNuevos.aTiempo, 1), tarde: num(puntosNuevos.tarde, 0.5), tardeCuenta: puntosNuevos.tardeCuenta !== false };
+    const { data } = await supabase.from('config_app').select('value').eq('key', 'valores_puntos').maybeSingle();
+    let l: VersionPuntos[] = [];
+    try { l = JSON.parse(String(data?.value ?? '[]')); } catch { l = []; }
+    // Las versiones futuras se reemplazan; las que ya empezaron nunca se tocan.
+    l = (Array.isArray(l) ? l : []).filter((x) => x && String(x.desde) <= hoy);
+    l.push(v);
+    await supabase.from('config_app').upsert({ key: 'valores_puntos', value: JSON.stringify(l) }, { onConflict: 'key' });
+    await _registrarAjuste('puntos', _versionEn(hoy, await _versionesPuntos()), v, email);
+  }
+  return getReglasLiga(params);
+}
+
+/** Aplica un cambio de equipo guardado (aprobado por un Pivot o automático). */
+async function _aplicarCambioEquipo(fila: any, estado: 'aprobado' | 'auto', por: string): Promise<void> {
+  const act = { ...(fila.actualizacion ?? {}), categoria: fila.a };
+  await supabase.from('equipo').update(act).eq('username', fila.username);
+  const mes = _hoyEcuadorISO().slice(0, 7);
+  await supabase.from('historial_tier').upsert({ username: fila.username, mes, tier_nombre: fila.a }, { onConflict: 'username,mes' });
+  await supabase.from('cambios_equipo').update({ estado, resuelto_por: por, resuelto_en: new Date().toISOString() }).eq('id', fila.id);
+}
+
+/** Cambios de equipo en revisión: listar, aprobar o dejar como está (rechazar). */
+async function adminCambiosEquipo(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const corte = await _corteEquipos();
+  const accion = String(params.accion ?? 'listar');
+  if (accion === 'listar') {
+    const { data } = await supabase.from('cambios_equipo').select('id, username, de, a, estado, mes').eq('mes', corte.mes).order('created_at');
+    return { exito: true, corte, cambios: data ?? [] };
+  }
+  let ids: string[] = [];
+  try { ids = Array.isArray(params.ids) ? params.ids : JSON.parse(String(params.ids ?? '[]')); } catch { ids = []; }
+  if (params.id) ids.push(String(params.id));
+  if (!ids.length) return { exito: false, error: 'Falta el cambio.' };
+  const { data: filas } = await supabase.from('cambios_equipo').select('*').in('id', ids).eq('estado', 'pendiente');
+  for (const f of filas ?? []) {
+    if (accion === 'aprobar') {
+      await _aplicarCambioEquipo(f, 'aprobado', email);
+      await sendPush({
+        tipo: 'solicitud_resuelta', include_external_user_ids: [f.username],
+        headings: { es: `Ahora estás en ${f.a}` }, contents: { es: `Pasaste de ${f.de ?? 'tu equipo'} a ${f.a}. Mira tus estadísticas para saber por qué.` }, url: APP_URL,
+      }).catch(() => {});
+    } else if (accion === 'rechazar') {
+      await supabase.from('cambios_equipo').update({ estado: 'rechazado', resuelto_por: email, resuelto_en: new Date().toISOString() }).eq('id', f.id);
+    }
+  }
+  return { exito: true, procesados: (filas ?? []).length };
+}
+
+/** Cron diario: aviso cuando llega la lista, recordatorio el día antes y
+ * aplicación automática de lo no revisado el día de corte. */
+async function _cronCorteEquipos(): Promise<void> {
+  const corte = await _corteEquipos();
+  if (corte.modo !== 'revisar') return;
+  const hoy = _hoyEcuadorISO();
+  const aviso = async (titulo: string, texto: string) => sendPush({
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'equipo'),
+    headings: { es: titulo }, contents: { es: texto }, url: APP_URL,
+  }).catch(() => {});
+  if (Number(hoy.slice(8, 10)) === corte.dia) {
+    const { data: pend } = await supabase.from('cambios_equipo').select('*').eq('mes', hoy.slice(0, 7)).eq('estado', 'pendiente');
+    for (const f of pend ?? []) await _aplicarCambioEquipo(f, 'auto', _EMAIL_SISTEMA);
+    const n = (pend ?? []).length;
+    if (n) await aviso('Cambios de equipo aplicados', `Se aplicaron ${n} ${n === 1 ? 'cambio' : 'cambios'} de equipo que no se revisaron.`);
+    return;
+  }
+  const { count } = await supabase.from('cambios_equipo').select('id', { count: 'exact', head: true }).eq('mes', corte.mes).eq('estado', 'pendiente');
+  const n = count ?? 0;
+  if (!n) return;
+  const manana = new Date(Date.parse(corte.fecha) - 86400000).toISOString().slice(0, 10);
+  if (hoy === manana) await aviso('Mañana se aplican los cambios de equipo', `Quedan ${n} sin revisar en la Bandeja. Lo que no revises se aplicará automáticamente.`);
+  else if (hoy === corte.llega) await aviso('Lista de cambios de equipo', `${n} ${n === 1 ? 'persona cambia' : 'personas cambian'} de equipo. Revísalo en la Bandeja antes del corte.`);
+}
+
 async function getConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
   if (!(await _validarToken(params.token)) && !(params.adminToken && await _validarAdminToken(String(params.adminToken)))) {
     return { exito: false, error: 'Sesión inválida.' };
   }
-  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()) };
+    const { data: logo } = await supabase.from('config_app').select('value').eq('key', 'logo_liga').maybeSingle();
+  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()), reglas: await _reglasLiga(), logo: logo?.value ?? '' };
 }
 
 async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
@@ -873,8 +1045,13 @@ async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Reco
     if (!Number.isFinite(n) || n < 0 || n > 10000) return { exito: false, error: 'Precio inválido.' };
     filas.push({ key: clave, value: String(n) });
   }
+    if (params.logo != null) {
+    const u = String(params.logo).trim();
+    if (u && !/^https:\/\//.test(u)) return { exito: false, error: 'Logo inválido.' };
+    filas.push({ key: 'logo_liga', value: u });
+  }
   if (filas.length) await supabase.from('config_app').upsert(filas, { onConflict: 'key' });
-  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()) };
+  return getConfigLiga({ adminToken: params.adminToken });
 }
 
 // País del equipo (prefijo y documento por defecto en Ajustes).
@@ -1065,8 +1242,20 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
     cupon_disponible: true, permisos_configurados: true,
     fecha_registro: new Date().toISOString(),
   };
-  if (pinHash && pinHash.length === 64) row.pin_hash = pinHash;
+    if (pinHash && pinHash.length === 64) row.pin_hash = pinHash;
   if (foto && foto.startsWith('http')) row.foto_perfil = foto;
+  // Enlace de invitación de un equipo (Mi Liga, 2026-11-13): entra directo a
+  // ese equipo si cumple sus requisitos; si no, al equipo inicial.
+  const codigoEquipo = String(params.equipo ?? '').trim();
+  if (codigoEquipo) {
+    const { data: t } = await supabase.from('config_tiers').select('nombre, requisitos').eq('codigo_invitacion', codigoEquipo).maybeSingle();
+    if (t) {
+      const req = (t.requisitos ?? {}) as Record<string, any>;
+      const usa = (v: unknown) => { const x = String(v ?? '').trim().toLowerCase(); return x !== '' && x !== 'no'; };
+      const cumple = !(req.patinesPropios && usa(necesitaPatines)) && !(req.proteccionesPropias && usa(necesitaProtecciones));
+      if (cumple) row.categoria = t.nombre;
+    }
+  }
   if (guardarFecha === 'si' && _normalizarFechaNac(fechaNac)) {
     row.fecha_nacimiento = _normalizarFechaNac(fechaNac);
     row.fecha_publica    = fechaPublica === 'Sí' ? 'Sí' : 'No';
@@ -1249,6 +1438,31 @@ async function subirFotoPerfil(params: Record<string, any>): Promise<Record<stri
     // Misma ruta siempre: el ?v= hace que todos vean la foto nueva y no la de caché.
   const url = `${urlData.publicUrl}?v=${Date.now()}`;
   await supabase.from('equipo').update({ foto_perfil: url }).eq('username', username);
+  return { exito: true, url };
+}
+
+/** Logo de la liga o de un equipo (Mi Liga, 2026-11-13). destino: 'liga' o el id del equipo. */
+async function adminSubirLogo(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const destino = String(params.destino ?? 'liga');
+  const base64Data = String(params.base64Data ?? '').trim();
+  let url = '';
+  if (base64Data) {
+    const parsed = await _base64ToBuffer(base64Data);
+    if (!parsed) return { exito: false, error: 'Formato de imagen inválido.' };
+    const path = `logos/${destino === 'liga' ? 'liga' : 'equipo-' + destino.replace(/[^a-z0-9-]/gi, '')}.png`;
+    const { error } = await supabase.storage.from('fotos-perfil').upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
+    if (error) return { exito: false, error: 'Error al subir imagen: ' + error.message };
+    url = `${supabase.storage.from('fotos-perfil').getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
+  }
+  if (destino === 'liga') {
+    await supabase.from('config_app').upsert({ key: 'logo_liga', value: url }, { onConflict: 'key' });
+  } else {
+    const { error } = await supabase.from('config_tiers').update({ logo: url || null }).eq('id', destino);
+    if (error) return { exito: false, error: error.message };
+  }
+  await _registrarAjuste('logo', null, { destino, url }, email);
   return { exito: true, url };
 }
 
@@ -2077,7 +2291,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const [res, rect, exc, les, asig] = await Promise.all([
     supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
-      .gte('created_at', new Date(Date.now() - DIAS_RECTIFICACION * 86400000).toISOString()).order('created_at', { ascending: true }),
+      .gte('created_at', new Date(Date.now() - (await _diasRectificacion()) * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
     supabase.from('equipo').select('username').eq('solicitud_lesion_pendiente', true).is('eliminado_en', null),
     supabase.from('asignaciones_tareas').select('id, tarea_id, nombre_usuario, fecha_envio').eq('estado', 'pendiente_revision').order('fecha_envio', { ascending: true }),
@@ -2130,9 +2344,25 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
       tarea: ta[a.tarea_id] ? { idTarea: a.tarea_id, titulo: ta[a.tarea_id].titulo, puntos: Number(ta[a.tarea_id].puntos) || 0, area: ta[a.tarea_id].area ?? '' } : null,
     })),
   };
-    // Cada Pivot ve solo lo de sus áreas (2026-11-13).
+      // Cambios de equipo por revisar (modo "Revisar antes"): desde que llega la lista hasta el corte.
+  const corte = await _corteEquipos();
+  let cambiosEquipo: any[] = [];
+  if (corte.modo === 'revisar' && _hoyEcuadorISO() >= corte.llega) {
+    const { data: ce } = await supabase.from('cambios_equipo').select('id, username, de, a').eq('mes', corte.mes).eq('estado', 'pendiente').order('created_at');
+    const faltan = (ce ?? []).map((c: any) => c.username).filter((u: string) => !pe[u]);
+    if (faltan.length) {
+      const { data: mas } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria').in('username', faltan);
+      (mas ?? []).forEach((p: any) => { pe[p.username] = p; });
+    }
+        const { data: tiersOrden } = await supabase.from('config_tiers').select('nombre, orden');
+    const orden: Record<string, number> = {};
+    (tiersOrden ?? []).forEach((t: any) => { orden[t.nombre] = Number(t.orden) || 0; });
+    cambiosEquipo = (ce ?? []).map((c: any) => ({ id: c.id, ...persona(c.username), de: c.de ?? '', a: c.a, corte: corte.fecha, sube: (orden[c.a] ?? 99) < (orden[c.de] ?? 99) }));
+  }
+  (items as Record<string, any[]>).cambiosEquipo = cambiosEquipo;
+  // Cada Pivot ve solo lo de sus áreas (2026-11-13).
   const areas = await _areasDe(adminEmail);
-  const areaDe: Record<string, string> = { reservas: 'finanzas', excepciones: 'finanzas', rectificaciones: 'asistencia', lesiones: 'salud', prestamos: 'inventario', tareas: 'tareas' };
+  const areaDe: Record<string, string> = { reservas: 'finanzas', excepciones: 'finanzas', rectificaciones: 'asistencia', lesiones: 'salud', prestamos: 'inventario', tareas: 'tareas', cambiosEquipo: 'equipo' };
   for (const k of Object.keys(items)) if (!areas.includes(areaDe[k])) (items as Record<string, any[]>)[k] = [];
   const total = Object.values(items).reduce((n, l) => n + l.length, 0);
   return { exito: true, total, ...items, areas };
@@ -3679,22 +3909,44 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
 async function _recalcularPuntosAsistenciaPersona(nombre: string, mes: number, anio: number): Promise<void> {
   const desde = `${anio}-${String(mes).padStart(2, '0')}-01`;
   const hasta = mes === 12 ? `${anio + 1}-01-01` : `${anio}-${String(mes + 1).padStart(2, '0')}-01`;
-  const { data: logs } = await supabase.from('log_asistencias').select('id_evento, estado, marca_temporal')
+    const { data: logs } = await supabase.from('log_asistencias').select('id_evento, estado, marca_temporal, fecha_entrenamiento')
     .eq('nombre_usuario', nombre).in('origen', ['Admin', 'Externa'])
     .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta);
-  const ultima: Record<string, { estado: string; marca: number }> = {};
+    const ultima: Record<string, { estado: string; marca: number; fecha: string }> = {};
   for (const l of logs ?? []) {
     const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
-    if (!ultima[l.id_evento] || marca >= ultima[l.id_evento].marca) ultima[l.id_evento] = { estado: l.estado, marca };
+    if (!ultima[l.id_evento] || marca >= ultima[l.id_evento].marca) ultima[l.id_evento] = { estado: l.estado, marca, fecha: String(l.fecha_entrenamiento ?? '').slice(0, 10) };
   }
-  const v = await _valoresPuntos();
-  const puntos = Object.values(ultima).reduce((s, x) => s + (x.estado === 'A tiempo' ? v.aTiempo : x.estado === 'Tarde' ? v.tarde : 0), 0);
+  const versiones = await _versionesPuntos();
+  const puntos = Object.values(ultima).reduce((s, x) => s + _valorMarca(x.estado, x.fecha, versiones), 0);
   await supabase.from('puntos_mensuales').upsert({ nombre_usuario: nombre, anio, mes, puntos_asistencia: puntos }, { onConflict: 'nombre_usuario,anio,mes' });
 }
 
-/** Cuánto vale cada marca (por ahora fijo; Mi Liga lo hará editable con fecha de inicio). */
-async function _valoresPuntos(): Promise<{ aTiempo: number; tarde: number }> {
-  return { aTiempo: 1, tarde: 0.5 };
+/**
+ * Cuánto vale cada marca, por versiones con fecha de inicio (config_app
+ * `valores_puntos`, Mi Liga). Regla de oro (Victor, 2026-11-13): un cambio
+ * empieza siempre después de hoy, así nunca altera puntos ya ganados.
+ */
+type VersionPuntos = { desde: string; aTiempo: number; tarde: number; tardeCuenta: boolean };
+const VERSION_PUNTOS_BASE: VersionPuntos = { desde: '2000-01-01', aTiempo: 1, tarde: 0.5, tardeCuenta: true };
+async function _versionesPuntos(): Promise<VersionPuntos[]> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'valores_puntos').maybeSingle();
+  let l: VersionPuntos[] = [];
+  try { l = JSON.parse(String(data?.value ?? '[]')); } catch { l = []; }
+  return [VERSION_PUNTOS_BASE, ...(Array.isArray(l) ? l : [])]
+    .filter((v) => v && /^\d{4}-\d{2}-\d{2}$/.test(String(v.desde)))
+    .sort((a, b) => a.desde.localeCompare(b.desde));
+}
+function _versionEn(fecha: string, versiones: VersionPuntos[]): VersionPuntos {
+  let v = versiones[0] ?? VERSION_PUNTOS_BASE;
+  for (const x of versiones) if (x.desde <= fecha) v = x;
+  return v;
+}
+function _valorMarca(estado: string, fecha: string, versiones: VersionPuntos[]): number {
+  const v = _versionEn(fecha || '2000-01-01', versiones);
+  if (estado === 'A tiempo') return Number(v.aTiempo) || 0;
+  if (estado === 'Tarde') return v.tardeCuenta === false ? 0 : (Number(v.tarde) || 0);
+  return 0;
 }
 
 // Asistencia externa (feat nueva, ver MANIFEST.md) -- una jugadora entrenó
@@ -3832,7 +4084,7 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
   if (!ESTADOS_RECTIFICACION.includes(estadoSolicitado)) return { exito: false, error: 'Estado inválido.' };
     // Una sola revisión pendiente por evento; a los 7 días sin respuesta se
   // descarta sola y se puede volver a pedir (Victor, 2026-11-12).
-  const desde = new Date(Date.now() - DIAS_RECTIFICACION * 86400000).toISOString();
+  const desde = new Date(Date.now() - (await _diasRectificacion()) * 86400000).toISOString();
   const { data: abierta } = await supabase.from('rectificaciones_asistencia').select('id')
     .eq('nombre', username).eq('id_evento', idEvento).eq('decision', 'Pendiente').gte('created_at', desde).limit(1).maybeSingle();
   if (abierta) return { exito: false, error: 'Ya pediste revisar esta asistencia. Un Pivot la revisará pronto.' };
@@ -3861,7 +4113,10 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
   return { exito: true };
 }
 
-const DIAS_RECTIFICACION = 7;
+/** Días para revisar una rectificación (Mi Liga → reglas, por defecto 7). */
+async function _diasRectificacion(): Promise<number> {
+  return Number((await _reglasLiga()).rectificacionDias) || 7;
+}
 
 // Mis pedidos de revisión de asistencia de los últimos 60 días, para mostrar
 // "Revisión pendiente" (con los días que quedan) o cómo se resolvió.
@@ -3871,6 +4126,7 @@ async function getMisRectificaciones(params: Record<string, any>): Promise<Recor
   const desde = new Date(Date.now() - 60 * 86400000).toISOString();
   const { data } = await supabase.from('rectificaciones_asistencia').select('id, id_evento, estado_solicitado, decision, created_at')
     .eq('nombre', username).gte('created_at', desde).order('created_at', { ascending: false });
+  const DIAS_RECTIFICACION = await _diasRectificacion();
   const limite = Date.now() - DIAS_RECTIFICACION * 86400000;
   const porEvento: Record<string, any> = {};
   for (const r of data ?? []) {
@@ -4619,11 +4875,12 @@ async function adminGetUsuarios(): Promise<any[]> {
     eliminado: !!r.eliminado_en, eliminadoPor: r.eliminado_por || null,
   }));
   if (!personas.length) return personas;
-  const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+    const ultimaPorUsuario = await _ultimaAsistenciaRealPorUsuario();
+  const diasInactiva = Number((await _reglasLiga()).inactividadDias) || 30;
   personas.forEach((p: any) => {
     const u = _ultimaAsistenciaDe(ultimaPorUsuario, p.nombre);
     const dias = u ? Math.floor((Date.now() - new Date(u).getTime()) / 86400000) : Infinity;
-    p.inactiva = dias >= 30;
+    p.inactiva = dias >= diasInactiva;
   });
   return personas;
 }
@@ -5245,21 +5502,23 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
   // archivo) para el mismo problema aplicado a la racha -- acá recién se
   // extiende también a `puntos_asistencia`, que hasta ahora había quedado
   // afuera de ese fix.
-  const ultimaPorClave: Record<string, { estado: string; nombre_usuario: string; marca: number }> = {};
+    const ultimaPorClave: Record<string, { estado: string; nombre_usuario: string; marca: number; fecha: string }> = {};
   (logs ?? []).forEach((l: any) => {
     const u = String(l.nombre_usuario ?? '').trim();
     if (!u) return;
     const clave = l.id_evento + '|' + u;
     const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
     const actual = ultimaPorClave[clave];
-    if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, nombre_usuario: u, marca };
+        if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, nombre_usuario: u, marca, fecha: String(l.fecha_entrenamiento ?? '').slice(0, 10) };
   });
 
+  // Valores por fecha (regla de oro, Victor 2026-11-13: un cambio nunca toca puntos ya ganados).
+  const versiones = await _versionesPuntos();
   const puntosPorUsuario: Record<string, number> = {};
   Object.keys(ultimaPorClave).forEach((clave) => {
     const l = ultimaPorClave[clave];
-    if (l.estado === 'A tiempo') puntosPorUsuario[l.nombre_usuario] = (puntosPorUsuario[l.nombre_usuario] || 0) + 1;
-    else if (l.estado === 'Tarde') puntosPorUsuario[l.nombre_usuario] = (puntosPorUsuario[l.nombre_usuario] || 0) + 0.5;
+    const v = _valorMarca(l.estado, l.fecha, versiones);
+    if (v) puntosPorUsuario[l.nombre_usuario] = (puntosPorUsuario[l.nombre_usuario] || 0) + v;
   });
 
   const filas = Object.keys(puntosPorUsuario).map((nombre_usuario) => ({
@@ -6042,14 +6301,14 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
     .in('origen', ['Admin', 'Externa']) // mismo criterio que recalcularPuntosAsistencia()
     .gte('fecha_entrenamiento', desdePeriodo).lt('fecha_entrenamiento', hastaPeriodo);
-  const ultimaPorClaveAsistencia: Record<string, { estado: string; nombre_usuario: string; marca: number }> = {};
+  const ultimaPorClaveAsistencia: Record<string, { estado: string; nombre_usuario: string; marca: number; fecha: string }> = {};
   (logsAsistenciaPeriodo ?? []).forEach((l: any) => {
     const u = String(l.nombre_usuario ?? '').trim();
     if (!u) return;
     const clave = l.id_evento + '|' + u;
     const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
     const actual = ultimaPorClaveAsistencia[clave];
-    if (!actual || marca >= actual.marca) ultimaPorClaveAsistencia[clave] = { estado: l.estado, nombre_usuario: u, marca };
+    if (!actual || marca >= actual.marca) ultimaPorClaveAsistencia[clave] = { estado: l.estado, nombre_usuario: u, marca, fecha: String(l.fecha_entrenamiento ?? '').slice(0, 10) };
   });
       // Presentes hoy (botón de emergencia, Victor 2026-11-07): última marca de
   // hoy (hora de Ecuador) "A tiempo" o "Tarde" en algún evento.
@@ -6067,6 +6326,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   });
   const presentesHoy = new Set(Object.keys(ultimaHoy).filter((k) => ultimaHoy[k].estado === 'A tiempo' || ultimaHoy[k].estado === 'Tarde').map((k) => k.split('|').slice(1).join('|')));
   const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
+  const versionesLive = await _versionesPuntos();
   // Asistencia del período (app, dato de la fila de Equipo, 2026-11-07):
   // veces que vino (a tiempo o tarde) sobre los eventos con asistencia tomada.
   const asistenciasPeriodoPorUsuario: Record<string, number> = {};
@@ -6074,8 +6334,8 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   Object.keys(ultimaPorClaveAsistencia).forEach((clave) => {
     const l = ultimaPorClaveAsistencia[clave];
     if (l.estado === 'A tiempo' || l.estado === 'Tarde') asistenciasPeriodoPorUsuario[l.nombre_usuario] = (asistenciasPeriodoPorUsuario[l.nombre_usuario] || 0) + 1;
-    if (l.estado === 'A tiempo') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 1;
-    else if (l.estado === 'Tarde') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 0.5;
+    const vm = _valorMarca(l.estado, l.fecha, versionesLive);
+    if (vm) puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + vm;
   });
 
   // Tendencia de termómetro, hoy vs. hace 1 mes (feat re-hecha, ver
@@ -6625,52 +6885,55 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
 // calcula al instante quién cumpliría con cada cambio.
 async function adminDatosCategorias(params: Record<string, any>): Promise<Record<string, any>> {
   if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
-  const hoy = new Date();
-  const atras = (n: number) => {
-    const y = hoy.getUTCFullYear(), m = hoy.getUTCMonth() - n;
-    const d = Math.min(hoy.getUTCDate(), new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
-    return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
-  };
-  const hoyISO = hoy.toISOString().slice(0, 10);
-  const inicio = atras(12);
+  // Por mes calendario (2026-11-13, misma cuenta que recalcular-categorias):
+  // índice 0 = mes en curso, 1 = último mes cerrado… hasta 12.
+  const hoyISO = _hoyEcuadorISO();
+  const y = Number(hoyISO.slice(0, 4)), mo = Number(hoyISO.slice(5, 7)) - 1;
+  const idxHoy = y * 12 + mo;
+  const inicio = new Date(Date.UTC(y, mo - 12, 1)).toISOString().slice(0, 10);
+  const reglas = await _reglasLiga();
+  const tipos: string[] | null = Array.isArray(reglas.tiposCuentan) ? reglas.tiposCuentan : null;
+  const cuentaTipo = (t: unknown) => !tipos || tipos.includes(String(t || 'Entrenamiento'));
   const [{ data: gente }, asis, { data: ext }, { data: pts }] = await Promise.all([
     supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria, tier_modo, estado_miembro, necesita_patines, necesita_protecciones, meses_consecutivos_cumplidos')
       .is('eliminado_en', null),
-    _paginado((a, b) => supabase.from('asistencias').select('fecha, a_horario, tarde')
+    _paginado((a, b) => supabase.from('asistencias').select('fecha, a_horario, tarde, tipo_evento')
       .not('estado', 'in', '("Evento Cancelado","No se entrena")').gte('fecha', inicio).lt('fecha', hoyISO)
       .order('fecha', { ascending: true }).range(a, b)),
     supabase.from('log_asistencias').select('nombre_usuario, fecha_entrenamiento').eq('origen', 'Externa')
       .gte('fecha_entrenamiento', inicio).lt('fecha_entrenamiento', hoyISO).limit(100000),
-    supabase.from('puntos_mensuales').select('nombre_usuario, anio, mes, puntos_total').gte('anio', Number(inicio.slice(0, 4))),
+    supabase.from('puntos_mensuales').select('nombre_usuario, anio, mes, puntos_total, puntos_tareas').gte('anio', y - 1),
   ]);
-  const desdes = Array.from({ length: 13 }, (_, v) => atras(v));
-  const idxHoy = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
-  const clases: Record<string, number[]> = {}, puntos: Record<string, number[]> = {};
+  const idxDe = (f: string) => idxHoy - (Number(f.slice(0, 4)) * 12 + Number(f.slice(5, 7)) - 1);
+  const clases: Record<string, number[]> = {}, tareas: Record<string, number[]> = {}, total: Record<string, number[]> = {};
   const sumarClase = (u: string, f: string) => {
-    const k = u.trim().toUpperCase();
-    const l = clases[k] ??= Array(13).fill(0);
-    for (let v = 0; v <= 12; v++) if (f >= desdes[v]) l[v]++;
+    const i = idxDe(f);
+    if (i < 0 || i > 12) return;
+    (clases[u.trim().toUpperCase()] ??= Array(13).fill(0))[i]++;
   };
   for (const r of asis) {
-    const nombres = new Set([...String(r.a_horario ?? '').split(','), ...String(r.tarde ?? '').split(',')].map((n) => n.trim()).filter(Boolean));
+    if (!cuentaTipo(r.tipo_evento)) continue;
+    const nombres = new Set([...String(r.a_horario ?? '').split(','), ...(reglas.tardeCuentaClase !== false ? String(r.tarde ?? '').split(',') : [])].map((n) => n.trim()).filter(Boolean));
     for (const n of nombres) sumarClase(n, r.fecha);
   }
-  for (const e of ext ?? []) sumarClase(String(e.nombre_usuario ?? ''), String(e.fecha_entrenamiento).slice(0, 10));
+  if (!tipos || tipos.includes('Externa')) for (const e of ext ?? []) sumarClase(String(e.nombre_usuario ?? ''), String(e.fecha_entrenamiento).slice(0, 10));
   for (const r of pts ?? []) {
-    const diff = idxHoy - (Number(r.anio) * 12 + Number(r.mes) - 1);
-    if (diff < 0) continue;
-    const l = puntos[r.nombre_usuario] ??= Array(13).fill(0);
-    for (let v = diff; v <= 12; v++) l[v] += Number(r.puntos_total) || 0;
+    const i = idxHoy - (Number(r.anio) * 12 + Number(r.mes) - 1);
+    if (i < 0 || i > 12) continue;
+    (tareas[r.nombre_usuario] ??= Array(13).fill(0))[i] += Number(r.puntos_tareas) || 0;
+    (total[r.nombre_usuario] ??= Array(13).fill(0))[i] += Number(r.puntos_total) || 0;
   }
   const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
+  const r1 = (l: number[]) => l.map((x) => Math.round(x * 10) / 10);
   const personas = (gente ?? []).filter((p: any) => p.username).map((p: any) => ({
     nombre: p.username, nombreMostrar: p.nombre_derby || p.username, foto: p.foto_perfil || '',
     categoria: p.categoria ?? null, modo: p.tier_modo ?? 'auto', estado: p.estado_miembro ?? null,
     usaEquipo: usa(p.necesita_patines) || usa(p.necesita_protecciones), mesesSeguidos: Number(p.meses_consecutivos_cumplidos) || 0,
-    clases: clases[String(p.username).trim().toUpperCase()] ?? Array(13).fill(0),
-    puntos: (puntos[p.username] ?? Array(13).fill(0)).map((x: number) => Math.round(x * 10) / 10),
+    clasesMes: clases[String(p.username).trim().toUpperCase()] ?? Array(13).fill(0),
+    tareasMes: r1(tareas[p.username] ?? Array(13).fill(0)),
+    puntosMes: r1(total[p.username] ?? Array(13).fill(0)),
   }));
-  return { exito: true, personas, desdes };
+  return { exito: true, personas, corte: await _corteEquipos() };
 }
 
 // ─── Bandeja de cada persona (Victor, 2026-11-13) ───────────────────────
@@ -6778,6 +7041,7 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
       const actual = ultimaPorEventoDesglose[l.id_evento];
       if (!actual || marca >= actual.marca) ultimaPorEventoDesglose[l.id_evento] = { estado: l.estado, fecha: l.fecha_entrenamiento, marca, externa: l.origen === 'Externa', lugar: l.lugar_externo ?? '' };
     });
+    const versionesDesglose = await _versionesPuntos();
     const filas = Object.keys(ultimaPorEventoDesglose)
       .map((idEvento) => ultimaPorEventoDesglose[idEvento])
       .filter((f) => f.estado === 'A tiempo' || f.estado === 'Tarde')
@@ -6785,7 +7049,7 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
       .map((l: any) => ({
         fecha: String(l.fecha).slice(0, 10),
         estado: l.estado,
-        puntos: l.estado === 'A tiempo' ? 1 : 0.5,
+        puntos: _valorMarca(l.estado, String(l.fecha).slice(0, 10), versionesDesglose),
         // Asistencia externa (adminRegistrarAsistenciaExterna()) -- el
         // frontend la distingue con un badge "Externa" + el lugar, si hay.
         ...(l.externa ? { externa: true, lugar: l.lugar } : {}),
@@ -7647,6 +7911,8 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
   const adminDestinatarios = await _adminDestinatariosPush(undefined, 'asistencia');
   if (!adminDestinatarios.length) return { exito: true, eventos: enVentana.length, enviados: 0 };
+  // Mínimo de personas para sugerir cancelar (Mi Liga → reglas, por defecto 5).
+  const minPersonas = Number((await _reglasLiga()).eventosMinPersonas) || 0;
   let enviados = 0;
   for (const ev of enVentana) {
         const filas = asistPorEvento[ev.id_evento] ?? [];
@@ -7673,7 +7939,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
     if (llevar.length) partes.push(`Equipamiento a llevar hoy: ${llevar.join(' y ')}.`);
     // "Cancelar" solo con menos de 5 personas; si no, el admin que asiste ve
     // "No asistiré". Cualquiera de los dos abre la app para confirmar.
-    const pocos = n < 5;
+    const pocos = n < minPersonas;
     if (pocos) partes.push('Son pocas personas: puedes cancelarlo.');
 
     const url = _urlEvento(String(ev.id_evento));
@@ -8202,7 +8468,8 @@ async function cronDiario(): Promise<Record<string, any>> {
     await recalcularPuntosAsistencia(m === 1 ? 12 : m - 1, m === 1 ? a - 1 : a);
     await recalcularPuntosAsistencia(m, a);
   } catch (e) { console.error('[puntos] cron:', e); }
-  try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
+    try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
+  try { await _cronCorteEquipos(); } catch (e) { console.error('[equipos] corte:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'
   const diaDelMes = Number(hoyIso.substring(8, 10));
@@ -8505,7 +8772,11 @@ Deno.serve(async (req: Request) => {
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
             case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
                         case 'adminBandeja':                    return json(await adminBandeja(params));
-            case 'adminPivots':                     return json(await adminPivots(params));
+                        case 'adminPivots':                     return json(await adminPivots(params));
+            case 'getReglasLiga':                   return json(await getReglasLiga(params));
+            case 'adminReglasLiga':                 return json(await adminReglasLiga(params));
+                        case 'adminCambiosEquipo':              return json(await adminCambiosEquipo(params));
+            case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
       case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
@@ -8747,15 +9018,31 @@ Deno.serve(async (req: Request) => {
         // `true`); los 2 enteros nuevos viajan tal cual, como ya hacen
         // `min_clases`/`min_puntos`/`ventana_meses` (PostgREST coerciona el
         // string a `integer` solo con el `default`/tipo de columna).
-        const row = {
+                const row: Record<string, any> = {
           orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default: !!es_default,
           meses_consecutivos_ascenso, meses_gracia_demotion,
           dividir_puntos_mitad: !!dividir_puntos_mitad, califica_fondos_viaje: !!califica_fondos_viaje,
         };
+        // Campos de la app (2026-11-13): solo se tocan si vienen (la web vieja no los manda).
+        const unidades = ['dia', 'semana', 'mes', 'anio'];
+        if (params.puntos_fuente != null) row.puntos_fuente = params.puntos_fuente === 'todos' ? 'todos' : 'tareas';
+        if (params.periodo_unidad != null && unidades.includes(String(params.periodo_unidad))) row.periodo_unidad = String(params.periodo_unidad);
+        if (params.gracia_unidad != null && unidades.includes(String(params.gracia_unidad))) row.gracia_unidad = String(params.gracia_unidad);
+        if (params.requisitos != null) {
+          try { row.requisitos = typeof params.requisitos === 'object' ? params.requisitos : JSON.parse(String(params.requisitos)); } catch { /* sin cambio */ }
+        }
+        if (!String(nombre ?? '').trim()) return json({ error: 'Falta el nombre del equipo.' }, 400);
+        const { data: antesTier } = id ? await supabase.from('config_tiers').select('*').eq('id', id).maybeSingle() : { data: null };
+        if (!id) row.codigo_invitacion = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
         const { data, error } = id
           ? await supabase.from('config_tiers').update(row).eq('id', id).select().single()
           : await supabase.from('config_tiers').insert(row).select().single();
-        if (error) return json({ error: error.message }, 500);
+                if (error) return json({ error: error.message }, 500);
+        // Si cambia el nombre, las personas de ese equipo lo siguen.
+        if (antesTier && antesTier.nombre !== data.nombre) {
+          await supabase.from('equipo').update({ categoria: data.nombre }).eq('categoria', antesTier.nombre);
+        }
+        await _registrarAjuste('equipo', antesTier, data, adminEmail);
         return json({ tier: data });
       }
       case 'deleteTier': {
@@ -8763,8 +9050,13 @@ Deno.serve(async (req: Request) => {
         if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
         const { data: tier } = await supabase.from('config_tiers').select('es_default').eq('id', params.id).single();
         if (!tier || tier.es_default) return json({ error: 'No se puede eliminar el tier por defecto' }, 400);
+                // Quien estaba en ese equipo pasa al inicial (nunca queda sin equipo).
+        const { data: borrado } = await supabase.from('config_tiers').select('*').eq('id', params.id).maybeSingle();
+        const { data: inicial } = await supabase.from('config_tiers').select('nombre').eq('es_default', true).maybeSingle();
+        if (borrado && inicial) await supabase.from('equipo').update({ categoria: inicial.nombre }).eq('categoria', borrado.nombre);
         const { error } = await supabase.from('config_tiers').delete().eq('id', params.id);
         if (error) return json({ error: error.message }, 500);
+        await _registrarAjuste('equipo', borrado, null, adminEmail);
         return json({ ok: true });
       }
       // Fase 2 completa del sistema de tiers -- config global de fondos de

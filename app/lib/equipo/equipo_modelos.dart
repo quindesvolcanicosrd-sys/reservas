@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/config_liga.dart';
 import '../core/fechas.dart';
 
 /// Una persona del equipo tal como la devuelve `getEquipo` (Edge Function).
@@ -66,7 +67,7 @@ class Integrante {
     if (deViaje || lesionadx) return false;
     if (estado == 'Inactivx') return true;
     final u = ultimaAsistencia;
-    return u == null || Fechas.diasEntre(u, Fechas.hoy()) >= 30;
+    return u == null || Fechas.diasEntre(u, Fechas.hoy()) >= ConfigLiga.diasInactividad;
   }
 
   /// Marcada hoy "A tiempo" o "Tarde" (habilita el botón de emergencia).

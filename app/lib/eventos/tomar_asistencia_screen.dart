@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/config_liga.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import 'eventos_repo.dart';
@@ -107,6 +108,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
                   onChanged: (v) => setState(() => _busqueda = v),
                 ),
               ),
+              _AvisoTolerancia(ev: ev, minutos: ConfigLiga.de(widget.repo.sesion).toleranciaMin),
               Expanded(child: _lista(context, ev, marcados)),
             ],
           ),
@@ -228,6 +230,45 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
             onSelectionChanged: (s) => _marcar(ev, m.persona, s.isEmpty ? null : s.first),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Pasada la tolerancia de llegada (Mi Liga → reglas), sugiere marcar
+/// "Tarde" a quien llega ahora. Nunca marca nada solo.
+class _AvisoTolerancia extends StatelessWidget {
+  const _AvisoTolerancia({required this.ev, required this.minutos});
+  final Evento ev;
+  final int minutos;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final hm = ev.horaInicio.split(':');
+    final h = int.tryParse(hm.first), m = hm.length > 1 ? int.tryParse(hm[1]) : 0;
+    if (h == null || m == null || minutos <= 0) return const SizedBox.shrink();
+    final inicio = DateTime(ev.fecha.year, ev.fecha.month, ev.fecha.day, h, m);
+    final ahora = DateTime.now();
+    final limite = inicio.add(Duration(minutes: minutos));
+    if (ahora.isBefore(limite) || ahora.difference(inicio).inHours >= 6) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: p.suave, borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4)),
+        child: Row(
+          children: [
+            Icon(Icons.schedule_rounded, size: 18, color: p.sobreSuave),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Ya pasaron los $minutos minutos de tolerancia. A quien llegue ahora, sugerimos marcarlo Tarde.',
+                style: TextStyle(fontSize: 13, color: p.sobreSuave),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

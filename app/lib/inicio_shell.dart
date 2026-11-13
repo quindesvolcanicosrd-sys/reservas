@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'core/config_liga.dart';
 import 'core/api.dart';
 import 'core/fechas.dart';
 import 'core/tema.dart';
@@ -39,6 +40,9 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Navegacion.ir.addListener(_irAPestana);
+    // Ajustes y reglas de la liga (inactividad, tolerancia…) desde el inicio.
+    ConfigLiga.de(widget.sesion);
+
     // Datos del perfil pendientes: al entrar, sin tapar el tour de primera vez.
     Future.delayed(const Duration(milliseconds: 2500), _recordarDatos);
   }

@@ -622,7 +622,9 @@ function inscEnviar() {
       foto:G.foto,
       fechaNac:G.fechaNac, guardarFecha:'si',
       fechaPublica:G.fechaPublica || 'No', edadPublica:G.edadPublica || 'No',
-      mayorEdad:G.mayorEdad, pinHash:pinHash||''
+      mayorEdad:G.mayorEdad, pinHash:pinHash||'',
+      // Enlace de invitación de un equipo (Mi Liga): ?equipo=<código>.
+      equipo:new URLSearchParams(window.location.search).get('equipo')||''
     }, function(res) {
       ocultarCargando();
       _inscEnviando = false;
