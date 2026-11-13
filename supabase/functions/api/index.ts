@@ -6072,6 +6072,61 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
   };
 }
 
+// ─── Simulador de Categorías/Equipos (Victor, 2026-11-13) ──────────────────
+// Para editar lo que pide cada Categoría/Equipo con ejemplos reales: por
+// cada persona activa, sus clases y puntos contados igual que
+// recalcular-categorias para cada período posible (1 a 12 meses). La app
+// calcula al instante quién cumpliría con cada cambio.
+async function adminDatosCategorias(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const hoy = new Date();
+  const atras = (n: number) => {
+    const y = hoy.getUTCFullYear(), m = hoy.getUTCMonth() - n;
+    const d = Math.min(hoy.getUTCDate(), new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
+    return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+  };
+  const hoyISO = hoy.toISOString().slice(0, 10);
+  const inicio = atras(12);
+  const [{ data: gente }, asis, { data: ext }, { data: pts }] = await Promise.all([
+    supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria, tier_modo, estado_miembro, necesita_patines, necesita_protecciones, meses_consecutivos_cumplidos')
+      .is('eliminado_en', null),
+    _paginado((a, b) => supabase.from('asistencias').select('fecha, a_horario, tarde')
+      .not('estado', 'in', '("Evento Cancelado","No se entrena")').gte('fecha', inicio).lt('fecha', hoyISO)
+      .order('fecha', { ascending: true }).range(a, b)),
+    supabase.from('log_asistencias').select('nombre_usuario, fecha_entrenamiento').eq('origen', 'Externa')
+      .gte('fecha_entrenamiento', inicio).lt('fecha_entrenamiento', hoyISO).limit(100000),
+    supabase.from('puntos_mensuales').select('nombre_usuario, anio, mes, puntos_total').gte('anio', Number(inicio.slice(0, 4))),
+  ]);
+  const desdes = Array.from({ length: 13 }, (_, v) => atras(v));
+  const idxHoy = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  const clases: Record<string, number[]> = {}, puntos: Record<string, number[]> = {};
+  const sumarClase = (u: string, f: string) => {
+    const k = u.trim().toUpperCase();
+    const l = clases[k] ??= Array(13).fill(0);
+    for (let v = 0; v <= 12; v++) if (f >= desdes[v]) l[v]++;
+  };
+  for (const r of asis) {
+    const nombres = new Set([...String(r.a_horario ?? '').split(','), ...String(r.tarde ?? '').split(',')].map((n) => n.trim()).filter(Boolean));
+    for (const n of nombres) sumarClase(n, r.fecha);
+  }
+  for (const e of ext ?? []) sumarClase(String(e.nombre_usuario ?? ''), String(e.fecha_entrenamiento).slice(0, 10));
+  for (const r of pts ?? []) {
+    const diff = idxHoy - (Number(r.anio) * 12 + Number(r.mes) - 1);
+    if (diff < 0) continue;
+    const l = puntos[r.nombre_usuario] ??= Array(13).fill(0);
+    for (let v = diff; v <= 12; v++) l[v] += Number(r.puntos_total) || 0;
+  }
+  const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
+  const personas = (gente ?? []).filter((p: any) => p.username).map((p: any) => ({
+    nombre: p.username, nombreMostrar: p.nombre_derby || p.username, foto: p.foto_perfil || '',
+    categoria: p.categoria ?? null, modo: p.tier_modo ?? 'auto', estado: p.estado_miembro ?? null,
+    usaEquipo: usa(p.necesita_patines) || usa(p.necesita_protecciones), mesesSeguidos: Number(p.meses_consecutivos_cumplidos) || 0,
+    clases: clases[String(p.username).trim().toUpperCase()] ?? Array(13).fill(0),
+    puntos: (puntos[p.username] ?? Array(13).fill(0)).map((x: number) => Math.round(x * 10) / 10),
+  }));
+  return { exito: true, personas, desdes };
+}
+
 async function getDesglosePuntos(params: Record<string, any>): Promise<Record<string, any>> {
   const solicitante = await _validarToken(params.token);
   if (!solicitante) return { exito: false, error: 'Sesión inválida.' };
@@ -7753,7 +7808,8 @@ Deno.serve(async (req: Request) => {
       case 'crearTareaPropia':                return json(await crearTareaPropia(params));
       case 'getAdministradorxs':              return json(await getAdministradorxs(params));
             case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
-      case 'getConfigLiga':                   return json(await getConfigLiga(params));
+            case 'getConfigLiga':                   return json(await getConfigLiga(params));
+      case 'adminDatosCategorias':            return json(await adminDatosCategorias(params));
       case 'adminGuardarConfigLiga':          return json(await adminGuardarConfigLiga(params));
       case 'restaurarSesion':                 return json(await restaurarSesion(params));
       case 'cerrarSesion':                    return json(await cerrarSesion(params));
