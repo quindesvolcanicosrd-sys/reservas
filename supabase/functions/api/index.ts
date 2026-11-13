@@ -85,7 +85,9 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     calleSecundaria:      row.calle_secundaria      ?? '',
     numeracion:           row.numeracion            ?? '',
     sector:               row.sector                ?? '',
-    canton:               row.canton                ?? '',
+        canton:               row.canton                ?? '',
+    direccionLat:         row.direccion_lat         ?? null,
+    direccionLng:         row.direccion_lng         ?? null,
     emerg1Nombre:         row.emerg1_nombre         ?? '',
     emerg1Relacion:       row.emerg1_relacion       ?? '',
     emerg1Prefijo:        row.emerg1_prefijo        ?? '',
@@ -640,7 +642,8 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
     fechaPublica: 'fecha_publica', edadPublica: 'edad_publica', fechaNacimiento: 'fecha_nacimiento',
     tipoDocumento: 'tipo_documento', paisExpedicion: 'pais_expedicion', numeroDocumento: 'numero_documento',
     nombreLegal: 'nombre_legal', callePrincipal: 'calle_principal', calleSecundaria: 'calle_secundaria',
-    numeracion: 'numeracion', sector: 'sector', canton: 'canton',
+        numeracion: 'numeracion', sector: 'sector', canton: 'canton',
+    direccionLat: 'direccion_lat', direccionLng: 'direccion_lng',
     emerg1Nombre: 'emerg1_nombre', emerg1Relacion: 'emerg1_relacion', emerg1Prefijo: 'emerg1_prefijo', emerg1Telefono: 'emerg1_telefono',
     emerg2Nombre: 'emerg2_nombre', emerg2Relacion: 'emerg2_relacion', emerg2Prefijo: 'emerg2_prefijo', emerg2Telefono: 'emerg2_telefono',
     enfermedad: 'enfermedad', alergias: 'alergias', alergiasDesc: 'alergias_desc',
@@ -651,7 +654,11 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   const update: Record<string, any> = {};
   for (const camel of Object.keys(datos ?? {})) { if (CAMPO_MAP[camel]) update[CAMPO_MAP[camel]] = datos[camel]; }
   // `fecha_nacimiento` es `date`: '' o un formato raro romperían el UPDATE entero.
-    if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
+        if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
+  // Pin del mapa (2026-11-12): número o null.
+  for (const c of ['direccion_lat', 'direccion_lng']) {
+    if (c in update) { const n = Number(update[c]); update[c] = update[c] === '' || update[c] == null || !Number.isFinite(n) ? null : n; }
+  }
     // Roles: solo los del catálogo de la liga (`_rolesEquipo`, editable por
   // Pivots desde 2026-11-12).
   if ('roles' in update) {

@@ -52,7 +52,21 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
   /// secundaria con el sector, luego la calle con el sector, luego el sector.
   Future<void> _ubicar() async {
     final d = _direccion;
+    final primeraVez = _ultimaDireccion.isEmpty && _punto == null;
     _ultimaDireccion = d;
+    // El pin guardado manda (migración 20261113080000): se muestra tal cual.
+    final lat = double.tryParse(valorDe(s, 'direccionLat')), lng = double.tryParse(valorDe(s, 'direccionLng'));
+    if (primeraVez && lat != null && lng != null) {
+      if (mounted) {
+        setState(() {
+          _punto = LatLng(lat, lng);
+          _buscandoPunto = false;
+        });
+      }
+      return;
+    }
+    // Si cambiaron la dirección a mano, el pin guardado ya no corresponde.
+    if (!primeraVez && lat != null) unawaited(s.guardarDatos({'direccionLat': '', 'direccionLng': ''}).catchError((_) {}));
     if (d.isEmpty) {
       if (mounted) setState(() => _buscandoPunto = false);
       return;
@@ -97,8 +111,13 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
     // El pin que pusiste manda: al guardar la calle no se vuelve a buscar
     // (antes el mapa se reiniciaba a otro punto o a Quito).
     _pinManual = true;
-    await guardarCampos(context, s, campos);
-    if (mounted) setState(() => _ultimaDireccion = _direccion);
+    await guardarCampos(context, s, {...campos, 'direccionLat': '${elegido.latitude}', 'direccionLng': '${elegido.longitude}'});
+    if (mounted) {
+      setState(() {
+        _ultimaDireccion = _direccion;
+        _pinManual = false;
+      });
+    }
   }
 
   @override
