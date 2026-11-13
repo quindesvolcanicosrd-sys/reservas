@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/iconos_marca.dart';
 import '../core/paises.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
@@ -330,7 +331,7 @@ class _TarjetaContacto extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'WhatsApp',
-                  icon: Icon(Icons.chat_rounded, color: p.marcaTexto),
+                  icon: Icon(IconosMarca.whatsapp, color: p.marcaTexto),
                   onPressed: () => launchUrl(Uri.parse('https://wa.me/$completo'), mode: LaunchMode.externalApplication),
                 ),
               ] else

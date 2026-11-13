@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/iconos_marca.dart';
 import '../core/emergencias.dart';
 import '../core/fechas.dart';
 import '../core/paises.dart';
@@ -400,7 +401,7 @@ class _EmergenciaScreenState extends State<EmergenciaScreen> {
                     textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   onPressed: () => _whatsapp(pre, tel),
-                  icon: const Icon(Icons.chat_rounded),
+                  icon: Icon(IconosMarca.whatsapp),
                   label: const Text('WhatsApp'),
                 ),
               ),

@@ -2209,7 +2209,7 @@ async function _avisarPrestamosLargos(): Promise<void> {
 // ─── Comunidad (Victor, 2026-11-08 / etapa 3): redes y grupos de la liga ──
 // Lista en `config_app.comunidad` (JSON): {red, nombre, url}. Toda persona
 // con sesión la ve en Equipo; Pivots la editan en Mi perfil → Ajustes de la liga.
-const REDES_COMUNIDAD = ['whatsapp', 'instagram', 'facebook', 'messenger', 'tiktok', 'youtube', 'web', 'correo', 'otro'];
+const REDES_COMUNIDAD = ['whatsapp', 'instagram', 'facebook', 'messenger', 'telegram', 'signal', 'discord', 'tiktok', 'youtube', 'web', 'correo', 'otro'];
 
 async function getComunidad(params: Record<string, any>): Promise<Record<string, any>> {
   const esPivot = !!(await _validarAdminToken(String(params.adminToken ?? '')));

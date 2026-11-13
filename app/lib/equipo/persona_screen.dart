@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/iconos_marca.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
@@ -147,7 +148,7 @@ class _Ficha extends StatelessWidget {
     final botones = <Widget>[
       if (!yo && tel.isNotEmpty)
         _Accion(
-          icono: Icons.chat_rounded,
+          icono: IconosMarca.whatsapp,
           texto: 'WhatsApp',
           alTocar: () => launchUrl(Uri.parse('https://wa.me/${completo.substring(1)}'), mode: LaunchMode.externalApplication),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/iconos_marca.dart';
 import '../core/asistente.dart';
 import '../core/fechas.dart';
 import '../core/pagos.dart';
@@ -710,7 +711,7 @@ class ReservaExitoScreen extends StatelessWidget {
                 Uri.parse('https://wa.me/${Pagos.whatsapp}?text=${Uri.encodeComponent(resultado.mensajeWhatsapp)}'),
                 mode: LaunchMode.externalApplication,
               ),
-              icon: const Icon(Icons.send_rounded),
+              icon: Icon(IconosMarca.whatsapp),
               label: const Text('Enviar comprobante por WhatsApp'),
             ),
           const SizedBox(height: 10),

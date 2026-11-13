@@ -39,6 +39,10 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
     _ubicar();
   }
 
+  /// Solo las calles mueven el pin: cambiar el sector o la ciudad a mano no
+  /// lo sobrescribe (Victor, 2026-11-13).
+  String get _calles => [valorDe(s, 'callePrincipal'), valorDe(s, 'numeracion'), valorDe(s, 'calleSecundaria')].join('|');
+
   String get _direccion => [
     [valorDe(s, 'callePrincipal'), valorDe(s, 'numeracion')].where((x) => x.isNotEmpty).join(' '),
     valorDe(s, 'calleSecundaria'),
@@ -53,7 +57,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
   Future<void> _ubicar() async {
     final d = _direccion;
     final primeraVez = _ultimaDireccion.isEmpty && _punto == null;
-    _ultimaDireccion = d;
+    _ultimaDireccion = _calles;
     // El pin guardado manda (migración 20261113080000): se muestra tal cual.
     final lat = double.tryParse(valorDe(s, 'direccionLat')), lng = double.tryParse(valorDe(s, 'direccionLng'));
     if (primeraVez && lat != null && lng != null) {
@@ -114,7 +118,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
     await guardarCampos(context, s, {...campos, 'direccionLat': '${elegido.latitude}', 'direccionLng': '${elegido.longitude}'});
     if (mounted) {
       setState(() {
-        _ultimaDireccion = _direccion;
+        _ultimaDireccion = _calles;
         _pinManual = false;
       });
     }
@@ -126,7 +130,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
       listenable: s,
       builder: (context, _) {
         // Si cambiaron la dirección a mano, se vuelve a ubicar la vista previa.
-        if (_direccion != _ultimaDireccion && !_buscandoPunto && !_pinManual) {
+        if (_calles != _ultimaDireccion && !_buscandoPunto && !_pinManual) {
           _buscandoPunto = true;
           scheduleMicrotask(_ubicar);
         }
@@ -186,7 +190,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
                   ('numeracion', Icons.pin_outlined, 'Numeración', 20),
                   ('calleSecundaria', Icons.alt_route_rounded, 'Calle secundaria', 80),
                   ('sector', Icons.holiday_village_outlined, 'Sector o barrio', 80),
-                  ('canton', Icons.location_city_outlined, 'Cantón o ciudad', 80),
+                  ('canton', Icons.location_city_outlined, 'Ciudad', 80),
                 ])
                   FilaAjuste(
                     icono: icono,

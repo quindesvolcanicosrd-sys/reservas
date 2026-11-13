@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-13 — App Android: "¿Es correcto?" dentro de la pill de tu asistencia; Funciones de Pivot visibles en la ficha; Ajustes de la liga en Mi perfil con editor de categorías; asistentes de tareas recurrentes y asistencia anticipada más simples; préstamos de equipamiento con casillas y cantidades; el pin de la dirección no se mueve al cambiar sector o ciudad; logos de WhatsApp, Instagram, YouTube y otras redes; Comunidad sin lápiz.
+
 2026-11-13 — Seguridad: la clave pública de la base queda solo para leer eventos, asistencias, lugares y temporadas; crear o editar eventos, lugares y asistencia anticipada pasa por el servidor, que valida quién escribe.
 
 2026-11-13 — Inventario para todo el equipo: cuánto hay por talla y cuánto queda libre para la próxima clase; quién tiene cosas del equipo ("Las tiene X"); cualquiera puede avisar que se llevó algo (lo aprueba un Pivot en la Bandeja); a los 7 días se pregunta a los Pivots si aún lo tiene.

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/iconos_marca.dart';
 import '../core/api.dart';
 import '../core/cargando.dart';
 import '../core/fechas.dart';
@@ -479,7 +480,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                         ? null
                         : IconButton(
                             tooltip: 'Escribir por WhatsApp',
-                            icon: const Icon(Icons.chat_rounded),
+                            icon: Icon(IconosMarca.whatsapp),
                             onPressed: () => launchUrl(Uri.parse('${r['waLink']}'), mode: LaunchMode.externalApplication),
                           ),
                   ),

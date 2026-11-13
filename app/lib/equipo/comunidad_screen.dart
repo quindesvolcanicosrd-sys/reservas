@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
+import '../core/iconos_marca.dart';
 import '../core/cargando.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
@@ -14,13 +15,16 @@ class EnlaceComunidad {
   final String red, nombre, url;
   Map<String, String> get json => {'red': red, 'nombre': nombre, 'url': url};
 
-  static const redes = {
-    'whatsapp': ('WhatsApp', Icons.chat_rounded),
-    'instagram': ('Instagram', Icons.photo_camera_outlined),
-    'facebook': ('Facebook', Icons.facebook),
-    'messenger': ('Messenger', Icons.messenger_outline_rounded),
-    'tiktok': ('TikTok', Icons.tiktok),
-    'youtube': ('YouTube', Icons.smart_display_outlined),
+  static final redes = {
+    'whatsapp': ('WhatsApp', IconosMarca.whatsapp),
+    'instagram': ('Instagram', IconosMarca.instagram),
+    'facebook': ('Facebook', IconosMarca.facebook),
+    'messenger': ('Messenger', IconosMarca.messenger),
+    'telegram': ('Telegram', IconosMarca.telegram),
+    'signal': ('Signal', IconosMarca.signal),
+    'discord': ('Discord', IconosMarca.discord),
+    'tiktok': ('TikTok', IconosMarca.tiktok),
+    'youtube': ('YouTube', IconosMarca.youtube),
     'web': ('Sitio web', Icons.public_rounded),
     'correo': ('Correo', Icons.mail_outline_rounded),
     'otro': ('Otro', Icons.link_rounded),
@@ -32,7 +36,10 @@ class EnlaceComunidad {
   /// Reconoce la red por el enlace pegado (Victor, 2026-11-12).
   static String detectar(String url) {
     final u = url.toLowerCase();
-    if (u.contains('whatsapp.com') || u.contains('wa.me')) return 'whatsapp';
+    if (u.contains('whatsapp.com') || u.contains('wa.me') || esTelefono(url)) return 'whatsapp';
+    if (u.contains('t.me/') || u.contains('telegram.')) return 'telegram';
+    if (u.contains('signal.group') || u.contains('signal.me')) return 'signal';
+    if (u.contains('discord.gg') || u.contains('discord.com')) return 'discord';
     if (u.contains('instagram.com')) return 'instagram';
     if (u.contains('m.me/') || u.contains('messenger.com')) return 'messenger';
     if (u.contains('facebook.com') || u.contains('fb.com') || u.contains('fb.me')) return 'facebook';
@@ -41,6 +48,22 @@ class EnlaceComunidad {
     if (u.contains('@') && !u.contains('/')) return 'correo';
     if (u.contains('.')) return 'web';
     return 'otro';
+  }
+
+  /// Un número de teléfono suelto (ej. +593 99 869 0423 o 0998690423).
+  static bool esTelefono(String v) {
+    final d = v.replaceAll(RegExp(r'[\s\-().]'), '');
+    return RegExp(r'^\+?\d{8,15}$').hasMatch(d);
+  }
+
+  /// WhatsApp: grupos (chat.whatsapp.com), wa.me o un número → enlace que abre
+  /// el chat. En Ecuador, 09… pasa a 5939… (Victor, 2026-11-13).
+  static String normalizarWhatsapp(String v, {String prefijoPais = '593'}) {
+    final t = v.trim();
+    if (!esTelefono(t)) return t;
+    var d = t.replaceAll(RegExp(r'[^\d]'), '');
+    if (!t.startsWith('+') && d.startsWith('0')) d = '$prefijoPais${d.substring(1)}';
+    return 'https://wa.me/$d';
   }
 
   /// Nombre sugerido para la red reconocida.
@@ -101,9 +124,9 @@ Future<void> abrirEnlace(BuildContext context, String url) async {
 }
 
 /// Comunidad en Equipo (rediseño, Victor 2026-11-12): cuadrícula de 2
-/// columnas con ícono y nombre; tocar abre el enlace. Pivots: el lápiz
-/// activa el modo edición (tocar edita, ✕ quita, "Agregar" al final) y,
-/// sin enlaces, "Agregar" abre la hoja directo.
+/// columnas con ícono y nombre; tocar abre el enlace. Pivots: siempre
+/// tienen el mosaico "Agregar" y al tocar uno eligen abrir, editar o
+/// eliminar (Victor, 2026-11-13: sin lápiz).
 class ComunidadScreen extends StatefulWidget {
   const ComunidadScreen({super.key, required this.repo});
   final ComunidadRepo repo;
@@ -114,7 +137,6 @@ class ComunidadScreen extends StatefulWidget {
 
 class _ComunidadScreenState extends State<ComunidadScreen> {
   ComunidadRepo get repo => widget.repo;
-  bool _editando = false;
   bool _guardando = false;
 
   @override
@@ -144,16 +166,51 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
     await _guardar(nueva);
   }
 
+  Future<void> _opciones(int i) async {
+    final e = repo.enlaces[i];
+    final r = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (hoja) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Row(
+                children: [
+                  Icon(e.icono),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(e.nombre, style: Theme.of(hoja).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(leading: const Icon(Icons.open_in_new_rounded), title: Text(e.accion), onTap: () => Navigator.of(hoja).pop('abrir')),
+            ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Editar'), onTap: () => Navigator.of(hoja).pop('editar')),
+            ListTile(leading: const Icon(Icons.delete_outline_rounded), title: const Text('Eliminar'), onTap: () => Navigator.of(hoja).pop('eliminar')),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (r == 'abrir') await abrirEnlace(context, e.url);
+    if (r == 'editar') await _editar(i);
+    if (r == 'eliminar') await _quitar(i);
+  }
+
   Future<void> _quitar(int i) async {
     final e = repo.enlaces[i];
     final ok = await showDialog<bool>(
       context: context,
       builder: (d) => AlertDialog(
-        title: Text('¿Quitar "${e.nombre}"?'),
+        title: Text('¿Eliminar "${e.nombre}"?'),
         content: const Text('Dejará de verse en Comunidad.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Quitar')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Eliminar')),
         ],
       ),
     );
@@ -170,17 +227,6 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
           preferredSize: const Size.fromHeight(3),
           child: AnimatedOpacity(opacity: _guardando ? 1 : 0, duration: const Duration(milliseconds: 200), child: const LinearProgressIndicator(minHeight: 3)),
         ),
-        actions: [
-          if (repo.esPivot && repo.enlaces.isNotEmpty)
-            IconButton(
-              tooltip: _editando ? 'Listo' : 'Editar',
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(_editando ? Icons.check_rounded : Icons.edit_outlined, key: ValueKey(_editando)),
-              ),
-              onPressed: () => setState(() => _editando = !_editando),
-            ),
-        ],
       ),
       body: ListenableBuilder(
         listenable: repo,
@@ -226,7 +272,7 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
                 crossAxisSpacing: 12,
                 childAspectRatio: 1.25,
               ),
-              itemCount: n + (_editando ? 1 : 0),
+              itemCount: n + (repo.esPivot ? 1 : 0),
               itemBuilder: (context, i) {
                 if (i == n) {
                   return _Mosaico(
@@ -243,8 +289,8 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
                   icono: e.icono,
                   titulo: e.nombre,
                   sub: e.nombreRed,
-                  alTocar: _guardando ? null : (_editando ? () => _editar(i) : () => abrirEnlace(context, e.url)),
-                  alQuitar: _editando && !_guardando ? () => _quitar(i) : null,
+                  // Pivots: abrir, editar o eliminar; el resto, abrir.
+                  alTocar: _guardando ? null : (repo.esPivot ? () => _opciones(i) : () => abrirEnlace(context, e.url)),
                 );
               },
             );
@@ -257,11 +303,11 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
 }
 
 class _Mosaico extends StatelessWidget {
-  const _Mosaico({required this.icono, required this.titulo, required this.sub, this.red, this.alTocar, this.alQuitar, this.resaltado = false});
+  const _Mosaico({required this.icono, required this.titulo, required this.sub, this.red, this.alTocar, this.resaltado = false});
   final IconData icono;
   final String titulo, sub;
   final String? red;
-  final VoidCallback? alTocar, alQuitar;
+  final VoidCallback? alTocar;
   final bool resaltado;
 
   @override
@@ -298,27 +344,6 @@ class _Mosaico extends StatelessWidget {
                     ),
                     Text(sub, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
                   ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -6,
-          right: -6,
-          child: AnimatedScale(
-            scale: alQuitar == null ? 0 : 1,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutBack,
-            child: Material(
-              color: p.marca,
-              shape: CircleBorder(side: BorderSide(color: p.fondo, width: 2)),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: alQuitar,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.close_rounded, size: 16, color: p.sobreMarca),
                 ),
               ),
             ),
@@ -367,8 +392,8 @@ Future<EnlaceComunidad?> mostrarHojaEnlace(BuildContext context, {EnlaceComunida
                 keyboardType: TextInputType.url,
                 onChanged: alCambiarEnlace,
                 decoration: InputDecoration(
-                  labelText: 'Enlace o correo',
-                  hintText: 'https://chat.whatsapp.com/…',
+                  labelText: 'Enlace, número o correo',
+                  hintText: 'Enlace del grupo o +593 99…',
                   prefixIcon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: Icon((EnlaceComunidad.redes[red] ?? EnlaceComunidad.redes['otro']!).$2, key: ValueKey(red)),
@@ -414,7 +439,8 @@ Future<EnlaceComunidad?> mostrarHojaEnlace(BuildContext context, {EnlaceComunida
                 onPressed: () {
                   if (url.text.trim().isEmpty) return;
                   final n = nombre.text.trim().isEmpty ? EnlaceComunidad.nombreSugerido(red) : nombre.text.trim();
-                  Navigator.of(hoja).pop(EnlaceComunidad(red, n, url.text.trim()));
+                  final enlace = red == 'whatsapp' ? EnlaceComunidad.normalizarWhatsapp(url.text) : url.text.trim();
+                  Navigator.of(hoja).pop(EnlaceComunidad(red, n, enlace));
                 },
                 child: Text(actual == null ? 'Agregar' : 'Guardar'),
               ),
