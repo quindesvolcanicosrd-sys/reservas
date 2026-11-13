@@ -94,7 +94,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     ),
                   // Junto a la cuota (Victor, 2026-11-08): sale de Mi perfil en Equipo.
                   FilaAjuste(
-                    icono: Icons.roller_skating_outlined,
+                    icono: Icons.content_paste_rounded,
                     seccion: 'equipamiento',
                     titulo: 'Mi equipamiento',
                     valor: textoEquipamiento(sesion.datos),

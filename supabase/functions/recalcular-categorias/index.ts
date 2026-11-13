@@ -140,6 +140,11 @@ Deno.serve(async (req: Request) => {
       const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
       return usa(patines) || usa(protecciones);
     };
+        // Pedidos de uso de equipamiento aprobados y vigentes (2026-11-13): un
+    // Pivot permitió usar equipamiento del equipo por un tiempo sin bajar.
+    const { data: usosData } = await supabase.from('inventario_prestamos').select('username')
+      .eq('tipo', 'uso').eq('estado', 'activo').gte('hasta', new Date().toISOString().slice(0, 10));
+    const conPermisoEquipo = new Set((usosData ?? []).map((u: any) => u.username));
     const { data: equipoData, error: equipoError } = await supabase.from('equipo')
       .select('username, estado_miembro, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes')
       .is('eliminado_en', null);
@@ -154,7 +159,7 @@ Deno.serve(async (req: Request) => {
       .map((r: any) => ({
         username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto',
         categoria: r.categoria ?? null,
-        necesitaEquipoClub: necesitaEquipoClub(r.necesita_patines, r.necesita_protecciones),
+                necesitaEquipoClub: !conPermisoEquipo.has(r.username) && necesitaEquipoClub(r.necesita_patines, r.necesita_protecciones),
         tierRiesgoDesde: r.tier_riesgo_desde ?? null, tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
         tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
         mesesConsecutivosCumplidos: Number(r.meses_consecutivos_cumplidos) || 0,

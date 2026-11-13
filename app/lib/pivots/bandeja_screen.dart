@@ -76,7 +76,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     (TipoPedido.excepcion, 'Excepciones de cuota', Icons.volunteer_activism_outlined),
     (TipoPedido.lesion, 'Lesiones', Icons.healing_outlined),
     (TipoPedido.tarea, 'Tareas por validar', Icons.task_alt_rounded),
-    (TipoPedido.prestamo, 'Equipamiento que se llevaron', Icons.roller_skating_rounded),
+    (TipoPedido.prestamo, 'Equipamiento', Icons.content_paste_rounded),
   ];
 
   Future<void> _resolver(Pedido p, bool aprobar) async {
@@ -92,6 +92,12 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     var extra = const <String, Object?>{};
     if (aprobar && p.tipo == TipoPedido.excepcion) {
       final r = await elegirDuracionExcepcion(context, p);
+      if (r == null || !mounted) return;
+      extra = r;
+    }
+    // Pedido para usar equipamiento: cuánto tiempo y cómo se entrega.
+    if (aprobar && p.tipo == TipoPedido.prestamo && p.m['tipo'] == 'uso') {
+      final r = await _elegirUso(p);
       if (r == null || !mounted) return;
       extra = r;
     }
@@ -112,6 +118,68 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     } finally {
       if (mounted) setState(() => _saliendo.remove(_clave(p)));
     }
+  }
+
+  Future<Map<String, Object?>?> _elegirUso(Pedido x) {
+    var meses = 1;
+    var entrega = 'casa';
+    return showModalBottomSheet<Map<String, Object?>>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, refrescar) {
+          final p = h.pivot;
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Equipamiento para ${x.nombreMostrar}', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text('Mientras dure, puede usarlo sin cambiar de Categoría/Equipo por eso.', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
+                  const SizedBox(height: 16),
+                  Text(
+                    '¿Por cuánto tiempo?',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<int>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 1, label: Text('1 mes')),
+                      ButtonSegment(value: 2, label: Text('2 meses')),
+                      ButtonSegment(value: 3, label: Text('3 meses')),
+                    ],
+                    selected: {meses},
+                    onSelectionChanged: (s) => refrescar(() => meses = s.first),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '¿Cómo lo usa?',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                  ),
+                  RadioGroup<String>(
+                    groupValue: entrega,
+                    onChanged: (v) => refrescar(() => entrega = v ?? 'casa'),
+                    child: const Column(
+                      children: [
+                        RadioListTile(contentPadding: EdgeInsets.zero, value: 'casa', title: Text('Se lo lleva a su casa')),
+                        RadioListTile(contentPadding: EdgeInsets.zero, value: 'pivot', title: Text('Un Pivot lo trae a cada entrenamiento')),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton(onPressed: () => Navigator.of(h).pop({'meses': meses, 'entrega': entrega}), child: const Text('Aprobar')),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<String?> _pedirNota(Pedido p) {
@@ -305,13 +373,14 @@ class _Encabezado extends StatelessWidget {
       ];
       return ('Subvención por dificultad económica${mes == null ? '' : ' · ${Fechas.mesNombre(mes)}'}', partes.isEmpty ? null : partes.join('\n'));
     case TipoPedido.prestamo:
-      final d = '${m['detalle'] ?? ''}'.trim();
-      final que = switch (m['articulo']) {
-        'patines' => d.isEmpty ? 'patines' : 'patines talla $d',
-        'protecciones' => d.isEmpty ? 'protecciones' : 'protecciones ($d)',
-        _ => d.isEmpty ? 'equipamiento' : d,
-      };
-      return ('Avisa que se llevó $que', 'Al aprobarlo, se ve en Inventario como "Las tiene".');
+      final que = v('detalle').isEmpty ? 'equipamiento del equipo' : v('detalle');
+      if (m['tipo'] == 'uso') {
+        return ('Pide usar $que', v('motivo').isEmpty ? 'Al aprobarlo eliges por cuánto tiempo y cómo lo usa.' : 'Motivo: ${v('motivo')}');
+      }
+      return (
+        'Avisa que se llevó $que${m['permanente'] == true ? ' (permanente)' : ''}',
+        v('motivo').isEmpty ? 'Al aprobarlo, se ve en Inventario.' : 'Motivo: ${v('motivo')}',
+      );
     case TipoPedido.lesion:
       return ('Pidió pasar a Lesionadx', 'Mientras dure no cuenta para la asistencia ni paga cuota.');
     case TipoPedido.tarea:

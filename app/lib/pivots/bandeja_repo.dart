@@ -132,7 +132,7 @@ class BandejaRepo extends ChangeNotifier {
           if (nota.trim().isNotEmpty) 'notaAdmin': nota.trim(),
           ...extra,
         }),
-        TipoPedido.prestamo => await _api.post('adminPrestamo', {'adminToken': token, 'accion': aprobar ? 'aprobar' : 'rechazar', 'id': p.id}),
+        TipoPedido.prestamo => await _api.post('adminPrestamo', {'adminToken': token, 'accion': aprobar ? 'aprobar' : 'rechazar', 'id': p.id, ...extra}),
         TipoPedido.lesion => await _api.post(aprobar ? 'adminAprobarLesion' : 'adminRechazarLesion', {'adminToken': token, 'nombre': p.nombre}),
         TipoPedido.tarea => await _api.post('adminValidarTarea', {
           'adminToken': token,

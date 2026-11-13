@@ -1,24 +1,21 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/iconos_marca.dart';
 import '../core/api.dart';
 import '../core/cargando.dart';
+import '../core/config_liga.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
 import '../sesion/sesion.dart';
 import 'equipo_repo.dart';
+import 'inventario_asistentes.dart';
+import 'inventario_modelos.dart';
 
-/// Inventario del equipamiento que presta la liga (Victor, 2026-11-12):
-/// - Todo el equipo ve cuánto hay por talla y cuánto queda libre en la
-///   próxima clase, y quién tiene cosas del equipo ("Las tiene X").
-/// - Cualquiera puede avisar que se llevó algo (un Pivot lo aprueba).
-/// - Pivots editan cantidades, registran préstamos, marcan devoluciones, ven
-///   lo reservado para los próximos entrenamientos y, a los 7 días, "¿Aún
-///   lo tiene?".
+/// Inventario del equipo (Victor, 2026-11-13): listas personalizables
+/// (con tallas, sets de piezas, unidades o insumos), quién tiene qué
+/// (temporal con recordatorio cada 7 días o permanente) y pedidos para usar
+/// equipamiento. Pivots crean listas y registran; todos ven y avisan.
 class InventarioScreen extends StatefulWidget {
   const InventarioScreen({super.key, required this.sesion});
   final Sesion sesion;
@@ -28,31 +25,13 @@ class InventarioScreen extends StatefulWidget {
 }
 
 class _InventarioScreenState extends State<InventarioScreen> {
-  Sesion get s => widget.sesion;
-  Api get _api => s.api;
-  bool get _pivot => s.esAdmin && s.adminToken != null;
-  Map<String, Object?> get _admin => {'adminToken': s.adminToken};
-
-  Map<String, dynamic>? _datos;
-  List<Map<String, dynamic>> _reservas = const [];
+  late final InventarioRepo repo = InventarioRepo(widget.sesion);
+  bool _cargado = false;
   String? _error;
   bool _guardando = false;
+  List<Map<String, dynamic>> _reservas = const [];
 
-  List<({String talla, int cantidad, int libres})> get _tallas {
-    final l = [
-      for (final t in (_datos?['tallas'] as List? ?? const []))
-        if (t is Map) (talla: '${t['talla']}', cantidad: (t['cantidad'] as num?)?.toInt() ?? 0, libres: (t['libres'] as num?)?.toInt() ?? 0),
-    ];
-    l.sort((a, b) => (double.tryParse(a.talla) ?? 0).compareTo(double.tryParse(b.talla) ?? 0));
-    return l;
-  }
-
-  int get _protecciones => (_datos?['protecciones'] as num?)?.toInt() ?? 0;
-  int get _proteccionesLibres => (_datos?['proteccionesLibres'] as num?)?.toInt() ?? 0;
-  List<Map<String, dynamic>> get _prestamos => [
-    for (final p in (_datos?['prestamos'] as List? ?? const []))
-      if (p is Map<String, dynamic>) p,
-  ];
+  bool get _pivot => repo.esPivot;
 
   @override
   void initState() {
@@ -62,26 +41,26 @@ class _InventarioScreenState extends State<InventarioScreen> {
 
   Future<void> _cargar() async {
     try {
-      final r = await _api.get('getInventario', {if (_pivot) ..._admin});
-      if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo cargar.'}');
-      final res = _pivot ? await _api.getLista('adminGetQueLlevar', _admin).catchError((_) => <dynamic>[]) : const <dynamic>[];
+      await repo.cargar();
+      final res = _pivot
+          ? await widget.sesion.api.getLista('adminGetQueLlevar', {'adminToken': widget.sesion.adminToken}).catchError((_) => <dynamic>[])
+          : const <dynamic>[];
       if (!mounted) return;
       setState(() {
-        _datos = r;
-        _reservas = res.whereType<Map<String, dynamic>>().toList();
+        _cargado = true;
         _error = null;
+        _reservas = res.whereType<Map<String, dynamic>>().toList();
       });
     } catch (e) {
       if (mounted) setState(() => _error = e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.');
     }
   }
 
-  Future<void> _hacer(Future<Map<String, dynamic>> Function() f, {String? ok}) async {
+  Future<void> _hacer(Future<void> Function() f, {String? ok}) async {
     setState(() => _guardando = true);
     final m = ScaffoldMessenger.of(context);
     try {
-      final r = await f();
-      if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo guardar.'}');
+      await f();
       await _cargar();
       if (ok != null) m.showSnackBar(SnackBar(content: Text(ok)));
     } catch (e) {
@@ -91,400 +70,210 @@ class _InventarioScreenState extends State<InventarioScreen> {
     }
   }
 
-  Future<void> _guardarStock(List<({String talla, int cantidad})> tallas, int protecciones) => _hacer(
-    () => _api.post('adminGuardarEquipamiento', {
-      ..._admin,
-      'tallasJson': jsonEncode([
-        for (final t in tallas) {'talla': t.talla, 'cantidad': t.cantidad},
-      ]),
-      'protecciones': protecciones,
-    }),
-  );
-
-  void _cambiarTalla(int i, int delta) {
-    final l = [for (final t in _tallas) (talla: t.talla, cantidad: t.cantidad)];
-    l[i] = (talla: l[i].talla, cantidad: (l[i].cantidad + delta).clamp(0, 99));
-    _guardarStock(l, _protecciones);
-  }
-
-  Future<void> _nuevaTalla() async {
-    final c = TextEditingController();
-    final t = await showDialog<String>(
-      context: context,
-      builder: (d) => AlertDialog(
-        title: const Text('Nueva talla de patines'),
-        content: TextField(
-          controller: c,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(hintText: 'Ej. 38'),
-          onSubmitted: (v) => Navigator.of(d).pop(v.trim()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.of(d).pop(c.text.trim()), child: const Text('Agregar')),
-        ],
-      ),
-    );
-    if (t == null || t.isEmpty || !mounted) return;
-    if (_tallas.any((x) => x.talla == t)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Esa talla ya está. Usa + para sumar pares.')));
-      return;
+  Future<void> _abrir(Widget pantalla, String ok) async {
+    final r = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => pantalla));
+    if (r == true && mounted) {
+      await _cargar();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok)));
     }
-    await _guardarStock([for (final x in _tallas) (talla: x.talla, cantidad: x.cantidad), (talla: t, cantidad: 1)], _protecciones);
   }
 
-  static const _piezas = ['Casco', 'Rodilleras', 'Coderas', 'Muñequeras', 'Protector bucal'];
+  void _prestamo(ModoPrestamo modo) => _abrir(PrestamoAsistente(repo: repo, equipo: EquipoRepo.de(widget.sesion), modo: modo), switch (modo) {
+    ModoPrestamo.registrar => 'Registrado',
+    ModoPrestamo.salida => 'Aviso enviado. Un Pivot lo aprobará.',
+    ModoPrestamo.uso => 'Pedido enviado. Un Pivot decidirá por cuánto tiempo.',
+  });
 
-  /// Alguien se llevó cosas del equipo a su casa (por ejemplo, a limpiarlas).
-  /// No es para usarlas en un entrenamiento: eso se reserva al confirmar.
-  Future<void> _prestamo({required bool comoPivot}) async {
-    var articulo = 'patines';
-    String? persona;
-    String talla = _tallas.isEmpty ? '' : _tallas.first.talla;
-    final piezas = <String, int>{};
-    final equipo = EquipoRepo.de(s);
-    if (comoPivot) await equipo.cargar();
-    if (!mounted) return;
-    final ok = await showModalBottomSheet<bool>(
+  /// El "+": Pivots crean listas o registran; el resto avisa o pide.
+  Future<void> _mas() async {
+    final opciones = <(String, String, IconData, VoidCallback)>[
+      if (_pivot) ...[
+        (
+          'Nueva lista de equipamiento',
+          'Con tallas, sets, unidades o insumos',
+          Icons.playlist_add_rounded,
+          () => _abrir(NuevaListaAsistente(repo: repo), 'Lista creada'),
+        ),
+        ('Alguien tiene equipamiento', 'Temporal o permanente', Icons.assignment_ind_outlined, () => _prestamo(ModoPrestamo.registrar)),
+      ] else ...[
+        ('Me llevé equipamiento', 'Para limpiarlo, repararlo o traerlo', Icons.back_hand_outlined, () => _prestamo(ModoPrestamo.salida)),
+        ('Necesito equipamiento del equipo', 'Si el tuyo se rompió o lo estás lavando', Icons.volunteer_activism_outlined, () => _prestamo(ModoPrestamo.uso)),
+      ],
+    ];
+    final elegido = await showModalBottomSheet<int>(
       context: context,
-      isScrollControlled: true,
       showDragHandle: true,
-      builder: (hoja) => StatefulBuilder(
-        builder: (hoja, refrescar) {
-          final p = hoja.pivot;
-          final personas = [...?equipo.personas]..sort((a, b) => a.nombreMostrar.toLowerCase().compareTo(b.nombreMostrar.toLowerCase()));
-          final listo = (!comoPivot || persona != null) && (articulo == 'patines' ? talla.isNotEmpty : piezas.isNotEmpty);
-          return Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(hoja).bottom),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    comoPivot ? 'Alguien se llevó equipamiento' : '¿Te llevaste equipamiento?',
-                    style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Para cuando alguien se lleva cosas del equipo fuera del entrenamiento (por ejemplo, a limpiarlas). '
-                    'Para usarlas en una clase se reservan al confirmar asistencia.${comoPivot ? '' : ' Un Pivot lo aprueba.'}',
-                    style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
-                  ),
-                  const SizedBox(height: 14),
-                  if (comoPivot) ...[
-                    DropdownButtonFormField<String>(
-                      initialValue: persona,
-                      decoration: const InputDecoration(labelText: 'Quién se lo llevó'),
-                      items: [for (final x in personas) DropdownMenuItem(value: x.username, child: Text(x.nombreMostrar))],
-                      onChanged: (v) => refrescar(() => persona = v),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  SegmentedButton<String>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: 'patines', label: Text('Patines')),
-                      ButtonSegment(value: 'protecciones', label: Text('Protecciones')),
-                    ],
-                    selected: {articulo},
-                    onSelectionChanged: (x) => refrescar(() => articulo = x.first),
-                  ),
-                  const SizedBox(height: 12),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: articulo == 'patines'
-                        ? (_tallas.isEmpty
-                              ? Text('No hay patines cargados.', style: TextStyle(color: p.textoSecundario))
-                              : SizedBox(
-                                  height: 40,
-                                  child: ListView(
-                                    scrollDirection: Axis.horizontal,
-                                    children: [
-                                      for (final t in _tallas)
-                                        Padding(
-                                          padding: const EdgeInsets.only(right: 8),
-                                          child: ChoiceChip(
-                                            showCheckmark: false,
-                                            label: Text('Talla ${t.talla}'),
-                                            selected: talla == t.talla,
-                                            onSelected: (_) => refrescar(() => talla = t.talla),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ))
-                        : Column(
-                            children: [
-                              for (final pieza in _piezas)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CheckboxListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity: ListTileControlAffinity.leading,
-                                        title: Text(pieza),
-                                        value: piezas.containsKey(pieza),
-                                        onChanged: (v) => refrescar(() => v == true ? piezas[pieza] = 1 : piezas.remove(pieza)),
-                                      ),
-                                    ),
-                                    AnimatedOpacity(
-                                      duration: const Duration(milliseconds: 180),
-                                      opacity: piezas.containsKey(pieza) ? 1 : 0,
-                                      child: IgnorePointer(
-                                        ignoring: !piezas.containsKey(pieza),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              tooltip: 'Menos',
-                                              onPressed: (piezas[pieza] ?? 1) > 1 ? () => refrescar(() => piezas[pieza] = piezas[pieza]! - 1) : null,
-                                              icon: const Icon(Icons.remove_rounded),
-                                            ),
-                                            Text('${piezas[pieza] ?? 1}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                                            IconButton(
-                                              tooltip: 'Más',
-                                              onPressed: (piezas[pieza] ?? 1) < 10 ? () => refrescar(() => piezas[pieza] = (piezas[pieza] ?? 1) + 1) : null,
-                                              icon: const Icon(Icons.add_rounded),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                  ),
-                  const SizedBox(height: 18),
-                  FilledButton(onPressed: listo ? () => Navigator.of(hoja).pop(true) : null, child: Text(comoPivot ? 'Registrar' : 'Avisar')),
-                ],
+      builder: (h) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (i, o) in opciones.indexed)
+              ListTile(
+                leading: Icon(o.$3, color: h.pivot.marcaTexto),
+                title: Text(o.$1, style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(o.$2),
+                onTap: () => Navigator.of(h).pop(i),
               ),
-            ),
-          );
-        },
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
-    if (ok != true || !mounted) return;
-    // "1 casco y 2 muñequeras"
-    final partes = [for (final e in piezas.entries) '${e.value} ${e.value == 1 ? _singular(e.key) : _plural(e.key)}'];
-    final d = articulo == 'patines' ? talla : (partes.length <= 1 ? partes.join() : '${partes.sublist(0, partes.length - 1).join(', ')} y ${partes.last}');
-    await _hacer(
-      () => comoPivot
-          ? _api.post('adminPrestamo', {..._admin, 'accion': 'registrar', 'nombre': persona, 'articulo': articulo, 'detalle': d})
-          : _api.post('pedirPrestamo', {'articulo': articulo, 'detalle': d}),
-      ok: comoPivot ? 'Registrado' : 'Aviso enviado. Un Pivot lo aprobará.',
-    );
+    if (elegido != null && mounted) opciones[elegido].$4();
   }
 
-  static String _plural(String pieza) => switch (pieza) {
-    'Casco' => 'cascos',
-    'Protector bucal' => 'protectores bucales',
-    _ => pieza.toLowerCase(),
-  };
-
-  static String _singular(String pieza) => switch (pieza) {
-    'Rodilleras' => 'rodillera',
-    'Coderas' => 'codera',
-    'Muñequeras' => 'muñequera',
-    _ => pieza.toLowerCase(),
-  };
-
-  Future<void> _accionPrestamo(Map<String, dynamic> pr, String accion, String ok) =>
-      _hacer(() => _api.post('adminPrestamo', {..._admin, 'accion': accion, 'id': pr['id']}), ok: ok);
-
-  static String _texto(Map<String, dynamic> pr) {
-    final d = '${pr['detalle'] ?? ''}'.trim();
-    return switch (pr['articulo']) {
-      'patines' => d.isEmpty ? 'Patines' : 'Patines talla $d',
-      'protecciones' => d.isEmpty ? 'Protecciones' : '${d[0].toUpperCase()}${d.substring(1)}',
-      _ => d.isEmpty ? 'Equipamiento' : d,
-    };
+  Future<void> _opcionesPrestamo(Prestamo pr) async {
+    final a = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('${pr.nombreMostrar} · ${pr.texto}', style: Theme.of(h).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+            ListTile(leading: const Icon(Icons.assignment_return_outlined), title: const Text('Ya lo devolvió'), onTap: () => Navigator.of(h).pop('devolver')),
+            if (!pr.esUso)
+              ListTile(
+                leading: Icon(pr.permanente ? Icons.timelapse_rounded : Icons.all_inclusive_rounded),
+                title: Text(pr.permanente ? 'Cambiar a temporal' : 'Cambiar a permanente'),
+                onTap: () => Navigator.of(h).pop('permanente'),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (a == 'devolver') await _hacer(() => repo.accion(pr, 'devolver'), ok: 'Marcado como devuelto');
+    if (a == 'permanente') {
+      await _hacer(() => repo.accion(pr, 'permanente', extra: {'valor': !pr.permanente}), ok: pr.permanente ? 'Ahora es temporal' : 'Ahora es permanente');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
     Widget cuerpo;
-    if (_datos == null) {
+    if (!_cargado) {
       cuerpo = _error != null ? Center(key: const ValueKey('e'), child: Text(_error!)) : const Center(key: ValueKey('c'), child: PivotCargando());
     } else {
-      final tallas = _tallas;
-      final prox = _datos!['proxima'] as Map?;
-      final proxTxt = prox == null ? null : 'Libres para el ${Fechas.corta(DateTime.tryParse('${prox['fecha']}') ?? Fechas.hoy())}';
-      Widget tarjeta(List<Widget> hijos) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Material(
-          color: p.tarjeta,
-          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-          clipBehavior: Clip.antiAlias,
-          child: Column(children: hijos),
-        ),
-      );
+      final prox = repo.proxima;
+      final activos = repo.prestamos.where((x) => x.activo).toList();
+      final misPendientes = repo.prestamos.where((x) => x.pendiente && x.mio).toList();
+      final preguntarme = activos.where((x) => x.preguntarme).toList();
+      final preguntar = _pivot ? activos.where((x) => x.preguntar).toList() : const <Prestamo>[];
       Text seccion(String t) => Text(
         t,
         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: p.textoSecundario),
       );
-      Widget fila(String titulo, int n, int libres, void Function(int)? cambiar) => ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text([n == 1 ? '1 en total' : '$n en total', if (proxTxt != null) '$libres ${libres == 1 ? 'libre' : 'libres'}'].join(' · ')),
-        trailing: cambiar == null
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: 'Quitar uno',
-                    onPressed: _guardando || n == 0 ? null : () => cambiar(-1),
-                    icon: const Icon(Icons.remove_circle_outline_rounded),
-                  ),
-                  SizedBox(
-                    width: 28,
-                    child: Text(
-                      '$n',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: p.texto),
-                    ),
-                  ),
-                  IconButton(tooltip: 'Sumar uno', onPressed: _guardando ? null : () => cambiar(1), icon: const Icon(Icons.add_circle_outline_rounded)),
-                ],
-              ),
-      );
-      final activos = _prestamos.where((x) => x['estado'] == 'activo').toList();
-      final misPendientes = _prestamos.where((x) => x['estado'] == 'pendiente' && x['mio'] == true).toList();
       cuerpo = RefreshIndicator(
         key: const ValueKey('lista'),
         onRefresh: _cargar,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
-            seccion('PATINES'),
-            const SizedBox(height: 8),
-            tarjeta([
-              for (var i = 0; i < tallas.length; i++)
-                fila('Talla ${tallas[i].talla}', tallas[i].cantidad, tallas[i].libres, _pivot ? (d) => _cambiarTalla(i, d) : null),
-              if (tallas.isEmpty) const ListTile(title: Text('Sin patines cargados')),
-              if (_pivot)
-                ListTile(
-                  leading: Icon(Icons.add_rounded, color: p.marcaTexto),
-                  title: Text(
-                    'Agregar talla',
-                    style: TextStyle(color: p.marcaTexto, fontWeight: FontWeight.w600),
-                  ),
-                  onTap: _guardando ? null : _nuevaTalla,
-                ),
-            ]),
-            seccion('PROTECCIONES'),
-            const SizedBox(height: 8),
-            tarjeta([
-              fila(
-                'Juegos completos',
-                _protecciones,
-                _proteccionesLibres,
-                _pivot ? (d) => _guardarStock([for (final x in tallas) (talla: x.talla, cantidad: x.cantidad)], (_protecciones + d).clamp(0, 99)) : null,
+            // Recordatorio a la persona: "¿Ya lo devolviste?" (se renueva cada 7 días).
+            for (final pr in preguntarme)
+              _Aviso(
+                icono: Icons.help_outline_rounded,
+                texto: '¿Ya devolviste ${pr.texto}?',
+                no: ('Aún no', () => _hacer(() => repo.responder(pr, devuelto: false), ok: 'Te lo recordamos en 7 días')),
+                si: ('Ya lo devolví', () => _hacer(() => repo.responder(pr, devuelto: true), ok: 'Gracias, se avisó a los Pivots')),
+                ocupado: _guardando,
               ),
-            ]),
-            // Solo si alguien tiene cosas del equipo (Victor, 2026-11-13).
+            for (final pr in preguntar)
+              _Aviso(
+                icono: Icons.help_outline_rounded,
+                texto: '¿${pr.nombreMostrar} aún tiene ${pr.texto}?',
+                no: ('No', () => _hacer(() => repo.accion(pr, 'devolver'), ok: 'Marcado como devuelto')),
+                si: ('Aún lo tiene', () => _hacer(() => repo.accion(pr, 'sigue'), ok: 'Anotado: aún lo tiene')),
+                ocupado: _guardando,
+              ),
+            if (prox != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                child: Text(
+                  'Lo libre es para el entrenamiento del ${Fechas.corta(DateTime.tryParse('${prox['fecha']}') ?? Fechas.hoy())}, descontando reservas y lo que tienen personas.',
+                  style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                ),
+              ),
+            for (final l in repo.listas)
+              _TarjetaLista(
+                lista: l,
+                conPrestamos: activos.where((x) => x.lista == l.nombre).length,
+                alTocar: () => _abrir(ListaInventarioScreen(repo: repo, lista: l), 'Guardado'),
+              ),
+            if (repo.listas.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  _pivot ? 'Todavía no hay listas. Crea la primera con el botón +.' : 'Todavía no hay equipamiento registrado.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: p.textoSecundario),
+                ),
+              ),
             if (activos.isNotEmpty || misPendientes.isNotEmpty) ...[
+              const SizedBox(height: 8),
               seccion('QUIÉN TIENE COSAS DEL EQUIPO'),
               const SizedBox(height: 8),
-              tarjeta([
-                for (final pr in [...misPendientes, ...activos])
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-                    child: Row(
-                      children: [
-                        AvatarPersona(nombre: '${pr['nombreMostrar']}', foto: '${pr['foto'] ?? ''}', tamano: 40),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _texto(pr),
-                                style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-                              ),
-                              const SizedBox(height: 4),
-                              Etiqueta(
-                                texto: pr['estado'] == 'pendiente'
-                                    ? 'Esperando aprobación'
-                                    : 'Las tiene ${pr['nombreMostrar']} · ${(pr['dias'] as num? ?? 0) == 0 ? 'desde hoy' : 'hace ${pr['dias']} ${(pr['dias'] as num) == 1 ? 'día' : 'días'}'}',
-                                icono: pr['estado'] == 'pendiente' ? Icons.hourglass_top_rounded : Icons.inventory_2_outlined,
-                              ),
-                            ],
-                          ),
+              Material(
+                color: p.tarjeta,
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final pr in [...misPendientes, ...activos])
+                      ListTile(
+                        leading: AvatarPersona(nombre: pr.nombreMostrar, foto: pr.foto, tamano: 40),
+                        title: Text(
+                          '${pr.texto[0].toUpperCase()}${pr.texto.substring(1)}',
+                          style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
                         ),
-                        if (_pivot && pr['estado'] == 'activo')
-                          PopupMenuButton<String>(
-                            tooltip: 'Opciones',
-                            onSelected: (a) =>
-                                a == 'sigue' ? _accionPrestamo(pr, 'sigue', 'Anotado: aún lo tiene') : _accionPrestamo(pr, 'devolver', 'Marcado como devuelto'),
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'devolver', child: Text('Ya lo devolvió')),
-                              if (pr['preguntar'] == true) const PopupMenuItem(value: 'sigue', child: Text('Aún lo tiene')),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-              ]),
-            ],
-            // A los 7 días, el Pivot confirma si aún lo tiene.
-            for (final pr in activos.where((x) => x['preguntar'] == true && _pivot))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: p.suave,
-                  borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-                    child: Row(
-                      children: [
-                        Icon(Icons.help_outline_rounded, color: p.sobreSuave),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '¿${pr['nombreMostrar']} aún tiene ${_texto(pr).toLowerCase()}?',
-                            style: TextStyle(fontWeight: FontWeight.w600, color: p.sobreSuave),
-                          ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Align(alignment: Alignment.centerLeft, child: _etiqueta(pr)),
                         ),
-                        TextButton(onPressed: _guardando ? null : () => _accionPrestamo(pr, 'devolver', 'Marcado como devuelto'), child: const Text('No')),
-                        FilledButton.tonal(
-                          onPressed: _guardando ? null : () => _accionPrestamo(pr, 'sigue', 'Anotado: aún lo tiene'),
-                          child: const Text('Aún lo tiene'),
-                        ),
-                      ],
-                    ),
-                  ),
+                        trailing: _pivot && pr.activo ? const Icon(Icons.more_vert_rounded) : null,
+                        onTap: _pivot && pr.activo ? () => _opcionesPrestamo(pr) : null,
+                      ),
+                  ],
                 ),
               ),
+            ],
             if (_pivot && _reservas.isNotEmpty) ...[
+              const SizedBox(height: 16),
               seccion('RESERVADO PARA LOS PRÓXIMOS ENTRENAMIENTOS'),
               const SizedBox(height: 8),
-              tarjeta([
-                for (final r in _reservas)
-                  ListTile(
-                    title: Text('${r['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      [
-                        '${r['fecha']}',
-                        if ('${r['patines']}'.isNotEmpty && r['patines'] != 'No') 'Patines ${r['patines']}',
-                        if ('${r['protecciones']}'.isNotEmpty && r['protecciones'] != 'No') r['protecciones'] == 'Sí' ? 'Protecciones' : '${r['protecciones']}',
-                      ].join(' · '),
-                    ),
-                    trailing: '${r['waLink'] ?? ''}'.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Escribir por WhatsApp',
-                            icon: Icon(IconosMarca.whatsapp),
-                            onPressed: () => launchUrl(Uri.parse('${r['waLink']}'), mode: LaunchMode.externalApplication),
-                          ),
-                  ),
-              ]),
+              Material(
+                color: p.tarjeta,
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                child: Column(
+                  children: [
+                    for (final r in _reservas)
+                      ListTile(
+                        title: Text('${r['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          [
+                            '${r['fecha']}',
+                            if ('${r['patines']}'.isNotEmpty && r['patines'] != 'No') 'Patines ${r['patines']}',
+                            if ('${r['protecciones']}'.isNotEmpty && r['protecciones'] != 'No')
+                              r['protecciones'] == 'Sí' ? 'Protecciones' : '${r['protecciones']}',
+                          ].join(' · '),
+                        ),
+                        trailing: '${r['waLink'] ?? ''}'.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Escribir',
+                                icon: Icon(ConfigLiga.de(widget.sesion).icono),
+                                onPressed: () => launchUrl(Uri.parse('${r['waLink']}'), mode: LaunchMode.externalApplication),
+                              ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
@@ -495,17 +284,371 @@ class _InventarioScreenState extends State<InventarioScreen> {
         title: const Text('Inventario', style: TextStyle(fontWeight: FontWeight.w700)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
-          child: AnimatedOpacity(opacity: _guardando ? 1 : 0, duration: const Duration(milliseconds: 200), child: const LinearProgressIndicator(minHeight: 3)),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _guardando ? const LinearProgressIndicator(minHeight: 3) : const SizedBox(height: 3),
+          ),
         ),
       ),
-      floatingActionButton: _datos == null
+      // Solo el ícono (Victor, 2026-11-13); las opciones se eligen al tocarlo.
+      floatingActionButton: !_cargado
           ? null
-          : FloatingActionButton.extended(
-              onPressed: _guardando ? null : () => _prestamo(comoPivot: _pivot),
-              icon: Icon(_pivot ? Icons.assignment_ind_outlined : Icons.back_hand_outlined),
-              label: Text(_pivot ? 'Alguien se llevó algo' : 'Me llevé algo'),
-            ),
+          : FloatingActionButton(tooltip: _pivot ? 'Agregar' : 'Avisar o pedir', onPressed: _guardando ? null : _mas, child: const Icon(Icons.add_rounded)),
       body: AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: cuerpo),
+    );
+  }
+
+  Widget _etiqueta(Prestamo pr) {
+    if (pr.pendiente) return const Etiqueta(texto: 'Esperando aprobación', icono: Icons.hourglass_top_rounded);
+    if (pr.esUso && pr.hasta != null) {
+      return Etiqueta(
+        texto: '${pr.nombreMostrar} · hasta el ${Fechas.corta(pr.hasta!)}${pr.entrega == 'pivot' ? ' · lo trae un Pivot' : ''}',
+        icono: Icons.event_available_rounded,
+      );
+    }
+    if (pr.permanente) return Etiqueta(texto: '${pr.nombreMostrar} · permanente', icono: Icons.all_inclusive_rounded);
+    return Etiqueta(
+      texto: '${pr.nombreMostrar} · ${pr.dias == 0 ? 'desde hoy' : 'hace ${pr.dias} ${pr.dias == 1 ? 'día' : 'días'}'}',
+      icono: Icons.inventory_2_outlined,
+    );
+  }
+}
+
+class _Aviso extends StatelessWidget {
+  const _Aviso({required this.icono, required this.texto, required this.no, required this.si, required this.ocupado});
+  final IconData icono;
+  final String texto;
+  final (String, VoidCallback) no, si;
+  final bool ocupado;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: p.suave,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icono, color: p.sobreSuave),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      texto,
+                      style: TextStyle(fontWeight: FontWeight.w600, color: p.sobreSuave),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(onPressed: ocupado ? null : no.$2, child: Text(no.$1)),
+                  const SizedBox(width: 6),
+                  FilledButton.tonal(onPressed: ocupado ? null : si.$2, child: Text(si.$1)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TarjetaLista extends StatelessWidget {
+  const _TarjetaLista({required this.lista, required this.conPrestamos, required this.alTocar});
+  final ListaInventario lista;
+  final int conPrestamos;
+  final VoidCallback alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final l = lista;
+    // Lo libre de un vistazo: tallas y piezas como pills.
+    final pills = <String>[
+      if (l.esTallas)
+        for (final f in l.stock)
+          if (f.cantidad > 0) '${f.variante}: ${f.libres}/${f.cantidad}',
+      if (l.esSet)
+        for (final pz in l.piezas) '${pz.nombre}: ${l.fila(pz.nombre)?.libres ?? 0}',
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: alTocar,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(l.iconoData, color: p.marcaTexto),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l.nombre,
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.texto),
+                          ),
+                          Text(
+                            [
+                              l.resumen,
+                              if (l.esSet) '${l.setsLibres} libres' else if (!l.esTallas) '${l.libresTotal} libres',
+                              if (conPrestamos > 0) '$conPrestamos con personas',
+                            ].join(' · '),
+                            style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                  ],
+                ),
+                if (pills.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 6, runSpacing: 6, children: [for (final t in pills) Etiqueta(texto: t)]),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Una lista: su stock (Pivots lo cambian con − y +), nombre, ícono,
+/// piezas de cada set y quién tiene cosas de ella.
+class ListaInventarioScreen extends StatefulWidget {
+  const ListaInventarioScreen({super.key, required this.repo, required this.lista});
+  final InventarioRepo repo;
+  final ListaInventario lista;
+
+  @override
+  State<ListaInventarioScreen> createState() => _ListaInventarioScreenState();
+}
+
+class _ListaInventarioScreenState extends State<ListaInventarioScreen> {
+  late ListaInventario l = widget.lista;
+  // Cantidades editadas (variante → cantidad); se guardan con "Guardar".
+  late final Map<String, int> _stock = {for (final f in l.stock) f.variante: f.cantidad};
+  late int _sets = l.setsCompletos;
+  bool _cambio = false, _ocupado = false;
+
+  InventarioRepo get repo => widget.repo;
+
+  Future<void> _guardar() async {
+    setState(() => _ocupado = true);
+    try {
+      final stock = l.esSet ? [for (final pz in l.piezas) (pz.nombre, _stock[pz.nombre] ?? 0)] : [for (final e in _stock.entries) (e.key, e.value)];
+      await repo.editarLista(l, stock: stock);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _ocupado = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar.')));
+    }
+  }
+
+  Future<void> _renombrar() async {
+    final c = TextEditingController(text: l.nombre);
+    final n = await showDialog<String>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Nombre de la lista'),
+        content: TextField(controller: c, autofocus: true, textCapitalization: TextCapitalization.sentences),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(c.text.trim()), child: const Text('Guardar')),
+        ],
+      ),
+    );
+    if (n == null || n.isEmpty || n == l.nombre || !mounted) return;
+    try {
+      await repo.editarLista(l, nombre: n);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar.')));
+    }
+  }
+
+  Future<void> _borrar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Borrar "${l.nombre}"?'),
+        content: const Text('Se borra la lista y sus cantidades. No se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Borrar')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await repo.borrarLista(l);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo borrar.')));
+    }
+  }
+
+  Future<void> _nuevaTalla() async {
+    final c = TextEditingController();
+    final t = await showDialog<String>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('Nueva talla'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Ej. 38 o M'),
+          onSubmitted: (v) => Navigator.of(d).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(c.text.trim()), child: const Text('Agregar')),
+        ],
+      ),
+    );
+    if (t == null || t.isEmpty || _stock.containsKey(t)) return;
+    setState(() {
+      _stock[t] = 1;
+      _cambio = true;
+    });
+  }
+
+  void _cambiarSets(int v) => setState(() {
+    _sets = v;
+    for (final pz in l.piezas) {
+      _stock[pz.nombre] = v * pz.cantidad;
+    }
+    _cambio = true;
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final pivot = repo.esPivot;
+    final tienen = repo.prestamos.where((x) => x.activo && x.lista == l.nombre).toList();
+    Widget fila(String titulo, String? sub, String clave) {
+      final f = l.fila(clave);
+      final n = _stock[clave] ?? 0;
+      return ListTile(
+        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(sub ?? '${f?.libres ?? n} libres${(f?.enUso ?? 0) > 0 ? ' · ${f!.enUso} en uso' : ''}'),
+        trailing: pivot
+            ? Contador(
+                valor: n,
+                max: 100000,
+                alCambiar: (v) => setState(() {
+                  _stock[clave] = v;
+                  _cambio = true;
+                }),
+              )
+            : Text(
+                '$n',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: p.texto),
+              ),
+      );
+    }
+
+    final variantes = l.esTallas ? (_stock.keys.toList()..sort((a, b) => (double.tryParse(a) ?? 0).compareTo(double.tryParse(b) ?? 0))) : <String>[];
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          if (pivot)
+            PopupMenuButton<String>(
+              tooltip: 'Opciones',
+              onSelected: (a) => a == 'nombre' ? _renombrar() : _borrar(),
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'nombre', child: Text('Cambiar nombre')),
+                if (l.sistema == null) const PopupMenuItem(value: 'borrar', child: Text('Borrar lista')),
+              ],
+            ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        children: [
+          if (l.sistema != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Text('Se puede reservar al confirmar asistencia a una clase.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+            ),
+          Material(
+            color: p.tarjeta,
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                if (l.esTallas) ...[
+                  for (final v in variantes) fila('Talla $v', null, v),
+                  if (pivot)
+                    ListTile(
+                      leading: Icon(Icons.add_rounded, color: p.marcaTexto),
+                      title: Text(
+                        'Agregar talla',
+                        style: TextStyle(color: p.marcaTexto, fontWeight: FontWeight.w600),
+                      ),
+                      onTap: _nuevaTalla,
+                    ),
+                ] else if (l.esSet) ...[
+                  if (pivot)
+                    ListTile(
+                      title: const Text('Sets completos', style: TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: const Text('Cambia todas las piezas a la vez'),
+                      trailing: Contador(valor: _sets, max: 999, alCambiar: _cambiarSets),
+                    ),
+                  for (final pz in l.piezas) fila(pz.nombre, '${pz.cantidad} por set · ${l.fila(pz.nombre)?.libres ?? 0} libres', pz.nombre),
+                ] else
+                  fila(l.esInsumo && (l.unidad ?? '').isNotEmpty ? l.unidad![0].toUpperCase() + l.unidad!.substring(1) : 'En total', null, ''),
+              ],
+            ),
+          ),
+          if (tienen.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              'LO TIENEN',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: p.textoSecundario),
+            ),
+            const SizedBox(height: 8),
+            for (final pr in tienen)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: AvatarPersona(nombre: pr.nombreMostrar, foto: pr.foto, tamano: 36),
+                title: Text(pr.nombreMostrar),
+                subtitle: Text('${pr.texto}${pr.permanente ? ' · permanente' : ''}'),
+              ),
+          ],
+        ],
+      ),
+      floatingActionButton: AnimatedScale(
+        scale: _cambio ? 1 : 0,
+        duration: const Duration(milliseconds: 200),
+        child: FloatingActionButton.extended(
+          onPressed: _ocupado ? null : _guardar,
+          icon: _ocupado ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check_rounded),
+          label: const Text('Guardar'),
+        ),
+      ),
     );
   }
 }

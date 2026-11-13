@@ -812,7 +812,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                     if (_llevar[per.username.toLowerCase()] case final llevar?)
                                       Padding(
                                         padding: const EdgeInsets.only(left: 6),
-                                        child: Etiqueta(texto: llevar, icono: Icons.roller_skating_rounded),
+                                        child: Etiqueta(texto: llevar, icono: Icons.content_paste_rounded),
                                       ),
                                     if (_esAdmin &&
                                         marcadxs.contains(per.username.trim().toLowerCase()) &&

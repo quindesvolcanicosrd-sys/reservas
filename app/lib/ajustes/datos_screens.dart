@@ -6,6 +6,8 @@ import '../equipo/equipo_repo.dart';
 import '../equipo/roles_screen.dart';
 import '../sesion/sesion.dart';
 import 'ajustes_screen.dart';
+import '../equipo/inventario_asistentes.dart';
+import '../equipo/inventario_modelos.dart';
 import 'campos.dart';
 import 'componentes.dart';
 
@@ -178,21 +180,26 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
       return;
     }
     if (_usaClub && valorDe(s, 'categoria') == 'Quindes') {
-      final si = await showDialog<bool>(
+      final si = await showDialog<String>(
         context: context,
         builder: (c) => AlertDialog(
           title: const Text('Pasas a Mirlxs'),
           content: const Text(
             'Con equipamiento del equipo pasas a Mirlxs: solo podrás reservar por clase (con su precio), no por mes, '
-            'y no vuelves a Quindes hasta tener tu equipamiento completo propio.',
+            'y no vuelves a Quindes hasta tener tu equipamiento completo propio.\n\n'
+            'Si es por un tiempo (se te rompió o lo estás lavando), mejor pídelo: un Pivot decide por cuánto tiempo y no cambias de Categoría/Equipo.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Volver')),
-            FilledButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Entendido, guardar')),
+            TextButton(onPressed: () => Navigator.of(c).pop('pedir'), child: const Text('Pedir por un tiempo')),
+            FilledButton(onPressed: () => Navigator.of(c).pop('guardar'), child: const Text('Guardar igual')),
           ],
         ),
       );
-      if (si != true || !mounted) return;
+      if (si == 'pedir' && mounted) {
+        await _pedirUso();
+        return;
+      }
+      if (si != 'guardar' || !mounted) return;
     }
     setState(() => _guardando = true);
     var bajo = false;
@@ -204,6 +211,23 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
     if (ok && bajo) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Equipamiento guardado. Ahora estás en Mirlxs.')));
       EquipoRepo.de(s).cargar(forzar: true);
+    }
+  }
+
+  /// Pedir equipamiento del equipo por un tiempo (Victor, 2026-11-13).
+  Future<void> _pedirUso() async {
+    final repo = InventarioRepo(s);
+    try {
+      await repo.cargar();
+    } catch (_) {}
+    if (!mounted) return;
+    final ok = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PrestamoAsistente(repo: repo, equipo: EquipoRepo.de(s), modo: ModoPrestamo.uso),
+      ),
+    );
+    if (ok == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pedido enviado. Un Pivot decidirá por cuánto tiempo.')));
     }
   }
 
@@ -301,6 +325,21 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
               style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
             ),
           ),
+          if (valorDe(s, 'categoria') == 'Quindes' && !_usaClub) ...[
+            const SizedBox(height: 12),
+            Material(
+              color: p.tarjeta,
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+                leading: Icon(Icons.volunteer_activism_outlined, color: p.marcaTexto),
+                title: const Text('¿Necesitas equipamiento por un tiempo?', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Si se te rompió o lo estás lavando, pídelo: un Pivot decide por cuánto tiempo y no cambias de Categoría/Equipo.'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: _pedirUso,
+              ),
+            ),
+          ],
         ],
       ),
       bottomNavigationBar: SafeArea(

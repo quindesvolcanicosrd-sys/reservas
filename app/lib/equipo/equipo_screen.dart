@@ -333,7 +333,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
           ),
           const SizedBox(width: 10),
           acceso(
-            Icons.roller_skating_rounded,
+            Icons.content_paste_rounded,
             'privacidad',
             'Inventario',
             'Equipamiento',

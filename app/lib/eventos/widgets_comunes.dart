@@ -99,9 +99,14 @@ class Etiqueta extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icono != null) ...[Icon(icono, size: 15, color: c), const SizedBox(width: 4)],
-          Text(
-            texto,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c),
+          // Si no entra, se corta con "…" en vez de desbordar.
+          Flexible(
+            child: Text(
+              texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: c),
+            ),
           ),
         ],
       ),
