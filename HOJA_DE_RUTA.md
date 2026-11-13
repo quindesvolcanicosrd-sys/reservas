@@ -67,7 +67,7 @@ Reglas de siempre:
    - **Conciliación**: el Pivot ingresa el saldo real del banco o De Una y la app muestra la diferencia, para encontrar centavos o pagos sin registrar.
    - **Filtros completos**: fechas libres, medio de pago, persona, categoría, tipo. Exportar a Excel o CSV.
    - **Préstamos o uso de fondos por una persona**: deuda aparte de la cuota, con abonos. No cambia la cuota.
-   - **Saldo a favor o en contra de una persona** (Victor, 2026-11-13; propuesta en la Bandeja, falta su aprobación): "Saldo con el equipo" en Funciones de Pivot con cada movimiento; al pagar la cuota se avisa y se elige cómo aplicarlo (cubrir toda la cuota o un monto fijo por mes; pagar la deuda junto o en cuotas). El Pivot decide si se junta con la cuota.
+   - **Saldo a favor o en contra de una persona** (Victor, 2026-11-13; diseño aprobado): "Saldo con el equipo" en Funciones de Pivot con cada movimiento; al pagar la cuota se avisa y se elige cómo aplicarlo (cubrir toda la cuota o un monto fijo por mes; pagar la deuda junto o en cuotas). El Pivot decide si se junta con la cuota.
    - **Fondos de viaje**:
      - Registrar el viaje, el monto y la ventana de asistencia (ej. últimos 2 años o desde una fecha).
      - Tramos por % de asistencia (ej. ≥90 % reparte 50 %, 35–89 % el otro 50 %, menos no recibe).
