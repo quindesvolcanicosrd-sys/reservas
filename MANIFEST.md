@@ -38,7 +38,7 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 - Ajustes de Victor (2026-11-12, 19:20):
   - El degradado blanco→negro de los Lottie es una guía: se dibuja como rojo de marca → transparente (`ValueDelegate.gradientColor`).
   - El fondo de la entrada es `p.fondo` (claro/oscuro), no rojo.
-  - La animación va al 60 % del lienzo y aparece con un fundido.
+  - La animación va al 60 % del lienzo y aparece con un fundido. Desde el fotograma 26 (cuando la P empieza a crecer) la app dibuja la P roja que llena la pantalla y después el hueco (`_PintorRevelar`): el Lottie achicado recortaba el rojo en un rectángulo.
   - Durante la entrada, la barra de navegación del sistema toma el color del fondo.
 - `PivotCargando` (`core/cargando.dart`) ahora es el Lottie en bucle recortado a un cuadrado (72 por defecto) en vez de las formas de estrella y círculo. La composición se carga una vez y se comparte.
 - Ícono nuevo (AppLight.svg de Victor, guardado en `app/assets/icono/` junto con AppDark.svg): adaptable con fondo (degradado claro), la P reducida a la zona segura y su silueta como ícono monocromo (Android 13+). Android no admite un ícono distinto para modo oscuro. `assets/logo.png` (login y actualización) también es el ícono nuevo. Regenerar con `dart run flutter_launcher_icons`.

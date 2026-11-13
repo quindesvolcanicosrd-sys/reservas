@@ -44,9 +44,12 @@ class _IntroPivotState extends State<IntroPivot> with TickerProviderStateMixin {
   // cubre toda la pantalla. Desde ahí el hueco que revela la app lo dibuja
   // la app (`_PintorRevelar`): el reproductor de Lottie de Flutter no
   // dibuja la máscara invertida del archivo y la pantalla quedaba roja.
-  static const _cubre = 46 / 75;
+  // Fotograma en que la P del archivo empieza a crecer: desde ahí la forma
+  // roja que llena la pantalla y el hueco los dibuja la app, porque con la
+  // animación achicada el Lottie recortaba el rojo en un rectángulo.
+  static const _cubre = 26 / 75;
   static const _escala = 0.6;
-  late final AnimationController _revelar = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+  late final AnimationController _revelar = AnimationController(vsync: this, duration: const Duration(milliseconds: 950));
 
   @override
   void initState() {
@@ -156,11 +159,7 @@ class _IntroPivotState extends State<IntroPivot> with TickerProviderStateMixin {
         color: p.fondo,
         child: _desdeLogo ? _AparecerSuave(child: animacion(_compEntrada, _entrada)) : animacion(_compEntrada, _entrada),
       ),
-      _Fase.revelar => CustomPaint(
-        key: const ValueKey('revelar'),
-        painter: _PintorRevelar(CurvedAnimation(parent: _revelar, curve: Curves.easeInCubic), p.marca),
-        size: Size.infinite,
-      ),
+      _Fase.revelar => CustomPaint(key: const ValueKey('revelar'), painter: _PintorRevelar(_revelar, p.marca, p.fondo, _escala), size: Size.infinite),
       _Fase.fin => const SizedBox.shrink(key: ValueKey('fin')),
     };
     final oscuro = Theme.of(context).brightness == Brightness.dark;
@@ -211,28 +210,46 @@ class _AparecerSuave extends StatelessWidget {
   );
 }
 
-/// Rojo de marca con un hueco en forma de la "P" de Pivot (cápsula inclinada)
-/// que crece desde el centro hasta dejar ver la app.
+/// Salida de la entrada, dibujada por la app: la P roja crece desde su
+/// tamaño en la animación hasta llenar la pantalla, y después se abre un
+/// hueco con su forma que deja ver la app.
 class _PintorRevelar extends CustomPainter {
-  _PintorRevelar(this.t, this.color) : super(repaint: t);
+  _PintorRevelar(this.t, this.color, this.fondo, this.escala) : super(repaint: t);
   final Animation<double> t;
-  final Color color;
+  final Color color, fondo;
+  final double escala;
 
-  @override
-  void paint(Canvas canvas, Size s) {
-    final diagonal = s.longestSide * 1.6;
-    final ancho = diagonal * t.value, alto = ancho * 1.72;
-    final hueco = Path()..addRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: ancho, height: alto), Radius.circular(ancho / 2)));
+  static const _corte = 0.45; // primera parte: crecer; segunda: el hueco
+
+  Path _capsula(Size s, double ancho) {
     final m = Matrix4.identity()
       ..translateByDouble(s.width / 2, s.height / 2, 0, 1)
       ..rotateZ(0.2);
+    return (Path()..addRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: ancho, height: ancho * 1.72), Radius.circular(ancho / 2))))
+        .transform(m.storage);
+  }
+
+  @override
+  void paint(Canvas canvas, Size s) {
+    final v = t.value;
+    // Ancho de la P en pantalla: 272 de 1125 en el lienzo, con BoxFit.cover y la escala de la animación.
+    final ajuste = s.width / 1125 > s.height / 2436 ? s.width / 1125 : s.height / 2436;
+    final inicial = 272 * ajuste * escala;
+    final cubre = s.longestSide * 1.6;
+    if (v < _corte) {
+      final g = Curves.easeInCubic.transform(v / _corte);
+      canvas.drawRect(Offset.zero & s, Paint()..color = fondo);
+      canvas.drawPath(_capsula(s, inicial + (cubre - inicial) * g), Paint()..color = color);
+      return;
+    }
+    final h = Curves.easeInCubic.transform((v - _corte) / (1 - _corte));
     final velo = Path()
       ..fillType = PathFillType.evenOdd
       ..addRect(Offset.zero & s)
-      ..addPath(hueco.transform(m.storage), Offset.zero);
+      ..addPath(_capsula(s, cubre * h), Offset.zero);
     canvas.drawPath(velo, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_PintorRevelar old) => old.color != color;
+  bool shouldRepaint(_PintorRevelar old) => old.color != color || old.fondo != fondo;
 }
