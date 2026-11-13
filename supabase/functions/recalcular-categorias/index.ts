@@ -67,6 +67,14 @@ function periodoTier(tier: any): { desde: string; hasta: string; mesDesde: numbe
   return { desde: fechaISO(d), hasta: fechaISO(hoy), mesDesde: d.getUTCFullYear() * 12 + d.getUTCMonth(), mesHasta: idx };
 }
 
+// Gracias que venían de la regla vieja (día cualquiera del mes): con período
+// por meses se corre al día 1 siguiente, así el mes en curso alcanza a cerrar.
+function _venceGracia(hasta: string, tier: any): Date {
+  const h = new Date(hasta);
+  if (String(tier.periodo_unidad ?? 'mes') !== 'mes' || h.getUTCDate() === 1) return h;
+  return new Date(Date.UTC(h.getUTCFullYear(), h.getUTCMonth() + 1, 1));
+}
+
 // Suma cantidad + unidad a una fecha (gracia).
 function sumarPlazo(desde: Date, n: number, unidad: string): Date {
   if (unidad === 'dia') return new Date(desde.getTime() + n * 86400000);
@@ -502,12 +510,16 @@ Deno.serve(async (req: Request) => {
               // la migración sobre por qué no recalcularla al vuelo en cada
               // lectura).
               categoriaAsignada = categoriaActual;
-              const desde = hoy;
-                            const hasta = sumarPlazo(desde, mesesGracia, String(tierActualCfg.gracia_unidad ?? 'mes'));
+                            const desde = hoy;
+              // Con período en meses, la gracia corre por meses cerrados: vence
+              // el día 1 del mes que cierra el último mes de gracia.
+              const porMes = String(tierActualCfg.periodo_unidad ?? 'mes') === 'mes' && String(tierActualCfg.gracia_unidad ?? 'mes') === 'mes';
+              const base = porMes ? new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1)) : desde;
+              const hasta = sumarPlazo(base, mesesGracia, String(tierActualCfg.gracia_unidad ?? 'mes'));
               nuevoRiesgoDesde = desde.toISOString();
               nuevoRiesgoHasta = hasta.toISOString();
               nuevoRiesgoObjetivo = mejorTierPara(username);
-            } else if (hoy > new Date(m.tierRiesgoHasta as string)) {
+                        } else if (hoy >= _venceGracia(m.tierRiesgoHasta as string, tierActualCfg)) {
               // La gracia ya venció y sigue sin cumplir -- demotion
               // efectiva. Se recalcula el mejor tier FRESCO (no se confía en
               // el `tier_riesgo_objetivo` guardado como snapshot -- si algo
