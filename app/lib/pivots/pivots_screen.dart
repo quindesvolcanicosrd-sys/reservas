@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../core/api.dart';
@@ -61,7 +63,7 @@ class PivotsRepo {
   }
 
   Future<void> guardar(String username, List<String> areas) async {
-    final r = await sesion.api.post('adminPivots', {..._t, 'accion': 'guardar', 'username': username, 'areas': areas});
+    final r = await sesion.api.post('adminPivots', {..._t, 'accion': 'guardar', 'username': username, 'areas': jsonEncode(areas)});
     if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo guardar.'}');
   }
 

@@ -1080,8 +1080,11 @@ async function getConfigLiga(params: Record<string, any>): Promise<Record<string
   if (!(await _validarToken(params.token)) && !(params.adminToken && await _validarAdminToken(String(params.adminToken)))) {
     return { exito: false, error: 'Sesión inválida.' };
   }
-    const { data: logo } = await supabase.from('config_app').select('value').eq('key', 'logo_liga').maybeSingle();
-  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()), reglas: await _reglasLiga(), logo: logo?.value ?? '' };
+      const { data: extra } = await supabase.from('config_app').select('key, value').in('key', ['logo_liga', 'formas_pago']);
+  const v = (k: string) => (extra ?? []).find((r: any) => r.key === k)?.value ?? '';
+  let formasPago: any = null;
+  try { formasPago = v('formas_pago') ? JSON.parse(v('formas_pago')) : null; } catch { formasPago = null; }
+  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()), reglas: await _reglasLiga(), logo: v('logo_liga'), formasPago };
 }
 
 async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
@@ -1106,7 +1109,24 @@ async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Reco
     if (!Number.isFinite(n) || n < 0 || n > 10000) return { exito: false, error: 'Precio inválido.' };
     filas.push({ key: clave, value: String(n) });
   }
-    if (params.logo != null) {
+      // Formas de pago (Cobros, 2026-11-13): DeUna, transferencia y efectivo.
+  if (params.formasPago != null) {
+    let f: any = null;
+    try { f = typeof params.formasPago === 'object' ? params.formasPago : JSON.parse(String(params.formasPago)); } catch { f = null; }
+    if (!f || typeof f !== 'object') return { exito: false, error: 'Formas de pago inválidas.' };
+    const texto = (x: unknown, n = 120) => String(x ?? '').trim().slice(0, n);
+    const limpio = {
+      deuna: { activa: f.deuna?.activa !== false, enlace: /^https:\/\//.test(texto(f.deuna?.enlace, 300)) ? texto(f.deuna?.enlace, 300) : '' },
+      transferencia: {
+        activa: f.transferencia?.activa !== false, banco: texto(f.transferencia?.banco, 60),
+        datos: (Array.isArray(f.transferencia?.datos) ? f.transferencia.datos : []).slice(0, 8).map((d: any) => [texto(d?.[0], 30), texto(d?.[1], 60)]).filter((d: string[]) => d[0] && d[1]),
+      },
+      efectivo: { activa: f.efectivo?.activa === true, texto: texto(f.efectivo?.texto, 200) },
+      whatsapp: texto(f.whatsapp, 20).replace(/[^0-9]/g, ''),
+    };
+    filas.push({ key: 'formas_pago', value: JSON.stringify(limpio) });
+  }
+  if (params.logo != null) {
     const u = String(params.logo).trim();
     if (u && !/^https:\/\//.test(u)) return { exito: false, error: 'Logo inválido.' };
     filas.push({ key: 'logo_liga', value: u });

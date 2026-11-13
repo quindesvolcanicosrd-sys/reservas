@@ -10,6 +10,7 @@ import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import '../core/selector_plazo.dart';
 import 'categorias_screen.dart';
+import 'formas_pago_screen.dart';
 import 'pivots_screen.dart';
 
 /// Mi perfil → Ajustes de la liga (solo Pivots, Victor 2026-11-13): un solo
@@ -211,8 +212,15 @@ class AjustesLigaScreen extends StatelessWidget {
             const SizedBox(height: 16),
             GrupoAjustes(
               titulo: 'Cobros',
-              pie: 'Los planes, cupones y desactivar cobros llegan con Finanzas.',
+              pie: 'Los planes y cupones llegan en la siguiente etapa.',
               filas: [
+                FilaAjuste(
+                  icono: Icons.credit_card_rounded,
+                  seccion: 'cuota',
+                  titulo: 'Formas de pago',
+                  valor: [if (c.deunaActiva) 'DeUna', if (c.transferenciaActiva) 'Transferencia', if (c.efectivoActivo) 'Efectivo'].join(' · '),
+                  alTocar: () => SubAjustes.abrir(context, FormasPagoScreen(config: c)),
+                ),
                 FilaAjuste(
                   icono: Icons.calendar_month_outlined,
                   seccion: 'cuota',

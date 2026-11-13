@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/config_liga.dart';
 import '../core/iconos_marca.dart';
 import '../core/asistente.dart';
 import '../core/fechas.dart';
-import '../core/pagos.dart';
 import '../core/tema.dart';
 import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
@@ -421,11 +421,12 @@ class _ReservaScreenState extends State<ReservaScreen> {
             ),
           ),
         ],
-        if (t.monto > 0) ...[
+        // Formas de pago de la liga (Mi Liga → Cobros).
+        if (t.monto > 0 && _cfg.deunaActiva) ...[
           const SizedBox(height: 20),
           FilledButton.icon(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
-            onPressed: _guardando ? null : () => _confirmar(Pagos.deuna),
+            onPressed: _guardando ? null : () => _confirmar(_cfg.deunaEnlace, medio: 'deuna'),
             icon: const Icon(Icons.qr_code_2_rounded),
             label: Text('Paga con DeUna · ${ReservasRepo.dinero(t.monto)}'),
           ),
@@ -437,8 +438,25 @@ class _ReservaScreenState extends State<ReservaScreen> {
               style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
             ),
           ),
-          const SizedBox(height: 16),
-          _transferencia(context, t),
+        ],
+        if (t.monto > 0 && _cfg.transferenciaActiva) ...[const SizedBox(height: 16), _transferencia(context, t)],
+        if (t.monto > 0 && _cfg.efectivoActivo) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+            onPressed: _guardando ? null : () => _confirmar(null, medio: 'efectivo'),
+            icon: const Icon(Icons.payments_outlined),
+            label: Text('Pago en efectivo · ${ReservasRepo.dinero(t.monto)}'),
+          ),
+          if (_cfg.efectivoTexto.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Text(
+                _cfg.efectivoTexto,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+              ),
+            ),
         ],
       ],
     );
@@ -496,7 +514,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
           ListTile(
             leading: Icon(Icons.account_balance_outlined, color: p.marcaTexto),
             title: const Text('Transferencia bancaria'),
-            subtitle: const Text(Pagos.banco),
+            subtitle: Text(_cfg.banco),
             trailing: AnimatedRotation(
               turns: _transferenciaAbierta ? 0.5 : 0,
               duration: const Duration(milliseconds: 220),
@@ -514,7 +532,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 8, 16),
                     child: Column(
                       children: [
-                        for (final (etiqueta, valor) in Pagos.cuenta)
+                        for (final (etiqueta, valor) in _cfg.datosBancarios)
                           Row(
                             children: [
                               SizedBox(
@@ -543,7 +561,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed: _guardando ? null : () => _confirmar(null),
+                            onPressed: _guardando ? null : () => _confirmar(null, medio: 'transferencia'),
                             child: Text('Ya transferí ${ReservasRepo.dinero(t.monto)}'),
                           ),
                         ),
@@ -558,7 +576,9 @@ class _ReservaScreenState extends State<ReservaScreen> {
 
   // ─── Confirmar ────────────────────────────────────────────────────────
 
-  Future<void> _confirmar(String? urlPago) async {
+  ConfigLiga get _cfg => ConfigLiga.de(widget.repo.sesion);
+
+  Future<void> _confirmar(String? urlPago, {String? medio}) async {
     if (_guardando) return;
     setState(() => _guardando = true);
     final total = _total;
@@ -569,7 +589,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
       tallaPorFecha: _tallaPorFecha,
       total: total,
       // Dónde dice que pagó, para que el Pivot sepa dónde revisar.
-      medio: total.monto == 0 ? null : (urlPago == Pagos.deuna ? 'deuna' : 'transferencia'),
+      medio: total.monto == 0 ? null : medio,
     );
     if (!mounted) return;
     if (resultado.guardados.isEmpty) {
@@ -710,7 +730,7 @@ class ReservaExitoScreen extends StatelessWidget {
             FilledButton.icon(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
               onPressed: () => launchUrl(
-                Uri.parse('https://wa.me/${Pagos.whatsapp}?text=${Uri.encodeComponent(resultado.mensajeWhatsapp)}'),
+                Uri.parse('https://wa.me/${ConfigLiga.whatsappActual}?text=${Uri.encodeComponent(resultado.mensajeWhatsapp)}'),
                 mode: LaunchMode.externalApplication,
               ),
               icon: Icon(IconosMarca.whatsapp),

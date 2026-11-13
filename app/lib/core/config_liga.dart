@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../sesion/sesion.dart';
 import 'api.dart';
 import 'iconos_marca.dart';
+import 'pagos.dart';
 
 /// Ajustes de la liga (`getConfigLiga`, Victor 2026-11-13): canal para
 /// escribir a las personas, cómo se resuelven los pedidos de Pivots, país,
@@ -27,6 +28,26 @@ class ConfigLiga extends ChangeNotifier {
   num? precioMensual;
   String logo = '';
 
+  /// Formas de pago (Cobros). Sin configurar, las del club de siempre.
+  Map<String, dynamic>? formasPago;
+  bool get deunaActiva => (formasPago?['deuna'] as Map?)?['activa'] != false && deunaEnlace.isNotEmpty;
+  String get deunaEnlace =>
+      '${(formasPago?['deuna'] as Map?)?['enlace'] ?? ''}'.isNotEmpty ? '${formasPago!['deuna']['enlace']}' : (formasPago == null ? Pagos.deuna : '');
+  bool get transferenciaActiva => (formasPago?['transferencia'] as Map?)?['activa'] != false;
+  String get banco => formasPago == null ? Pagos.banco : '${(formasPago!['transferencia'] as Map?)?['banco'] ?? ''}';
+  List<(String, String)> get datosBancarios => formasPago == null
+      ? Pagos.cuenta
+      : [
+          for (final d in ((formasPago!['transferencia'] as Map?)?['datos'] as List? ?? const []))
+            if (d is List && d.length == 2) ('${d[0]}', '${d[1]}'),
+        ];
+  bool get efectivoActivo => (formasPago?['efectivo'] as Map?)?['activa'] == true;
+  String get efectivoTexto => '${(formasPago?['efectivo'] as Map?)?['texto'] ?? ''}';
+
+  /// WhatsApp para comprobantes de la liga cargada (o el del club).
+  static String get whatsappActual => _instancia?.whatsappComprobante ?? Pagos.whatsapp;
+  String get whatsappComprobante => '${formasPago?['whatsapp'] ?? ''}'.isNotEmpty ? '${formasPago!['whatsapp']}' : Pagos.whatsapp;
+
   /// Reglas que un Pivot cambia en Mi Liga (`reglas_liga`).
   Map<String, dynamic> reglas = const {};
   int get toleranciaMin => (reglas['toleranciaMin'] as num?)?.toInt() ?? 15;
@@ -45,6 +66,7 @@ class ConfigLiga extends ChangeNotifier {
     precioPorClase = num.tryParse('${r['precioPorClase']}');
     precioMensual = num.tryParse('${r['precioMensual']}');
     logo = '${r['logo'] ?? ''}';
+    formasPago = r['formasPago'] is Map<String, dynamic> ? r['formasPago'] as Map<String, dynamic> : null;
     if (r['reglas'] is Map<String, dynamic>) reglas = r['reglas'] as Map<String, dynamic>;
     diasInactividad = (reglas['inactividadDias'] as num?)?.toInt() ?? 30;
     cargado = true;
