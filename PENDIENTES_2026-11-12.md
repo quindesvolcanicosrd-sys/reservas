@@ -391,11 +391,11 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] **Inventario**: fotos y etiqueta por artículo.
 
 ## K. Notas del 2026-11-13, 14:58 (para la ronda de las 4 p. m.)
-0. [ ] **BUG (prioridad):** `puntos_mensuales` no suma puntos de asistencia desde octubre (noviembre en 0 para todo el equipo; tareas también en 0). Por eso Tormento no "cumple" con "Solo puntos". Encontrar dónde se escribían (¿al tomar lista? ¿cron?), arreglar y recalcular octubre y noviembre.
-1. [ ] Tareas: quitar el recuadro rojo de puntos (se consulta en Estadísticas).
-2. [ ] Tareas recurrentes: no como subsección, sino tarjetas que se deslizan de lado.
-3. [ ] Bandeja → pagos y reservas: decir dónde se pagó (ej. Deuna, banco internacional) para saber dónde revisar.
-4. [ ] Inventario:
+0. [x] **BUG (prioridad):** `puntos_mensuales` no suma puntos de asistencia desde octubre (noviembre en 0 para todo el equipo; tareas también en 0). Por eso Tormento no "cumple" con "Solo puntos". Encontrar dónde se escribían (¿al tomar lista? ¿cron?), arreglar y recalcular octubre y noviembre.
+1. [x] Tareas: quitar el recuadro rojo de puntos (se consulta en Estadísticas).
+2. [x] Tareas recurrentes: no como subsección, sino tarjetas que se deslizan de lado.
+3. [x] Bandeja → pagos y reservas: decir dónde se pagó (ej. Deuna, banco internacional) para saber dónde revisar.
+4. [x] Inventario (hecho 2026-11-13: secciones, interruptor por lista, Tu equipamiento, botiquín con vencimiento y "Se usó", reglas de préstamo, plazos editables):
    1. Quitar el texto de arriba "Lo libre es para el entrenamiento…".
    2. Íconos más generales y una lista más completa.
    3. Estructura (confirmar con Victor): Inventario → **Equipamiento deportivo** (Con talla · Sets completos), **Insumos de entrenamiento** (conos, cintas…), **Botiquín** (insumos médicos con vencimiento) y **Misceláneos**. Sin los tipos técnicos "unidades/insumo".

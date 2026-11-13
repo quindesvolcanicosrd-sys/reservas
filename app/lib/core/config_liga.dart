@@ -50,7 +50,7 @@ class ConfigLiga extends ChangeNotifier {
     _leer(r);
   }
 
-    // Sin SMS (Victor, 2026-11-13): si la liga no usa ninguna app, "Solo teléfono" (llamar).
+  // Sin SMS (Victor, 2026-11-13): si la liga no usa ninguna app, "Solo teléfono" (llamar).
   static const canales = {'whatsapp': 'WhatsApp', 'telegram': 'Telegram', 'signal': 'Signal', 'telefono': 'Solo teléfono'};
   String get nombreCanal => canales[canal] ?? 'WhatsApp';
   String get nombreCanalCorto => canal == 'telefono' ? 'Llamar' : nombreCanal;
@@ -58,7 +58,7 @@ class ConfigLiga extends ChangeNotifier {
   static IconData iconoDe(String c) => switch (c) {
     'telegram' => IconosMarca.telegram,
     'signal' => IconosMarca.signal,
-        'telefono' => Icons.call_outlined,
+    'telefono' => Icons.call_outlined,
     _ => IconosMarca.whatsapp,
   };
   IconData get icono => iconoDe(canal);
@@ -71,7 +71,7 @@ class ConfigLiga extends ChangeNotifier {
     return switch (canal) {
       'telegram' => Uri.parse('https://t.me/+$sinMas'),
       'signal' => Uri.parse('https://signal.me/#p/+$sinMas'),
-            'telefono' => Uri.parse('tel:+$sinMas'),
+      'telefono' => Uri.parse('tel:+$sinMas'),
       _ => Uri.parse('https://wa.me/$sinMas${texto.isEmpty ? '' : '?text=$t'}'),
     };
   }

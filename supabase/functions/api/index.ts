@@ -2193,12 +2193,12 @@ const ARTICULOS_INVENTARIO = ['patines', 'protecciones', 'otro'];
 //   pide por un tiempo (se le rompió, lo está lavando). Un Pivot decide
 //   cuánto dura y si se lo lleva a casa o un Pivot lo trae; mientras dure no
 //   baja de Categoría/Equipo por usarlo (recalcular-categorias).
-type ListaInv = { id: string; nombre: string; tipo: string; icono: string | null; piezas: { nombre: string; cantidad: number }[]; unidad: string | null; sistema: string | null; orden: number };
+type ListaInv = { id: string; nombre: string; tipo: string; icono: string | null; piezas: { nombre: string; cantidad: number }[]; unidad: string | null; sistema: string | null; orden: number; seccion: string; activa: boolean };
 
 async function _listasInventario(): Promise<{ listas: ListaInv[]; stock: any[] }> {
   const [{ data: listas }, { data: stock }] = await Promise.all([
     supabase.from('inventario_listas').select('*').order('orden').order('created_at'),
-    supabase.from('inventario_stock').select('lista_id, variante, cantidad'),
+    supabase.from('inventario_stock').select('lista_id, variante, cantidad, vence, minimo'),
   ]);
   return {
     listas: (listas ?? []).map((l: any) => ({ ...l, piezas: Array.isArray(l.piezas) ? l.piezas.map((p: any) => ({ nombre: String(p.nombre), cantidad: Number(p.cantidad) || 1 })) : [] })),
@@ -2218,7 +2218,7 @@ function _textoPrestamo(p: any, l: ListaInv | undefined): string {
     if (completo || !piezas.length) return n > 1 ? `${n} sets de ${nombre}` : `un set de ${nombre}`;
     return `${nombre} (${lista(piezas.map((y: any) => `${y.cantidad} ${String(y.nombre).toLowerCase()}`))})`;
   }
-  if (l.tipo === 'insumo') return `${n} ${l.unidad ? l.unidad + ' de ' : ''}${nombre}`;
+    if (l.tipo === 'insumo') return p.variante ? `${n} ${String(p.variante).toLowerCase()}` : `${n} ${l.unidad ? l.unidad + ' de ' : ''}${nombre}`;
   return `${n} ${nombre}`;
 }
 
@@ -2250,6 +2250,9 @@ async function getInventario(params: Record<string, any>): Promise<Record<string
     _proximosEntrenamientos(),
     supabase.from('inventario_prestamos').select('*').in('estado', ['activo', 'pendiente']).order('desde'),
   ]);
+    // Listas ocultas (interruptor de Pivots): el resto del equipo no las ve.
+  const visiblesListas = esPivot ? listas : listas.filter((l) => l.activa !== false);
+  const regla = yo ? await _reglaPrestamoPara(yo) : null;
   const enUso: Record<string, number> = {}; // `${lista}|${variante}`
   const sumar = (lista: string, variante: string, n: number) => { const k = lista + '|' + variante; enUso[k] = (enUso[k] ?? 0) + n; };
   const porId: Record<string, ListaInv> = {}; listas.forEach((l) => { porId[l.id] = l; });
@@ -2279,14 +2282,25 @@ async function getInventario(params: Record<string, any>): Promise<Record<string
     exito: true,
     esPivot,
     proxima: proxima ? { idEvento: proxima.idEvento, fecha: proxima.fecha, lugar: proxima.donde, hora: proxima.horaInicio } : null,
-    listas: listas.map((l) => {
+        reglaPrestamo: regla,
+    listas: visiblesListas.map((l) => {
       const st = stock.filter((x: any) => x.lista_id === l.id);
       const variantes = l.tipo === 'set' ? l.piezas.map((p) => p.nombre) : l.tipo === 'tallas' ? st.map((x: any) => x.variante) : [''];
       const filas = variantes.map((v: string) => {
         const total = Number(st.find((x: any) => x.variante === v)?.cantidad) || 0;
         const uso = enUso[l.id + '|' + v] ?? 0;
-        return { variante: v, cantidad: total, enUso: uso, libres: Math.max(0, total - uso) };
+                const f = st.find((x: any) => x.variante === v);
+        return { variante: v, cantidad: total, enUso: uso, libres: Math.max(0, total - uso), vence: f?.vence ?? null, minimo: f?.minimo == null ? null : Number(f.minimo) };
       });
+            if (l.seccion === 'botiquin' || l.tipo === 'insumo') {
+        // El botiquín y los insumos tienen un renglón por cosa (variante = nombre).
+        filas.length = 0;
+        for (const x of st) {
+          const uso = enUso[l.id + '|' + x.variante] ?? 0;
+          filas.push({ variante: x.variante, cantidad: Number(x.cantidad) || 0, enUso: uso, libres: Math.max(0, (Number(x.cantidad) || 0) - uso), vence: x.vence ?? null, minimo: x.minimo == null ? null : Number(x.minimo) });
+        }
+        filas.sort((a: any, b: any) => String(a.variante).localeCompare(String(b.variante)));
+      }
       if (l.tipo === 'tallas') filas.sort((a: any, b: any) => (parseFloat(a.variante) || 0) - (parseFloat(b.variante) || 0) || String(a.variante).localeCompare(String(b.variante)));
       const sets = l.tipo === 'set' && l.piezas.length
         ? {
@@ -2294,23 +2308,32 @@ async function getInventario(params: Record<string, any>): Promise<Record<string
           libres: Math.min(...l.piezas.map((p) => Math.floor((filas.find((f: any) => f.variante === p.nombre)?.libres ?? 0) / p.cantidad))),
         }
         : null;
-      return { id: l.id, nombre: l.nombre, tipo: l.tipo, icono: l.icono, unidad: l.unidad, sistema: l.sistema, piezas: l.piezas, stock: filas, sets };
+            return { id: l.id, nombre: l.nombre, tipo: l.tipo, icono: l.icono, unidad: l.unidad, sistema: l.sistema, piezas: l.piezas, stock: filas, sets, seccion: l.seccion ?? 'equipamiento', activa: l.activa !== false };
     }),
     prestamos: visibles.map((p: any) => {
       const l = p.lista_id ? porId[p.lista_id] : undefined;
-      const temporal = !p.permanente && (p.tipo !== 'uso' || p.entrega === 'casa');
+            const temporal = !p.permanente && p.plazo !== 'dia' && (p.tipo !== 'uso' || p.entrega === 'casa');
       return {
         id: p.id, nombre: p.username, nombreMostrar: pe[p.username]?.nombre_derby || p.username, foto: pe[p.username]?.foto_perfil || '',
         listaId: p.lista_id, lista: l?.nombre ?? '', icono: l?.icono ?? null, texto: _textoPrestamo(p, l),
         variante: p.variante ?? '', cantidad: Number(p.cantidad) || 1, piezas: p.piezas ?? [],
         estado: p.estado, desde: p.desde, dias: Math.floor((ahora - new Date(p.desde).getTime()) / 86400000),
-        permanente: !!p.permanente, tipo: p.tipo ?? 'salida', hasta: p.hasta, entrega: p.entrega, motivo: p.motivo ?? '',
-        preguntar: esPivot && p.estado === 'activo' && temporal && (ahora - new Date(p.aviso_7d_en ?? p.desde).getTime()) >= 7 * 86400000,
-        preguntarme: p.username === yo && p.estado === 'activo' && temporal && (ahora - new Date(p.aviso_persona_en ?? p.desde).getTime()) >= 7 * 86400000,
+                permanente: !!p.permanente, tipo: p.tipo ?? 'salida', hasta: p.hasta, entrega: p.entrega, motivo: p.motivo ?? '',
+        plazo: p.plazo ?? (p.permanente ? null : p.hasta ? 'fecha' : 'indefinido'), recordarCada: p.recordar_cada_dias ?? 7,
+                preguntar: esPivot && p.estado === 'activo' && temporal && _tocaPreguntar(p, p.aviso_7d_en),
+        preguntarme: p.username === yo && p.estado === 'activo' && temporal && _tocaPreguntar(p, p.aviso_persona_en),
         mio: p.username === yo,
       };
     }),
   };
+}
+
+/** ¿Toca preguntar si aún lo tiene? Con fecha: desde que vence. Si no, cada N días. */
+function _tocaPreguntar(p: any, ultimoAviso: string | null): boolean {
+  const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  if (p.plazo === 'fecha') return !!p.hasta && p.hasta <= hoy;
+  const cada = Math.max(1, Number(p.recordar_cada_dias) || 7) * 86400000;
+  return Date.now() - new Date(ultimoAviso ?? p.desde).getTime() >= cada;
 }
 
 function _textoArticulo(articulo: string, detalle: string): string {
@@ -2331,9 +2354,9 @@ async function _filaPrestamo(params: Record<string, any>): Promise<{ fila?: Reco
     lista_id: l.id, cantidad, articulo: l.sistema ?? 'otro', permanente: params.permanente === true || params.permanente === 'true',
     motivo: String(params.motivo ?? '').trim().slice(0, 120) || null,
   };
-  if (l.tipo === 'tallas') {
+    if (l.tipo === 'tallas' || l.tipo === 'insumo') {
     fila.variante = String(params.variante ?? '').trim();
-    if (!fila.variante) return { error: 'Elige la talla.' };
+    if (!fila.variante) return { error: l.tipo === 'tallas' ? 'Elige la talla.' : 'Elige qué.' };
   } else if (l.tipo === 'set') {
     const lista = (Array.isArray(piezas) ? piezas : []).map((x: any) => ({ nombre: String(x.nombre), cantidad: Math.max(0, Number(x.cantidad) || 0) }))
       .filter((x: any) => x.cantidad > 0 && l.piezas.some((p) => p.nombre === x.nombre));
@@ -2351,13 +2374,17 @@ async function pedirPrestamo(params: Record<string, any>): Promise<Record<string
   if (!yo) return { exito: false, error: 'Sesión inválida.' };
   const r = await _filaPrestamo(params);
   if (r.error) return { exito: false, error: r.error };
-  const tipo = params.tipo === 'uso' ? 'uso' : 'salida';
+    const tipo = params.tipo === 'uso' ? 'uso' : 'salida';
+  // Reglas de préstamo del equipo de la persona.
+  const regla = tipo === 'uso' ? await _reglaPrestamoPara(yo, r.lista!.id) : { presta: 'excepcional', id: null };
+  if (regla.presta === 'no') return { exito: false, error: 'Por ahora tu equipo no presta este equipamiento. Si lo necesitas, habla con un Pivot.' };
   const { data: nuevo, error } = await supabase.from('inventario_prestamos')
     .insert({ ...r.fila, username: yo, estado: 'pendiente', pedido_por: 'persona', tipo, permanente: tipo === 'uso' ? false : r.fila!.permanente }).select('id').maybeSingle();
   if (error) return { exito: false, error: 'No se pudo enviar.' };
-  const pivot = await _pedidoDePivot(yo);
-  if (pivot.auto && nuevo?.id) {
-    await adminPrestamo({ adminToken: _TOKEN_INTERNO, accion: 'aprobar', id: nuevo.id, meses: 1, entrega: 'casa' });
+    const pivot = await _pedidoDePivot(yo);
+  // 'si' = se presta: se aprueba solo para el día (un Pivot puede editarlo).
+  if ((pivot.auto || (tipo === 'uso' && regla.presta === 'si')) && nuevo?.id) {
+    await adminPrestamo({ adminToken: _TOKEN_INTERNO, accion: 'aprobar', id: nuevo.id, plazo: 'dia', entrega: 'pivot' });
     return { exito: true, aprobada: true };
   }
   const { data: f } = await supabase.from('equipo').select('nombre_derby').eq('username', yo).maybeSingle();
@@ -2391,12 +2418,12 @@ async function adminPrestamo(params: Record<string, any>): Promise<Record<string
   let cambios: Record<string, any> = {};
   if (accion === 'aprobar' && p.estado === 'pendiente') {
     cambios = { estado: 'activo', aprobado_por: email, desde: ahora };
-    if (p.tipo === 'uso') {
-      const meses = Math.max(1, Math.min(12, Number(params.meses) || 1));
-      const h = new Date(); h.setUTCMonth(h.getUTCMonth() + meses);
-      cambios.hasta = h.toISOString().slice(0, 10);
-      cambios.entrega = params.entrega === 'pivot' ? 'pivot' : 'casa';
-    }
+        Object.assign(cambios, _plazoPrestamo(params, p.tipo === 'uso'));
+  } else if (accion === 'editar' && p.estado === 'activo') {
+    // Un Pivot cambia el plazo o la entrega de un préstamo ya aprobado y se
+    // le avisa a la persona (Victor, 2026-11-13).
+    cambios = _plazoPrestamo(params, p.tipo === 'uso');
+    cambios.aviso_7d_en = null; cambios.aviso_persona_en = null;
   } else if (accion === 'rechazar' && p.estado === 'pendiente') cambios = { estado: 'rechazado', aprobado_por: email };
   else if (accion === 'devolver' && p.estado === 'activo') cambios = { estado: 'devuelto', devuelto_en: ahora };
   else if (accion === 'sigue' && p.estado === 'activo') cambios = { aviso_7d_en: ahora };
@@ -2404,16 +2431,116 @@ async function adminPrestamo(params: Record<string, any>): Promise<Record<string
   if (!Object.keys(cambios).length) return { exito: false, error: 'Acción inválida.' };
   const { error } = await supabase.from('inventario_prestamos').update(cambios).eq('id', p.id);
   if (error) return { exito: false, error: 'No se pudo guardar.' };
-  if (p.tipo === 'uso' && (accion === 'aprobar' || accion === 'rechazar') && email !== _EMAIL_SISTEMA) {
-    await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' },
-      contents: { es: accion === 'aprobar'
-        ? `Puedes usar ${p.detalle ?? 'el equipamiento'} hasta el ${cambios.hasta}${cambios.entrega === 'pivot' ? '; un Pivot lo llevará a cada entrenamiento' : ''}. Mientras tanto no cambia tu Categoría/Equipo por usarlo.`
-        : `Tu pedido de ${p.detalle ?? 'equipamiento'} no se aprobó. Si tienes dudas, habla con un Pivot.` },
-      url: APP_URL + '/',
-    });
+    if ((accion === 'aprobar' || accion === 'rechazar' || accion === 'editar') && email !== _EMAIL_SISTEMA) {
+    const que = p.detalle ?? 'el equipamiento';
+    const texto = accion === 'rechazar'
+      ? `Tu pedido de ${que} no se aprobó. Si tienes dudas, habla con un Pivot.`
+      : `${accion === 'editar' ? 'Un Pivot cambió tu préstamo: ' : ''}${_textoPlazo(cambios, que)}`;
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' }, contents: { es: texto }, url: APP_URL + '/' });
   }
   return { exito: true };
+}
+
+/** Plazo de un préstamo (Victor, 2026-11-13): 'dia' (mismo día, sin avisos:
+ * el Pivot lo lleva y se lo vuelve a llevar), 'fecha' (hasta una fecha; ese
+ * día se avisa a la persona y a los Pivots) o 'indefinido' (aviso cada N días). */
+function _plazoPrestamo(params: Record<string, any>, esUso: boolean): Record<string, any> {
+  const plazo = ['dia', 'fecha', 'indefinido'].includes(String(params.plazo)) ? String(params.plazo) : (esUso ? 'dia' : 'indefinido');
+  const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  const hasta = plazo === 'dia' ? hoy : plazo === 'fecha' && /^\d{4}-\d{2}-\d{2}$/.test(String(params.hasta ?? '')) ? String(params.hasta) : null;
+  return {
+    plazo,
+    hasta: plazo === 'fecha' && !hasta ? hoy : hasta,
+    recordar_cada_dias: plazo === 'indefinido' ? Math.max(1, Math.min(90, Number(params.recordarCada) || 7)) : null,
+    entrega: params.entrega === 'pivot' ? 'pivot' : (params.entrega === 'casa' || esUso ? 'casa' : null),
+    permanente: false,
+  };
+}
+
+function _textoPlazo(c: Record<string, any>, que: string): string {
+  const casa = c.entrega === 'pivot' ? ' Un Pivot lo lleva a cada entrenamiento.' : '';
+  if (c.plazo === 'dia') return `Puedes usar ${que} hoy.${casa}`;
+  if (c.plazo === 'fecha') return `Puedes usar ${que} hasta el ${c.hasta}.${casa} Ese día te lo recordamos.`;
+  return `Puedes usar ${que} sin fecha de fin; te preguntaremos cada ${c.recordar_cada_dias} días si aún lo tienes.${casa}`;
+}
+
+// ─── Reglas de préstamo por equipo (Victor, 2026-11-13) ──────────────────
+// Como la asistencia anticipada: por fechas o indefinidas, y la más
+// específica gana (un equipo puntual > todos; con fechas > indefinida; más
+// nueva > más vieja). 'si' = se presta (el pedido se aprueba solo, para el
+// día), 'excepcional' = solo en casos excepcionales (lo aprueba un Pivot),
+// 'no' = no se presta. Sin reglas: 'excepcional'.
+async function _reglaPrestamoPara(username: string, listaId?: string | null): Promise<{ presta: string; id: string | null }> {
+  const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  const [{ data: reglas }, { data: fila }] = await Promise.all([
+    supabase.from('inventario_reglas').select('*').eq('activa', true),
+    supabase.from('equipo').select('categoria').eq('username', username).maybeSingle(),
+  ]);
+  const equipo = fila?.categoria ?? null;
+  const vale = (r: any) => (!r.equipo || r.equipo === equipo) && (!r.lista_id || !listaId || r.lista_id === listaId)
+    && (!r.desde || r.desde <= hoy) && (!r.hasta || r.hasta >= hoy);
+  const peso = (r: any) => (r.equipo ? 4 : 0) + (r.lista_id ? 2 : 0) + (r.desde || r.hasta ? 1 : 0);
+  const l = (reglas ?? []).filter(vale).sort((a: any, b: any) => peso(b) - peso(a) || String(b.created_at).localeCompare(String(a.created_at)));
+  return l.length ? { presta: l[0].presta, id: l[0].id } : { presta: 'excepcional', id: null };
+}
+
+async function getReglasPrestamo(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const { data } = await supabase.from('inventario_reglas').select('*').order('created_at', { ascending: false });
+  return { exito: true, reglas: data ?? [] };
+}
+
+async function adminReglaPrestamo(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const accion = String(params.accion ?? '');
+  const fecha = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? String(v) : null;
+  if (accion === 'borrar') {
+    await supabase.from('inventario_reglas').delete().eq('id', params.id);
+    return { exito: true };
+  }
+  const fila: Record<string, any> = {
+    equipo: String(params.equipo ?? '').trim() || null,
+    presta: ['si', 'excepcional', 'no'].includes(String(params.presta)) ? String(params.presta) : 'excepcional',
+    lista_id: String(params.listaId ?? '').trim() || null,
+    desde: fecha(params.desde), hasta: fecha(params.hasta),
+    activa: params.activa === false || params.activa === 'false' ? false : true,
+    nota: String(params.nota ?? '').trim().slice(0, 200) || null,
+  };
+  if (fila.desde && fila.hasta && fila.hasta < fila.desde) return { exito: false, error: 'La fecha final es antes que la inicial.' };
+  if (accion === 'crear') {
+    const { error } = await supabase.from('inventario_reglas').insert({ ...fila, creada_por: email });
+    return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true };
+  }
+  if (accion === 'editar') {
+    const { error } = await supabase.from('inventario_reglas').update(fila).eq('id', params.id);
+    return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true };
+  }
+  return { exito: false, error: 'Acción inválida.' };
+}
+
+// Registrar lo que se usó del botiquín o de los insumos: descuenta y, si
+// queda por debajo del mínimo, avisa a los Pivots para reponer.
+async function registrarUsoInventario(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  const pivot = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!yo && !pivot) return { exito: false, error: 'Inicia sesión.' };
+  const listaId = String(params.listaId ?? ''), variante = String(params.variante ?? '');
+  const cantidad = Math.max(1, Math.min(999, Number(params.cantidad) || 1));
+  const { data: f } = await supabase.from('inventario_stock').select('id, cantidad, minimo').eq('lista_id', listaId).eq('variante', variante).maybeSingle();
+  if (!f) return { exito: false, error: 'No encontramos eso en el inventario.' };
+  const queda = Math.max(0, (Number(f.cantidad) || 0) - cantidad);
+  await supabase.from('inventario_stock').update({ cantidad: queda }).eq('id', f.id);
+  await supabase.from('inventario_usos').insert({ lista_id: listaId, variante, cantidad, username: yo ?? null, nota: String(params.nota ?? '').slice(0, 200) || null });
+  const { data: l } = await supabase.from('inventario_listas').select('nombre').eq('id', listaId).maybeSingle();
+  if (f.minimo != null && queda <= Number(f.minimo)) {
+    await sendPush({
+      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(), headings: { es: `Reponer: ${variante}` },
+      contents: { es: `En ${l?.nombre ?? 'el inventario'} quedan ${queda} de ${variante} (mínimo ${f.minimo}).` }, url: APP_URL + '/',
+    });
+  }
+  await _sincronizarSistema(listaId);
+  return { exito: true, queda };
 }
 
 // La persona responde al recordatorio: "Ya lo devolví" o "Aún no" (7 días más).
@@ -2448,7 +2575,11 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
     .filter((p: any) => p.nombre).slice(0, 12);
   const guardarStock = async (listaId: string) => {
     if (!Array.isArray(stock)) return;
-    const filas = stock.map((x: any) => ({ lista_id: listaId, variante: String(x.variante ?? '').trim().slice(0, 30), cantidad: Math.max(0, Math.min(100000, Number(x.cantidad) || 0)) }));
+        const fecha = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? String(v) : null;
+    const filas = stock.map((x: any) => ({
+      lista_id: listaId, variante: String(x.variante ?? '').trim().slice(0, 60), cantidad: Math.max(0, Math.min(100000, Number(x.cantidad) || 0)),
+      vence: fecha(x.vence), minimo: x.minimo == null || x.minimo === '' ? null : Math.max(0, Number(x.minimo) || 0),
+    }));
     const vistas = new Set<string>();
     for (const f of filas) { if (vistas.has(f.variante)) return; vistas.add(f.variante); }
     await supabase.from('inventario_stock').delete().eq('lista_id', listaId);
@@ -2463,8 +2594,9 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
     const pz = limpiarPiezas(piezas);
     if (tipo === 'set' && !pz.length) return { exito: false, error: 'Agrega al menos una pieza.' };
     const { data: max } = await supabase.from('inventario_listas').select('orden').order('orden', { ascending: false }).limit(1).maybeSingle();
+        const seccion = ['equipamiento', 'entrenamiento', 'botiquin', 'miscelaneo'].includes(String(params.seccion)) ? String(params.seccion) : 'equipamiento';
     const { data, error } = await supabase.from('inventario_listas').insert({
-      nombre, tipo, icono: String(params.icono ?? '').slice(0, 30) || null, piezas: pz, unidad: String(params.unidad ?? '').trim().slice(0, 20) || null, orden: (Number(max?.orden) || 0) + 1,
+      nombre, tipo, icono: String(params.icono ?? '').slice(0, 30) || null, piezas: pz, unidad: String(params.unidad ?? '').trim().slice(0, 20) || null, orden: (Number(max?.orden) || 0) + 1, seccion,
     }).select('id').single();
     if (error) return { exito: false, error: 'No se pudo crear.' };
     await guardarStock(data.id);
@@ -2477,7 +2609,9 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
     const cambios: Record<string, any> = {};
     if (params.nombre != null) { const n = String(params.nombre).trim().slice(0, 40); if (!n) return { exito: false, error: 'Ponle un nombre.' }; cambios.nombre = n; }
     if (params.icono != null) cambios.icono = String(params.icono).slice(0, 30) || null;
-    if (params.unidad != null) cambios.unidad = String(params.unidad).trim().slice(0, 20) || null;
+        if (params.unidad != null) cambios.unidad = String(params.unidad).trim().slice(0, 20) || null;
+    // Interruptor de la tarjeta: ocultar o mostrar la lista (no borra nada).
+    if (params.activa != null) cambios.activa = !(params.activa === false || params.activa === 'false');
     if (piezas != null && l.tipo === 'set') { const pz = limpiarPiezas(piezas); if (!pz.length) return { exito: false, error: 'Agrega al menos una pieza.' }; cambios.piezas = pz; }
     if (Object.keys(cambios).length) await supabase.from('inventario_listas').update(cambios).eq('id', id);
     await guardarStock(id);
@@ -2494,43 +2628,56 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
   return { exito: false, error: 'Acción inválida.' };
 }
 
-// Cron diario: préstamos temporales cada 7 días (aviso a Pivots y a la
-// persona) y pedidos de uso que terminaron.
+// Cron diario de préstamos (Victor, 2026-11-13: cuando se cumple un plazo se
+// avisa SIEMPRE a la persona y a los Pivots):
+// - plazo 'dia': al día siguiente se cierra solo (el Pivot lo llevó y se lo
+//   volvió a llevar), sin avisos.
+// - plazo 'fecha': el día que vence se avisa a ambos (una vez).
+// - 'indefinido' o sin plazo (temporal viejo): aviso a ambos cada N días.
+// - permanente: nunca.
+// Y el botiquín: vencidos o por vencer (30, 7 y 0 días) a los Pivots.
 async function _avisarPrestamosLargos(): Promise<void> {
-  const hoy = new Date().toISOString().slice(0, 10);
-  // Pedidos de uso vencidos: si se lo llevó, pasa a préstamo normal; si lo traía un Pivot, se cierra.
-  const { data: vencidos } = await supabase.from('inventario_prestamos').select('id, username, entrega, detalle').eq('estado', 'activo').eq('tipo', 'uso').lt('hasta', hoy);
-  for (const v of vencidos ?? []) {
-    await supabase.from('inventario_prestamos').update(v.entrega === 'pivot' ? { estado: 'devuelto', devuelto_en: new Date().toISOString() } : { tipo: 'salida', aviso_persona_en: null, aviso_7d_en: null }).eq('id', v.id);
-    await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: [v.username], headings: { es: 'Equipamiento del equipo' },
-      contents: { es: v.entrega === 'pivot' ? `Terminó el tiempo para usar ${v.detalle ?? 'el equipamiento'} del equipo.` : `Terminó el tiempo para usar ${v.detalle ?? 'el equipamiento'}. Cuando puedas, devuélvelo a un Pivot.` },
-      url: APP_URL + '/',
-    });
+  const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+  const ahora = new Date().toISOString();
+  const { data: activos } = await supabase.from('inventario_prestamos')
+    .select('id, username, detalle, desde, aviso_7d_en, aviso_persona_en, tipo, entrega, plazo, hasta, permanente, recordar_cada_dias')
+    .eq('estado', 'activo').eq('permanente', false);
+  const usuarios = [...new Set((activos ?? []).map((p: any) => p.username))];
+  const { data: per } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby').in('username', usuarios) : { data: [] as any[] };
+  const nom: Record<string, string> = {}; (per ?? []).forEach((p: any) => { nom[p.username] = p.nombre_derby || p.username; });
+  const pivots = await _adminDestinatariosPush();
+  const avisar = async (p: any, persona: string, aPivots: string) => {
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' }, contents: { es: persona }, url: APP_URL + '/' });
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Equipamiento del equipo' }, contents: { es: aPivots }, url: APP_URL + '/' });
+  };
+  for (const p of activos ?? []) {
+    const quien = nom[p.username] ?? p.username, que = p.detalle ?? 'el equipamiento del equipo';
+    const plazo = p.plazo ?? (p.tipo === 'uso' && p.hasta ? 'fecha' : 'indefinido');
+    if (plazo === 'dia') {
+      if (p.hasta && p.hasta < hoy) await supabase.from('inventario_prestamos').update({ estado: 'devuelto', devuelto_en: ahora }).eq('id', p.id);
+      continue;
+    }
+    if (plazo === 'fecha') {
+      if (p.hasta && p.hasta <= hoy && (!p.aviso_7d_en || String(p.aviso_7d_en).slice(0, 10) < p.hasta)) {
+        await avisar(p, `Hoy vence el plazo de ${que}. Devuélvelo a un Pivot o pídele más tiempo.`, `Hoy vence el plazo de ${quien} para ${que}.`);
+        await supabase.from('inventario_prestamos').update({ aviso_7d_en: ahora, aviso_persona_en: ahora }).eq('id', p.id);
+      }
+      continue;
+    }
+    const cada = Math.max(1, Number(p.recordar_cada_dias) || 7) * 86400000;
+    const ultimo = new Date(p.aviso_7d_en ?? p.desde).getTime();
+    if (Date.now() - ultimo >= cada) {
+      await avisar(p, `¿Aún tienes ${que}? Respóndelo en Equipo → Inventario.`, `¿${quien} aún tiene ${que}? Revísalo en Equipo → Inventario.`);
+      await supabase.from('inventario_prestamos').update({ aviso_7d_en: ahora, aviso_persona_en: ahora }).eq('id', p.id);
+    }
   }
-  const limite = new Date(Date.now() - 7 * 86400000).toISOString();
-  const { data } = await supabase.from('inventario_prestamos').select('id, username, detalle, desde, aviso_7d_en, aviso_persona_en, tipo, entrega')
-    .eq('estado', 'activo').eq('permanente', false).lte('desde', limite);
-  const temporales = (data ?? []).filter((p: any) => p.tipo !== 'uso' || p.entrega === 'casa');
-  const aPivots = temporales.filter((p: any) => p.tipo !== 'uso' && (!p.aviso_7d_en || p.aviso_7d_en <= limite));
-  const aPersonas = temporales.filter((p: any) => p.tipo !== 'uso' && (!p.aviso_persona_en || p.aviso_persona_en <= limite));
-  if (aPivots.length) {
-    const usuarios = [...new Set(aPivots.map((p: any) => p.username))];
-    const { data: per } = await supabase.from('equipo').select('username, nombre_derby').in('username', usuarios);
-    const nom: Record<string, string> = {}; (per ?? []).forEach((p: any) => { nom[p.username] = p.nombre_derby || p.username; });
-    const texto = aPivots.length === 1
-      ? `¿${nom[aPivots[0].username] ?? aPivots[0].username} aún tiene ${aPivots[0].detalle ?? 'el equipamiento'}? Ya pasaron 7 días.`
-      : `${aPivots.length} préstamos de equipamiento llevan más de 7 días. Revisa en Equipo → Inventario.`;
-    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(), headings: { es: 'Equipamiento del equipo' }, contents: { es: texto }, url: APP_URL + '/' });
-    await supabase.from('inventario_prestamos').update({ aviso_7d_en: new Date().toISOString() }).in('id', aPivots.map((p: any) => p.id));
+  // Botiquín: vence en 30 o 7 días, o vence hoy.
+  const fechas = [0, 7, 30].map((d) => new Date(Date.parse(hoy) + d * 86400000).toISOString().slice(0, 10));
+  const { data: venc } = await supabase.from('inventario_stock').select('variante, vence, lista_id').in('vence', fechas);
+  if (venc?.length) {
+    const txt = venc.map((v: any) => `${v.variante} (${v.vence === hoy ? 'vence hoy' : 'vence el ' + v.vence})`).join(', ');
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Botiquín: vencimientos' }, contents: { es: txt }, url: APP_URL + '/' });
   }
-  for (const p of aPersonas) {
-    await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' },
-      contents: { es: `¿Ya devolviste ${p.detalle ?? 'el equipamiento del equipo'}? Respóndelo en Equipo → Inventario.` }, url: APP_URL + '/',
-    });
-  }
-  if (aPersonas.length) await supabase.from('inventario_prestamos').update({ aviso_persona_en: new Date().toISOString() }).in('id', aPersonas.map((p: any) => p.id));
 }
 
 // ─── Comunidad (Victor, 2026-11-08 / etapa 3): redes y grupos de la liga ──
@@ -8250,7 +8397,10 @@ Deno.serve(async (req: Request) => {
       case 'pedirPrestamo':                   return json(await pedirPrestamo(params));
       case 'adminPrestamo':                   return json(await adminPrestamo(params));
       case 'responderPrestamo':               return json(await responderPrestamo(params));
-      case 'adminInventarioLista':            return json(await adminInventarioLista(params));
+            case 'adminInventarioLista':            return json(await adminInventarioLista(params));
+      case 'getReglasPrestamo':               return json(await getReglasPrestamo(params));
+      case 'adminReglaPrestamo':              return json(await adminReglaPrestamo(params));
+      case 'registrarUsoInventario':          return json(await registrarUsoInventario(params));
       case 'getComunidad':                    return json(await getComunidad(params));
       case 'adminGuardarComunidad':           return json(await adminGuardarComunidad(params));
       case 'getRolesEquipo':                  return json(await getRolesEquipo());

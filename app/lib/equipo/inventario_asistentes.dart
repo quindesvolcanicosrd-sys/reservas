@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api.dart';
 import '../core/asistente.dart';
+import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
 import 'equipo_modelos.dart';
@@ -37,59 +38,190 @@ class Contador extends StatelessWidget {
   }
 }
 
-// ─── Nueva lista de equipamiento ─────────────────────────────────────────
+// ─── Nueva lista de inventario ───────────────────────────────────────────
 
-enum _PasoLista { tipo, nombre, detalle }
+enum _PasoLista { seccion, tipo, nombre, detalle }
 
-/// Crear una lista (Victor, 2026-11-13): 100 % personalizable para cualquier
-/// deporte. Con tallas, sets de piezas, unidades o insumos.
+/// Un renglón del botiquín o de insumos mientras se edita.
+class RenglonInventario {
+  RenglonInventario({this.nombre = '', this.cantidad = 1, this.vence, this.minimo});
+  String nombre;
+  int cantidad;
+  DateTime? vence;
+  int? minimo;
+
+  Map<String, Object?> get json => {
+    'variante': nombre.trim(),
+    'cantidad': cantidad,
+    'vence': vence == null ? null : '${vence!.year}-${vence!.month.toString().padLeft(2, '0')}-${vence!.day.toString().padLeft(2, '0')}',
+    'minimo': minimo,
+  };
+}
+
+/// Editor de renglones: nombre, cantidad y, en el botiquín, vencimiento y
+/// mínimo para reponer.
+class EditorRenglones extends StatelessWidget {
+  const EditorRenglones({super.key, required this.renglones, required this.botiquin, required this.alCambiar});
+  final List<RenglonInventario> renglones;
+  final bool botiquin;
+  final VoidCallback alCambiar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final (i, r) in renglones.indexed)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+            decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: r.nombre,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(hintText: botiquin ? 'Ej. Gasas' : 'Ej. Conos', isDense: true),
+                        onChanged: (v) {
+                          r.nombre = v;
+                          alCambiar();
+                        },
+                      ),
+                    ),
+                    Contador(
+                      valor: r.cantidad,
+                      max: 9999,
+                      alCambiar: (v) {
+                        r.cantidad = v;
+                        alCambiar();
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Quitar',
+                      onPressed: () {
+                        renglones.removeAt(i);
+                        alCambiar();
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                if (botiquin)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.event_outlined, size: 18),
+                        label: Text(r.vence == null ? 'Sin vencimiento' : 'Vence ${Fechas.corta(r.vence!)}'),
+                        onPressed: () async {
+                          final hoy = Fechas.hoy();
+                          final f = await showDatePicker(
+                            context: context,
+                            initialDate: r.vence ?? DateTime(hoy.year + 1, hoy.month, hoy.day),
+                            firstDate: DateTime(hoy.year - 1),
+                            lastDate: DateTime(hoy.year + 10),
+                          );
+                          if (f != null) {
+                            r.vence = f;
+                            alCambiar();
+                          }
+                        },
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.low_priority_rounded, size: 18),
+                        label: Text(r.minimo == null ? 'Sin mínimo' : 'Avisar con ${r.minimo} o menos'),
+                        onPressed: () {
+                          r.minimo = r.minimo == null ? 1 : (r.minimo! >= 10 ? null : r.minimo! + 1);
+                          alCambiar();
+                        },
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        TextButton.icon(
+          onPressed: () {
+            renglones.add(RenglonInventario());
+            alCambiar();
+          },
+          icon: const Icon(Icons.add_rounded),
+          label: Text(botiquin ? 'Agregar al botiquín' : 'Agregar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Crear una lista (Victor, 2026-11-13): primero la sección (equipamiento
+/// deportivo, insumos de entrenamiento, botiquín o misceláneos); el
+/// equipamiento se cuenta por tallas o por sets completos y lo demás por
+/// renglones (en el botiquín, con vencimiento y mínimo para reponer).
 class NuevaListaAsistente extends StatefulWidget {
-  const NuevaListaAsistente({super.key, required this.repo});
+  const NuevaListaAsistente({super.key, required this.repo, this.seccion});
   final InventarioRepo repo;
+  final String? seccion;
 
   @override
   State<NuevaListaAsistente> createState() => _NuevaListaAsistenteState();
 }
 
 class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
-  _PasoLista _paso = _PasoLista.tipo;
+  late String? _seccion = widget.seccion;
+  late _PasoLista _paso = widget.seccion == null ? _PasoLista.seccion : (widget.seccion == 'equipamiento' ? _PasoLista.tipo : _PasoLista.nombre);
   bool _adelante = true, _ocupado = false;
   String? _tipo;
   final _nombre = TextEditingController();
-  final _unidad = TextEditingController();
-  String _icono = 'otro';
+  late String _icono = _seccion == 'botiquin' ? 'botiquin' : 'otro';
   final _tallas = <(String, int)>[];
   final _piezas = <Pieza>[Pieza('', 1)];
-  int _sets = 1, _cantidad = 1;
+  final _renglones = <RenglonInventario>[RenglonInventario()];
+  int _sets = 1;
+
+  bool get _equipamiento => _seccion == 'equipamiento';
 
   @override
   void dispose() {
     _nombre.dispose();
-    _unidad.dispose();
     super.dispose();
   }
 
+  List<_PasoLista> get _pasos => [if (widget.seccion == null) _PasoLista.seccion, if (_equipamiento) _PasoLista.tipo, _PasoLista.nombre, _PasoLista.detalle];
+
   void _ir(int d) {
-    final i = _paso.index + d;
+    final l = _pasos;
+    final i = l.indexOf(_paso) + d;
     if (i < 0) {
       Navigator.of(context).pop();
       return;
     }
-    if (i >= _PasoLista.values.length) return;
+    if (i >= l.length) return;
     setState(() {
       _adelante = d > 0;
-      _paso = _PasoLista.values[i];
+      _paso = l[i];
+    });
+  }
+
+  void _elegirYSeguir(VoidCallback c) {
+    setState(c);
+    Future.delayed(const Duration(milliseconds: 180), () {
+      if (mounted) _ir(1);
     });
   }
 
   bool get _valido => switch (_paso) {
+    _PasoLista.seccion => _seccion != null,
     _PasoLista.tipo => _tipo != null,
     _PasoLista.nombre => _nombre.text.trim().isNotEmpty,
-    _PasoLista.detalle => switch (_tipo) {
-      'tallas' => _tallas.isNotEmpty,
-      'set' => _piezas.any((p) => p.nombre.trim().isNotEmpty),
-      _ => true,
-    },
+    _PasoLista.detalle =>
+      _equipamiento
+          ? (_tipo == 'tallas' ? _tallas.isNotEmpty : _piezas.any((p) => p.nombre.trim().isNotEmpty))
+          : _renglones.any((r) => r.nombre.trim().isNotEmpty),
   };
 
   Future<void> _crear() async {
@@ -101,15 +233,17 @@ class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
     try {
       await widget.repo.crearLista(
         nombre: _nombre.text.trim(),
-        tipo: _tipo!,
+        tipo: _equipamiento ? _tipo! : 'insumo',
         icono: _icono,
-        unidad: _unidad.text.trim(),
+        seccion: _seccion!,
         piezas: piezas,
-        stock: switch (_tipo) {
-          'tallas' => _tallas,
-          'set' => [for (final p in piezas) (p.nombre, p.cantidad * _sets)],
-          _ => [('', _cantidad)],
-        },
+        stock: _equipamiento ? (_tipo == 'tallas' ? _tallas : [for (final p in piezas) (p.nombre, p.cantidad * _sets)]) : const [],
+        renglones: _equipamiento
+            ? null
+            : [
+                for (final r in _renglones)
+                  if (r.nombre.trim().isNotEmpty) r.json,
+              ],
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -121,52 +255,78 @@ class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
 
   @override
   Widget build(BuildContext context) {
+    final l = _pasos;
+    final ultimo = _paso == l.last;
     return Asistente(
-      titulo: 'Nueva lista de equipamiento',
-      indice: _paso.index,
-      total: _PasoLista.values.length,
+      titulo: 'Nueva lista',
+      indice: l.indexOf(_paso),
+      total: l.length,
       clavePaso: _paso,
       adelante: _adelante,
       alAtras: () => _ir(-1),
       tituloPaso: switch (_paso) {
+        _PasoLista.seccion => '¿Qué vas a registrar?',
         _PasoLista.tipo => '¿Cómo se cuenta?',
-        _PasoLista.nombre => '¿Cómo se llama?',
-        _PasoLista.detalle => switch (_tipo) {
-          'tallas' => '¿Qué tallas hay?',
-          'set' => '¿Qué trae cada set?',
-          'insumo' => '¿Cuánto hay?',
-          _ => '¿Cuántos hay?',
+        _PasoLista.nombre => '¿Cómo se llama la lista?',
+        _PasoLista.detalle => switch (_seccion) {
+          'equipamiento' => _tipo == 'tallas' ? '¿Qué tallas hay?' : '¿Qué trae cada set?',
+          'botiquin' => '¿Qué hay en el botiquín?',
+          _ => '¿Qué hay?',
         },
       },
       ayuda: switch (_paso) {
-        _PasoLista.tipo => 'Puedes crear tantas listas como necesite la liga, para cualquier deporte.',
-        _PasoLista.nombre => null,
+        _PasoLista.seccion => 'Puedes crear tantas listas como necesite la liga, para cualquier deporte.',
+        _PasoLista.detalle when _seccion == 'botiquin' => 'Pon la fecha de vencimiento y un mínimo para que la app avise qué reponer.',
         _PasoLista.detalle => 'Después puedes cambiar las cantidades desde Inventario.',
+        _ => null,
       },
       cuerpo: switch (_paso) {
-        _PasoLista.tipo => ListView(
+        _PasoLista.seccion => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            for (final e in ListaInventario.tipos.entries)
+            for (final e in seccionesInventario.entries)
               OpcionAsistente(
                 icono: e.value.$3,
                 titulo: e.value.$1,
                 texto: e.value.$2,
-                activa: _tipo == e.key,
-                alTocar: () {
-                  setState(() => _tipo = e.key);
-                  Future.delayed(const Duration(milliseconds: 180), () {
-                    if (mounted) _ir(1);
-                  });
-                },
+                activa: _seccion == e.key,
+                alTocar: () => _elegirYSeguir(() {
+                  _seccion = e.key;
+                  _icono = e.key == 'botiquin' ? 'botiquin' : (e.key == 'entrenamiento' ? 'conos' : 'otro');
+                }),
               ),
+          ],
+        ),
+        _PasoLista.tipo => ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            OpcionAsistente(
+              icono: Icons.straighten_rounded,
+              titulo: 'Con talla',
+              texto: 'Ej. patines: cuántos hay de cada talla.',
+              activa: _tipo == 'tallas',
+              alTocar: () => _elegirYSeguir(() {
+                _tipo = 'tallas';
+                _icono = 'patines';
+              }),
+            ),
+            OpcionAsistente(
+              icono: Icons.dashboard_customize_outlined,
+              titulo: 'Sets completos',
+              texto: 'Ej. protecciones: cada set trae casco, coderas, rodilleras…',
+              activa: _tipo == 'set',
+              alTocar: () => _elegirYSeguir(() {
+                _tipo = 'set';
+                _icono = 'protecciones';
+              }),
+            ),
           ],
         ),
         _PasoLista.nombre => _pasoNombre(context),
         _PasoLista.detalle => _pasoDetalle(context),
       },
-      textoBoton: _paso == _PasoLista.tipo ? (_tipo == null ? null : 'Siguiente') : (_paso == _PasoLista.detalle ? 'Crear lista' : 'Siguiente'),
-      alContinuar: !_valido ? null : (_paso == _PasoLista.detalle ? _crear : () => _ir(1)),
+      textoBoton: ultimo ? 'Crear lista' : 'Siguiente',
+      alContinuar: !_valido ? null : (ultimo ? _crear : () => _ir(1)),
       ocupado: _ocupado,
     );
   }
@@ -183,21 +343,14 @@ class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(
             labelText: 'Nombre',
-            hintText: switch (_tipo) {
-              'tallas' => 'Ej. Patines',
-              'set' => 'Ej. Protecciones',
-              'insumo' => 'Ej. Cinta',
-              _ => 'Ej. Conos',
+            hintText: switch (_seccion) {
+              'equipamiento' => _tipo == 'tallas' ? 'Ej. Patines' : 'Ej. Protecciones',
+              'botiquin' => 'Ej. Botiquín',
+              'entrenamiento' => 'Ej. Material de entrenamiento',
+              _ => 'Ej. Merch',
             },
           ),
         ),
-        if (_tipo == 'insumo') ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _unidad,
-            decoration: const InputDecoration(labelText: 'Se cuenta en (opcional)', hintText: 'Ej. rollos, botellas'),
-          ),
-        ],
         const SizedBox(height: 20),
         Text(
           'Ícono',
@@ -240,82 +393,181 @@ class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
 
   Widget _pasoDetalle(BuildContext context) {
     final p = context.pivot;
-    switch (_tipo) {
-      case 'tallas':
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final (i, t) in _tallas.indexed)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('Talla ${t.$1}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                trailing: Contador(valor: t.$2, alCambiar: (v) => setState(() => v == 0 ? _tallas.removeAt(i) : _tallas[i] = (t.$1, v))),
-              ),
-            TextButton.icon(onPressed: _agregarTalla, icon: const Icon(Icons.add_rounded), label: const Text('Agregar talla')),
-          ],
-        );
-      case 'set':
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final (i, pz) in _piezas.indexed)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: pz.nombre,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(hintText: i == 0 ? 'Ej. Casco' : 'Pieza', isDense: true),
-                        onChanged: (v) => setState(() => pz.nombre = v),
-                      ),
-                    ),
-                    Contador(valor: pz.cantidad, min: 1, max: 20, alCambiar: (v) => setState(() => pz.cantidad = v)),
-                    IconButton(
-                      tooltip: 'Quitar',
-                      onPressed: _piezas.length > 1 ? () => setState(() => _piezas.removeAt(i)) : null,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-              ),
-            TextButton.icon(
-              onPressed: () => setState(() => _piezas.add(Pieza('', 1))),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Agregar pieza'),
+    if (!_equipamiento) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [EditorRenglones(renglones: _renglones, botiquin: _seccion == 'botiquin', alCambiar: () => setState(() {}))],
+      );
+    }
+    if (_tipo == 'tallas') {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          for (final (i, t) in _tallas.indexed)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Talla ${t.$1}', style: const TextStyle(fontWeight: FontWeight.w600)),
+              trailing: Contador(valor: t.$2, alCambiar: (v) => setState(() => v == 0 ? _tallas.removeAt(i) : _tallas[i] = (t.$1, v))),
             ),
-            const SizedBox(height: 16),
-            Row(
+          TextButton.icon(onPressed: _agregarTalla, icon: const Icon(Icons.add_rounded), label: const Text('Agregar talla')),
+        ],
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final (i, pz) in _piezas.indexed)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '¿Cuántos sets completos hay?',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                  child: TextFormField(
+                    initialValue: pz.nombre,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(hintText: i == 0 ? 'Ej. Casco' : 'Pieza', isDense: true),
+                    onChanged: (v) => setState(() => pz.nombre = v),
                   ),
                 ),
-                Contador(valor: _sets, alCambiar: (v) => setState(() => _sets = v)),
+                Contador(valor: pz.cantidad, min: 1, max: 20, alCambiar: (v) => setState(() => pz.cantidad = v)),
+                IconButton(
+                  tooltip: 'Quitar',
+                  onPressed: _piezas.length > 1 ? () => setState(() => _piezas.removeAt(i)) : null,
+                  icon: const Icon(Icons.close_rounded),
+                ),
               ],
             ),
-          ],
-        );
-      default:
-        return ListView(
-          padding: const EdgeInsets.all(16),
+          ),
+        TextButton.icon(onPressed: () => setState(() => _piezas.add(Pieza('', 1))), icon: const Icon(Icons.add_rounded), label: const Text('Agregar pieza')),
+        const SizedBox(height: 16),
+        Row(
           children: [
-            Center(
-              child: Contador(valor: _cantidad, max: 100000, alCambiar: (v) => setState(() => _cantidad = v)),
+            Expanded(
+              child: Text(
+                '¿Cuántos sets completos hay?',
+                style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _tipo == 'insumo' && _unidad.text.trim().isNotEmpty ? _unidad.text.trim() : 'en total',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: p.textoSecundario),
-            ),
+            Contador(valor: _sets, alCambiar: (v) => setState(() => _sets = v)),
           ],
-        );
-    }
+        ),
+      ],
+    );
   }
+}
+
+// ─── Plazo de un préstamo ───────────────────────────────────────────────
+
+/// Hoja para elegir el plazo y la entrega al aprobar o editar un préstamo
+/// (Victor, 2026-11-13): el mismo día (sin avisos), hasta una fecha (ese día
+/// se avisa a ambos) o indefinido (aviso cada N días).
+Future<Map<String, Object?>?> elegirPlazoPrestamo(
+  BuildContext context, {
+  required String titulo,
+  String textoBoton = 'Aprobar',
+  String? plazo,
+  DateTime? hasta,
+  int recordarCada = 7,
+  String entrega = 'casa',
+}) {
+  var pl = plazo ?? 'dia';
+  var h = hasta ?? Fechas.hoy().add(const Duration(days: 7));
+  var cada = recordarCada;
+  var en = entrega;
+  String iso(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  return showModalBottomSheet<Map<String, Object?>>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (hoja) => StatefulBuilder(
+      builder: (hoja, refrescar) {
+        final p = hoja.pivot;
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(titulo, style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                for (final (v, t, d) in const [
+                  ('dia', 'Solo hoy', 'Un Pivot lo lleva y se lo vuelve a llevar. Sin avisos.'),
+                  ('fecha', 'Hasta una fecha', 'Ese día se avisa a la persona y a los Pivots.'),
+                  ('indefinido', 'Sin fecha de fin', 'Se pregunta cada tanto si aún lo tiene.'),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: OpcionAsistente(
+                      icono: v == 'dia' ? Icons.today_rounded : (v == 'fecha' ? Icons.event_rounded : Icons.all_inclusive_rounded),
+                      titulo: t,
+                      texto: d,
+                      activa: pl == v,
+                      alTocar: () => refrescar(() => pl = v),
+                    ),
+                  ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 200),
+                  alignment: Alignment.topCenter,
+                  child: switch (pl) {
+                    'fecha' => OutlinedButton.icon(
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text('Hasta el ${Fechas.corta(h)}'),
+                      onPressed: () async {
+                        final f = await showDatePicker(
+                          context: hoja,
+                          initialDate: h,
+                          firstDate: Fechas.hoy(),
+                          lastDate: Fechas.hoy().add(const Duration(days: 730)),
+                        );
+                        if (f != null) refrescar(() => h = f);
+                      },
+                    ),
+                    'indefinido' => Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Preguntar cada $cada días',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: p.texto),
+                          ),
+                        ),
+                        Contador(valor: cada, min: 1, max: 90, alCambiar: (v) => refrescar(() => cada = v)),
+                      ],
+                    ),
+                    _ => const SizedBox(width: double.infinity),
+                  },
+                ),
+                if (pl != 'dia') ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    '¿Cómo lo usa?',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                  ),
+                  RadioGroup<String>(
+                    groupValue: en,
+                    onChanged: (v) => refrescar(() => en = v ?? 'casa'),
+                    child: const Column(
+                      children: [
+                        RadioListTile(contentPadding: EdgeInsets.zero, value: 'casa', title: Text('Se lo lleva a su casa')),
+                        RadioListTile(contentPadding: EdgeInsets.zero, value: 'pivot', title: Text('Un Pivot lo trae a cada entrenamiento')),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () => Navigator.of(
+                    hoja,
+                  ).pop({'plazo': pl, if (pl == 'fecha') 'hasta': iso(h), if (pl == 'indefinido') 'recordarCada': cada, 'entrega': pl == 'dia' ? 'pivot' : en}),
+                  child: Text(textoBoton),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 // ─── Alguien tiene algo / Me llevé algo / Pedir equipamiento ───────────
@@ -374,7 +626,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
   /// En un pedido de uso solo se ofrecen las listas que se prestan para entrenar.
   List<ListaInventario> get _listas => [
     for (final l in widget.repo.listas)
-      if (modo != ModoPrestamo.uso || l.tipo == 'tallas' || l.tipo == 'set') l,
+      if (l.activa && (modo != ModoPrestamo.uso || l.seccion == 'equipamiento')) l,
   ];
 
   void _ir(int d) {
@@ -406,6 +658,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
           switch (_lista!.tipo) {
             'tallas' => _variante != null,
             'set' => _setCompleto || _piezas.isNotEmpty,
+            'insumo' => _variante != null && _cantidad > 0,
             _ => _cantidad > 0,
           },
     _PasoPrestamo.tiempo => _permanente != null,
@@ -660,6 +913,32 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
                         ),
                     ],
                   ),
+          ),
+        ],
+      );
+    }
+    if (l.porRenglones) {
+      // Botiquín o insumos: qué cosa y cuántas.
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final f in l.stock)
+                if (f.cantidad > 0)
+                  ChoiceChip(
+                    showCheckmark: false,
+                    label: Text('${f.variante} · ${f.libres}'),
+                    selected: _variante == f.variante,
+                    onSelected: (_) => setState(() => _variante = f.variante),
+                  ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Contador(valor: _cantidad, min: 1, max: 9999, alCambiar: (v) => setState(() => _cantidad = v)),
           ),
         ],
       );

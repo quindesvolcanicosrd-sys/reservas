@@ -14,6 +14,12 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 - Loaders: el Lottie (25 cuadros por segundo) ahora se dibuja a la frecuencia de la pantalla (`FrameRate.max`), en `RepaintBoundary`, un poco más rápido (2,2 s), más grande (92) y centrado en la pantalla, no en el espacio bajo la barra; aparece con un fundido ya en su lugar.
 - Excepciones vigentes: botón "Editar" (duración y efecto) además de "Cancelar"; se quitan solo los meses desde el actual y se avisa a la persona.
 - "Categoría/Equipo" pasa a "Equipo" y "Categorías/Equipos y puntos" a "Equipos y puntos".
+- **Inventario reorganizado:** secciones Equipamiento deportivo, Insumos de entrenamiento, Botiquín y Misceláneos; sin el texto "Lo libre es para…". El + abre botones encima (como Calendario, `core/menu_acciones.dart`): Pivots — Nueva lista, Alguien tiene algo del equipo, Reglas de préstamo; resto — Necesito equipamiento, Me llevé algo del equipo. Más íconos y más generales.
+- Cada lista tiene un interruptor (Pivots): al apagarla pide confirmación, se oculta para el equipo y no se borra nada.
+- "Tu equipamiento" arriba del Inventario (sale de Mi perfil). Con equipamiento propio: "Necesito equipamiento por un tiempo".
+- Botiquín e insumos: un renglón por cosa con cantidad, vencimiento y mínimo para reponer; "Se usó" descuenta y avisa a los Pivots si baja del mínimo. Avisos de vencimiento a 30, 7 y 0 días (`registrarUsoInventario`, tabla `inventario_usos`).
+- Reglas de préstamo por equipo (Se presta / Solo casos excepcionales / No se presta), con fechas o sin fin; gana la más específica. Sin regla: casos excepcionales. No se cobra aparte: la clase incluye el equipamiento (`inventario_reglas`, `getReglasPrestamo`, `adminReglaPrestamo`).
+- Plazos de préstamo: solo hoy (sin avisos, lo trae el Pivot), hasta una fecha (ese día se avisa a ambas partes) o indefinido (recordatorio cada N días a ambas partes). Un Pivot puede cambiar el plazo o la entrega después de aprobar ("Cambiar plazo o entrega") y se avisa a la persona. Migración `inventario_secciones_botiquin_reglas`.
 
 ## 2026-11-13 (tarde)
 - Comunidad: el campo del enlace ya no muestra el texto de ejemplo "Enlace del grupo o +593 99…".

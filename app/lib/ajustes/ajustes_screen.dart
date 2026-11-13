@@ -99,14 +99,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       valor: 'Tus excepciones y solicitudes',
                       alTocar: () => SubAjustes.abrir(context, ExcepcionesPanelScreen(sesion: sesion)),
                     ),
-                  // Junto a la cuota (Victor, 2026-11-08): sale de Mi perfil en Equipo.
-                  FilaAjuste(
-                    icono: Icons.content_paste_rounded,
-                    seccion: 'equipamiento',
-                    titulo: 'Mi equipamiento',
-                    valor: textoEquipamiento(sesion.datos),
-                    alTocar: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
-                  ),
+                  // Mi equipamiento se movió al Inventario (Victor, 2026-11-13).
                 ],
               ),
               if (conFicha)
