@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../ajustes/ajustes_screen.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
 import 'emergencia_screen.dart';
 import 'equipo_modelos.dart';
-import '../core/navegacion.dart';
-import 'desglose_screen.dart';
+import 'estadisticas.dart';
 import 'equipo_repo.dart';
 import '../core/cargando.dart';
 
@@ -89,27 +87,6 @@ class _Ficha extends StatelessWidget {
                     tag: 'avatar-${p.username}',
                     child: AvatarPersona(nombre: p.nombreMostrar, foto: p.foto, tamano: 104),
                   ),
-                  // Tu ficha: cámara arriba a la derecha para cambiar la foto (con encuadre).
-                  // Aparece después de que el avatar llega a su lugar (fundido + escala).
-                  if (yo)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: _AlLlegar(
-                        child: Material(
-                          color: pal.marca,
-                          shape: CircleBorder(side: BorderSide(color: pal.fondo, width: 3)),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => cambiarFoto(context, repo.sesion),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(Icons.photo_camera_rounded, size: 18, color: pal.sobreMarca),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -142,25 +119,12 @@ class _Ficha extends StatelessWidget {
                 Etiqueta(texto: p.categoria),
                 for (final r in p.roles) Etiqueta(texto: r),
                 if (estado != null) Etiqueta(texto: estado.texto),
-                if (yo) const Etiqueta(texto: 'Tú'),
               ],
             ),
             const SizedBox(height: 18),
             _acciones(context, pal, yo),
             const SizedBox(height: 18),
-            _Estadisticas(repo: repo, p: p),
-            // Mi perfil vive en tu ficha (como en la web): lo que ve el equipo.
-            // Tus datos se editan en Mi perfil (Victor, 2026-11-12).
-            if (yo && repo.sesion.datos.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Center(
-                child: FilledButton.tonalIcon(
-                  onPressed: () => Navegacion.ir.value = Pestana.perfil,
-                  icon: const Icon(Icons.edit_rounded),
-                  label: const Text('Editar mi perfil'),
-                ),
-              ),
-            ],
+            EstadisticasPersona(repo: repo, p: p),
             if (p.fechaIngreso != null) ...[
               const SizedBox(height: 4),
               Text(
@@ -199,205 +163,6 @@ class _Ficha extends StatelessWidget {
   }
 }
 
-/// Stats de la persona (Victor, 2026-11-07): arriba lo del año (asistencia
-/// y horas); abajo "Datos de noviembre ▾" con asistencia y puntos de ese mes.
-/// El mes se cambia desde el chevron y cada tarjeta abre su desglose.
-class _Estadisticas extends StatefulWidget {
-  const _Estadisticas({required this.repo, required this.p});
-  final EquipoRepo repo;
-  final Integrante p;
-
-  @override
-  State<_Estadisticas> createState() => _EstadisticasState();
-}
-
-class _EstadisticasState extends State<_Estadisticas> {
-  late DateTime _mes = DateTime(Fechas.hoy().year, Fechas.hoy().month);
-  late Future<Integrante?> _datos = widget.repo.enMes(widget.p.username, _mes);
-
-  EquipoRepo get repo => widget.repo;
-  bool get _esActual {
-    final h = Fechas.hoy();
-    return _mes.year == h.year && _mes.month == h.month;
-  }
-
-  @override
-  void didUpdateWidget(_Estadisticas old) {
-    super.didUpdateWidget(old);
-    // Al recargar la lista, el mes actual toma los datos nuevos.
-    if (_esActual && !identical(old.p, widget.p)) _datos = Future.value(widget.p);
-  }
-
-  String get _nombreMes {
-    final h = Fechas.hoy();
-    return _mes.year == h.year ? Fechas.mesNombre(_mes).toLowerCase() : Fechas.mesAnio(_mes).toLowerCase();
-  }
-
-  Future<void> _elegirMes() async {
-    final h = Fechas.hoy();
-    final meses = [for (var i = 0; i < 12; i++) DateTime(h.year, h.month - i)];
-    final m = await showModalBottomSheet<DateTime>(
-      context: context,
-      showDragHandle: true,
-      builder: (c) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Ver datos de', style: Theme.of(c).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-            ),
-            for (final x in meses)
-              ListTile(
-                title: Text(x.year == h.year ? Fechas.mesNombre(x) : Fechas.mesAnio(x)),
-                trailing: x == _mes ? Icon(Icons.check_rounded, color: c.pivot.marcaTexto) : null,
-                onTap: () => Navigator.of(c).pop(x),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (m == null || m == _mes || !mounted) return;
-    setState(() {
-      _mes = m;
-      _datos = repo.enMes(widget.p.username, m);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pal = context.pivot;
-    final p = widget.p;
-    final anioPct = p.eventosAnio == 0 ? null : (p.asistenciasAnio * 100 / p.eventosAnio).round();
-    final delAnio = [
-      if ((anioPct ?? 0) > 0) _Stat(valor: '$anioPct%', etiqueta: 'Asistencia'),
-      if (p.horasAnio > 0) _Stat(valor: numero(p.horasAnio), etiqueta: 'Horas patinadas'),
-    ];
-    // Cada bloque en su caja (Victor, 2026-11-08): "Datos anuales" y el mes
-    // con su pill "Noviembre ▾".
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Caja(
-          titulo: Text(
-            'Datos anuales',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: pal.texto),
-          ),
-          hijo: delAnio.isEmpty ? Text('Sin estadísticas del año aún', style: TextStyle(fontSize: 14, color: pal.textoSecundario)) : _fila(delAnio),
-        ),
-        const SizedBox(height: 12),
-        _Caja(
-          titulo: Align(
-            alignment: Alignment.centerLeft,
-            child: Material(
-              color: pal.suave,
-              shape: const StadiumBorder(),
-              child: InkWell(
-                customBorder: const StadiumBorder(),
-                onTap: _elegirMes,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: Text(
-                          _mesPill,
-                          key: ValueKey(_mesPill),
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: pal.sobreSuave),
-                        ),
-                      ),
-                      Icon(Icons.expand_more_rounded, size: 20, color: pal.sobreSuave),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          hijo: FutureBuilder<Integrante?>(
-            future: _datos,
-            builder: (context, s) {
-              final Widget hijo;
-              if (s.connectionState != ConnectionState.done) {
-                hijo = const Padding(
-                  key: ValueKey('cargando'),
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))),
-                );
-              } else if (s.hasError) {
-                hijo = Text(
-                  'No se pudieron cargar los datos de ese mes.',
-                  key: const ValueKey('error'),
-                  style: TextStyle(color: pal.textoSecundario),
-                );
-              } else {
-                final x = s.data;
-                final pct = x?.asistenciaPct;
-                final tarjetas = [
-                  if ((pct ?? 0) > 0) _Stat(valor: '$pct%', etiqueta: 'Asistencia'),
-                  if ((x?.puntosAsistencia ?? 0) > 0)
-                    _Stat(
-                      valor: numero(x!.puntosAsistencia),
-                      etiqueta: 'Puntos por asistencia',
-                      alTocar: () => _desglose(context, 'asistencia', 'Puntos por asistencia'),
-                    ),
-                  if ((x?.puntosTareas ?? 0) > 0)
-                    _Stat(valor: numero(x!.puntosTareas), etiqueta: 'Puntos por tareas', alTocar: () => _desglose(context, 'tareas', 'Puntos por tareas')),
-                  if ((x?.puntosRacha ?? 0) > 0)
-                    _Stat(valor: numero(x!.puntosRacha), etiqueta: 'Puntos por racha', alTocar: () => _desglose(context, 'racha', 'Puntos por racha')),
-                ];
-                hijo = tarjetas.isEmpty
-                    ? Text(
-                        'Sin datos en $_nombreMes',
-                        key: ValueKey('vacio$_mes'),
-                        style: TextStyle(fontSize: 14, color: pal.textoSecundario),
-                      )
-                    : Column(
-                        key: ValueKey('datos$_mes'),
-                        children: [
-                          _fila(tarjetas.take(2).toList()),
-                          if (tarjetas.length > 2) ...[const SizedBox(height: 10), _fila(tarjetas.skip(2).toList())],
-                        ],
-                      );
-              }
-              return AnimatedSize(
-                duration: const Duration(milliseconds: 240),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topCenter,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 240),
-                  layoutBuilder: (actual, previos) => Stack(alignment: Alignment.topLeft, children: [...previos, ?actual]),
-                  child: hijo,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// "Noviembre" (o "Octubre 2025" si es de otro año).
-  String get _mesPill {
-    final h = Fechas.hoy();
-    return _mes.year == h.year ? Fechas.mesNombre(_mes) : Fechas.mesAnio(_mes);
-  }
-
-  Widget _fila(List<Widget> tarjetas) => IntrinsicHeight(
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final (i, t) in tarjetas.indexed) ...[if (i > 0) const SizedBox(width: 10), Expanded(child: t)],
-      ],
-    ),
-  );
-
-  /// Desglose del mes elegido, en pantalla completa (`DesgloseScreen`).
-  void _desglose(BuildContext context, String concepto, String titulo) =>
-      DesgloseScreen.abrir(context, repo: repo, username: widget.p.username, concepto: concepto, titulo: titulo, mes: _mes, nombreMes: _nombreMes);
-}
-
 class _Accion extends StatelessWidget {
   const _Accion({required this.icono, required this.texto, required this.alTocar, this.roja = false});
   final bool roja;
@@ -425,87 +190,6 @@ class _Accion extends StatelessWidget {
           style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: p.texto),
         ),
       ],
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.valor, required this.etiqueta, this.alTocar});
-  // Dentro de una `_Caja`: fondo hundido (color de fondo de la pantalla).
-  final String valor;
-  final String etiqueta;
-  final VoidCallback? alTocar;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.pivot;
-    return Material(
-      color: p.fondo,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta - 4),
-        onTap: alTocar,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          child: Column(
-            children: [
-              Text(
-                valor,
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: p.texto),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                etiqueta,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11.5, height: 1.2, color: p.textoSecundario),
-              ),
-              if (alTocar != null) Icon(Icons.expand_more_rounded, size: 16, color: p.textoSecundario),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Muestra [child] con fundido y escala al terminar la transición de la ruta
-/// (cuando el avatar ya "aterrizó"); al volver, se va primero.
-class _AlLlegar extends StatelessWidget {
-  const _AlLlegar({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final ruta = ModalRoute.of(context)?.animation;
-    if (ruta == null) return child;
-    final opacidad = CurvedAnimation(
-      parent: ruta,
-      curve: const Interval(0.7, 1, curve: Curves.easeOut),
-    );
-    final escala = CurvedAnimation(
-      parent: ruta,
-      curve: const Interval(0.7, 1, curve: Curves.easeOutBack),
-    );
-    return FadeTransition(
-      opacity: opacidad,
-      child: ScaleTransition(scale: escala, child: child),
-    );
-  }
-}
-
-/// Contenedor de un bloque de stats: título arriba y contenido.
-class _Caja extends StatelessWidget {
-  const _Caja({required this.titulo, required this.hijo});
-  final Widget titulo;
-  final Widget hijo;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.pivot;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-      decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [titulo, const SizedBox(height: 12), hijo]),
     );
   }
 }

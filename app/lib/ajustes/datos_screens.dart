@@ -28,16 +28,7 @@ class MiPerfilEditable extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             GrupoAjustes(
-              titulo: 'MI FICHA',
               filas: [
-                FilaAjuste(
-                  icono: Icons.add_a_photo_outlined,
-                  seccion: 'foto',
-                  titulo: 'Foto de perfil',
-                  valor: s.fotoPerfil.isEmpty ? '' : 'Cambiar o quitar',
-                  alTocar: () => cambiarFoto(context, s),
-                ),
-
                 FilaAjuste(
                   icono: Icons.sports_rounded,
                   seccion: 'nombre',
@@ -289,9 +280,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
             duration: dur,
             child: Text(
               key: ValueKey(_usaClub),
-              _usaClub
-                  ? 'Con equipamiento del equipo reservas por clase, y el equipo te lo tiene listo.'
-                  : 'Con todo tu equipamiento propio puedes pagar la mensualidad.',
+              _usaClub ? 'Con equipamiento del equipo reservas por clase, y el equipo te lo tiene listo.' : '',
               style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
             ),
           ),

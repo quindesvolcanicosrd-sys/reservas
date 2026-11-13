@@ -146,7 +146,8 @@ List<DatoFila> datosRelevantes(Integrante p, DateTime hoy, {String periodo = 'es
   final pct = p.asistenciaPct;
   if (pct != null && pct >= 80) {
     final flecha = p.tendencia == 'sube' ? ' ↑' : (p.tendencia == 'baja' ? ' ↓' : '');
-    res.add(DatoFila(Icons.event_available_outlined, '$pct% de asistencia$flecha'));
+    // Con el mes (Victor, 2026-11-12): "100% de asistencia en noviembre".
+    res.add(DatoFila(Icons.event_available_outlined, '$pct% de asistencia ${periodo == 'este mes' ? 'en ${Fechas.mes(hoy)}' : periodo}$flecha'));
   }
   if (p.puntos >= 5) res.add(DatoFila(Icons.star_outline_rounded, '${_num(p.puntos)} pts $periodo'));
   if (p.racha >= 2) res.add(DatoFila(Icons.local_fire_department_outlined, 'Racha de ${p.racha} meses'));

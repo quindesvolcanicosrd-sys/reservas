@@ -28,7 +28,7 @@ class SaludEmergenciaScreen extends StatelessWidget {
     'Problemas osteomusculares crónicos',
   ];
   static const _antecedentes = ['Cirugías previas', 'Hospitalización en el último año', 'Lesiones deportivas previas'];
-  static const _dietas = ['Vegetariano', 'Vegano', 'Pescetariano'];
+  static const _dietas = ['Vegetariano', 'Vegano'];
 
   @override
   Widget build(BuildContext context) {

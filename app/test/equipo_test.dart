@@ -73,6 +73,6 @@ void main() {
     expect(m.first, 'Cumple en 2 días');
     expect(m[1], '3 años en el equipo en 3 días');
     final alta = _p('pia', asis: 9, ev: 10, pts: 12);
-    expect(datosRelevantes(alta, hoy).map((d) => d.texto), ['90% de asistencia', '12 pts este mes']);
+    expect(datosRelevantes(alta, hoy).map((d) => d.texto), ['90% de asistencia en noviembre', '12 pts este mes']);
   });
 }

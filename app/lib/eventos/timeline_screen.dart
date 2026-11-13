@@ -104,9 +104,12 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool _buscando = false;
   String _consulta = '';
-  String? _filtroLugar;
-  String? _filtroTipo;
-  String? _filtroArea; // área de tarea
+  // Varios a la vez (Victor, 2026-11-12); vacío = todos.
+  Set<String> _filtroLugar = {};
+  Set<String> _filtroTipo = {};
+  Set<String> _filtroArea = {}; // área de tarea
+  DateTime? _diaArriba; // primer día visible: los filtros no mueven el timeline
+  Object? _firmaFiltros;
   DateTime _mesVisible = Fechas.hoy();
   // Título de la barra ("Noviembre"): se actualiza solo, sin reconstruir la
   // pantalla (antes cada cambio de mes al scrollear o deslizar redibujaba
@@ -175,9 +178,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       setState(() {
         _consulta = pr.getString(_kTexto) ?? '';
         _textoBusqueda.text = _consulta;
-        _filtroLugar = pr.getString(_kLugar);
-        _filtroTipo = pr.getString(_kTipo);
-        _filtroArea = pr.getString(_kArea);
+        Set<String> leer(String k) {
+          try {
+            return (pr.getStringList(k) ?? const []).toSet();
+          } catch (_) {
+            final v = pr.getString(k); // formato anterior: un solo valor
+            return v == null ? {} : {v};
+          }
+        }
+
+        _filtroLugar = leer(_kLugar);
+        _filtroTipo = leer(_kTipo);
+        _filtroArea = leer(_kArea);
         _vista = _Vista.values.firstWhere((v) => v.name == pr.getString(_kVista), orElse: () => _Vista.todo);
         _claveFilas = null;
       });
@@ -188,9 +200,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     try {
       final pr = await SharedPreferences.getInstance();
       _consulta.trim().isEmpty ? await pr.remove(_kTexto) : await pr.setString(_kTexto, _consulta);
-      _filtroLugar == null ? await pr.remove(_kLugar) : await pr.setString(_kLugar, _filtroLugar!);
-      _filtroTipo == null ? await pr.remove(_kTipo) : await pr.setString(_kTipo, _filtroTipo!);
-      _filtroArea == null ? await pr.remove(_kArea) : await pr.setString(_kArea, _filtroArea!);
+      Future<void> guardar(String k, Set<String> v) async => v.isEmpty ? await pr.remove(k) : await pr.setStringList(k, v.toList());
+      await guardar(_kLugar, _filtroLugar);
+      await guardar(_kTipo, _filtroTipo);
+      await guardar(_kArea, _filtroArea);
       _vista == _Vista.todo ? await pr.remove(_kVista) : await pr.setString(_kVista, _vista.name);
     } catch (_) {}
   }
@@ -239,6 +252,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     pos.sort((a, b) => a.index.compareTo(b.index));
     final i = pos.first.index.clamp(0, _filas.length - 1);
     final d = _filas[i].dia;
+    if (_scrollDelUsuario || _diaArriba == null) _diaArriba = d;
     if (d.month != _mesVisible.month || d.year != _mesVisible.year) {
       _mesVisible = d;
       if (!_calAbierto) _tituloMes.value = d;
@@ -271,15 +285,15 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (!_coincideTexto(it)) return false;
     // Con filtros solo de eventos se ocultan las tareas, y al revés (el
     // área ya se aplicó al armar las tareas).
-    final deEventos = _filtroLugar != null || _filtroTipo != null;
-    if (it.esTarea) return !deEventos || _filtroArea != null;
-    if (_filtroArea != null && !deEventos) return false;
+    final deEventos = _filtroLugar.isNotEmpty || _filtroTipo.isNotEmpty;
+    if (it.esTarea) return !deEventos || _filtroArea.isNotEmpty;
+    if (_filtroArea.isNotEmpty && !deEventos) return false;
     final ev = it.evento;
-    if (_filtroLugar != null && ev?.lugar != _filtroLugar) return false;
-    if (_filtroTipo != null) {
-      if (_filtroTipo == 'Cumpleaños') return it.cumple != null;
-      if (_filtroTipo == 'Descanso') return it.temporada != null;
-      if (ev?.tipo != _filtroTipo) return false;
+    if (_filtroLugar.isNotEmpty && !_filtroLugar.contains(ev?.lugar)) return false;
+    if (_filtroTipo.isNotEmpty) {
+      if (it.cumple != null) return _filtroTipo.contains('Cumpleaños');
+      if (it.temporada != null) return _filtroTipo.contains('Descanso');
+      if (!_filtroTipo.contains(ev?.tipo)) return false;
     }
     return true;
   }
@@ -287,17 +301,18 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   bool get _hayFiltros => _consulta.trim().isNotEmpty || _cantidadFiltros > 0;
 
   /// Filtros del botón de filtros (la lupa es solo para el texto).
-  int get _cantidadFiltros => (_vista != _Vista.todo ? 1 : 0) + (_filtroLugar != null ? 1 : 0) + (_filtroTipo != null ? 1 : 0) + (_filtroArea != null ? 1 : 0);
+  int get _cantidadFiltros =>
+      (_vista != _Vista.todo ? 1 : 0) + (_filtroLugar.isNotEmpty ? 1 : 0) + (_filtroTipo.isNotEmpty ? 1 : 0) + (_filtroArea.isNotEmpty ? 1 : 0);
 
   /// "Eventos · Pista" para el aviso de la búsqueda.
   String get _resumenFiltros =>
-      [if (_vista == _Vista.eventos) 'Eventos', if (_vista == _Vista.tareas) 'Tareas', ?_filtroTipo, ?_filtroLugar, ?_filtroArea].join(' · ');
+      [if (_vista == _Vista.eventos) 'Eventos', if (_vista == _Vista.tareas) 'Tareas', ..._filtroTipo, ..._filtroLugar, ..._filtroArea].join(' · ');
 
   void _quitarFiltros() {
     _vista = _Vista.todo;
-    _filtroLugar = null;
-    _filtroTipo = null;
-    _filtroArea = null;
+    _filtroLugar = {};
+    _filtroTipo = {};
+    _filtroArea = {};
   }
 
   List<_Item> _todos() => [
@@ -316,14 +331,14 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final items = <_Item>[];
     for (final m in _tareas.mias) {
       if (m.vence == null || _atrasada(m)) continue;
-      if (_filtroArea != null && m.tarea.area != _filtroArea) continue;
+      if (_filtroArea.isNotEmpty && !_filtroArea.contains(m.tarea.area)) continue;
       items.add(_Item.mia(m));
     }
     final porDia = <DateTime, List<Tarea>>{};
     for (final t in _tareas.tablero) {
       final v = t.vence;
       if (v == null || t.personas.isEmpty || t.tiene(_tareas.yo)) continue;
-      if (_filtroArea != null && t.area != _filtroArea) continue;
+      if (_filtroArea.isNotEmpty && !_filtroArea.contains(t.area)) continue;
       porDia.putIfAbsent(Fechas.soloDia(v), () => []).add(t);
     }
     porDia.forEach((d, l) => items.add(_Item.grupo(l, d)));
@@ -339,7 +354,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     for (final it in _todos()) {
       final ev = it.evento;
       if (ev == null || !_coincideTexto(it)) continue;
-      if (_filtroTipo != null && _filtroTipo != ev.tipo) continue;
+      if (_filtroTipo.isNotEmpty && !_filtroTipo.contains(ev.tipo)) continue;
       if (ev.lugar.isNotEmpty) s.add(ev.lugar);
     }
     return s.toList()..sort();
@@ -356,10 +371,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         if (it.temporada != null) hayDescanso = true;
         continue;
       }
-      if (_filtroLugar != null && _filtroLugar != ev.lugar) continue;
+      if (_filtroLugar.isNotEmpty && !_filtroLugar.contains(ev.lugar)) continue;
       s.add(ev.tipo);
     }
-    return [...(s.toList()..sort()), if (hayCumples && _filtroLugar == null) 'Cumpleaños', if (hayDescanso && _filtroLugar == null) 'Descanso'];
+    return [...(s.toList()..sort()), if (hayCumples && _filtroLugar.isEmpty) 'Cumpleaños', if (hayDescanso && _filtroLugar.isEmpty) 'Descanso'];
   }
 
   // ─── Filas ──────────────────────────────────────────────────────────────
@@ -410,6 +425,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   }
 
   void _irA(DateTime dia, {bool animado = true}) {
+    _diaArriba = Fechas.soloDia(dia);
     if (!_scroll.isAttached || _filas.isEmpty) return;
     final i = _indiceDeDia(dia);
     if (animado) {
@@ -562,9 +578,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           repo.eventos.length,
           Object.hash(identityHashCode(_tareas.mias), identityHashCode(_tareas.tablero), _vista),
           _consulta,
-          _filtroLugar,
-          _filtroTipo,
-          _filtroArea,
+          Object.hashAll(_filtroLugar),
+          Object.hashAll(_filtroTipo),
+          Object.hashAll(_filtroArea),
           ahora.day,
           ahora.hour,
           ahora.minute,
@@ -576,6 +592,14 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           final hoy = Fechas.hoy();
           _idTarjetaTour = _filas.where((f) => f.item?.evento != null && !f.dia.isBefore(hoy)).map((f) => f.item!.evento!.id).firstOrNull;
         }
+        // Filtrar o quitar filtros no mueve el timeline (bug, Victor
+        // 2026-11-12: quitaba el filtro y aparecía en octubre).
+        final firmaFiltros = Object.hash(_vista, Object.hashAll(_filtroLugar), Object.hashAll(_filtroTipo), Object.hashAll(_filtroArea));
+        if (_firmaFiltros != null && firmaFiltros != _firmaFiltros && _saltoInicialHecho) {
+          final dia = _diaArriba ?? Fechas.hoy();
+          WidgetsBinding.instance.addPostFrameCallback((_) => _irA(dia, animado: false));
+        }
+        _firmaFiltros = firmaFiltros;
         final firma = Object.hash(identityHashCode(repo.eventos), identityHashCode(repo.cumples));
         if (_firmaDatos != null && firma != _firmaDatos && _saltoInicialHecho) _mantenerAncla(antes, _filas);
         _firmaDatos = firma;
@@ -894,21 +918,40 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           );
 
-          Widget grupo(String texto, IconData icono, String? valor, List<String> opciones, void Function(String?) alElegir) {
+          // Una fila que se desliza de lado, con varios elegibles a la vez
+          // (Victor, 2026-11-12): la hoja no crece con muchos tipos o lugares.
+          Widget grupo(String texto, IconData icono, Set<String> valor, List<String> opciones) {
+            final todas = {...opciones, ...valor}.toList();
             return Padding(
               padding: const EdgeInsets.only(top: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   titulo(texto, icono),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ChoiceChip(label: const Text('Todos'), selected: valor == null, onSelected: (_) => elegir(() => alElegir(null))),
-                      for (final o in opciones)
-                        ChoiceChip(label: Text(o), selected: valor == o, onSelected: (_) => elegir(() => alElegir(valor == o ? null : o))),
-                    ],
+                  SizedBox(
+                    height: 40,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      clipBehavior: Clip.none,
+                      children: [
+                        for (final (i, o) in [null, ...todas].indexed)
+                          Padding(
+                            padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
+                            child: FilterChip(
+                              showCheckmark: false,
+                              label: Text(o ?? 'Todos'),
+                              selected: o == null ? valor.isEmpty : valor.contains(o),
+                              onSelected: (_) => elegir(() {
+                                if (o == null) {
+                                  valor.clear();
+                                } else if (!valor.remove(o)) {
+                                  valor.add(o);
+                                }
+                              }),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -939,10 +982,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                       onSelectionChanged: (s) => elegir(() {
                         _vista = s.first;
                         if (_vista == _Vista.tareas) {
-                          _filtroLugar = null;
-                          _filtroTipo = null;
+                          _filtroLugar = {};
+                          _filtroTipo = {};
                         }
-                        if (_vista == _Vista.eventos) _filtroArea = null;
+                        if (_vista == _Vista.eventos) _filtroArea = {};
                       }),
                     ),
                     AnimatedSize(
@@ -953,11 +996,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (_vista != _Vista.tareas) ...[
-                            grupo('Tipo de evento', Icons.category_outlined, _filtroTipo, _opcionesTipo(), (v) => _filtroTipo = v),
-                            grupo('Lugar', Icons.place_outlined, _filtroLugar, _opcionesLugar(), (v) => _filtroLugar = v),
+                            grupo('Tipo de evento', Icons.category_outlined, _filtroTipo, _opcionesTipo()),
+                            grupo('Lugar', Icons.place_outlined, _filtroLugar, _opcionesLugar()),
                           ],
-                          if (_vista != _Vista.eventos && areas.isNotEmpty)
-                            grupo('Área de tarea', Icons.checklist_rounded, _filtroArea, areas, (v) => _filtroArea = v),
+                          if (_vista != _Vista.eventos && areas.isNotEmpty) grupo('Área de tarea', Icons.checklist_rounded, _filtroArea, areas),
                         ],
                       ),
                     ),
@@ -1007,6 +1049,14 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
               Text(
                 _consulta.trim().isNotEmpty && _cantidadFiltros > 0
                     ? 'No hay resultados con los filtros activos ($_resumenFiltros).'
+                    : _cantidadFiltros == 1 && _vista == _Vista.tareas
+                    ? 'No hay tareas disponibles.'
+                    : _cantidadFiltros == 1 && _vista == _Vista.eventos
+                    ? 'No hay eventos disponibles.'
+                    : _cantidadFiltros > 0 && _vista == _Vista.tareas
+                    ? 'No hay tareas con estos filtros.'
+                    : _cantidadFiltros > 0 && _vista == _Vista.eventos
+                    ? 'No hay eventos con estos filtros.'
                     : _cantidadFiltros > 0
                     ? 'No hay nada con estos filtros.'
                     : 'No hay nada que coincida con la búsqueda.',
@@ -1037,6 +1087,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
+          // Al volver a aparecer (después de un filtro sin resultados) sigue en el mismo día.
+          initialScrollIndex: _filas.isEmpty ? 0 : _indiceDeDia(_diaArriba ?? Fechas.hoy()),
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,

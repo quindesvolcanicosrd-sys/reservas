@@ -4,8 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
-import '../equipo/comunidad_screen.dart';
-import '../equipo/inventario_screen.dart';
+import '../equipo/estadisticas.dart';
 import '../equipo/roles_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
@@ -65,6 +64,8 @@ class _AjustesScreenState extends State<AjustesScreen> {
           final c = eventos.cuota;
           final pagos = PagosScreen.tieneAlgo(c);
           final debe = c != null && c.pagaCuotaMensual && !c.alDia;
+          // Excepción de cuota solo para quien paga cuota mensual (Victor, 2026-11-12).
+          final pagaCuota = d['exenta_cuota'] != true && ('${d['categoria'] ?? ''}'.toLowerCase() == 'quindes' || (c?.pagaCuotaMensual ?? false));
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
@@ -73,7 +74,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               _CabeceraPerfil(sesion: sesion),
               if (conFicha) MiPerfilEditable(sesion: sesion),
               GrupoAjustes(
-                titulo: 'PAGOS Y EQUIPAMIENTO',
                 filas: [
                   if (pagos)
                     FilaAjuste(
@@ -84,7 +84,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       pendiente: debe,
                       alTocar: () => SubAjustes.abrir(context, PagosScreen(repo: eventos)),
                     ),
-                  if (conFicha)
+                  if (conFicha && pagaCuota)
                     FilaAjuste(
                       icono: Icons.volunteer_activism_rounded,
                       seccion: 'cuota',
@@ -104,7 +104,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               ),
               if (conFicha)
                 GrupoAjustes(
-                  titulo: 'DATOS PERSONALES',
                   filas: [
                     FilaAjuste(
                       icono: Icons.emergency_rounded,
@@ -127,7 +126,6 @@ class _AjustesScreenState extends State<AjustesScreen> {
               // Ajustes de la liga, solo Pivots (etapa 3, Victor 2026-11-12).
               if (sesion.esAdmin && sesion.adminToken != null)
                 GrupoAjustes(
-                  titulo: 'AJUSTES DE LA LIGA',
                   filas: [
                     FilaAjuste(
                       icono: Icons.shield_outlined,
@@ -136,24 +134,9 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       valor: 'Crear, renombrar o borrar roles',
                       alTocar: () => SubAjustes.abrir(context, RolesScreen(repo: EquipoRepo.de(sesion))),
                     ),
-                    FilaAjuste(
-                      icono: Icons.groups_2_rounded,
-                      seccion: 'notificaciones',
-                      titulo: 'Comunidad',
-                      valor: 'Grupos y redes que ve el equipo',
-                      alTocar: () => SubAjustes.abrir(context, ComunidadScreen(repo: ComunidadRepo.de(sesion))),
-                    ),
-                    FilaAjuste(
-                      icono: Icons.roller_skating_rounded,
-                      seccion: 'equipamiento',
-                      titulo: 'Inventario',
-                      valor: 'Patines y protecciones que presta la liga',
-                      alTocar: () => SubAjustes.abrir(context, InventarioScreen(sesion: sesion)),
-                    ),
                   ],
                 ),
               GrupoAjustes(
-                titulo: 'APLICACIÓN',
                 filas: [
                   if (conFicha)
                     FilaAjuste(
@@ -251,9 +234,9 @@ class _CabeceraPerfil extends StatelessWidget {
                 if (sesion.datos.isNotEmpty)
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    onPressed: () => PersonaScreen.abrir(context, EquipoRepo.de(sesion), sesion.nombre ?? ''),
+                    onPressed: () => SubAjustes.abrir(context, MisEstadisticasScreen(repo: EquipoRepo.de(sesion))),
                     icon: const Icon(Icons.insights_rounded, size: 18),
-                    label: const Text('Ver mi ficha'),
+                    label: const Text('Mis estadísticas'),
                   ),
               ],
             ),
