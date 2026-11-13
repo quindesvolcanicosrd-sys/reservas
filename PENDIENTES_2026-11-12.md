@@ -383,6 +383,13 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
   - una pantalla de torneos con próximos partidos, invitaciones y pendientes; quizás con lugar propio en la barra.
 - [ ] **No se pasan a la app**: "Estado actual del equipo" y "Usuarios" de Mi Liga web (archivar queda en Equipo; eliminar, como último recurso y conservando los pagos).
 
+## J. Ronda del 2026-11-13 (tarde): quedó para después
+- [ ] **Saldo a favor o en contra de una persona** (Victor; dinero, necesita su aprobación): ver HOJA_DE_RUTA etapa 5.
+- [ ] **Crear liga**: sumar al asistente el canal de comunicación, el país y la zona horaria, las reglas de Categoría/Equipo, las listas de equipamiento (y si hay cosas que una persona tiene de forma permanente) y la regla de pedidos de Pivots (todo ya editable en Ajustes de la liga).
+- [ ] **Zona horaria**: se guarda en Ajustes de la liga; aplicarla a horarios, push y cron con la base para varias ligas (hoy todo usa la hora de Ecuador).
+- [ ] **Desactivar cobros, planes y cupones**: con Finanzas (etapas 5 y 6).
+- [ ] **Inventario**: fotos y etiqueta por artículo.
+
 ## Orden propuesto
 0. Prioridad 1 de la auditoría (consultas de `log_asistencias` + índices).
 1. Ronda de 11 cambios de arriba y la migración pendiente.

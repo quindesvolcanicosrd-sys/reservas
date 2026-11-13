@@ -49,7 +49,7 @@ Reglas de siempre:
      - [ ] Cambios de categoría en la Bandeja ("Pedir revisión" del cambio de categoría): todavía no existe el pedido; se hace junto con el modal de cambio de categoría.
      - [x] Funciones de personas en la ficha: registrar pago, "No paga (mes)" y acceso de Pivot (2026-11-12).
      - [x] Comunidad (grupos y redes) e Inventario (patines por talla, protecciones, lo reservado) en Equipo (2026-11-12).
-     - [ ] Inventario completo: fotos, etiqueta, quién lo tiene y aviso a los 7 días (necesita tabla nueva).
+     - [x] Inventario personalizable: listas propias (tallas, sets, unidades, insumos), quién lo tiene (temporal con aviso cada 7 días a Pivots y a la persona, o permanente) y pedidos de uso sin bajar de Categoría/Equipo (2026-11-13). Faltan fotos y etiqueta, y sumarlo al asistente de crear liga (etapa 9).
      - [x] Ajustes de la liga en Mi perfil: roles, comunidad, inventario (2026-11-12). El resto de Mi Liga (precios, categorías, tareas recurrentes, finanzas) se mueve en las etapas 4–6.
      - [x] Rectificaciones: "¿Es correcto?" en la tarjeta y el detalle, "Revisión pendiente" con días restantes, se descarta a los 7 días (2026-11-12).
      - [x] Qué llevar: pill con lo reservado junto a cada persona en el detalle del evento (Pivots) (2026-11-12).
@@ -67,6 +67,7 @@ Reglas de siempre:
    - **Conciliación**: el Pivot ingresa el saldo real del banco o De Una y la app muestra la diferencia, para encontrar centavos o pagos sin registrar.
    - **Filtros completos**: fechas libres, medio de pago, persona, categoría, tipo. Exportar a Excel o CSV.
    - **Préstamos o uso de fondos por una persona**: deuda aparte de la cuota, con abonos. No cambia la cuota.
+   - **Saldo a favor o en contra de una persona** (Victor, 2026-11-13; propuesta en la Bandeja, falta su aprobación): "Saldo con el equipo" en Funciones de Pivot con cada movimiento; al pagar la cuota se avisa y se elige cómo aplicarlo (cubrir toda la cuota o un monto fijo por mes; pagar la deuda junto o en cuotas). El Pivot decide si se junta con la cuota.
    - **Fondos de viaje**:
      - Registrar el viaje, el monto y la ventana de asistencia (ej. últimos 2 años o desde una fecha).
      - Tramos por % de asistencia (ej. ≥90 % reparte 50 %, 35–89 % el otro 50 %, menos no recibe).
@@ -114,5 +115,5 @@ Reglas de siempre:
 - **Inventario**:
   - Fotos, etiqueta y quién lo tiene.
   - Push a los Pivots a cargo a los 7 días con una persona.
-- **Categorías y puntos**: pantalla con ejemplos usando personas reales del equipo, para ver cómo afectaría cada cambio.
+- **Categorías y puntos**: pantalla con ejemplos usando personas reales del equipo, para ver cómo afectaría cada cambio. Hecho (2026-11-13): asistente por pasos con impacto y avisos.
 - **Eliminar persona**: último recurso para casos serios. Conserva todos sus movimientos de dinero con nombre y datos.
