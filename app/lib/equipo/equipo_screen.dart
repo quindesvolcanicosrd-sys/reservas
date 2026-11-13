@@ -199,7 +199,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           if (repo.hayFiltros) SliverToBoxAdapter(child: _filtrosActivos(p)),
-          // Comunidad (todo el equipo) e Inventario (Pivots), etapa 3.
+          // Comunidad e Inventario, para todo el equipo (Victor, 2026-11-12).
           if (!repo.hayFiltros) SliverToBoxAdapter(child: _accesos(context)),
           if (favoritos.isNotEmpty && !repo.hayFiltros) ...[
             _encabezado(p, 'Favoritos', favoritos.length),
@@ -322,16 +322,14 @@ class _EquipoScreenState extends State<EquipoScreen> {
             'Grupos y redes',
             () => SubAjustes.abrir(context, ComunidadScreen(repo: ComunidadRepo.de(repo.sesion))),
           ),
-          if (repo.esAdmin) ...[
-            const SizedBox(width: 10),
-            acceso(
-              Icons.roller_skating_rounded,
-              'privacidad',
-              'Inventario',
-              'Equipamiento',
-              () => SubAjustes.abrir(context, InventarioScreen(sesion: repo.sesion)),
-            ),
-          ],
+          const SizedBox(width: 10),
+          acceso(
+            Icons.roller_skating_rounded,
+            'privacidad',
+            'Inventario',
+            'Equipamiento',
+            () => SubAjustes.abrir(context, InventarioScreen(sesion: repo.sesion)),
+          ),
         ],
       ),
     );

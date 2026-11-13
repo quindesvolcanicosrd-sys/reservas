@@ -36,6 +36,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     (TipoPedido.excepcion, 'Excepciones de cuota', Icons.volunteer_activism_outlined),
     (TipoPedido.lesion, 'Lesiones', Icons.healing_outlined),
     (TipoPedido.tarea, 'Tareas por validar', Icons.task_alt_rounded),
+    (TipoPedido.prestamo, 'Equipamiento que se llevaron', Icons.roller_skating_rounded),
   ];
 
   Future<void> _resolver(Pedido p, bool aprobar) async {
@@ -169,7 +170,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Aquí llegan pagos, rectificaciones, excepciones, lesiones y tareas por validar.',
+                          'Aquí llegan pagos, rectificaciones, excepciones, lesiones, tareas por validar y equipamiento que alguien se llevó.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: p.textoSecundario),
                         ),
@@ -251,6 +252,14 @@ class _Encabezado extends StatelessWidget {
         if ('${datos['compromiso'] ?? ''}'.isNotEmpty) 'Compromiso: ${datos['compromiso']}',
       ];
       return ('Subvención por dificultad económica${mes == null ? '' : ' · ${Fechas.mesNombre(mes)}'}', partes.isEmpty ? null : partes.join('\n'));
+    case TipoPedido.prestamo:
+      final d = '${m['detalle'] ?? ''}'.trim();
+      final que = switch (m['articulo']) {
+        'patines' => d.isEmpty ? 'patines' : 'patines talla $d',
+        'protecciones' => d.isEmpty ? 'protecciones' : 'protecciones ($d)',
+        _ => d.isEmpty ? 'equipamiento' : d,
+      };
+      return ('Avisa que se llevó $que', 'Al aprobarlo, se ve en Inventario como "Las tiene".');
     case TipoPedido.lesion:
       return ('Pidió pasar a Lesionadx', 'Mientras dure no cuenta para la asistencia ni paga cuota.');
     case TipoPedido.tarea:

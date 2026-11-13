@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-13 — Inventario para todo el equipo: cuánto hay por talla y cuánto queda libre para la próxima clase; quién tiene cosas del equipo ("Las tiene X"); cualquiera puede avisar que se llevó algo (lo aprueba un Pivot en la Bandeja); a los 7 días se pregunta a los Pivots si aún lo tiene.
+
 2026-11-13 — Asistencia anticipada por día de la semana o lugar (ej. solo lunes, solo en CCI); si una regla se cruza con otra, la app avisa antes de guardar. La web respeta los mismos filtros.
 
 2026-11-12 — Tareas recurrentes flexibles: "Una vez" o "Recurrente"; cada semana, 15 días, mes, 2, 3, 4 o 6 meses, año u otra frecuencia; desde qué día aparece y cuándo vence. Pin de la dirección guardado. Se cerraron todas las sesiones abiertas.

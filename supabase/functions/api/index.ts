@@ -1961,6 +1961,7 @@ async function adminEditarTareaRecurrente(params: Record<string, any>): Promise<
 async function adminBandeja(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { data: prestPend } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, created_at').eq('estado', 'pendiente').order('created_at');
   const [res, rect, exc, les, asig] = await Promise.all([
     supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
@@ -1978,6 +1979,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const nombres = [...new Set([
     ...(res.data ?? []).map((r: any) => r.nombre_usuario), ...(rect.data ?? []).map((r: any) => r.nombre),
     ...excVisibles.map((r: any) => r.nombre), ...(les.data ?? []).map((r: any) => r.username), ...(asig.data ?? []).map((a: any) => a.nombre_usuario),
+    ...(prestPend ?? []).map((p: any) => p.username),
   ].filter(Boolean))];
   const [evs, tareas, personas] = await Promise.all([
     idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, donde, inicia, tipo').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
@@ -1998,6 +2000,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
     rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
     excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
     lesiones: (les.data ?? []).map((r: any) => ({ ...persona(r.username) })),
+    prestamos: (prestPend ?? []).map((p: any) => ({ id: p.id, ...persona(p.username), articulo: p.articulo, detalle: p.detalle ?? '', creada: p.created_at })),
     tareas: (asig.data ?? []).map((a: any) => ({
       idAsignacion: a.id, ...persona(a.nombre_usuario), enviada: a.fecha_envio,
       tarea: ta[a.tarea_id] ? { idTarea: a.tarea_id, titulo: ta[a.tarea_id].titulo, puntos: Number(ta[a.tarea_id].puntos) || 0, area: ta[a.tarea_id].area ?? '' } : null,
@@ -2005,6 +2008,133 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   };
   const total = Object.values(items).reduce((n, l) => n + l.length, 0);
   return { exito: true, total, ...items };
+}
+
+// ─── Inventario para todo el equipo (Victor, 2026-11-12) ───────────────
+// Todas las personas ven cuánto hay por talla y cuánto queda libre en la
+// próxima clase, y quién tiene cosas del equipo. Solo Pivots ven quién
+// reservó y editan cantidades. Préstamos (`inventario_prestamos`): la
+// persona avisa que se llevó algo (un Pivot lo aprueba) o un Pivot lo
+// registra; a los 7 días se pregunta a los Pivots si aún lo tiene.
+const ARTICULOS_INVENTARIO = ['patines', 'protecciones', 'otro'];
+
+async function getInventario(params: Record<string, any>): Promise<Record<string, any>> {
+  const esPivot = !!(await _validarAdminToken(String(params.adminToken ?? '')));
+  const yo = esPivot ? null : await _validarToken(String(params.token ?? ''));
+  if (!esPivot && !yo) return { exito: false, error: 'Inicia sesión.' };
+  const [{ data: tallas }, { data: cfg }, proximos, { data: prest }] = await Promise.all([
+    supabase.from('equipamiento_tallas').select('talla, cantidad'),
+    supabase.from('config_equipamiento').select('total_protecciones').limit(1).maybeSingle(),
+    _proximosEntrenamientos(),
+    supabase.from('inventario_prestamos').select('id, username, articulo, detalle, estado, pedido_por, desde, aviso_7d_en').in('estado', ['activo', 'pendiente']).order('desde'),
+  ]);
+  // Libres en la próxima clase con reserva: stock menos lo reservado.
+  const proxima = proximos[0] ?? null;
+  let reservadas: any[] = [];
+  if (proxima) {
+    const { data } = await supabase.from('reservas').select('talla, protecciones').eq('id_evento', proxima.idEvento).neq('estado', 'Cancelada');
+    reservadas = data ?? [];
+  }
+  const usadosTalla: Record<string, number> = {};
+  let usadasProt = 0;
+  for (const r of reservadas) {
+    if (r.talla && r.talla !== 'No') usadosTalla[r.talla] = (usadosTalla[r.talla] ?? 0) + 1;
+    if (r.protecciones && r.protecciones !== 'No') usadasProt++;
+  }
+  // Préstamos activos: también ocupan stock.
+  const activos = (prest ?? []).filter((p: any) => p.estado === 'activo');
+  for (const p of activos) {
+    if (p.articulo === 'patines' && p.detalle) usadosTalla[p.detalle] = (usadosTalla[p.detalle] ?? 0) + 1;
+    if (p.articulo === 'protecciones') usadasProt++;
+  }
+  const visibles = (prest ?? []).filter((p: any) => p.estado === 'activo' || esPivot || p.username === yo);
+  const usuarios = [...new Set(visibles.map((p: any) => p.username))];
+  const { data: per } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby, foto_perfil').in('username', usuarios) : { data: [] as any[] };
+  const pe: Record<string, any> = {}; (per ?? []).forEach((p: any) => { pe[p.username] = p; });
+  const ahora = Date.now();
+  return {
+    exito: true,
+    esPivot,
+    proxima: proxima ? { idEvento: proxima.idEvento, fecha: proxima.fecha, lugar: proxima.donde, hora: proxima.horaInicio } : null,
+    tallas: (tallas ?? []).map((t: any) => ({ talla: t.talla, cantidad: Number(t.cantidad) || 0, libres: Math.max(0, (Number(t.cantidad) || 0) - (usadosTalla[t.talla] ?? 0)) })),
+    protecciones: Number(cfg?.total_protecciones) || 0,
+    proteccionesLibres: Math.max(0, (Number(cfg?.total_protecciones) || 0) - usadasProt),
+    prestamos: visibles.map((p: any) => ({
+      id: p.id, nombre: p.username, nombreMostrar: pe[p.username]?.nombre_derby || p.username, foto: pe[p.username]?.foto_perfil || '',
+      articulo: p.articulo, detalle: p.detalle ?? '', estado: p.estado, desde: p.desde,
+      dias: Math.floor((ahora - new Date(p.desde).getTime()) / 86400000),
+      preguntar: esPivot && p.estado === 'activo' && (ahora - new Date(p.aviso_7d_en ?? p.desde).getTime()) >= 7 * 86400000,
+      mio: p.username === yo,
+    })),
+  };
+}
+
+function _textoArticulo(articulo: string, detalle: string): string {
+  if (articulo === 'patines') return detalle ? `patines talla ${detalle}` : 'patines';
+  if (articulo === 'protecciones') return detalle ? `protecciones (${detalle})` : 'protecciones';
+  return detalle || 'equipamiento del equipo';
+}
+
+// La persona avisa que se llevó algo; queda pendiente hasta que un Pivot lo apruebe.
+async function pedirPrestamo(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  if (!yo) return { exito: false, error: 'Sesión inválida.' };
+  const articulo = ARTICULOS_INVENTARIO.includes(String(params.articulo)) ? String(params.articulo) : 'otro';
+  const detalle = String(params.detalle ?? '').trim().slice(0, 80);
+  if (articulo === 'otro' && !detalle) return { exito: false, error: 'Escribe qué te llevaste.' };
+  const { error } = await supabase.from('inventario_prestamos').insert({ username: yo, articulo, detalle: detalle || null, estado: 'pendiente', pedido_por: 'persona' });
+  if (error) return { exito: false, error: 'No se pudo enviar.' };
+  const { data: f } = await supabase.from('equipo').select('nombre_derby').eq('username', yo).maybeSingle();
+  await sendPush({
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(),
+    headings: { es: 'Equipamiento del equipo' },
+    contents: { es: `${f?.nombre_derby || yo} avisa que se llevó ${_textoArticulo(articulo, detalle)}. Apruébalo en la Bandeja.` },
+    url: APP_URL + '/',
+  });
+  return { exito: true };
+}
+
+// Pivots: registrar (alguien se llevó algo), aprobar, rechazar, devolver o "aún lo tiene".
+async function adminPrestamo(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión admin inválida.' };
+  const accion = String(params.accion ?? '');
+  const ahora = new Date().toISOString();
+  if (accion === 'registrar') {
+    const username = String(params.nombre ?? '').trim();
+    if (!username) return { exito: false, error: 'Elige a la persona.' };
+    const articulo = ARTICULOS_INVENTARIO.includes(String(params.articulo)) ? String(params.articulo) : 'otro';
+    const detalle = String(params.detalle ?? '').trim().slice(0, 80);
+    const { error } = await supabase.from('inventario_prestamos').insert({ username, articulo, detalle: detalle || null, estado: 'activo', pedido_por: 'pivot', aprobado_por: email });
+    return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true };
+  }
+  const { data: p } = await supabase.from('inventario_prestamos').select('id, estado').eq('id', params.id).maybeSingle();
+  if (!p) return { exito: false, error: 'No existe.' };
+  const cambios: Record<string, any> =
+    accion === 'aprobar' && p.estado === 'pendiente' ? { estado: 'activo', aprobado_por: email, desde: ahora }
+    : accion === 'rechazar' && p.estado === 'pendiente' ? { estado: 'rechazado', aprobado_por: email }
+    : accion === 'devolver' && p.estado === 'activo' ? { estado: 'devuelto', devuelto_en: ahora }
+    : accion === 'sigue' && p.estado === 'activo' ? { aviso_7d_en: ahora }
+    : {};
+  if (!Object.keys(cambios).length) return { exito: false, error: 'Acción inválida.' };
+  const { error } = await supabase.from('inventario_prestamos').update(cambios).eq('id', p.id);
+  return error ? { exito: false, error: 'No se pudo guardar.' } : { exito: true };
+}
+
+// Cron diario: a los 7 días con una persona, se pregunta a los Pivots.
+async function _avisarPrestamosLargos(): Promise<void> {
+  const limite = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { data } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, desde, aviso_7d_en').eq('estado', 'activo').lte('desde', limite);
+  const pendientes = (data ?? []).filter((p: any) => !p.aviso_7d_en || p.aviso_7d_en <= limite);
+  if (!pendientes.length) return;
+  const usuarios = [...new Set(pendientes.map((p: any) => p.username))];
+  const { data: per } = await supabase.from('equipo').select('username, nombre_derby').in('username', usuarios);
+  const nom: Record<string, string> = {}; (per ?? []).forEach((p: any) => { nom[p.username] = p.nombre_derby || p.username; });
+  const texto = pendientes.length === 1
+    ? `¿${nom[pendientes[0].username] ?? pendientes[0].username} aún tiene ${_textoArticulo(pendientes[0].articulo, pendientes[0].detalle ?? '')}? Ya pasaron 7 días.`
+    : `${pendientes.length} préstamos de equipamiento llevan más de 7 días. Revisa en Equipo → Inventario.`;
+  await sendPush({ tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(), headings: { es: 'Equipamiento del equipo' }, contents: { es: texto }, url: APP_URL + '/' });
+  await supabase.from('inventario_prestamos').update({ aviso_7d_en: new Date().toISOString() }).in('id', pendientes.map((p: any) => p.id));
 }
 
 // ─── Comunidad (Victor, 2026-11-08 / etapa 3): redes y grupos de la liga ──
@@ -7062,6 +7192,7 @@ async function adminEliminarTemporadaDescanso(params: Record<string, any>): Prom
 // acá, porque necesita leer `req.headers`, no `params`.
 async function cronDiario(): Promise<Record<string, any>> {
   try { await _extenderExcepcionesIndefinidas(); } catch (e) { console.error('[excepciones] extender:', e); }
+  try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'
   const diaDelMes = Number(hoyIso.substring(8, 10));
@@ -7355,6 +7486,9 @@ Deno.serve(async (req: Request) => {
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
       case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
+      case 'getInventario':                   return json(await getInventario(params));
+      case 'pedirPrestamo':                   return json(await pedirPrestamo(params));
+      case 'adminPrestamo':                   return json(await adminPrestamo(params));
       case 'getComunidad':                    return json(await getComunidad(params));
       case 'adminGuardarComunidad':           return json(await adminGuardarComunidad(params));
       case 'getRolesEquipo':                  return json(await getRolesEquipo());
