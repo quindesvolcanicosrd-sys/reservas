@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../ajustes/componentes.dart';
-import '../core/api.dart';
-import '../core/cargando.dart';
 import '../core/tema.dart';
 import 'tareas_modelos.dart';
 import 'tareas_repo.dart';
 
-/// Tareas recurrentes (admins): plantillas que crean una tarea cada cierto tiempo.
-/// Se editan (cambia la de este mes y las siguientes), se pausan, se
-/// reanudan o se terminan sin borrar el historial.
+/// Tareas recurrentes (Pivots) como tarjetas que se deslizan de lado dentro
+/// de Tareas (Victor, 2026-11-13: no como subsección). Tocar una la edita,
+/// pausa, reanuda o termina sin borrar el historial.
 class RecurrentesScreen extends StatefulWidget {
   const RecurrentesScreen({super.key, required this.repo});
   final TareasRepo repo;
@@ -119,64 +117,86 @@ class _RecurrentesScreenState extends State<RecurrentesScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tareas recurrentes', style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
-      body: FutureBuilder<List<Recurrente>>(
-        future: _f,
-        builder: (context, s) {
-          if (s.connectionState != ConnectionState.done) return const Center(child: PivotCargando());
-          if (s.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      s.error is ApiException ? '${s.error}' : 'No se pudieron cargar. Revisa tu conexión.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: p.textoSecundario),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.tonal(onPressed: _recargar, child: const Text('Reintentar')),
-                  ],
-                ),
+    return FutureBuilder<List<Recurrente>>(
+      future: _f,
+      builder: (context, s) {
+        final l = s.data ?? const <Recurrente>[];
+        if (s.connectionState != ConnectionState.done || s.hasError || l.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Text(
+                'RECURRENTES',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 0.4, color: p.textoSecundario),
               ),
-            );
-          }
-          final l = s.data!;
-          final activas = l.where((r) => !r.pausada).toList(), pausadas = l.where((r) => r.pausada).toList();
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-            children: [
-              if (l.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'No hay tareas recurrentes. Créalas desde "Nueva tarea" eligiendo "Recurrente".',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: p.textoSecundario),
-                  ),
-                ),
-              if (activas.isNotEmpty) GrupoAjustes(titulo: 'ACTIVAS', pie: 'Se crean solas según su frecuencia.', filas: [for (final r in activas) _fila(r)]),
-              if (pausadas.isNotEmpty) GrupoAjustes(titulo: 'PAUSADAS', filas: [for (final r in pausadas) _fila(r)]),
-            ],
-          );
-        },
-      ),
+            ),
+            SizedBox(
+              height: 112,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                itemCount: l.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (_, i) => _tarjeta(l[i]),
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
+        );
+      },
     );
   }
 
-  Widget _fila(Recurrente r) {
+  Widget _tarjeta(Recurrente r) {
+    final p = context.pivot;
     final a = AreaTarea.de(r.area);
-    return FilaAjuste(
-      icono: r.pausada ? Icons.pause_rounded : a.icono,
-      seccion: a.seccion,
-      titulo: r.titulo,
-      valor: '${r.frecuencia} · ${textoPuntos(r.puntos)} · ${r.cupos == 1 ? '1 cupo' : '${r.cupos} cupos'}',
-      alTocar: () => _opciones(r),
+    return SizedBox(
+      width: 230,
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: () => _opciones(r),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(r.pausada ? Icons.pause_rounded : a.icono, size: 20, color: p.marcaTexto),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        r.titulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  r.frecuencia,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: p.texto),
+                ),
+                Text(
+                  '${r.pausada ? 'Pausada · ' : ''}${textoPuntos(r.puntos)} · ${r.cupos == 1 ? '1 cupo' : '${r.cupos} cupos'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

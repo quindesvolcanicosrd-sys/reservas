@@ -787,7 +787,7 @@ async function cambiarUsuario(params: Record<string, any>): Promise<Record<strin
 // Pedidos de Pivots: 'otro' (por defecto, lo aprueba otro Pivot) o 'auto'
 // (se aprueba solo). Si hay un solo Pivot, siempre se aprueba solo.
 // Canal de comunicación: con qué app se escribe a las personas del equipo.
-const CANALES_LIGA = ['whatsapp', 'telegram', 'signal', 'sms'];
+const CANALES_LIGA = ['whatsapp', 'telegram', 'signal', 'telefono'];
 const CLAVES_LIGA: Record<string, string> = {
   solicitudesPivots: 'solicitudes_pivots', canal: 'canal_comunicacion', pais: 'pais_equipo', zonaHoraria: 'zona_horaria',
 };
