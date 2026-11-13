@@ -540,6 +540,67 @@ async function loginGoogle(params: Record<string, any>): Promise<Record<string, 
   return { valido: true, token, nombre: row.username, datos: getDatosCompletos(row), foto };
 }
 
+// ─── Inicio y cuenta con correo (preparado, Victor 2026-11-13) ─────────────
+// Código de 6 dígitos por correo (Supabase Auth OTP). Apagado hasta que Victor
+// lo active: config_app `login_correo` = 'true' y el proveedor de correo
+// habilitado en Supabase Auth.
+async function _loginCorreoActivo(): Promise<boolean> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'login_correo').maybeSingle();
+  return data?.value === 'true';
+}
+
+async function _firmaRegistro(email: string, exp: number): Promise<string> {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(SUPABASE_SERVICE_KEY), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const f = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`registro|${email}|${exp}`));
+  return Array.from(new Uint8Array(f)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Token corto (1 hora) que prueba que el correo se verificó, para crear la cuenta. */
+async function _tokenRegistro(email: string): Promise<string> {
+  const exp = Date.now() + 3600 * 1000;
+  return `${exp}.${await _firmaRegistro(email, exp)}`;
+}
+
+async function _registroValido(email: string, token: string): Promise<boolean> {
+  const [e, firma] = String(token ?? '').split('.');
+  const exp = Number(e);
+  if (!exp || exp < Date.now() || !firma) return false;
+  return (await _firmaRegistro(email, exp)) === firma;
+}
+
+async function getOpcionesLogin(): Promise<Record<string, any>> {
+  return { exito: true, correo: await _loginCorreoActivo() };
+}
+
+async function enviarCodigoCorreo(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _loginCorreoActivo())) return { exito: false, desactivado: true, error: 'Entrar con correo todavía no está disponible.' };
+  const email = String(params.email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { exito: false, error: 'Correo inválido.' };
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) return { exito: false, error: 'No se pudo enviar el código. Inténtalo en un minuto.' };
+  return { exito: true };
+}
+
+async function verificarCodigoCorreo(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _loginCorreoActivo())) return { valido: false, desactivado: true, error: 'Entrar con correo todavía no está disponible.' };
+  const email = String(params.email ?? '').trim().toLowerCase();
+  const codigo = String(params.codigo ?? '').replace(/\D/g, '');
+  if (!email || codigo.length < 6) return { valido: false, error: 'Escribe el código que te llegó.' };
+  const { error } = await supabase.auth.verifyOtp({ email, token: codigo, type: 'email' });
+  if (error) return { valido: false, error: 'Código incorrecto o vencido.' };
+  const esAdmin = await _esAdmin(email);
+  const row = await _getEquipoRowByEmail(email);
+  if (_estaArchivado(row)) return { valido: false, error: 'Esta cuenta fue eliminada.' };
+  if (!row) {
+    if (esAdmin) return { valido: true, esAdmin: true, email, adminToken: await _crearAdminToken(email) };
+    return { valido: false, noRegistrado: true, email, registroToken: await _tokenRegistro(email) };
+  }
+  const token = await _crearToken(row.username);
+  const out: Record<string, any> = { valido: true, token, nombre: row.username, datos: getDatosCompletos(row) };
+  if (esAdmin) { out.esAdmin = true; out.adminToken = await _crearAdminToken(email); }
+  return out;
+}
+
 async function adminLogin(params: Record<string, any>): Promise<Record<string, any>> {
   const info = await _verificarGoogleToken(params.idToken);
   if (!info) return { ok: false, error: 'Token de Google inválido.' };
@@ -1223,10 +1284,14 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
   if (!email || !email.includes('@')) return { exito: false, error: 'Email inválido.' };
   if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) return { exito: false, error: 'El nombre solo puede contener letras y espacios.' };
 
+    // Correo verificado con código (inicio con correo, 2026-11-13).
+  if (params.registroToken && !(await _registroValido(email, String(params.registroToken)))) {
+    return { exito: false, error: 'La verificación del correo venció. Pide un código nuevo.' };
+  }
   // Verificar Google token si viene
   if (idToken) {
     const info = await _verificarGoogleToken(idToken);
-    if (!info) return { exito: false, error: 'Token de Google inválido. Volvé a iniciar sesión.' };
+    if (!info) return { exito: false, error: 'Token de Google inválido. Vuelve a iniciar sesión.' };
     if ((info.email ?? '').toLowerCase() !== email) return { exito: false, error: 'El email no coincide con el token de Google.' };
   }
 
@@ -1272,7 +1337,7 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
     broadcastEquipo: true,
     excluirUsernames: [nombre],
     headings: { es: '¡Nuevo integrante en el equipo!' },
-    contents: { es: ` se unió hoy. ¡Bienvenidx!` },
+    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
   });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
@@ -1319,7 +1384,7 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
     broadcastEquipo: true,
     excluirUsernames: [nombre],
     headings: { es: '¡Nuevo integrante en el equipo!' },
-    contents: { es: ` se unió hoy. ¡Bienvenidx!` },
+    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
     url: APP_URL + '/?tab=equipo',
   });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
@@ -9145,7 +9210,10 @@ Deno.serve(async (req: Request) => {
             case 'adminReglasLiga':                 return json(await adminReglasLiga(params));
                         case 'adminCambiosEquipo':              return json(await adminCambiosEquipo(params));
                         case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
-            case 'adminTesoreria':                  return json(await adminTesoreria(params));
+                        case 'adminTesoreria':                  return json(await adminTesoreria(params));
+            case 'getOpcionesLogin':                return json(await getOpcionesLogin());
+            case 'enviarCodigoCorreo':              return json(await enviarCodigoCorreo(params));
+            case 'verificarCodigoCorreo':           return json(await verificarCodigoCorreo(params));
             case 'getTransparencia':                return json(await getTransparencia(params));
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));

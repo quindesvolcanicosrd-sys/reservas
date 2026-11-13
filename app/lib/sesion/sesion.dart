@@ -109,6 +109,53 @@ class Sesion extends ChangeNotifier {
     await _guardar(res);
   }
 
+  // ─── Inicio y cuenta con correo (preparado; se activa desde el servidor) ──
+  /// ¿El servidor ya permite entrar con correo? (`login_correo`).
+  Future<bool> loginCorreoActivo() async {
+    try {
+      final r = await api.get('getOpcionesLogin');
+      return r['correo'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> enviarCodigoCorreo(String email) async {
+    final r = await api.post('enviarCodigoCorreo', {'email': email.trim().toLowerCase()});
+    if (r['exito'] != true) throw LoginFallido('${r['error'] ?? 'No se pudo enviar el código.'}');
+  }
+
+  /// Devuelve null si entró; si el correo no tiene cuenta, el token para crearla.
+  Future<String?> verificarCodigoCorreo(String email, String codigo) async {
+    final res = await api.post('verificarCodigoCorreo', {'email': email.trim().toLowerCase(), 'codigo': codigo.trim()});
+    if (res['noRegistrado'] == true) return '${res['registroToken']}';
+    if (res['valido'] != true) throw LoginFallido('${res['error'] ?? 'No se pudo verificar el código.'}');
+    if (res['token'] == null) throw LoginFallido('Esta cuenta es solo de administración. Por ahora úsala desde la web.');
+    await _guardar(res);
+    return null;
+  }
+
+  /// Crea la cuenta con el correo ya verificado (mismo alta que la inscripción web).
+  Future<void> crearCuentaCorreo({
+    required String email,
+    required String registroToken,
+    required String nombre,
+    required String prefijo,
+    required String telefono,
+  }) async {
+    final res = await api.post('inscribirPersona', {
+      'nombre': nombre.trim(),
+      'email': email.trim().toLowerCase(),
+      'registroToken': registroToken,
+      'prefijo': prefijo,
+      'telefono': telefono.trim(),
+      'necesitaPatines': 'No',
+      'necesitaProtecciones': 'No',
+    });
+    if (res['exito'] != true) throw LoginFallido('${res['error'] ?? 'No se pudo crear la cuenta.'}');
+    await _guardar(res);
+  }
+
   /// Inicio con contraseña o PIN. El PIN usa el mismo hash que la web,
   /// sha256(pin + '|' + username); la contraseña viaja en el cuerpo (POST),
   /// nunca en la URL, y el servidor la prueba primero si la persona tiene una.
