@@ -19,6 +19,7 @@ import 'crear_evento_screen.dart';
 import 'detalle_screen.dart';
 import 'eventos_repo.dart';
 import 'modelos.dart';
+import 'rectificacion.dart';
 import 'tomar_asistencia_screen.dart';
 import 'widgets_comunes.dart';
 import '../core/cargando.dart';
@@ -1516,7 +1517,13 @@ class _TarjetaEvento extends StatelessWidget {
                     Etiqueta(texto: textoEstadoEvento(ev), apagada: true)
                   else if (miReal != null)
                     // Evento pasado con asistencia tomada (Victor, 2026-11-12): lo que pasó de verdad.
-                    Etiqueta(texto: miReal.$1, icono: miReal.$2)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Etiqueta(texto: miReal.$1, icono: miReal.$2),
+                        BotonRectificacion(repo: repo, ev: ev),
+                      ],
+                    )
                   else if (ev.miEstado != null && !ev.finalizado)
                     Etiqueta(texto: textoMiEstado(ev.miEstado!), icono: iconoMiEstado(ev.miEstado!)),
                 ],

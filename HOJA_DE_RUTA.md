@@ -41,11 +41,17 @@ Reglas de siempre:
      - Tour actualizado (`tour.calendario.visto`).
    - [x] Ajustes → Mi perfil (pestaña con el avatar): cabecera con foto y "Ver mi ficha", Mi ficha editable, pagos y equipamiento, datos personales, aplicación. En Equipo, tu ficha tiene "Editar mi perfil" (lleva a la pestaña).
    - [x] Pestaña Tareas eliminada (el tablero se abre desde Calendario).
+   - [x] Calendario: filtros en un solo botón junto a la lupa (qué mostrar, tipo, lugar, área); la lupa solo busca texto (2026-11-12).
+   - [x] Roles del equipo editables por Pivots (catálogo por liga, renombrar cambia todas las fichas, borrar en uso pide confirmar) (2026-11-12). Falta sumarlo al asistente de crear liga (etapa 9).
    - [ ] Mi Liga se reparte (sigue en la web por ahora, pestaña solo para Pivots):
-     - [ ] Bandeja de Pivots en Calendario: pagos y reservas, rectificaciones, excepciones, tareas por validar, cambios de categoría.
-     - [ ] Funciones de personas en la ficha: pago manual, "No paga <mes>", permisos.
-     - [ ] Inventario y Comunidad en Equipo.
-     - [ ] Ajustes de la liga en Mi perfil.
+     - [x] Bandeja de Pivots en Calendario: pagos y reservas, rectificaciones, excepciones, lesiones y tareas por validar (2026-11-12).
+     - [ ] Cambios de categoría en la Bandeja ("Pedir revisión" del cambio de categoría): todavía no existe el pedido; se hace junto con el modal de cambio de categoría.
+     - [x] Funciones de personas en la ficha: registrar pago, "No paga (mes)" y acceso de Pivot (2026-11-12).
+     - [x] Comunidad (grupos y redes) e Inventario (patines por talla, protecciones, lo reservado) en Equipo (2026-11-12).
+     - [ ] Inventario completo: fotos, etiqueta, quién lo tiene y aviso a los 7 días (necesita tabla nueva).
+     - [x] Ajustes de la liga en Mi perfil: roles, comunidad, inventario (2026-11-12). El resto de Mi Liga (precios, categorías, tareas recurrentes, finanzas) se mueve en las etapas 4–6.
+     - [x] Rectificaciones: "¿Es correcto?" en la tarjeta y el detalle, "Revisión pendiente" con días restantes, se descarta a los 7 días (2026-11-12).
+     - [x] Qué llevar: pill con lo reservado junto a cada persona en el detalle del evento (Pivots) (2026-11-12).
    - [ ] Nav final: Calendario · Equipo · Finanzas (si la liga cobra y hay permiso) · Mi perfil.
 4. [ ] **Pivots y permisos**
    - "Pivot" en vez de admin.

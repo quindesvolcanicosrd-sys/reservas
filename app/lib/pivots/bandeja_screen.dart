@@ -204,13 +204,14 @@ class _Encabezado extends StatelessWidget {
   final m = x.m;
   final f = x.fechaEvento;
   final cuando = f == null ? '' : Fechas.corta(f);
+  String v(String k) => '${m[k] ?? ''}'.trim();
   String plata(Object? v) => '\$${((v as num?) ?? 0).toStringAsFixed(2)}';
   switch (x.tipo) {
     case TipoPedido.reserva:
       final equipo = [
-        if ('${m['talla']}'.trim().isNotEmpty) 'Patines ${m['talla']}',
-        if ('${m['protecciones']}'.trim().isNotEmpty && '${m['protecciones']}' != 'No')
-          '${m['protecciones']}' == 'Sí' ? 'todas las protecciones' : 'protecciones: ${'${m['protecciones']}'.toLowerCase()}',
+        if (v('talla').isNotEmpty && v('talla') != 'No') 'Patines ${v('talla')}',
+        if (v('protecciones').isNotEmpty && v('protecciones') != 'No')
+          v('protecciones') == 'Sí' ? 'todas las protecciones' : 'protecciones: ${v('protecciones').toLowerCase()}',
       ].join(' · ');
       final que = m['tipo'] == 'mensual'
           ? 'Mensualidad ${m['mesTexto'] ?? ''}'.trim()

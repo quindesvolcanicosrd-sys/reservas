@@ -1948,7 +1948,8 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const [res, rect, exc, les, asig] = await Promise.all([
     supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
-    supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente').order('created_at', { ascending: true }),
+        supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
+      .gte('created_at', new Date(Date.now() - DIAS_RECTIFICACION * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
     supabase.from('equipo').select('username').eq('solicitud_lesion_pendiente', true).is('eliminado_en', null),
     supabase.from('asignaciones_tareas').select('id, tarea_id, nombre_usuario, fecha_envio').eq('estado', 'pendiente_revision').order('fecha_envio', { ascending: true }),
@@ -3025,15 +3026,51 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
   const estadoSolicitado = String(params.estadoSolicitado ?? '').trim();
   if (!idEvento) return { exito: false, error: 'Evento inválido.' };
   if (!ESTADOS_RECTIFICACION.includes(estadoSolicitado)) return { exito: false, error: 'Estado inválido.' };
-  const { data: ev } = await supabase.from('asistencias').select('fecha').eq('id_evento', idEvento).maybeSingle();
-  await supabase.from('rectificaciones_asistencia').insert({
+    // Una sola revisión pendiente por evento; a los 7 días sin respuesta se
+  // descarta sola y se puede volver a pedir (Victor, 2026-11-12).
+  const desde = new Date(Date.now() - DIAS_RECTIFICACION * 86400000).toISOString();
+  const { data: abierta } = await supabase.from('rectificaciones_asistencia').select('id')
+    .eq('nombre', username).eq('id_evento', idEvento).eq('decision', 'Pendiente').gte('created_at', desde).limit(1).maybeSingle();
+  if (abierta) return { exito: false, error: 'Ya pediste revisar esta asistencia. Un Pivot la revisará pronto.' };
+  const { data: ev } = await supabase.from('asistencias').select('fecha, tipo').eq('id_evento', idEvento).maybeSingle();
+  const { error } = await supabase.from('rectificaciones_asistencia').insert({
     nombre: username,
     id_evento: idEvento,
     fecha_evento: ev?.fecha ?? null,
     estado_solicitado: estadoSolicitado,
     decision: 'Pendiente',
   });
+  if (error) return { exito: false, error: 'No se pudo enviar. Intenta de nuevo.' };
+  const { data: fila } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
+  await sendPush({
+    tipo: 'avisos_admin',
+    include_external_user_ids: await _adminDestinatariosPush(),
+    headings: { es: 'Revisión de asistencia' },
+    contents: { es: `${fila?.nombre_derby || username} pide corregir su asistencia${ev?.fecha ? ' del ' + ev.fecha : ''}: ${estadoSolicitado}.` },
+    url: APP_URL + '/',
+  });
   return { exito: true };
+}
+
+const DIAS_RECTIFICACION = 7;
+
+// Mis pedidos de revisión de asistencia de los últimos 60 días, para mostrar
+// "Revisión pendiente" (con los días que quedan) o cómo se resolvió.
+async function getMisRectificaciones(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const desde = new Date(Date.now() - 60 * 86400000).toISOString();
+  const { data } = await supabase.from('rectificaciones_asistencia').select('id, id_evento, estado_solicitado, decision, created_at')
+    .eq('nombre', username).gte('created_at', desde).order('created_at', { ascending: false });
+  const limite = Date.now() - DIAS_RECTIFICACION * 86400000;
+  const porEvento: Record<string, any> = {};
+  for (const r of data ?? []) {
+    if (porEvento[r.id_evento]) continue; // la más reciente manda
+    const vencida = r.decision === 'Pendiente' && new Date(r.created_at).getTime() < limite;
+    const quedan = Math.max(0, Math.ceil((new Date(r.created_at).getTime() + DIAS_RECTIFICACION * 86400000 - Date.now()) / 86400000));
+    porEvento[r.id_evento] = { id: r.id, estadoSolicitado: r.estado_solicitado, decision: vencida ? 'Descartada' : r.decision, creada: r.created_at, diasQuedan: quedan };
+  }
+  return { exito: true, porEvento, dias: DIAS_RECTIFICACION };
 }
 
 async function adminGetRectificaciones(params: Record<string, any>): Promise<any[]> {
@@ -5680,7 +5717,7 @@ async function adminGetQueLlevar(): Promise<any[]> {
   for (const r of pendientes) {
     const ev = eventosPorId[r.id_evento];
     if (!ev) continue;
-    out.push({ nombre: r.nombre_usuario, patines: r.talla ?? '', protecciones: r.protecciones ?? '', fecha: ev.fecha + (ev.donde ? ' - ' + ev.donde : ''), pronombres: pronMap[r.nombre_usuario] ?? '', waLink: waMap[r.nombre_usuario] ?? '' });
+        out.push({ idEvento: r.id_evento, nombre: r.nombre_usuario, patines: r.talla ?? '', protecciones: r.protecciones ?? '', fecha: ev.fecha + (ev.donde ? ' - ' + ev.donde : ''), pronombres: pronMap[r.nombre_usuario] ?? '', waLink: waMap[r.nombre_usuario] ?? '' });
   }
   return out;
 }
@@ -7156,7 +7193,8 @@ Deno.serve(async (req: Request) => {
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
             case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
             case 'adminBandeja':                    return json(await adminBandeja(params));
-            case 'getComunidad':                    return json(await getComunidad(params));
+                  case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
+      case 'getComunidad':                    return json(await getComunidad(params));
       case 'adminGuardarComunidad':           return json(await adminGuardarComunidad(params));
       case 'getRolesEquipo':                  return json(await getRolesEquipo());
       case 'adminRolesEquipo':                return json(await adminRolesEquipo(params));

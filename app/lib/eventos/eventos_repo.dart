@@ -99,7 +99,59 @@ class EventosRepo extends ChangeNotifier {
     final hasta = _hasta ?? hoy.add(const Duration(days: diasAdelante));
     if (forzar) _cuota = null;
     _cargarCuota();
+    cargarRectificaciones();
     await _traer(desde, hasta, reemplazar: true);
+  }
+
+  // ─── Qué llevar (Pivots): equipamiento reservado por evento ───────────
+
+  Future<Map<String, Map<String, String>>>? _queLlevar;
+  DateTime? _queLlevarEn;
+
+  /// idEvento → (username en minúsculas → "Patines 38 · Protecciones").
+  Future<Map<String, Map<String, String>>> queLlevar() {
+    if (_queLlevar != null && _queLlevarEn != null && DateTime.now().difference(_queLlevarEn!) < const Duration(minutes: 2)) return _queLlevar!;
+    _queLlevarEn = DateTime.now();
+    return _queLlevar = _api
+        .getLista('adminGetQueLlevar', {'adminToken': sesion.adminToken})
+        .then((l) {
+          final out = <String, Map<String, String>>{};
+          for (final r in l.whereType<Map<String, dynamic>>()) {
+            final pat = '${r['patines'] ?? ''}'.trim(), pro = '${r['protecciones'] ?? ''}'.trim();
+            final txt = [if (pat.isNotEmpty && pat != 'No') 'Patines $pat', if (pro.isNotEmpty && pro != 'No') pro == 'Sí' ? 'Protecciones' : pro].join(' · ');
+            if (txt.isEmpty) continue;
+            (out['${r['idEvento']}'] ??= {})['${r['nombre']}'.toLowerCase()] = txt;
+          }
+          return out;
+        })
+        .catchError((_) {
+          _queLlevar = null;
+          return <String, Map<String, String>>{};
+        });
+  }
+
+  // ─── Rectificaciones de asistencia (Victor, 2026-11-12) ────────────────
+
+  /// Mi último pedido de revisión por evento: estadoSolicitado, decision
+  /// (Pendiente, Aprobada, Rechazada o Descartada a los 7 días) y diasQuedan.
+  Map<String, Map<String, dynamic>> rectificaciones = const {};
+  int diasRectificacion = 7;
+
+  Future<void> cargarRectificaciones() async {
+    try {
+      final r = await _api.get('getMisRectificaciones');
+      final m = r['porEvento'];
+      rectificaciones = m is Map ? {for (final e in m.entries) '${e.key}': Map<String, dynamic>.from(e.value as Map)} : const {};
+      diasRectificacion = (r['dias'] as num?)?.toInt() ?? 7;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// Pide a los Pivots corregir mi asistencia: 'A tiempo', 'Tarde' o 'Sin registrar'.
+  Future<void> pedirRectificacion(Evento ev, String estado) async {
+    final r = await _api.post('solicitarRectificacionAsistencia', {'idEvento': ev.id, 'estadoSolicitado': estado});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo enviar.'}');
+    await cargarRectificaciones();
   }
 
   // ─── ¿Puede responder "¿Vas a ir?"? (mismas reglas que la web) ─────────

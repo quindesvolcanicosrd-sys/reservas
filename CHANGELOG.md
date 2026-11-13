@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — App Android: "¿Es correcto?" para pedir corregir tu asistencia en eventos pasados (con "Revisión pendiente" y días restantes) y, para Pivots, lo que cada persona reservó junto a su nombre en el detalle del evento.
+
 2026-11-12 — App Android (etapa 3): Bandeja de Pivots en Calendario (pagos y reservas, rectificaciones, excepciones, lesiones y tareas por validar); registrar pago y "No paga un mes" desde la ficha; Comunidad e Inventario en Equipo; Ajustes de la liga en Mi perfil (roles, comunidad, inventario). Las excepciones de cuota de otras personas ya no se pueden consultar sin ser Pivot.
 
 2026-11-12 — Seguridad: 19 acciones de Pivots (pagos, balance, usuarios, enviar avisos al equipo, lugares, equipamiento…) ahora exigen una sesión de Pivot válida; antes se podían llamar sin sesión.

@@ -16,6 +16,7 @@ import 'editar_evento_screen.dart';
 import 'eventos_repo.dart';
 import 'tomar_asistencia_screen.dart';
 import 'video_screen.dart';
+import 'rectificacion.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 import '../core/cargando.dart';
@@ -53,7 +54,15 @@ class _DetalleScreenState extends State<DetalleScreen> {
     super.initState();
     if (repo.porId(widget.eventoId) == null) repo.cargar(forzar: true);
     _cargarSinRespuesta();
+    // Qué llevar (Pivots): pill con lo que reservó cada persona.
+    if (_esAdmin) {
+      repo.queLlevar().then((m) {
+        if (mounted) setState(() => _llevar = m[widget.eventoId] ?? const {});
+      });
+    }
   }
+
+  Map<String, String> _llevar = const {};
 
   Future<void> _cargarSinRespuesta() async {
     final ev = repo.porId(widget.eventoId);
@@ -539,11 +548,44 @@ class _DetalleScreenState extends State<DetalleScreen> {
   Widget _quienesFueron(BuildContext context, Evento ev) {
     final p = context.pivot;
     final fueron = [...ev.asistentes]..sort((a, b) => a.persona.nombreMostrar.toLowerCase().compareTo(b.persona.nombreMostrar.toLowerCase()));
+    final yo = (repo.sesion.nombre ?? '').toLowerCase();
+    final mia = ev.asistentes.where((a) => a.persona.username.toLowerCase() == yo).firstOrNull?.estado;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Tu asistencia real y "¿Es correcto?" (rectificaciones, 2026-11-12).
+          if (BotonRectificacion.aplica(ev))
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+              decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
+              child: Row(
+                children: [
+                  Icon(switch (mia) {
+                    EstadoReal.aTiempo => Icons.check_circle_rounded,
+                    EstadoReal.tarde => Icons.schedule_rounded,
+                    null => Icons.cancel_outlined,
+                  }, color: p.marcaTexto),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tu asistencia', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                        Text(switch (mia) {
+                          EstadoReal.aTiempo => 'Llegaste a horario',
+                          EstadoReal.tarde => 'Llegaste tarde',
+                          null => 'No asististe',
+                        }, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
+                      ],
+                    ),
+                  ),
+                  BotonRectificacion(repo: repo, ev: ev),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
@@ -706,6 +748,11 @@ class _DetalleScreenState extends State<DetalleScreen> {
                                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
                                       ),
                                     ),
+                                    if (_llevar[per.username.toLowerCase()] case final llevar?)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 6),
+                                        child: Etiqueta(texto: llevar, icono: Icons.roller_skating_rounded),
+                                      ),
                                     if (_esAdmin &&
                                         marcadxs.contains(per.username.trim().toLowerCase()) &&
                                         per.username.toLowerCase() != (repo.sesion.nombre ?? '').toLowerCase())
