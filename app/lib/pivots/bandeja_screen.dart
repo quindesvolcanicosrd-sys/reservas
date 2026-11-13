@@ -13,6 +13,7 @@ import '../ajustes/identidad_screen.dart';
 import '../ajustes/notificaciones_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/inventario_asistentes.dart' show elegirPlazoPrestamo;
+import '../finanzas/tesoreria_repo.dart';
 import '../equipo/persona_screen.dart';
 import 'bandeja_repo.dart';
 
@@ -136,6 +137,12 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       if (r == null || !mounted) return;
       extra = r;
     }
+    // Pago: el Pivot confirma a qué cuenta entró de verdad (Tesorería).
+    if (aprobar && p.tipo == TipoPedido.reserva && (p.m['monto'] as num? ?? 0) > 0 && p.m['usoCupon'] != true && repo.sesion.tieneArea('finanzas')) {
+      final c = await _elegirCuenta(p);
+      if (c == false || !mounted) return;
+      if (c is String) extra = {'cuentaId': c};
+    }
     // Pedido para usar equipamiento: cuánto tiempo y cómo se entrega.
     if (aprobar && p.tipo == TipoPedido.prestamo && p.m['tipo'] == 'uso') {
       final r = await elegirPlazoPrestamo(context, titulo: '¿Por cuánto tiempo?');
@@ -159,6 +166,60 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     } finally {
       if (mounted) setState(() => _saliendo.remove(_clave(p)));
     }
+  }
+
+  /// Cuentas de Tesorería: elegir a cuál entró el pago. Devuelve el id, null
+  /// si no hay cuentas (sigue sin Tesorería) o false si se cancela.
+  Future<Object?> _elegirCuenta(Pedido p) async {
+    List<Map<String, dynamic>> cuentas;
+    try {
+      final r = await TesoreriaRepo(repo.sesion).accion('resumen');
+      cuentas = [
+        for (final c in (r['cuentas'] as List? ?? const []))
+          if ((c as Map)['activa'] != false) c as Map<String, dynamic>,
+      ];
+    } catch (_) {
+      return null;
+    }
+    if (cuentas.isEmpty || !mounted) return null;
+    final medio = '${p.m['medio'] ?? ''}';
+    final tipoMedio = medio == 'deuna' ? 'deuna' : (medio == 'transferencia' ? 'banco' : (medio == 'efectivo' ? 'efectivo' : ''));
+    String? elegida = cuentas.where((c) => c['tipo'] == tipoMedio).map((c) => c['id'] as String).firstOrNull ?? cuentas.first['id'] as String;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('¿A qué cuenta entró?', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(
+                  medio.isEmpty ? 'La persona no dijo dónde pagó.' : 'Dijo que pagó por ${medio == 'deuna' ? 'DeUna' : medio}. Confírmalo.',
+                  style: TextStyle(color: h.pivot.textoSecundario),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final c in cuentas)
+                      ChoiceChip(label: Text('${c['nombre']}'), selected: elegida == c['id'], onSelected: (_) => set(() => elegida = c['id'] as String)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Aprobar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return ok == true ? elegida : false;
   }
 
   Future<String?> _pedirNota(Pedido p) {

@@ -206,7 +206,12 @@ class BandejaRepo extends ChangeNotifier {
     final token = sesion.adminToken;
     try {
       final r = switch (p.tipo) {
-        TipoPedido.reserva => await _api.post('adminSetEstadoReserva', {'adminToken': token, 'id': p.id, 'estado': aprobar ? 'Confirmada' : 'Cancelada'}),
+        TipoPedido.reserva => await _api.post('adminSetEstadoReserva', {
+          'adminToken': token,
+          'id': p.id,
+          'estado': aprobar ? 'Confirmada' : 'Cancelada',
+          ...extra,
+        }),
         TipoPedido.rectificacion => await _api.post('adminSetEstadoRectificacion', {
           'adminToken': token,
           'id': p.id,

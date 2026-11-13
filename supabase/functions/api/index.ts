@@ -4704,6 +4704,351 @@ async function usarCreditos(params: Record<string, any>): Promise<Record<string,
   return { exito: true, usados };
 }
 
+// ─── Tesorería (HOJA_DE_RUTA etapa 5, Victor 2026-11-13) ───────────────────
+// Cuentas con saldo inicial; cada ingreso o gasto dice de qué cuenta; nada se
+// borra (corregir = anular y volver a registrar); conciliación; saldos de
+// personas; fondos de viaje; transparencia opcional.
+const CATEGORIAS_TESORERIA = ['cuota', 'clase', 'merch', 'evento', 'equipamiento', 'alquiler', 'viaje', 'prestamo', 'abono', 'donacion', 'otro'];
+
+function _num2(n: number): number { return Math.round(n * 100) / 100; }
+
+/** Cuenta que corresponde a un medio de pago ('deuna' | 'transferencia' | 'efectivo'). */
+async function _cuentaPorMedio(medio: string): Promise<string | null> {
+  const tipo = medio === 'deuna' ? 'deuna' : medio === 'transferencia' ? 'banco' : medio === 'efectivo' ? 'efectivo' : '';
+  if (!tipo) return null;
+  const { data } = await supabase.from('tesoreria_cuentas').select('id').eq('tipo', tipo).eq('activa', true).order('orden').limit(1).maybeSingle();
+  return data?.id ?? null;
+}
+
+async function _nombrePersona(username: string | null | undefined): Promise<string | null> {
+  if (!username) return null;
+  const { data } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
+  return data?.nombre_derby || username;
+}
+
+/** Registra un movimiento (solo si hay cuentas creadas, para no ensuciar antes de empezar). */
+async function _registrarMovimiento(m: Record<string, any>): Promise<string | null> {
+  const { count } = await supabase.from('tesoreria_cuentas').select('id', { count: 'exact', head: true });
+  if (!count) return null;
+  if (m.origen && m.origen_id) {
+    const { data: ya } = await supabase.from('tesoreria_movimientos').select('id').eq('origen', m.origen).eq('origen_id', String(m.origen_id)).eq('anulado', false).maybeSingle();
+    if (ya) return ya.id;
+  }
+  const fila = { ...m, persona_nombre: m.persona_nombre ?? await _nombrePersona(m.persona) };
+  const { data, error } = await supabase.from('tesoreria_movimientos').insert(fila).select('id').single();
+  if (error) { console.error('[tesoreria]', error.message); return null; }
+  return data.id;
+}
+
+async function _saldosCuentas(): Promise<any[]> {
+  const [{ data: cuentas }, movs, { data: conc }] = await Promise.all([
+    supabase.from('tesoreria_cuentas').select('*').order('orden').order('created_at'),
+    _paginado((a, b) => supabase.from('tesoreria_movimientos').select('tipo, monto, cuenta_id, cuenta_destino_id, fecha').eq('anulado', false).range(a, b)),
+    supabase.from('tesoreria_conciliaciones').select('cuenta_id, fecha, saldo_real, diferencia, created_at').order('created_at', { ascending: false }).limit(200),
+  ]);
+  return (cuentas ?? []).map((c: any) => {
+    let saldo = Number(c.saldo_inicial) || 0;
+    for (const m of movs) {
+      if (m.fecha < c.fecha_inicial) continue;
+      const v = Number(m.monto) || 0;
+      if (m.tipo === 'ingreso' && m.cuenta_id === c.id) saldo += v;
+      if (m.tipo === 'egreso' && m.cuenta_id === c.id) saldo -= v;
+      if (m.tipo === 'transferencia') { if (m.cuenta_id === c.id) saldo -= v; if (m.cuenta_destino_id === c.id) saldo += v; }
+    }
+    const ultima = (conc ?? []).find((x: any) => x.cuenta_id === c.id) ?? null;
+    return {
+      id: c.id, nombre: c.nombre, tipo: c.tipo, responsable: c.responsable ?? '', saldoInicial: Number(c.saldo_inicial) || 0,
+      fechaInicial: c.fecha_inicial, activa: c.activa, saldo: _num2(saldo),
+      conciliacion: ultima ? { fecha: ultima.fecha, saldoReal: Number(ultima.saldo_real), diferencia: Number(ultima.diferencia) } : null,
+    };
+  });
+}
+
+function _filaMovimiento(m: any, cuentas: Record<string, string>): Record<string, any> {
+  return {
+    id: m.id, fecha: m.fecha, tipo: m.tipo, monto: Number(m.monto), cuenta: cuentas[m.cuenta_id] ?? '', cuentaId: m.cuenta_id,
+    cuentaDestino: m.cuenta_destino_id ? (cuentas[m.cuenta_destino_id] ?? '') : null, categoria: m.categoria, descripcion: m.descripcion ?? '',
+    persona: m.persona ?? null, personaNombre: m.persona_nombre ?? null, origen: m.origen, anulado: m.anulado, motivoAnulacion: m.motivo_anulacion ?? null,
+    reemplazaId: m.reemplaza_id ?? null, creado: m.created_at,
+  };
+}
+
+async function _saldoPersonas(username?: string): Promise<Record<string, number>> {
+  let q = supabase.from('saldos_movimientos').select('username, monto').eq('anulado', false);
+  if (username) q = q.eq('username', username);
+  const { data } = await q;
+  const out: Record<string, number> = {};
+  (data ?? []).forEach((r: any) => { out[r.username] = _num2((out[r.username] ?? 0) + (Number(r.monto) || 0)); });
+  return out;
+}
+
+async function adminTesoreria(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const accion = String(params.accion ?? 'resumen');
+  const leer = (v: unknown) => { if (v == null || v === '') return {}; if (typeof v === 'object') return v as Record<string, any>; try { return JSON.parse(String(v)); } catch { return {}; } };
+  const d = leer(params.datos);
+  const fechaOk = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? String(v) : null;
+  const hoy = _hoyEcuadorISO();
+
+  if (accion === 'resumen') {
+    const cuentas = await _saldosCuentas();
+    const nombres: Record<string, string> = {}; cuentas.forEach((c) => { nombres[c.id] = c.nombre; });
+    const mes = hoy.slice(0, 7) + '-01';
+    const [{ data: ult }, { data: delMes }, saldos, { data: transp }] = await Promise.all([
+      supabase.from('tesoreria_movimientos').select('*').order('fecha', { ascending: false }).order('created_at', { ascending: false }).limit(30),
+      supabase.from('tesoreria_movimientos').select('tipo, monto').eq('anulado', false).gte('fecha', mes),
+      _saldoPersonas(),
+      supabase.from('config_app').select('value').eq('key', 'tesoreria_transparencia').maybeSingle(),
+    ]);
+    const suma = (t: string) => _num2((delMes ?? []).filter((m: any) => m.tipo === t).reduce((s: number, m: any) => s + Number(m.monto), 0));
+    const deben = Object.values(saldos).filter((v) => v < 0);
+    return {
+      exito: true, cuentas, total: _num2(cuentas.filter((c) => c.activa).reduce((s, c) => s + c.saldo, 0)),
+      mes: { ingresos: suma('ingreso'), egresos: suma('egreso') },
+      movimientos: (ult ?? []).map((m: any) => _filaMovimiento(m, nombres)),
+      saldos: { personasDeben: deben.length, totalDeben: _num2(-deben.reduce((s, v) => s + v, 0)), personasAFavor: Object.values(saldos).filter((v) => v > 0).length },
+      transparencia: transp?.value === 'true', categorias: CATEGORIAS_TESORERIA,
+    };
+  }
+
+  if (accion === 'movimientos' || accion === 'exportar') {
+    const f = d;
+    const cuentas = await _saldosCuentas();
+    const nombres: Record<string, string> = {}; cuentas.forEach((c) => { nombres[c.id] = c.nombre; });
+    const filas = await _paginado((a, b) => {
+      let q = supabase.from('tesoreria_movimientos').select('*').order('fecha', { ascending: false }).order('created_at', { ascending: false });
+      if (fechaOk(f.desde)) q = q.gte('fecha', f.desde);
+      if (fechaOk(f.hasta)) q = q.lte('fecha', f.hasta);
+      if (f.cuentaId) q = q.or(`cuenta_id.eq.${f.cuentaId},cuenta_destino_id.eq.${f.cuentaId}`);
+      if (f.tipo) q = q.eq('tipo', String(f.tipo));
+      if (f.categoria) q = q.eq('categoria', String(f.categoria));
+      if (f.persona) q = q.eq('persona', String(f.persona));
+      if (!f.incluirAnulados) q = q.eq('anulado', false);
+      return q.range(a, b);
+    });
+    const lista = filas.map((m: any) => _filaMovimiento(m, nombres));
+    const validos = lista.filter((m) => !m.anulado);
+    const totales = {
+      ingresos: _num2(validos.filter((m) => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0)),
+      egresos: _num2(validos.filter((m) => m.tipo === 'egreso').reduce((s, m) => s + m.monto, 0)),
+    };
+    if (accion === 'exportar') {
+      const esc = (v: unknown) => { const s = String(v ?? ''); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+      const lineas = [['Fecha', 'Tipo', 'Monto', 'Cuenta', 'Cuenta destino', 'Categoría', 'Descripción', 'Persona', 'Anulado', 'Motivo anulación'].join(',')];
+      for (const m of lista) lineas.push([m.fecha, m.tipo, m.monto.toFixed(2), m.cuenta, m.cuentaDestino ?? '', m.categoria, m.descripcion, m.personaNombre ?? '', m.anulado ? 'sí' : '', m.motivoAnulacion ?? ''].map(esc).join(','));
+      return { exito: true, csv: '﻿' + lineas.join('\n'), totales, cantidad: lista.length };
+    }
+    return { exito: true, movimientos: lista, totales };
+  }
+
+  if (accion === 'guardarCuenta') {
+    const fila: Record<string, any> = {
+      nombre: String(d.nombre ?? '').trim().slice(0, 60),
+      tipo: ['efectivo', 'deuna', 'banco', 'otro'].includes(String(d.tipo)) ? String(d.tipo) : 'otro',
+      responsable: String(d.responsable ?? '').trim().slice(0, 60) || null,
+      saldo_inicial: Number(d.saldoInicial) || 0,
+      fecha_inicial: fechaOk(d.fechaInicial) ?? hoy,
+      activa: d.activa !== false,
+    };
+    if (!fila.nombre) return { exito: false, error: 'Falta el nombre de la cuenta.' };
+    let antes: any = null;
+    if (d.id) {
+      ({ data: antes } = await supabase.from('tesoreria_cuentas').select('*').eq('id', d.id).maybeSingle());
+      const { error } = await supabase.from('tesoreria_cuentas').update(fila).eq('id', d.id);
+      if (error) return { exito: false, error: error.message };
+    } else {
+      const { error } = await supabase.from('tesoreria_cuentas').insert(fila);
+      if (error) return { exito: false, error: error.message };
+    }
+    await _registrarAjuste('cuenta', antes, fila, email);
+    return adminTesoreria({ ...params, accion: 'resumen' });
+  }
+
+  if (accion === 'registrar') {
+    const tipo = ['ingreso', 'egreso', 'transferencia'].includes(String(d.tipo)) ? String(d.tipo) : '';
+    const monto = _num2(Number(d.monto));
+    if (!tipo) return { exito: false, error: 'Tipo inválido.' };
+    if (!(monto > 0)) return { exito: false, error: 'El monto debe ser mayor a 0.' };
+    if (!d.cuentaId) return { exito: false, error: 'Elige la cuenta.' };
+    if (tipo === 'transferencia' && (!d.cuentaDestinoId || d.cuentaDestinoId === d.cuentaId)) return { exito: false, error: 'Elige otra cuenta de destino.' };
+    const id = await _registrarMovimiento({
+      fecha: fechaOk(d.fecha) ?? hoy, tipo, monto, cuenta_id: d.cuentaId, cuenta_destino_id: tipo === 'transferencia' ? d.cuentaDestinoId : null,
+      categoria: CATEGORIAS_TESORERIA.includes(String(d.categoria)) ? String(d.categoria) : (tipo === 'transferencia' ? 'otro' : 'otro'),
+      descripcion: String(d.descripcion ?? '').trim().slice(0, 300) || null, persona: d.persona || null,
+      origen: 'manual', registrado_por: email, reemplaza_id: d.reemplazaId || null, comprobante_url: d.comprobanteUrl || null,
+    });
+    if (!id) return { exito: false, error: 'Primero crea al menos una cuenta.' };
+    return { exito: true, id };
+  }
+
+  if (accion === 'anular' || accion === 'corregir') {
+    const { data: m } = await supabase.from('tesoreria_movimientos').select('*').eq('id', d.id).maybeSingle();
+    if (!m) return { exito: false, error: 'No se encontró el movimiento.' };
+    if (m.anulado) return { exito: false, error: 'Ya estaba anulado.' };
+    const motivo = String(d.motivo ?? '').trim().slice(0, 200) || (accion === 'corregir' ? 'Corrección' : 'Anulado');
+    await supabase.from('tesoreria_movimientos').update({ anulado: true, anulado_por: email, anulado_en: new Date().toISOString(), motivo_anulacion: motivo }).eq('id', m.id);
+    if (accion === 'corregir') {
+      const n = leer(d.nuevo);
+      return adminTesoreria({ ...params, accion: 'registrar', datos: { ...n, reemplazaId: m.id } });
+    }
+    return { exito: true };
+  }
+
+  if (accion === 'conciliar') {
+    const cuentas = await _saldosCuentas();
+    const c = cuentas.find((x) => x.id === d.cuentaId);
+    if (!c) return { exito: false, error: 'Cuenta inválida.' };
+    const real = _num2(Number(d.saldoReal));
+    if (!Number.isFinite(real)) return { exito: false, error: 'Saldo inválido.' };
+    const diferencia = _num2(real - c.saldo);
+    await supabase.from('tesoreria_conciliaciones').insert({ cuenta_id: c.id, fecha: hoy, saldo_real: real, saldo_app: c.saldo, diferencia, nota: String(d.nota ?? '').slice(0, 200) || null, por: email });
+    return { exito: true, saldoApp: c.saldo, saldoReal: real, diferencia };
+  }
+
+  if (accion === 'saldos') {
+    const saldos = await _saldoPersonas();
+    const usuarios = Object.keys(saldos).filter((u) => saldos[u] !== 0);
+    const { data: gente } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby, foto_perfil').in('username', usuarios) : { data: [] as any[] };
+    const pe: Record<string, any> = {}; (gente ?? []).forEach((p: any) => { pe[p.username] = p; });
+    const { data: nombresHist } = usuarios.length ? await supabase.from('saldos_movimientos').select('username, persona_nombre').in('username', usuarios) : { data: [] as any[] };
+    const hist: Record<string, string> = {}; (nombresHist ?? []).forEach((r: any) => { if (r.persona_nombre) hist[r.username] = r.persona_nombre; });
+    return {
+      exito: true,
+      personas: usuarios.map((u) => ({ username: u, nombre: pe[u]?.nombre_derby || hist[u] || u, foto: pe[u]?.foto_perfil || '', saldo: saldos[u], sinCuenta: !pe[u] }))
+        .sort((a, b) => a.saldo - b.saldo),
+    };
+  }
+
+  if (accion === 'saldoPersona') {
+    const u = String(d.username ?? '');
+    const { data } = await supabase.from('saldos_movimientos').select('*').eq('username', u).order('fecha', { ascending: false }).order('created_at', { ascending: false });
+    return { exito: true, saldo: (await _saldoPersonas(u))[u] ?? 0, movimientos: data ?? [] };
+  }
+
+  if (accion === 'registrarSaldo') {
+    // tipo: 'a_favor' (pagó de más / el equipo le debe), 'cargo' (debe), 'prestamo'
+    // (el equipo le prestó: sale de una cuenta), 'abono' (paga lo que debe: entra a una cuenta).
+    const u = String(d.username ?? '').trim();
+    const tipo = ['cargo', 'abono', 'prestamo', 'a_favor'].includes(String(d.tipo)) ? String(d.tipo) : '';
+    const monto = _num2(Math.abs(Number(d.monto)));
+    if (!u || !tipo) return { exito: false, error: 'Faltan datos.' };
+    if (!(monto > 0)) return { exito: false, error: 'El monto debe ser mayor a 0.' };
+    const concepto = String(d.concepto ?? '').trim().slice(0, 200);
+    if (!concepto) return { exito: false, error: 'Escribe el concepto.' };
+    const signo = tipo === 'a_favor' || tipo === 'abono' ? 1 : -1;
+    let movimientoId: string | null = null;
+    if ((tipo === 'prestamo' || tipo === 'abono' || tipo === 'a_favor') && d.cuentaId) {
+      movimientoId = await _registrarMovimiento({
+        fecha: fechaOk(d.fecha) ?? hoy, tipo: tipo === 'prestamo' ? 'egreso' : 'ingreso', monto, cuenta_id: d.cuentaId,
+        categoria: tipo === 'prestamo' ? 'prestamo' : 'abono', descripcion: concepto, persona: u, origen: 'saldo', registrado_por: email,
+      });
+    }
+    const { error } = await supabase.from('saldos_movimientos').insert({
+      username: u, persona_nombre: await _nombrePersona(u), fecha: fechaOk(d.fecha) ?? hoy, monto: signo * monto, concepto, tipo,
+      aplicar: ['aparte', 'con_cuota', 'cuotas'].includes(String(d.aplicar)) ? String(d.aplicar) : 'aparte',
+      monto_por_cuota: d.aplicar === 'cuotas' ? (_num2(Number(d.montoPorCuota)) || null) : null, movimiento_id: movimientoId, por: email,
+    });
+    if (error) return { exito: false, error: error.message };
+    return { exito: true, saldo: (await _saldoPersonas(u))[u] ?? 0 };
+  }
+
+  if (accion === 'anularSaldo') {
+    const { data: s } = await supabase.from('saldos_movimientos').select('*').eq('id', d.id).maybeSingle();
+    if (!s || s.anulado) return { exito: false, error: 'No se encontró.' };
+    await supabase.from('saldos_movimientos').update({ anulado: true, anulado_por: email }).eq('id', s.id);
+    if (s.movimiento_id) await supabase.from('tesoreria_movimientos').update({ anulado: true, anulado_por: email, anulado_en: new Date().toISOString(), motivo_anulacion: 'Saldo anulado' }).eq('id', s.movimiento_id);
+    return { exito: true };
+  }
+
+  if (accion === 'transparencia') {
+    const v = d.activa === true || d.activa === 'true';
+    await supabase.from('config_app').upsert({ key: 'tesoreria_transparencia', value: v ? 'true' : 'false' }, { onConflict: 'key' });
+    await _registrarAjuste('transparencia', !v, v, email);
+    return { exito: true, transparencia: v };
+  }
+
+  if (accion === 'fondos') {
+    const { data } = await supabase.from('fondos_viaje').select('*').order('created_at', { ascending: false });
+    return { exito: true, fondos: data ?? [] };
+  }
+
+  if (accion === 'guardarFondo' || accion === 'previsualizarFondo') {
+    const desde = fechaOk(d.ventanaDesde), hasta = fechaOk(d.ventanaHasta) ?? hoy;
+    if (!desde) return { exito: false, error: 'Elige desde cuándo se cuenta la asistencia.' };
+    const monto = _num2(Number(d.monto) || 0);
+    let tramos: { min: number; pct: number }[] = Array.isArray(d.tramos) ? d.tramos : [];
+    tramos = tramos.map((t: any) => ({ min: Math.max(0, Math.min(100, Number(t.min) || 0)), pct: Math.max(0, Math.min(100, Number(t.pct) || 0)) }))
+      .sort((a, b) => b.min - a.min);
+    if (tramos.reduce((s, t) => s + t.pct, 0) > 100) return { exito: false, error: 'Los tramos suman más del 100 %.' };
+    const vista = await _repartoFondo(desde, hasta, monto, tramos);
+    if (accion === 'previsualizarFondo') return { exito: true, ...vista };
+    const nombre = String(d.nombre ?? '').trim().slice(0, 80);
+    if (!nombre) return { exito: false, error: 'Ponle nombre al viaje.' };
+    const fila = { nombre, monto, fecha: fechaOk(d.fecha), ventana_desde: desde, ventana_hasta: hasta, tramos, creado_por: email };
+    const { error } = d.id ? await supabase.from('fondos_viaje').update(fila).eq('id', d.id) : await supabase.from('fondos_viaje').insert(fila);
+    if (error) return { exito: false, error: error.message };
+    return { exito: true, ...vista };
+  }
+
+  return { exito: false, error: 'Acción desconocida.' };
+}
+
+/** Reparto de un fondo de viaje: % de asistencia de cada persona de equipos que califican. */
+async function _repartoFondo(desde: string, hasta: string, monto: number, tramos: { min: number; pct: number }[]): Promise<Record<string, any>> {
+  const [{ data: tiers }, eventos, logs, { data: gente }] = await Promise.all([
+    supabase.from('config_tiers').select('nombre, califica_fondos_viaje'),
+    _paginado((a, b) => supabase.from('asistencias').select('id_evento').not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")').gte('fecha', desde).lte('fecha', hasta).range(a, b)),
+    _paginado((a, b) => supabase.from('log_asistencias').select('id_evento, nombre_usuario, estado, marca_temporal').eq('origen', 'Admin').gte('fecha_entrenamiento', desde).lte('fecha_entrenamiento', hasta).range(a, b)),
+    supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria').is('eliminado_en', null),
+  ]);
+  const califican = new Set((tiers ?? []).filter((t: any) => t.califica_fondos_viaje).map((t: any) => t.nombre));
+  const idsEventos = new Set(eventos.map((e: any) => e.id_evento));
+  // Solo eventos con lista tomada cuentan en el total.
+  const conLista = new Set(logs.map((l: any) => l.id_evento).filter((id: string) => idsEventos.has(id)));
+  const ultima: Record<string, { estado: string; marca: number }> = {};
+  for (const l of logs) {
+    if (!conLista.has(l.id_evento)) continue;
+    const k = l.id_evento + '|' + l.nombre_usuario;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    if (!ultima[k] || marca >= ultima[k].marca) ultima[k] = { estado: l.estado, marca };
+  }
+  const fue: Record<string, number> = {};
+  for (const [k, v] of Object.entries(ultima)) if (v.estado === 'A tiempo' || v.estado === 'Tarde') { const u = k.split('|').slice(1).join('|'); fue[u] = (fue[u] ?? 0) + 1; }
+  const total = conLista.size;
+  const personas = (gente ?? []).filter((p: any) => califican.has(p.categoria)).map((p: any) => ({
+    username: p.username, nombre: p.nombre_derby || p.username, foto: p.foto_perfil || '', categoria: p.categoria,
+    clases: fue[p.username] ?? 0, pct: total ? Math.round(((fue[p.username] ?? 0) * 1000) / total) / 10 : 0, recibe: 0, tramo: -1,
+  }));
+  tramos.forEach((t, i) => {
+    const max = i === 0 ? Infinity : tramos[i - 1].min;
+    const en = personas.filter((p) => p.pct >= t.min && p.pct < max);
+    const parte = en.length ? _num2((monto * t.pct / 100) / en.length) : 0;
+    en.forEach((p) => { p.recibe = parte; p.tramo = i; });
+  });
+  personas.sort((a, b) => b.pct - a.pct);
+  const repartido = _num2(personas.reduce((s, p) => s + p.recibe, 0));
+  return { eventosConLista: total, personas, repartido, sobrante: _num2(monto - repartido) };
+}
+
+/** Transparencia (cualquier persona con sesión): totales por mes y en qué se gasta. Nunca datos de personas. */
+async function getTransparencia(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarToken(params.token))) return { exito: false, error: 'Sesión inválida.' };
+  const { data: t } = await supabase.from('config_app').select('value').eq('key', 'tesoreria_transparencia').maybeSingle();
+  if (t?.value !== 'true') return { exito: true, activa: false };
+  const desde = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
+  const movs = await _paginado((a, b) => supabase.from('tesoreria_movimientos').select('fecha, tipo, monto, categoria').eq('anulado', false).in('tipo', ['ingreso', 'egreso']).gte('fecha', desde).range(a, b));
+  const meses: Record<string, { ingresos: number; egresos: number; gastos: Record<string, number> }> = {};
+  for (const m of movs) {
+    const k = String(m.fecha).slice(0, 7);
+    const x = meses[k] ??= { ingresos: 0, egresos: 0, gastos: {} };
+    if (m.tipo === 'ingreso') x.ingresos = _num2(x.ingresos + Number(m.monto));
+    else { x.egresos = _num2(x.egresos + Number(m.monto)); x.gastos[m.categoria] = _num2((x.gastos[m.categoria] ?? 0) + Number(m.monto)); }
+  }
+  const cuentas = await _saldosCuentas();
+  return { exito: true, activa: true, total: _num2(cuentas.filter((c) => c.activa).reduce((s, c) => s + c.saldo, 0)), meses };
+}
+
 // ─── Acciones: pagos ──────────────────────────────────────────────────────────
 
 // Bug real corregido de paso (encontrado mientras se extendía esta función
@@ -4736,8 +5081,16 @@ async function adminRegistrarPago(params: Record<string, any>): Promise<any> {
     es_manual: datos.esManual !== false,
         id_evento: datos.tipo === 'clase' ? (datos.idEvento ?? null) : null,
   }).select();
-  if (error) return { exito: false, error: error.message };
-  return { exito: true, pago: data?.[0] ?? null };
+    if (error) return { exito: false, error: error.message };
+  const pago = data?.[0];
+  if (pago && Number(pago.monto) > 0 && !pago.exoneradx) {
+    const cuenta = String(datos.cuentaId ?? '') || await _cuentaPorMedio(String(datos.formaPago ?? '').toLowerCase().includes('deuna') ? 'deuna' : String(datos.formaPago ?? '').toLowerCase().includes('efectivo') ? 'efectivo' : 'transferencia');
+    if (cuenta) await _registrarMovimiento({
+      fecha: _hoyEcuadorISO(), tipo: 'ingreso', monto: Number(pago.monto), cuenta_id: cuenta, categoria: pago.tipo === 'clase' ? 'clase' : 'cuota',
+      descripcion: pago.tipo === 'clase' ? 'Clase' : `Cuota ${pago.mes}/${pago.anio}`, persona: pago.nombre_usuario, origen: 'pago', origen_id: String(pago.id), registrado_por: adminEmail,
+    });
+  }
+  return { exito: true, pago: pago ?? null };
 }
 
 async function adminRegistrarIngreso(params: Record<string, any>): Promise<any> {
@@ -8632,9 +8985,24 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const id = params.id ?? params.fila;
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
-  const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo').eq('id', id).maybeSingle();
+    const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, mes_texto, uso_cupon').eq('id', id).maybeSingle();
   const { error } = await supabase.from('reservas').update({ estado }).eq('id', id);
   if (error) return { exito: false, error: error.message };
+  // Tesorería: al confirmar, el ingreso entra a la cuenta que confirma el Pivot
+  // (o la del medio que declaró la persona). Al cancelar, se anula.
+  if (estado === 'Confirmada' && reservaAntes && Number(reservaAntes.monto) > 0 && !reservaAntes.uso_cupon) {
+    const cuenta = String(params.cuentaId ?? '') || await _cuentaPorMedio(String(reservaAntes.medio_pago ?? ''));
+    if (cuenta) {
+      await _registrarMovimiento({
+        tipo: 'ingreso', monto: Number(reservaAntes.monto), cuenta_id: cuenta, categoria: reservaAntes.tipo === 'mensual' ? 'cuota' : 'clase',
+        descripcion: reservaAntes.tipo === 'mensual' ? `Mensualidad ${reservaAntes.mes_texto ?? ''}`.trim() : 'Clase', persona: reservaAntes.nombre_usuario,
+        origen: 'reserva', origen_id: String(id), registrado_por: adminEmail,
+      });
+    }
+  } else if (estado === 'Cancelada') {
+    await supabase.from('tesoreria_movimientos').update({ anulado: true, anulado_por: adminEmail, anulado_en: new Date().toISOString(), motivo_anulacion: 'Reserva cancelada' })
+      .eq('origen', 'reserva').eq('origen_id', String(id)).eq('anulado', false);
+  }
 
   // Auto-marcar "Asistiré" al aprobar una reserva de Mirlxs (feat nueva,
   // pedido explícito -- ver MANIFEST.md). Solo reservas "por clase"
@@ -8776,7 +9144,9 @@ Deno.serve(async (req: Request) => {
             case 'getReglasLiga':                   return json(await getReglasLiga(params));
             case 'adminReglasLiga':                 return json(await adminReglasLiga(params));
                         case 'adminCambiosEquipo':              return json(await adminCambiosEquipo(params));
-            case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
+                        case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
+            case 'adminTesoreria':                  return json(await adminTesoreria(params));
+            case 'getTransparencia':                return json(await getTransparencia(params));
                   case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
       case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
       case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));

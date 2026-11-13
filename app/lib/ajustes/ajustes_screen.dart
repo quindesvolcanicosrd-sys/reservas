@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../finanzas/tesoreria_screen.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
@@ -134,6 +135,15 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       valor: 'Equipos, cobros, canal y más',
                       alTocar: () => SubAjustes.abrir(context, AjustesLigaScreen(sesion: sesion)),
                     ),
+                    // Tesorería (etapa 5, Victor 2026-11-13): Pivots con Finanzas.
+                    if (sesion.tieneArea('finanzas'))
+                      FilaAjuste(
+                        icono: Icons.account_balance_wallet_outlined,
+                        seccion: 'cuota',
+                        titulo: 'Tesorería',
+                        valor: 'Cuentas, movimientos, saldos y fondos de viaje',
+                        alTocar: () => SubAjustes.abrir(context, TesoreriaScreen(sesion: sesion)),
+                      ),
                   ],
                 ),
               GrupoAjustes(
