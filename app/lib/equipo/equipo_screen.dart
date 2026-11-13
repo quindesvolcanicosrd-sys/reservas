@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../core/vidrio.dart';
 import '../eventos/widgets_comunes.dart';
 import '../ajustes/componentes.dart';
 import 'buscador_equipo.dart';
@@ -81,7 +82,13 @@ class _EquipoScreenState extends State<EquipoScreen> {
         if (!hizo && _buscando) _alternarBusqueda();
       },
       child: Scaffold(
+        // Barra de vidrio: la lista pasa por detrás (Victor, 2026-11-13).
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          flexibleSpace: const Vidrio(child: SizedBox.expand()),
           // Igual que el buscador de Calendario (2026-11-13): flecha para
           // volver, campo con fondo y la X para borrar dentro del campo.
           titleSpacing: _buscando ? 0 : null,
@@ -176,7 +183,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
       if (n is ScrollEndNotification) _scrolleando = false;
       return false;
     },
-    child: RefreshIndicator(onRefresh: () => repo.cargar(forzar: true), child: hijo),
+    child: RefreshIndicator(edgeOffset: MediaQuery.paddingOf(context).top, onRefresh: () => repo.cargar(forzar: true), child: hijo),
   );
 
   Widget _lista(BuildContext context, PivotPaleta p, List<Integrante> personas) {
@@ -207,6 +214,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
         key: const ValueKey('lista'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).top)),
           if (repo.hayFiltros) SliverToBoxAdapter(child: _filtrosActivos(p)),
           // Comunidad e Inventario, para todo el equipo (Victor, 2026-11-12).
           if (!repo.hayFiltros) SliverToBoxAdapter(child: _accesos(context)),
@@ -267,7 +275,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
                 ),
               ),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          SliverToBoxAdapter(child: SizedBox(height: 32 + MediaQuery.paddingOf(context).bottom)),
         ],
       ),
     );

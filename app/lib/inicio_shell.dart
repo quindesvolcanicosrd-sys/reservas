@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/api.dart';
 import 'core/fechas.dart';
 import 'core/tema.dart';
+import 'core/vidrio.dart';
 import 'core/datos_pendientes.dart';
 import 'core/tour.dart';
 import 'ajustes/ajustes_screen.dart';
@@ -120,6 +121,8 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
     final indice = _indice.clamp(0, destinos.length - 1);
     ClavesTour.destinos = destinos.length;
     return Scaffold(
+      // Barra de abajo de vidrio: el contenido pasa por detrás desenfocado.
+      extendBody: true,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
@@ -128,17 +131,23 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         mainAxisSize: MainAxisSize.min,
         children: [
           AvisoSinConexion(repo: widget.repo),
-          NavigationBar(
-            key: ClavesTour.navegacion,
-            selectedIndex: indice,
-            onDestinationSelected: (i) {
-              if (i == 0 && indice == 0) {
-                _irAHoy.disparar();
-              } else {
-                setState(() => _indice = i);
-              }
-            },
-            destinations: [for (final d in destinos) d.$1],
+          Vidrio(
+            abajo: true,
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              key: ClavesTour.navegacion,
+              selectedIndex: indice,
+              onDestinationSelected: (i) {
+                if (i == 0 && indice == 0) {
+                  _irAHoy.disparar();
+                } else {
+                  setState(() => _indice = i);
+                }
+              },
+              destinations: [for (final d in destinos) d.$1],
+            ),
           ),
         ],
       ),

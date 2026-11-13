@@ -184,6 +184,29 @@ class PivotTexto {
       GoogleFonts.nunito(fontSize: tam, height: 1, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.4);
 }
 
+/// Barras de vidrio (Victor, 2026-11-13): translúcidas con desenfoque, un
+/// brillo arriba y un tinte rojo muy suave de la marca, como en iOS.
+class PivotVidrio {
+  static const desenfoque = 22.0;
+  static bool _osc(PivotPaleta p) => identical(p, PivotPaleta.oscuro);
+
+  /// Degradado de la barra: arriba más claro (brillo), abajo con el tinte de marca.
+  static LinearGradient degradado(PivotPaleta p, {bool haciaArriba = false}) => LinearGradient(
+    begin: haciaArriba ? Alignment.bottomCenter : Alignment.topCenter,
+    end: haciaArriba ? Alignment.topCenter : Alignment.bottomCenter,
+    colors: _osc(p)
+        ? [const Color(0xB81C1C1C), const Color(0xA6161010), const Color(0x99200C0C)]
+        : [const Color(0xD9FFFFFF), const Color(0xC7FFF4F2), const Color(0xB8FFE6E2)],
+    stops: const [0, 0.55, 1],
+  );
+
+  /// Línea fina del borde (arriba en la barra de abajo, abajo en la de arriba).
+  static Color borde(PivotPaleta p) => _osc(p) ? const Color(0x33FFFFFF) : const Color(0x26E8000D);
+
+  /// Brillo de la parte superior (reflejo).
+  static Color reflejo(PivotPaleta p) => _osc(p) ? const Color(0x14FFFFFF) : const Color(0x66FFFFFF);
+}
+
 class PivotRadios {
   static const iconoDia = 7.0; // ícono de Eventos con el día
   static const tarjeta = 16.0;

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../core/vidrio.dart';
 import '../equipo/estadisticas.dart';
 import '../pivots/ajustes_liga_screen.dart';
 import '../equipo/equipo_repo.dart';
@@ -51,7 +52,13 @@ class _AjustesScreenState extends State<AjustesScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
+      // Barra de vidrio: el contenido pasa por detrás (Victor, 2026-11-13).
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text('Mi perfil', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
@@ -67,7 +74,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
           // Excepción de cuota solo para quien paga cuota mensual (Victor, 2026-11-12).
           final pagaCuota = d['exenta_cuota'] != true && ('${d['categoria'] ?? ''}'.toLowerCase() == 'quindes' || (c?.pagaCuotaMensual ?? false));
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+            padding: EdgeInsets.fromLTRB(16, 8 + MediaQuery.paddingOf(context).top, 16, 40 + MediaQuery.paddingOf(context).bottom),
             children: [
               // Mi perfil (Victor, 2026-11-12): arriba quién eres y tus datos
               // de la ficha; después pagos y datos personales; al final, la app.

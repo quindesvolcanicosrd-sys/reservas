@@ -32,7 +32,7 @@ enum _Fase { logo, bucle, entrada, revelar, fin }
 
 class _IntroPivotState extends State<IntroPivot> with TickerProviderStateMixin {
   _Fase _fase = _Fase.logo;
-  late final AnimationController _bucle = AnimationController(vsync: this, duration: const Duration(seconds: 3));
+  late final AnimationController _bucle = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
   late final AnimationController _entrada = AnimationController(vsync: this, duration: const Duration(seconds: 3));
   LottieComposition? _compBucle, _compEntrada;
   bool _pidioEntrada = false;
@@ -140,7 +140,9 @@ class _IntroPivotState extends State<IntroPivot> with TickerProviderStateMixin {
         ? const SizedBox.expand()
         : Transform.scale(
             scale: _escala,
-            child: Lottie(composition: c, controller: ctrl, fit: BoxFit.cover, delegates: delegados),
+            child: RepaintBoundary(
+              child: Lottie(composition: c, controller: ctrl, fit: BoxFit.cover, delegates: delegados, frameRate: FrameRate.max),
+            ),
           );
     final Widget capa = switch (_fase) {
       _Fase.logo => ColoredBox(

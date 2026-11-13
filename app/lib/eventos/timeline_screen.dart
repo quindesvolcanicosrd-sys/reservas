@@ -1086,7 +1086,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           // Al volver a aparecer (después de un filtro sin resultados) sigue en el mismo día.
           initialScrollIndex: _filas.isEmpty ? 0 : _indiceDeDia(_diaArriba ?? Fechas.hoy()),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + (_calMontado ? _altoPanel : 0)),
+          padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + MediaQuery.paddingOf(context).bottom + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,
           itemBuilder: (context, i) => _fila(context, _filas[i]),
         ),
