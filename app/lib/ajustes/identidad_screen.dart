@@ -27,6 +27,7 @@ class IdentidadScreen extends StatefulWidget {
 class _IdentidadScreenState extends State<IdentidadScreen> {
   LatLng? _punto;
   bool _buscandoPunto = true;
+  bool _pinManual = false;
   String _ultimaDireccion = '';
 
   Sesion get s => widget.sesion;
@@ -46,6 +47,9 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
   ].where((x) => x.isNotEmpty).join(', ');
 
   /// Centra la vista previa en la dirección guardada (si se encuentra).
+  /// Prueba de lo más preciso a lo más general (bug, Victor 2026-11-12: con
+  /// la dirección completa a veces no aparecía el pin): calle principal y
+  /// secundaria con el sector, luego la calle con el sector, luego el sector.
   Future<void> _ubicar() async {
     final d = _direccion;
     _ultimaDireccion = d;
@@ -53,7 +57,21 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
       if (mounted) setState(() => _buscandoPunto = false);
       return;
     }
-    final p = await Geocodificacion.buscar(d, pais: s.paisEquipo);
+    final principal = valorDe(s, 'callePrincipal'), secundaria = valorDe(s, 'calleSecundaria');
+    final sector = valorDe(s, 'sector'), canton = valorDe(s, 'canton');
+    String unir(List<String> l) => l.where((x) => x.isNotEmpty).join(', ');
+    final intentos = <String>{
+      d,
+      unir([if (principal.isNotEmpty && secundaria.isNotEmpty) '$principal y $secundaria', sector, canton]),
+      unir([principal, sector, canton]),
+      unir([principal, canton]),
+      unir([sector, canton]),
+    }.where((x) => x.length >= 4);
+    LatLng? p;
+    for (final q in intentos) {
+      p = await Geocodificacion.buscar(q, pais: s.paisEquipo);
+      if (p != null || !mounted) break;
+    }
     if (mounted) {
       setState(() {
         _punto = p;
@@ -76,7 +94,11 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No reconocimos la calle en ese punto. Escríbela abajo.')));
       return;
     }
+    // El pin que pusiste manda: al guardar la calle no se vuelve a buscar
+    // (antes el mapa se reiniciaba a otro punto o a Quito).
+    _pinManual = true;
     await guardarCampos(context, s, campos);
+    if (mounted) setState(() => _ultimaDireccion = _direccion);
   }
 
   @override
@@ -85,7 +107,7 @@ class _IdentidadScreenState extends State<IdentidadScreen> {
       listenable: s,
       builder: (context, _) {
         // Si cambiaron la dirección a mano, se vuelve a ubicar la vista previa.
-        if (_direccion != _ultimaDireccion && !_buscandoPunto) {
+        if (_direccion != _ultimaDireccion && !_buscandoPunto && !_pinManual) {
           _buscandoPunto = true;
           scheduleMicrotask(_ubicar);
         }

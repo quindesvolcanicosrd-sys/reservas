@@ -28,6 +28,28 @@ class EnlaceComunidad {
   IconData get icono => (redes[red] ?? redes['otro']!).$2;
   String get nombreRed => (redes[red] ?? redes['otro']!).$1;
   String get accion => red == 'whatsapp' ? 'Unirse' : 'Abrir';
+
+  /// Reconoce la red por el enlace pegado (Victor, 2026-11-12).
+  static String detectar(String url) {
+    final u = url.toLowerCase();
+    if (u.contains('whatsapp.com') || u.contains('wa.me')) return 'whatsapp';
+    if (u.contains('instagram.com')) return 'instagram';
+    if (u.contains('m.me/') || u.contains('messenger.com')) return 'messenger';
+    if (u.contains('facebook.com') || u.contains('fb.com') || u.contains('fb.me')) return 'facebook';
+    if (u.contains('tiktok.com')) return 'tiktok';
+    if (u.contains('youtube.com') || u.contains('youtu.be')) return 'youtube';
+    if (u.contains('@') && !u.contains('/')) return 'correo';
+    if (u.contains('.')) return 'web';
+    return 'otro';
+  }
+
+  /// Nombre sugerido para la red reconocida.
+  static String nombreSugerido(String red) => switch (red) {
+    'whatsapp' => 'Grupo de WhatsApp',
+    'correo' => 'Correo de la liga',
+    'web' => 'Sitio web',
+    _ => (redes[red] ?? redes['otro']!).$1,
+  };
 }
 
 /// Redes y grupos de la liga (Victor, 2026-11-08; etapa 3). Toda persona
@@ -78,7 +100,10 @@ Future<void> abrirEnlace(BuildContext context, String url) async {
   }
 }
 
-/// Comunidad en Equipo: tarjetas con el ícono de cada red y "Unirse" o "Abrir".
+/// Comunidad en Equipo (rediseño, Victor 2026-11-12): cuadrícula de 2
+/// columnas con ícono y nombre; tocar abre el enlace. Pivots: el lápiz
+/// activa el modo edición (tocar edita, ✕ quita, "Agregar" al final) y,
+/// sin enlaces, "Agregar" abre la hoja directo.
 class ComunidadScreen extends StatefulWidget {
   const ComunidadScreen({super.key, required this.repo});
   final ComunidadRepo repo;
@@ -89,11 +114,49 @@ class ComunidadScreen extends StatefulWidget {
 
 class _ComunidadScreenState extends State<ComunidadScreen> {
   ComunidadRepo get repo => widget.repo;
+  bool _editando = false;
+  bool _guardando = false;
 
   @override
   void initState() {
     super.initState();
     repo.cargar();
+  }
+
+  Future<void> _guardar(List<EnlaceComunidad> nueva) async {
+    setState(() => _guardando = true);
+    try {
+      await repo.guardar(nueva);
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.')));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  Future<void> _editar([int? i]) async {
+    final r = await mostrarHojaEnlace(context, actual: i == null ? null : repo.enlaces[i]);
+    if (r == null || !mounted) return;
+    final nueva = [...repo.enlaces];
+    i == null ? nueva.add(r) : nueva[i] = r;
+    await _guardar(nueva);
+  }
+
+  Future<void> _quitar(int i) async {
+    final e = repo.enlaces[i];
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Quitar "${e.nombre}"?'),
+        content: const Text('Dejará de verse en Comunidad.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Quitar')),
+        ],
+      ),
+    );
+    if (ok == true) await _guardar([...repo.enlaces]..removeAt(i));
   }
 
   @override
@@ -102,22 +165,33 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comunidad', style: TextStyle(fontWeight: FontWeight.w700)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: AnimatedOpacity(opacity: _guardando ? 1 : 0, duration: const Duration(milliseconds: 200), child: const LinearProgressIndicator(minHeight: 3)),
+        ),
         actions: [
-          if (repo.esPivot)
+          if (repo.esPivot && repo.enlaces.isNotEmpty)
             IconButton(
-              tooltip: 'Editar redes y grupos',
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => EditarComunidadScreen(repo: repo))),
+              tooltip: _editando ? 'Listo' : 'Editar',
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(_editando ? Icons.check_rounded : Icons.edit_outlined, key: ValueKey(_editando)),
+              ),
+              onPressed: () => setState(() => _editando = !_editando),
             ),
         ],
       ),
       body: ListenableBuilder(
         listenable: repo,
         builder: (context, _) {
-          if (!repo.cargado && repo.error == null) return const Center(child: PivotCargando());
-          if (!repo.cargado) return Center(child: Text(repo.error!));
-          if (repo.enlaces.isEmpty) {
-            return Center(
+          final Widget cuerpo;
+          if (!repo.cargado && repo.error == null) {
+            cuerpo = const Center(key: ValueKey('c'), child: PivotCargando());
+          } else if (!repo.cargado) {
+            cuerpo = Center(key: const ValueKey('e'), child: Text(repo.error!));
+          } else if (repo.enlaces.isEmpty) {
+            cuerpo = Center(
+              key: const ValueKey('vacio'),
               child: Padding(
                 padding: const EdgeInsets.all(32),
                 child: Column(
@@ -134,242 +208,219 @@ class _ComunidadScreenState extends State<ComunidadScreen> {
                     ),
                     if (repo.esPivot) ...[
                       const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => EditarComunidadScreen(repo: repo))),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Agregar'),
-                      ),
+                      FilledButton.icon(onPressed: _guardando ? null : () => _editar(), icon: const Icon(Icons.add_rounded), label: const Text('Agregar')),
                     ],
                   ],
                 ),
               ),
             );
+          } else {
+            final n = repo.enlaces.length;
+            cuerpo = GridView.builder(
+              key: const ValueKey('lista'),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.25,
+              ),
+              itemCount: n + (_editando ? 1 : 0),
+              itemBuilder: (context, i) {
+                if (i == n) {
+                  return _Mosaico(
+                    icono: Icons.add_rounded,
+                    titulo: 'Agregar',
+                    sub: 'Grupo o red',
+                    resaltado: true,
+                    alTocar: _guardando ? null : () => _editar(),
+                  );
+                }
+                final e = repo.enlaces[i];
+                return _Mosaico(
+                  red: e.red,
+                  icono: e.icono,
+                  titulo: e.nombre,
+                  sub: e.nombreRed,
+                  alTocar: _guardando ? null : (_editando ? () => _editar(i) : () => abrirEnlace(context, e.url)),
+                  alQuitar: _editando && !_guardando ? () => _quitar(i) : null,
+                );
+              },
+            );
           }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-            children: [
-              for (final e in repo.enlaces)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Material(
-                    color: p.tarjeta,
-                    borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-                      onTap: () => abrirEnlace(context, e.url),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            _IconoRed(red: e.red, icono: e.icono),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    e.nombre,
-                                    style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-                                  ),
-                                  Text(e.nombreRed, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                                ],
-                              ),
-                            ),
-                            FilledButton.tonal(onPressed: () => abrirEnlace(context, e.url), child: Text(e.accion)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
+          return AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: cuerpo);
         },
       ),
     );
   }
 }
 
-class _IconoRed extends StatelessWidget {
-  const _IconoRed({required this.red, required this.icono});
-  final String red;
+class _Mosaico extends StatelessWidget {
+  const _Mosaico({required this.icono, required this.titulo, required this.sub, this.red, this.alTocar, this.alQuitar, this.resaltado = false});
   final IconData icono;
+  final String titulo, sub;
+  final String? red;
+  final VoidCallback? alTocar, alQuitar;
+  final bool resaltado;
 
   @override
   Widget build(BuildContext context) {
-    final (degradado, sobre) = PivotPaleta.seccion(red == 'whatsapp' ? 'notificaciones' : 'privacidad', Theme.of(context).brightness);
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(12)),
-      child: Icon(icono, color: sobre),
+    final p = context.pivot;
+    final (degradado, sobre) = PivotPaleta.seccion(red == 'whatsapp' ? 'notificaciones' : (resaltado ? 'salud' : 'privacidad'), Theme.of(context).brightness);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(
+          child: Material(
+            color: p.tarjeta,
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              onTap: alTocar,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(gradient: degradado, borderRadius: BorderRadius.circular(12)),
+                      child: Icon(icono, color: sobre),
+                    ),
+                    const Spacer(),
+                    Text(
+                      titulo,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w700, height: 1.2, color: p.texto),
+                    ),
+                    Text(sub, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: AnimatedScale(
+            scale: alQuitar == null ? 0 : 1,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            child: Material(
+              color: p.marca,
+              shape: CircleBorder(side: BorderSide(color: p.fondo, width: 2)),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: alQuitar,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.close_rounded, size: 16, color: p.sobreMarca),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-/// Pivots: agregar, editar, ordenar y quitar enlaces.
-class EditarComunidadScreen extends StatefulWidget {
-  const EditarComunidadScreen({super.key, required this.repo});
-  final ComunidadRepo repo;
+/// Hoja para agregar o editar un enlace: se pega el enlace y la red se
+/// reconoce sola; la fila de íconos solo corrige si hace falta.
+Future<EnlaceComunidad?> mostrarHojaEnlace(BuildContext context, {EnlaceComunidad? actual}) {
+  final url = TextEditingController(text: actual?.url.replaceFirst('mailto:', '') ?? '');
+  final nombre = TextEditingController(text: actual?.nombre ?? '');
+  var red = actual?.red ?? 'otro';
+  var nombreTocado = actual != null;
+  return showModalBottomSheet<EnlaceComunidad>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (hoja) => StatefulBuilder(
+      builder: (hoja, refrescar) {
+        final p = hoja.pivot;
+        void alCambiarEnlace(String v) {
+          final r = EnlaceComunidad.detectar(v.trim());
+          refrescar(() {
+            red = v.trim().isEmpty ? 'otro' : r;
+            if (!nombreTocado) nombre.text = v.trim().isEmpty ? '' : EnlaceComunidad.nombreSugerido(red);
+          });
+        }
 
-  @override
-  State<EditarComunidadScreen> createState() => _EditarComunidadScreenState();
-}
-
-class _EditarComunidadScreenState extends State<EditarComunidadScreen> {
-  late List<EnlaceComunidad> _lista = [...widget.repo.enlaces];
-  bool _guardando = false;
-
-  Future<void> _guardar(List<EnlaceComunidad> nueva) async {
-    final antes = _lista;
-    setState(() {
-      _lista = nueva;
-      _guardando = true;
-    });
-    try {
-      await widget.repo.guardar(nueva);
-      if (mounted) setState(() => _lista = [...widget.repo.enlaces]);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _lista = antes);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.')));
-    } finally {
-      if (mounted) setState(() => _guardando = false);
-    }
-  }
-
-  Future<void> _editar([int? i]) async {
-    final actual = i == null ? null : _lista[i];
-    var red = actual?.red ?? 'whatsapp';
-    final nombre = TextEditingController(text: actual?.nombre ?? '');
-    final url = TextEditingController(text: actual?.url.replaceFirst('mailto:', '') ?? '');
-    final r = await showModalBottomSheet<EnlaceComunidad>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (hoja) => StatefulBuilder(
-        builder: (hoja, refrescar) => Padding(
+        return Padding(
           padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(hoja).bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(actual == null ? 'Nuevo enlace' : 'Editar enlace', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final e in EnlaceComunidad.redes.entries)
-                    ChoiceChip(
-                      avatar: Icon(e.value.$2, size: 18),
-                      label: Text(e.value.$1),
-                      selected: red == e.key,
-                      onSelected: (_) => refrescar(() => red = e.key),
-                    ),
-                ],
+              Text(actual == null ? 'Agregar a Comunidad' : 'Editar enlace', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('Pega el enlace del grupo o la red; la reconocemos sola.', style: TextStyle(color: p.textoSecundario)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: url,
+                autofocus: actual == null,
+                keyboardType: TextInputType.url,
+                onChanged: alCambiarEnlace,
+                decoration: InputDecoration(
+                  labelText: 'Enlace o correo',
+                  hintText: 'https://chat.whatsapp.com/…',
+                  prefixIcon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon((EnlaceComunidad.redes[red] ?? EnlaceComunidad.redes['otro']!).$2, key: ValueKey(red)),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: nombre,
                 textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => nombreTocado = true,
                 decoration: const InputDecoration(labelText: 'Nombre', hintText: 'Ej. Grupo del equipo'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: url,
-                keyboardType: red == 'correo' ? TextInputType.emailAddress : TextInputType.url,
-                decoration: InputDecoration(labelText: red == 'correo' ? 'Correo' : 'Enlace', hintText: red == 'correo' ? 'liga@correo.com' : 'https://…'),
+              const SizedBox(height: 14),
+              Text('Red', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final e in EnlaceComunidad.redes.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Tooltip(
+                          message: e.value.$1,
+                          child: Material(
+                            color: red == e.key ? p.marca : p.suave,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () => refrescar(() => red = e.key),
+                              child: SizedBox(width: 44, height: 44, child: Icon(e.value.$2, size: 20, color: red == e.key ? p.sobreMarca : p.sobreSuave)),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: () {
-                  if (nombre.text.trim().isEmpty || url.text.trim().isEmpty) return;
-                  Navigator.of(hoja).pop(EnlaceComunidad(red, nombre.text.trim(), url.text.trim()));
+                  if (url.text.trim().isEmpty) return;
+                  final n = nombre.text.trim().isEmpty ? EnlaceComunidad.nombreSugerido(red) : nombre.text.trim();
+                  Navigator.of(hoja).pop(EnlaceComunidad(red, n, url.text.trim()));
                 },
-                child: const Text('Guardar'),
+                child: Text(actual == null ? 'Agregar' : 'Guardar'),
               ),
             ],
           ),
-        ),
-      ),
-    );
-    if (r == null || !mounted) return;
-    final nueva = [..._lista];
-    i == null ? nueva.add(r) : nueva[i] = r;
-    await _guardar(nueva);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.pivot;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Redes y grupos', style: TextStyle(fontWeight: FontWeight.w700)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(3),
-          child: AnimatedOpacity(opacity: _guardando ? 1 : 0, duration: const Duration(milliseconds: 200), child: const LinearProgressIndicator(minHeight: 3)),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _guardando ? null : () => _editar(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Agregar'),
-      ),
-      body: ReorderableListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-        header: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-          child: Text(
-            'Todo el equipo ve estos enlaces en Equipo → Comunidad. Mantén presionado para cambiar el orden.',
-            style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
-          ),
-        ),
-        itemCount: _lista.length,
-        onReorderItem: (de, a) {
-          final l = [..._lista];
-          l.insert(a, l.removeAt(de));
-          _guardar(l);
-        },
-        itemBuilder: (context, i) {
-          final e = _lista[i];
-          return Padding(
-            key: ValueKey('${e.red}-${e.url}-$i'),
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: p.tarjeta,
-              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-              child: ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
-                leading: Icon(e.icono, color: p.marcaTexto),
-                title: Text(e.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(e.url, maxLines: 1, overflow: TextOverflow.ellipsis),
-                onTap: _guardando ? null : () => _editar(i),
-                trailing: IconButton(
-                  tooltip: 'Quitar',
-                  icon: const Icon(Icons.delete_outline_rounded),
-                  onPressed: _guardando
-                      ? null
-                      : () async {
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (d) => AlertDialog(
-                              title: Text('¿Quitar "${e.nombre}"?'),
-                              content: const Text('Dejará de verse en Comunidad.'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Cancelar')),
-                                FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Quitar')),
-                              ],
-                            ),
-                          );
-                          if (ok == true) await _guardar([..._lista]..removeAt(i));
-                        },
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
 }

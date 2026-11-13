@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../core/api.dart';
+import '../equipo/equipo_repo.dart';
 import '../sesion/sesion.dart';
 import 'tareas_modelos.dart';
 
@@ -84,10 +85,21 @@ class TareasRepo extends ChangeNotifier {
       if (t.libres == 0 && !t.tiene(yo)) t,
   ];
 
-  /// Puntos que faltan este mes para la meta (0 si ya llegó o no hay meta).
+  /// Clases de este mes (asistencias reales), desde Equipo.
+  int get clasesMes => EquipoRepo.de(sesion).persona(yo)?.asistenciasPeriodo ?? 0;
+
+  /// La categoría pide clases O puntos (lógica "O" de la configuración):
+  /// con cualquiera de los dos ya se cumple (Victor, 2026-11-12).
+  bool get cumpleMeta {
+    final m = meta;
+    if (m == null) return true;
+    return (m.minClases > 0 && clasesMes >= m.minClases) || (m.minPuntos > 0 && puntosMes >= m.minPuntos);
+  }
+
+  /// Puntos que faltan este mes para la meta (0 si ya cumple o no hay meta).
   int get faltan {
     final m = meta;
-    if (m == null) return 0;
+    if (m == null || cumpleMeta) return 0;
     final f = m.minPuntos - puntosMes;
     return f > 0 ? f.ceil() : 0;
   }

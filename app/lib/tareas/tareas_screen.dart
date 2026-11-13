@@ -1,3 +1,5 @@
+import '../equipo/equipo_repo.dart';
+
 import 'package:flutter/material.dart';
 
 import '../ajustes/componentes.dart';
@@ -31,6 +33,7 @@ class _TareasScreenState extends State<TareasScreen> {
   void initState() {
     super.initState();
     repo.cargar(forzar: repo.cargado);
+    EquipoRepo.de(repo.sesion).cargar(); // clases del mes para la meta
   }
 
   void _abrir(Tarea t, {MiTarea? mia}) => SubAjustes.abrir(context, TareaScreen(repo: repo, tarea: t, mia: mia));
@@ -87,7 +90,10 @@ class _TareasScreenState extends State<TareasScreen> {
       key: ValueKey(repo.mias.length * 1000 + repo.tablero.length),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
-        _Resumen(repo: repo),
+        ListenableBuilder(
+          listenable: EquipoRepo.de(repo.sesion),
+          builder: (context, _) => _Resumen(repo: repo),
+        ),
         GrupoAjustes(
           titulo: 'MIS TAREAS',
           filas: repo.mias.isEmpty
@@ -181,7 +187,6 @@ class _Resumen extends StatelessWidget {
   Widget build(BuildContext context) {
     final meta = repo.meta;
     final puntos = repo.puntosMes.round();
-    final progreso = meta == null || meta.minPuntos == 0 ? null : (repo.puntosMes / meta.minPuntos).clamp(0.0, 1.0);
     const sobre = PivotPaleta.sobreSeccion;
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -224,27 +229,83 @@ class _Resumen extends StatelessWidget {
               ),
             ],
           ),
-          if (progreso != null) ...[
+          // Meta del mes, en tono tranquilo (Victor, 2026-11-12): la
+          // categoría pide clases O puntos; con uno de los dos ya se cumple.
+          if (meta != null && (meta.minPuntos > 0 || meta.minClases > 0)) ...[
             const SizedBox(height: 14),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: progreso),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeOutCubic,
-              builder: (context, v, _) => ClipRRect(
-                borderRadius: BorderRadius.circular(PivotRadios.chip),
-                child: LinearProgressIndicator(value: v, minHeight: 8, color: sobre, backgroundColor: sobre.withValues(alpha: 0.25)),
+            if (meta.minClases > 0) _Avance(texto: 'Clases', valor: repo.clasesMes, meta: meta.minClases),
+            if (meta.minClases > 0 && meta.minPuntos > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  'o',
+                  style: TextStyle(color: sobre.withValues(alpha: 0.8), fontSize: 12.5, fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              repo.faltan == 0
-                  ? 'Ya llegaste a los ${meta!.minPuntos} puntos de ${meta.nombre}.'
-                  : '${meta!.nombre} pide ${meta.minPuntos} puntos${meta.minClases > 0 ? ' o ${meta.minClases} clases' : ''} al mes.',
-              style: TextStyle(color: sobre.withValues(alpha: 0.9), fontSize: 13),
+            if (meta.minPuntos > 0) _Avance(texto: 'Puntos', valor: puntos, meta: meta.minPuntos),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(repo.cumpleMeta ? Icons.check_circle_rounded : Icons.info_outline_rounded, size: 18, color: sobre),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    repo.cumpleMeta ? 'Ya cumples con ${meta.nombre} este mes.' : _textoFalta(meta, repo.clasesMes, puntos),
+                    style: TextStyle(color: sobre.withValues(alpha: 0.95), fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+String _textoFalta(({String nombre, int minPuntos, int minClases}) m, int clases, int puntos) {
+  final partes = [
+    if (m.minClases > 0) m.minClases - clases == 1 ? '1 clase' : '${m.minClases - clases} clases',
+    if (m.minPuntos > 0) '${m.minPuntos - puntos} puntos',
+  ];
+  return 'Para ${m.nombre} este mes: ${partes.join(' o ')} más. Las clases y las tareas suman.';
+}
+
+/// Barra de avance dentro de la tarjeta del mes.
+class _Avance extends StatelessWidget {
+  const _Avance({required this.texto, required this.valor, required this.meta});
+  final String texto;
+  final int valor, meta;
+
+  @override
+  Widget build(BuildContext context) {
+    const sobre = PivotPaleta.sobreSeccion;
+    return Row(
+      children: [
+        SizedBox(
+          width: 58,
+          child: Text(
+            texto,
+            style: TextStyle(color: sobre.withValues(alpha: 0.9), fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: (valor / meta).clamp(0.0, 1.0)),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(PivotRadios.chip),
+              child: LinearProgressIndicator(value: v, minHeight: 8, color: sobre, backgroundColor: sobre.withValues(alpha: 0.25)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '${valor > meta ? meta : valor} de $meta',
+          style: const TextStyle(color: sobre, fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+      ],
     );
   }
 }
