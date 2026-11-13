@@ -49,7 +49,7 @@ function sha256Hex(str) {
         if (opts && opts.body) cuerpo.set('cuerpo', typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body));
         if (typeof _token !== 'undefined' && _token) cuerpo.set('token', _token);
         if (typeof _adminToken !== 'undefined' && _adminToken) cuerpo.set('adminToken', _adminToken);
-        return _fetchOriginal(BACKEND, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: cuerpo.toString() })
+        return _fetchOriginal(BACKEND, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }, body: cuerpo.toString() })
           .then(function (r) { return r.json(); })
           .then(function (j) {
             var ok = j && j.exito !== false;
