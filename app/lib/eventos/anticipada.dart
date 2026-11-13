@@ -58,7 +58,7 @@ class ReglaAnticipada {
     this.desde,
     this.hasta,
     this.meses = const [],
-        this.tiposEvento = const ['Entrenamiento'],
+    this.tiposEvento = const ['Entrenamiento'],
     this.diasSemana = const [],
     this.lugares = const [],
     this.creada,
@@ -74,7 +74,7 @@ class ReglaAnticipada {
   /// Meses como aaaamm (202611), 12 meses desde el actual (2026-11-07).
   /// Un valor 1..12 es una regla vieja: ese mes de cualquier año.
   final List<int> meses;
-    final List<String> tiposEvento;
+  final List<String> tiposEvento;
 
   /// Solo estos días (1 = lunes … 7 = domingo) y lugares; vacío = todos
   /// (Victor, 2026-11-12).
@@ -92,23 +92,31 @@ class ReglaAnticipada {
   String get resumenFiltros {
     String lista(List<String> l) => l.length <= 1 ? l.join() : '${l.sublist(0, l.length - 1).join(', ')} y ${l.last}';
     final partes = [
-      if (diasSemana.isNotEmpty) 'Solo ${lista([for (final d in [...diasSemana]..sort()) nombresDias[d - 1]])}',
+      if (diasSemana.isNotEmpty)
+        'Solo ${lista([
+          for (final d in [...diasSemana]..sort()) nombresDias[d - 1],
+        ])}',
       if (lugares.isNotEmpty) '${diasSemana.isEmpty ? 'Solo en' : 'en'} ${lista(lugares)}',
     ];
     return partes.join(' · ');
   }
 
   bool _pasaFiltros(Evento ev) =>
-      (diasSemana.isEmpty || diasSemana.contains(ev.fecha.weekday)) && (lugares.isEmpty || lugares.any((l) => l.trim().toLowerCase() == ev.lugar.trim().toLowerCase()));
+      (diasSemana.isEmpty || diasSemana.contains(ev.fecha.weekday)) &&
+      (lugares.isEmpty || lugares.any((l) => l.trim().toLowerCase() == ev.lugar.trim().toLowerCase()));
 
   /// Fechas que cubre (para ver si dos reglas se cruzan).
   bool _rangoCruza(ReglaAnticipada o) {
     (DateTime, DateTime?) r(ReglaAnticipada x) => switch (x.tipo) {
       TipoRango.indefinido => (x.desde ?? DateTime(2000), null),
       TipoRango.periodo => (x.desde ?? DateTime(2000), x.hasta),
-      TipoRango.meses => (x.mesesOrdenados.isEmpty ? DateTime(2000) : x.mesesOrdenados.first, x.mesesOrdenados.isEmpty ? null : DateTime(x.mesesOrdenados.last.year, x.mesesOrdenados.last.month + 1, 0)),
+      TipoRango.meses => (
+        x.mesesOrdenados.isEmpty ? DateTime(2000) : x.mesesOrdenados.first,
+        x.mesesOrdenados.isEmpty ? null : DateTime(x.mesesOrdenados.last.year, x.mesesOrdenados.last.month + 1, 0),
+      ),
     };
-    final (a0, a1) = r(this), (b0, b1) = r(o);
+    final (a0, a1) = r(this);
+    final (b0, b1) = r(o);
     if (tipo == TipoRango.meses && o.tipo == TipoRango.meses) return meses.any((m) => o.meses.contains(m));
     return (a1 == null || !a1.isBefore(b0)) && (b1 == null || !b1.isBefore(a0));
   }
@@ -162,14 +170,14 @@ class ReglaAnticipada {
       desde: Fechas.desdeIso(f['fecha_desde']),
       hasta: Fechas.desdeIso(f['fecha_hasta']),
       meses: ms is List ? ms.map((e) => int.tryParse(e.toString()) ?? 0).where((m) => (m >= 1 && m <= 12) || m > 190001).toList() : const [],
-            tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
+      tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
       diasSemana: f['dias_semana'] is List ? [for (final d in f['dias_semana'] as List) ?int.tryParse('$d')] : const [],
       lugares: f['lugares'] is List ? [for (final l in f['lugares'] as List) '$l'] : const [],
       creada: DateTime.tryParse('${f['created_at'] ?? ''}'),
     );
   }
 
-    bool aplicaA(Evento ev) {
+  bool aplicaA(Evento ev) {
     if (tiposEvento.isNotEmpty && !tiposEvento.contains(ev.tipo)) return false;
     if (!_pasaFiltros(ev)) return false;
     switch (tipo) {
@@ -205,7 +213,7 @@ class ReglaAnticipada {
     'motivo': estado == EstadoRsvp.noAsistire ? motivo : null,
     'meses': tipo == TipoRango.meses ? meses : null,
     'fecha_desde': tipo == TipoRango.meses || desde == null ? null : Fechas.iso(desde!),
-        'fecha_hasta': tipo == TipoRango.periodo && hasta != null ? Fechas.iso(hasta!) : null,
+    'fecha_hasta': tipo == TipoRango.periodo && hasta != null ? Fechas.iso(hasta!) : null,
     'dias_semana': diasSemana.isEmpty ? null : (diasSemana.toList()..sort()),
     'lugares': lugares.isEmpty ? null : lugares,
   };
@@ -436,7 +444,7 @@ class AnticipadaRepo {
     }
     if (lista.isEmpty) return false;
     const orden = {TipoRango.indefinido: 0, TipoRango.meses: 1, TipoRango.periodo: 2};
-        // De menos a más prioritaria (la última que aplica gana): tipo, luego
+    // De menos a más prioritaria (la última que aplica gana): tipo, luego
     // la más específica, luego la más reciente.
     lista.sort((a, b) {
       final t = orden[a.tipo]!.compareTo(orden[b.tipo]!);

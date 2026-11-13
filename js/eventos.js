@@ -7458,8 +7458,13 @@ function _evAntMapReglaSupabase(row) {
     fechaDesde: row.fecha_desde,
     fechaHasta: row.fecha_hasta,
     estado: row.estado,
-    motivo: row.motivo || null,
+        motivo: row.motivo || null,
     meses: row.meses || [],
+    // Solo ciertos días (1 = lunes … 7 = domingo) o lugares; vacío = todos
+    // (se crean desde la app Android, 2026-11-12).
+    diasSemana: row.dias_semana || [],
+    lugares: row.lugares || [],
+    creada: row.created_at || '',
   };
 }
 function _evAntFetchReglas(onOk, onErr) {
@@ -7510,8 +7515,17 @@ function _evAntReconciliarConReglas(reglas) {
   var hoy = _evHoyISO();
   var futuros = _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, hoy) >= 0; });
 
-  function tipoAplica(r, ev) {
-    return !r.tiposEvento || !r.tiposEvento.length || r.tiposEvento.indexOf(ev.tipo) !== -1;
+    function tipoAplica(r, ev) {
+    if (r.tiposEvento && r.tiposEvento.length && r.tiposEvento.indexOf(ev.tipo) === -1) return false;
+    if (r.diasSemana && r.diasSemana.length) {
+      var _d = new Date(ev.fecha + 'T12:00:00').getDay(); // 0 = domingo
+      if (r.diasSemana.indexOf(_d === 0 ? 7 : _d) === -1) return false;
+    }
+    if (r.lugares && r.lugares.length) {
+      var _l = String(ev.lugar || '').trim().toLowerCase();
+      if (!r.lugares.some(function(x) { return String(x).trim().toLowerCase() === _l; })) return false;
+    }
+    return true;
   }
   function matchFecha(r, ev) {
     if (r.tipoRango === 'indefinido') return !!r.fechaDesde && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0;
@@ -7524,7 +7538,12 @@ function _evAntReconciliarConReglas(reglas) {
   }
 
   var orden = { 'indefinido': 0, 'meses': 1, 'periodo': 2 };
-  reglas.sort(function(a, b) { return orden[a.tipoRango] - orden[b.tipoRango]; });
+    // De menos a más prioritaria (gana la última que aplica): tipo, luego la
+  // más específica (días/lugares), luego la más reciente.
+  function _esp(r) { return ((r.diasSemana || []).length ? 1 : 0) + ((r.lugares || []).length ? 1 : 0); }
+  reglas.sort(function(a, b) {
+    return (orden[a.tipoRango] - orden[b.tipoRango]) || (_esp(a) - _esp(b)) || String(a.creada || '').localeCompare(String(b.creada || ''));
+  });
 
   // `tocados` marca qué eventos matcheó al menos 1 regla en este pase --
   // separado del loop de arriba (en vez de persistir inline en cada match)

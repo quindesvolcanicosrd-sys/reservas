@@ -179,7 +179,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
   }
 }
 
-enum _Paso { estado, motivo, tipo, fechas }
+enum _Paso { estado, motivo, tipo, fechas, alcance }
 
 /// Asistente por pasos: Estado → (Motivo, si no asistirás) → Frecuencia →
 /// Meses o fechas. Misma lógica que la web (`_evAnt*`): motivo obligatorio
@@ -208,11 +208,28 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   late final Set<int> _meses = {for (final v in widget.editando?.meses ?? const <int>[]) ReglaAnticipada.clave(ReglaAnticipada.mesDe(v))};
   late DateTime? _desde = widget.editando?.desde;
   late DateTime? _hasta = widget.editando?.hasta;
+  // Solo ciertos días o lugares (Victor, 2026-11-12); vacío = todos.
+  late final Set<int> _dias = {...?widget.editando?.diasSemana};
+  late final Set<String> _lugares = {...?widget.editando?.lugares};
+  List<String>? _lugaresDisponibles;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repo
+        .venues()
+        .then((v) {
+          if (mounted) setState(() => _lugaresDisponibles = [for (final x in v) '${x['lugar']}'.trim()]..removeWhere((x) => x.isEmpty));
+        })
+        .catchError((_) {
+          if (mounted) setState(() => _lugaresDisponibles = const []);
+        });
+  }
 
   Cuota? get _cuota => widget.cuota;
   bool get _restringe => _cuota?.restringe(_estado) ?? false;
 
-  List<_Paso> get _pasos => [_Paso.estado, if (_estado == EstadoRsvp.noAsistire) _Paso.motivo, _Paso.tipo, _Paso.fechas];
+  List<_Paso> get _pasos => [_Paso.estado, if (_estado == EstadoRsvp.noAsistire) _Paso.motivo, _Paso.tipo, _Paso.fechas, _Paso.alcance];
 
   void _ir(int delta) {
     final pasos = _pasos;
@@ -284,7 +301,11 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   };
 
   Future<void> _aplicar() async {
-    if (_tipo == TipoRango.indefinido && widget.reglas.any((r) => r.tipo == TipoRango.indefinido && r.id != widget.editando?.id)) {
+    // Una sola indefinida para todos los eventos; con días o lugares pueden convivir varias.
+    if (_tipo == TipoRango.indefinido &&
+        _dias.isEmpty &&
+        _lugares.isEmpty &&
+        widget.reglas.any((r) => r.tipo == TipoRango.indefinido && r.id != widget.editando?.id && r.especificidad == 0)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya tienes una regla indefinida activa. Elimínala antes de crear una nueva.')));
       return;
     }
@@ -295,7 +316,35 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
       meses: _meses.toList()..sort(),
       desde: _tipo == TipoRango.meses ? null : _desde,
       hasta: _tipo == TipoRango.periodo ? _hasta : null,
+      diasSemana: _dias.toList()..sort(),
+      lugares: _lugares.toList(),
     );
+    // Si se cruza con otra regla, se avisa y se pide aprobarla (Victor, 2026-11-12).
+    final cruces = widget.reglas.where((r) => r.id != widget.editando?.id && nueva.seCruzaCon(r)).toList();
+    if (cruces.isNotEmpty) {
+      final gana = cruces.every((r) => _ganaNueva(nueva, r));
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: const Text('Esta regla se cruza con otra'),
+          content: Text(
+            [
+              for (final r in cruces) '• ${r.estado.valor}${r.resumenFiltros.isEmpty ? '' : ' (${r.resumenFiltros.toLowerCase()})'} · ${r.resumenRango}',
+              '',
+              gana
+                  ? 'En los eventos donde coinciden manda esta nueva, por ser más específica o más reciente.'
+                  : 'En los eventos donde coinciden manda la otra, por ser de un tipo con más prioridad (período > meses > indefinido).',
+              'Tus respuestas a mano nunca se cambian.',
+            ].join('\n'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Revisar')),
+            FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Guardar igual')),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
     setState(() => _ocupado = true);
     try {
       final aviso = await widget.repo.anticipada.guardar(nueva, vieja: widget.editando);
@@ -323,12 +372,14 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         _Paso.motivo => '¿Por qué no asistirás?',
         _Paso.tipo => '¿Para cuándo?',
         _Paso.fechas => _tipo == TipoRango.meses ? 'Elige los meses' : (_tipo == TipoRango.periodo ? 'Elige las fechas' : 'Desde cuándo'),
+        _Paso.alcance => '¿A qué entrenamientos aplica?',
       },
       ayuda: switch (_paso) {
         _Paso.estado => 'Se aplica sola a tus entrenamientos futuros, sin marcarlos uno por uno.',
         _Paso.motivo => MotivoAusencia.ayudaComun,
         _Paso.tipo => _restringe ? 'Con "Asistiré" solo puedes elegir los meses que tienes pagados.' : null,
         _Paso.fechas => null,
+        _Paso.alcance => 'Todos, o solo ciertos días de la semana o lugares. Puedes combinar ambos.',
       },
       clavePaso: _paso,
       adelante: _adelante,
@@ -338,9 +389,10 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         _Paso.motivo => _pasoMotivo(context),
         _Paso.tipo => _pasoTipo(context),
         _Paso.fechas => _pasoFechas(context),
+        _Paso.alcance => _pasoAlcance(context),
       },
-      textoBoton: _paso == _Paso.fechas ? (widget.editando == null ? 'Aplicar' : 'Guardar cambios') : (_siguienteVisible ? 'Siguiente' : null),
-      alContinuar: _paso == _Paso.fechas ? (_fechasValidas ? _aplicar : null) : () => _ir(1),
+      textoBoton: _paso == _Paso.alcance ? (widget.editando == null ? 'Aplicar' : 'Guardar cambios') : (_siguienteVisible ? 'Siguiente' : null),
+      alContinuar: _paso == _Paso.alcance ? _aplicar : (_paso == _Paso.fechas ? (_fechasValidas ? () => _ir(1) : null) : () => _ir(1)),
       ocupado: _ocupado,
     );
   }
@@ -350,8 +402,91 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     _Paso.estado => _estado != null,
     _Paso.motivo => _motivo != null,
     _Paso.tipo => _tipo != null,
-    _Paso.fechas => false,
+    _Paso.fechas => _fechasValidas,
+    _Paso.alcance => false,
   };
+
+  /// La nueva gana si su tipo tiene más prioridad, o el mismo con más
+  /// filtros, o empatan (la nueva es la más reciente).
+  static bool _ganaNueva(ReglaAnticipada n, ReglaAnticipada o) {
+    const orden = {TipoRango.indefinido: 0, TipoRango.meses: 1, TipoRango.periodo: 2};
+    final t = orden[n.tipo]!.compareTo(orden[o.tipo]!);
+    if (t != 0) return t > 0;
+    return n.especificidad >= o.especificidad;
+  }
+
+  Widget _pasoAlcance(BuildContext context) {
+    final p = context.pivot;
+    final todos = _dias.isEmpty && _lugares.isEmpty;
+    Text titulo(String t) => Text(
+      t,
+      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        OpcionAsistente(
+          icono: Icons.event_available_rounded,
+          titulo: 'Todos los entrenamientos',
+          texto: 'Sin importar el día ni el lugar.',
+          activa: todos,
+          alTocar: () => setState(() {
+            _dias.clear();
+            _lugares.clear();
+          }),
+        ),
+        const SizedBox(height: 12),
+        titulo('Solo estos días'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var d = 1; d <= 7; d++)
+              FilterChip(
+                showCheckmark: false,
+                label: Text(ReglaAnticipada.nombresDias[d - 1].substring(0, 3)),
+                tooltip: ReglaAnticipada.nombresDias[d - 1],
+                selected: _dias.contains(d),
+                onSelected: (_) => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        titulo('Solo en estos lugares'),
+        const SizedBox(height: 8),
+        if (_lugaresDisponibles == null)
+          const Center(child: PivotCargando(tamano: 40))
+        else if (_lugaresDisponibles!.isEmpty)
+          Text('No hay lugares guardados.', style: TextStyle(color: p.textoSecundario))
+        else
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final l in {..._lugaresDisponibles!, ..._lugares})
+                FilterChip(
+                  showCheckmark: false,
+                  label: Text(l),
+                  selected: _lugares.contains(l),
+                  onSelected: (_) => setState(() => _lugares.contains(l) ? _lugares.remove(l) : _lugares.add(l)),
+                ),
+            ],
+          ),
+        const SizedBox(height: 18),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: Text(
+            todos
+                ? 'Se aplica a todos tus entrenamientos del rango elegido.'
+                : 'Se aplica solo a ${ReglaAnticipada(tipo: TipoRango.indefinido, estado: EstadoRsvp.asistire, diasSemana: _dias.toList(), lugares: _lugares.toList()).resumenFiltros.replaceFirst('Solo ', '').toLowerCase()}.',
+            key: ValueKey('${_dias.length}-${_lugares.length}-$todos'),
+            style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _pasoEstado(BuildContext context) {
     void elegir(EstadoRsvp e) => _elegirYSeguir(() {
@@ -624,6 +759,13 @@ class TarjetaRegla extends StatelessWidget {
                     _periodo,
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: p.texto),
                   ),
+                  if (regla.resumenFiltros.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      regla.resumenFiltros,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: p.marcaTexto),
+                    ),
+                  ],
                   const SizedBox(height: 6),
                   Row(
                     children: [
