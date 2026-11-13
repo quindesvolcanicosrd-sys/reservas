@@ -7463,7 +7463,10 @@ function _evAntMapReglaSupabase(row) {
     // Solo ciertos días (1 = lunes … 7 = domingo) o lugares; vacío = todos
     // (se crean desde la app Android, 2026-11-12).
     diasSemana: row.dias_semana || [],
-    lugares: row.lugares || [],
+        lugares: row.lugares || [],
+    // Solo eventos que empiezan entre estas horas (2026-11-13).
+    horaDesde: row.hora_desde || null,
+    horaHasta: row.hora_hasta || null,
     creada: row.created_at || '',
   };
 }
@@ -7523,7 +7526,11 @@ function _evAntReconciliarConReglas(reglas) {
     }
     if (r.lugares && r.lugares.length) {
       var _l = String(ev.lugar || '').trim().toLowerCase();
-      if (!r.lugares.some(function(x) { return String(x).trim().toLowerCase() === _l; })) return false;
+            if (!r.lugares.some(function(x) { return String(x).trim().toLowerCase() === _l; })) return false;
+    }
+    if (r.horaDesde && r.horaHasta) {
+      var _h = String(ev.horaInicio || '').slice(0, 5);
+      if (!_h || _h < r.horaDesde || _h > r.horaHasta) return false;
     }
     return true;
   }
@@ -7540,7 +7547,7 @@ function _evAntReconciliarConReglas(reglas) {
   var orden = { 'indefinido': 0, 'meses': 1, 'periodo': 2 };
     // De menos a más prioritaria (gana la última que aplica): tipo, luego la
   // más específica (días/lugares), luego la más reciente.
-  function _esp(r) { return ((r.diasSemana || []).length ? 1 : 0) + ((r.lugares || []).length ? 1 : 0); }
+  function _esp(r) { return ((r.diasSemana || []).length ? 1 : 0) + ((r.lugares || []).length ? 1 : 0) + (r.horaDesde && r.horaHasta ? 1 : 0); }
   reglas.sort(function(a, b) {
     return (orden[a.tipoRango] - orden[b.tipoRango]) || (_esp(a) - _esp(b)) || String(a.creada || '').localeCompare(String(b.creada || ''));
   });

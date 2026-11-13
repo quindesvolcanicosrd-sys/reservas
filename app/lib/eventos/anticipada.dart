@@ -61,6 +61,8 @@ class ReglaAnticipada {
     this.tiposEvento = const ['Entrenamiento'],
     this.diasSemana = const [],
     this.lugares = const [],
+    this.horaDesde,
+    this.horaHasta,
     this.creada,
   });
 
@@ -80,11 +82,17 @@ class ReglaAnticipada {
   /// (Victor, 2026-11-12).
   final List<int> diasSemana;
   final List<String> lugares;
+
+  /// Solo eventos que empiezan entre estas horas ('HH:MM'), ej. "No asistiré
+  /// los lunes de 10:00 a 19:00" (Victor, 2026-11-13); null = cualquier hora.
+  final String? horaDesde;
+  final String? horaHasta;
+  bool get conHorario => horaDesde != null && horaHasta != null;
   final DateTime? creada;
 
   /// Cuántos filtros tiene: con dos reglas del mismo tipo en un evento, gana
   /// la más específica y, si empatan, la más reciente.
-  int get especificidad => (diasSemana.isEmpty ? 0 : 1) + (lugares.isEmpty ? 0 : 1);
+  int get especificidad => (diasSemana.isEmpty ? 0 : 1) + (lugares.isEmpty ? 0 : 1) + (conHorario ? 1 : 0);
 
   static const nombresDias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
@@ -97,13 +105,15 @@ class ReglaAnticipada {
           for (final d in [...diasSemana]..sort()) nombresDias[d - 1],
         ])}',
       if (lugares.isNotEmpty) '${diasSemana.isEmpty ? 'Solo en' : 'en'} ${lista(lugares)}',
+      if (conHorario) '${diasSemana.isEmpty && lugares.isEmpty ? 'Solo si empiezan' : 'si empiezan'} entre $horaDesde y $horaHasta',
     ];
     return partes.join(' · ');
   }
 
   bool _pasaFiltros(Evento ev) =>
       (diasSemana.isEmpty || diasSemana.contains(ev.fecha.weekday)) &&
-      (lugares.isEmpty || lugares.any((l) => l.trim().toLowerCase() == ev.lugar.trim().toLowerCase()));
+      (lugares.isEmpty || lugares.any((l) => l.trim().toLowerCase() == ev.lugar.trim().toLowerCase())) &&
+      (!conHorario || (ev.horaInicio.compareTo(horaDesde!) >= 0 && ev.horaInicio.compareTo(horaHasta!) <= 0));
 
   /// Fechas que cubre (para ver si dos reglas se cruzan).
   bool _rangoCruza(ReglaAnticipada o) {
@@ -127,7 +137,8 @@ class ReglaAnticipada {
     if (!_rangoCruza(o)) return false;
     final dias = diasSemana.isEmpty || o.diasSemana.isEmpty || diasSemana.any(o.diasSemana.contains);
     final lugs = lugares.isEmpty || o.lugares.isEmpty || lugares.any((l) => o.lugares.any((x) => x.toLowerCase() == l.toLowerCase()));
-    return dias && lugs;
+    final horas = !conHorario || !o.conHorario || (horaDesde!.compareTo(o.horaHasta!) <= 0 && o.horaDesde!.compareTo(horaHasta!) <= 0);
+    return dias && lugs && horas;
   }
 
   static int clave(DateTime d) => d.year * 100 + d.month;
@@ -173,6 +184,8 @@ class ReglaAnticipada {
       tiposEvento: tipos.where((t) => t.trim().isNotEmpty).toList(),
       diasSemana: f['dias_semana'] is List ? [for (final d in f['dias_semana'] as List) ?int.tryParse('$d')] : const [],
       lugares: f['lugares'] is List ? [for (final l in f['lugares'] as List) '$l'] : const [],
+      horaDesde: (f['hora_desde'] ?? '').toString().isEmpty ? null : '${f['hora_desde']}',
+      horaHasta: (f['hora_hasta'] ?? '').toString().isEmpty ? null : '${f['hora_hasta']}',
       creada: DateTime.tryParse('${f['created_at'] ?? ''}'),
     );
   }
@@ -216,6 +229,8 @@ class ReglaAnticipada {
     'fecha_hasta': tipo == TipoRango.periodo && hasta != null ? Fechas.iso(hasta!) : null,
     'dias_semana': diasSemana.isEmpty ? null : (diasSemana.toList()..sort()),
     'lugares': lugares.isEmpty ? null : lugares,
+    'hora_desde': conHorario ? horaDesde : null,
+    'hora_hasta': conHorario ? horaHasta : null,
   };
 
   /// Rango del viaje para `autodeclararEstado` (`_evAntRangoViaje()`).

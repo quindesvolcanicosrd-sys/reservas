@@ -179,7 +179,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
   }
 }
 
-enum _Paso { estado, motivo, tipo, fechas, alcance }
+enum _Paso { estado, motivo, tipo, fechas, alcance, criterio, dias, lugares, horario }
 
 /// Asistente por pasos: Estado → (Motivo, si no asistirás) → Frecuencia →
 /// Meses o fechas. Misma lógica que la web (`_evAnt*`): motivo obligatorio
@@ -211,26 +211,59 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   // Solo ciertos días o lugares (Victor, 2026-11-12); vacío = todos.
   late final Set<int> _dias = {...?widget.editando?.diasSemana};
   late final Set<String> _lugares = {...?widget.editando?.lugares};
-  List<String>? _lugaresDisponibles;
-  bool _soloAlgunos = false;
+  late String? _horaDesde = widget.editando?.horaDesde;
+  late String? _horaHasta = widget.editando?.horaHasta;
+  // "Solo algunos" se arma por pasos (Victor, 2026-11-13): primero por qué
+  // (días, lugares u horario, se pueden combinar) y después cada uno.
+  late bool _soloAlgunos = widget.editando != null && widget.editando!.especificidad > 0;
+  late bool _porDias = _dias.isNotEmpty;
+  late bool _porLugares = _lugares.isNotEmpty;
+  late bool _porHorario = widget.editando?.conHorario ?? false;
 
-  @override
-  void initState() {
-    super.initState();
-    widget.repo
-        .venues()
-        .then((v) {
-          if (mounted) setState(() => _lugaresDisponibles = [for (final x in v) '${x['lugar']}'.trim()]..removeWhere((x) => x.isEmpty));
-        })
-        .catchError((_) {
-          if (mounted) setState(() => _lugaresDisponibles = const []);
-        });
+  /// Entrenamientos futuros: de ahí salen los días y lugares que se ofrecen.
+  List<Evento> get _futuros {
+    final hoy = Fechas.hoy();
+    return [
+      for (final e in widget.repo.eventos)
+        if (!e.cancelado && !e.fecha.isBefore(hoy) && e.tipo == 'Entrenamiento') e,
+    ];
+  }
+
+  List<int> get _diasConEventos => ({for (final e in _futuros) e.fecha.weekday, ..._dias}.toList()..sort());
+  List<String> get _lugaresConEventos {
+    final vistos = <String, String>{};
+    for (final l in [..._futuros.map((e) => e.lugar), ..._lugares]) {
+      if (l.trim().isNotEmpty) vistos.putIfAbsent(l.trim().toLowerCase(), () => l.trim());
+    }
+    return vistos.values.toList()..sort();
   }
 
   Cuota? get _cuota => widget.cuota;
   bool get _restringe => _cuota?.restringe(_estado) ?? false;
 
-  List<_Paso> get _pasos => [_Paso.estado, if (_estado == EstadoRsvp.noAsistire) _Paso.motivo, _Paso.tipo, _Paso.fechas, _Paso.alcance];
+  List<_Paso> get _pasos => [
+    _Paso.estado,
+    if (_estado == EstadoRsvp.noAsistire) _Paso.motivo,
+    _Paso.tipo,
+    _Paso.fechas,
+    _Paso.alcance,
+    if (_soloAlgunos) ...[_Paso.criterio, if (_porDias) _Paso.dias, if (_porLugares) _Paso.lugares, if (_porHorario) _Paso.horario],
+  ];
+
+  bool get _horarioValido => _horaDesde != null && _horaHasta != null && _horaDesde!.compareTo(_horaHasta!) <= 0;
+
+  /// ¿Se puede seguir (o aplicar) desde el paso actual?
+  bool get _pasoValido => switch (_paso) {
+    _Paso.estado => _estado != null,
+    _Paso.motivo => _motivo != null,
+    _Paso.tipo => _tipo != null,
+    _Paso.fechas => _fechasValidas,
+    _Paso.alcance => true,
+    _Paso.criterio => _porDias || _porLugares || _porHorario,
+    _Paso.dias => _dias.isNotEmpty,
+    _Paso.lugares => _lugares.isNotEmpty,
+    _Paso.horario => _horarioValido,
+  };
 
   void _ir(int delta) {
     final pasos = _pasos;
@@ -303,9 +336,17 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
 
   Future<void> _aplicar() async {
     // Una sola indefinida para todos los eventos; con días o lugares pueden convivir varias.
+    // Lo que no se eligió en "Solo algunos" no se guarda.
+    if (!_soloAlgunos || !_porDias) _dias.clear();
+    if (!_soloAlgunos || !_porLugares) _lugares.clear();
+    if (!_soloAlgunos || !_porHorario) {
+      _horaDesde = null;
+      _horaHasta = null;
+    }
     if (_tipo == TipoRango.indefinido &&
         _dias.isEmpty &&
         _lugares.isEmpty &&
+        _horaDesde == null &&
         widget.reglas.any((r) => r.tipo == TipoRango.indefinido && r.id != widget.editando?.id && r.especificidad == 0)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ya tienes una regla indefinida activa. Elimínala antes de crear una nueva.')));
       return;
@@ -319,6 +360,8 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
       hasta: _tipo == TipoRango.periodo ? _hasta : null,
       diasSemana: _dias.toList()..sort(),
       lugares: _lugares.toList(),
+      horaDesde: _horaDesde,
+      horaHasta: _horaHasta,
     );
     // Si se cruza con otra regla, se avisa y se pide aprobarla (Victor, 2026-11-12).
     final cruces = widget.reglas.where((r) => r.id != widget.editando?.id && nueva.seCruzaCon(r)).toList();
@@ -374,13 +417,21 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         _Paso.tipo => '¿Para cuándo?',
         _Paso.fechas => _tipo == TipoRango.meses ? 'Elige los meses' : (_tipo == TipoRango.periodo ? 'Elige las fechas' : 'Desde cuándo'),
         _Paso.alcance => '¿A qué entrenamientos aplica?',
+        _Paso.criterio => '¿Cuáles?',
+        _Paso.dias => '¿Qué días?',
+        _Paso.lugares => '¿En qué lugares?',
+        _Paso.horario => '¿En qué horario?',
       },
       ayuda: switch (_paso) {
         _Paso.estado => 'Se aplica sola a tus entrenamientos futuros, sin marcarlos uno por uno.',
         _Paso.motivo => MotivoAusencia.ayudaComun,
         _Paso.tipo => _restringe ? 'Con "Asistiré" solo puedes elegir los meses que tienes pagados.' : null,
         _Paso.fechas => null,
-        _Paso.alcance => 'Todos, o solo ciertos días de la semana o lugares. Puedes combinar ambos.',
+        _Paso.alcance => null,
+        _Paso.criterio => 'Elige una o más opciones. Si combinas, aplica solo cuando se cumplen todas.',
+        _Paso.dias => 'Solo aparecen los días en que hay entrenamientos.',
+        _Paso.lugares => 'Solo aparecen los lugares donde hay entrenamientos.',
+        _Paso.horario => 'Aplica a los entrenamientos que empiezan dentro de este horario.',
       },
       clavePaso: _paso,
       adelante: _adelante,
@@ -391,11 +442,13 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         _Paso.tipo => _pasoTipo(context),
         _Paso.fechas => _pasoFechas(context),
         _Paso.alcance => _pasoAlcance(context),
+        _Paso.criterio => _pasoCriterio(context),
+        _Paso.dias => _pasoDias(context),
+        _Paso.lugares => _pasoLugares(context),
+        _Paso.horario => _pasoHorario(context),
       },
-      textoBoton: _paso == _Paso.alcance ? (widget.editando == null ? 'Aplicar' : 'Guardar cambios') : (_siguienteVisible ? 'Siguiente' : null),
-      alContinuar: _paso == _Paso.alcance
-          ? (_soloAlgunos && _dias.isEmpty && _lugares.isEmpty ? null : _aplicar)
-          : (_paso == _Paso.fechas ? (_fechasValidas ? () => _ir(1) : null) : () => _ir(1)),
+      textoBoton: _paso == pasos.last ? (widget.editando == null ? 'Aplicar' : 'Guardar cambios') : (_siguienteVisible ? 'Siguiente' : null),
+      alContinuar: !_pasoValido ? null : (_paso == pasos.last ? _aplicar : () => _ir(1)),
       ocupado: _ocupado,
     );
   }
@@ -406,7 +459,8 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     _Paso.motivo => _motivo != null,
     _Paso.tipo => _tipo != null,
     _Paso.fechas => _fechasValidas,
-    _Paso.alcance => false,
+    _Paso.alcance => _soloAlgunos,
+    _Paso.criterio || _Paso.dias || _Paso.lugares || _Paso.horario => true,
   };
 
   /// La nueva gana si su tipo tiene más prioridad, o el mismo con más
@@ -419,95 +473,199 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   }
 
   Widget _pasoAlcance(BuildContext context) {
-    final p = context.pivot;
-    final algunos = _soloAlgunos || _dias.isNotEmpty || _lugares.isNotEmpty;
-    Text titulo(String t) => Text(
-      t,
-      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-    );
-    // Primero "¿todos o algunos?"; los días y lugares aparecen solo si eligen
-    // "Solo algunos" (Victor, 2026-11-13: era mucho en un paso).
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         OpcionAsistente(
           icono: Icons.event_available_rounded,
           titulo: 'Todos los entrenamientos',
-          texto: 'Sin importar el día ni el lugar.',
-          activa: !algunos,
-          alTocar: () => setState(() {
-            _soloAlgunos = false;
-            _dias.clear();
-            _lugares.clear();
-          }),
+          texto: 'Sin importar el día, el lugar ni la hora.',
+          activa: !_soloAlgunos,
+          alTocar: () => setState(() => _soloAlgunos = false),
         ),
-        const SizedBox(height: 10),
         OpcionAsistente(
           icono: Icons.filter_alt_outlined,
           titulo: 'Solo algunos',
-          texto: 'Ciertos días de la semana o ciertos lugares.',
-          activa: algunos,
-          alTocar: () => setState(() => _soloAlgunos = true),
+          texto: 'Ciertos días, lugares u horarios.',
+          activa: _soloAlgunos,
+          alTocar: () => _elegirYSeguir(() => _soloAlgunos = true),
         ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 240),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: !algunos
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  padding: const EdgeInsets.only(top: 20),
+      ],
+    );
+  }
+
+  Widget _pasoCriterio(BuildContext context) {
+    final p = context.pivot;
+    Widget opcion(IconData icono, String titulo, String texto, bool activa, VoidCallback cambiar) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: activa ? p.suave : p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: () => setState(cambiar),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Row(
+              children: [
+                Icon(icono, color: activa ? p.sobreSuave : p.marcaTexto),
+                const SizedBox(width: 14),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      titulo('Días'),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (var d = 1; d <= 7; d++)
-                            FilterChip(
-                              showCheckmark: false,
-                              label: Text(ReglaAnticipada.nombresDias[d - 1].substring(0, 3)),
-                              tooltip: ReglaAnticipada.nombresDias[d - 1],
-                              selected: _dias.contains(d),
-                              onSelected: (_) => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      titulo('Lugares'),
-                      const SizedBox(height: 8),
-                      if (_lugaresDisponibles == null)
-                        const Center(child: PivotCargando(tamano: 40))
-                      else if (_lugaresDisponibles!.isEmpty)
-                        Text('No hay lugares guardados.', style: TextStyle(color: p.textoSecundario))
-                      else
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            for (final l in {..._lugaresDisponibles!, ..._lugares})
-                              FilterChip(
-                                showCheckmark: false,
-                                label: Text(l),
-                                selected: _lugares.contains(l),
-                                onSelected: (_) => setState(() => _lugares.contains(l) ? _lugares.remove(l) : _lugares.add(l)),
-                              ),
-                          ],
-                        ),
-                      const SizedBox(height: 14),
                       Text(
-                        _dias.isEmpty && _lugares.isEmpty
-                            ? 'Elige al menos un día o un lugar. Si eliges los dos, aplica cuando coinciden.'
-                            : 'Aplica ${ReglaAnticipada(tipo: TipoRango.indefinido, estado: EstadoRsvp.asistire, diasSemana: _dias.toList(), lugares: _lugares.toList()).resumenFiltros.toLowerCase()}.',
-                        style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+                        titulo,
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: activa ? p.sobreSuave : p.texto),
                       ),
+                      Text(texto, style: TextStyle(fontSize: 13.5, color: activa ? p.sobreSuave : p.textoSecundario)),
                     ],
                   ),
                 ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(
+                    activa ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+                    key: ValueKey(activa),
+                    color: activa ? p.sobreSuave : p.textoSecundario,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        opcion(Icons.calendar_view_week_rounded, 'Por días', 'Ej. solo los lunes', _porDias, () => _porDias = !_porDias),
+        opcion(Icons.place_outlined, 'Por lugares', 'Ej. solo en un lugar', _porLugares, () => _porLugares = !_porLugares),
+        opcion(Icons.schedule_rounded, 'Por horario', 'Ej. si empieza entre 10:00 y 19:00', _porHorario, () => _porHorario = !_porHorario),
+      ],
+    );
+  }
+
+  Widget _vistaPrevia(BuildContext context) {
+    final r = ReglaAnticipada(
+      tipo: TipoRango.indefinido,
+      estado: EstadoRsvp.asistire,
+      diasSemana: _porDias ? _dias.toList() : const [],
+      lugares: _porLugares ? _lugares.toList() : const [],
+      horaDesde: _porHorario && _horarioValido ? _horaDesde : null,
+      horaHasta: _porHorario && _horarioValido ? _horaHasta : null,
+    );
+    final txt = r.resumenFiltros;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: Text(
+        txt.isEmpty ? '' : 'Aplica: ${txt[0].toLowerCase()}${txt.substring(1)}.',
+        key: ValueKey(txt),
+        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: context.pivot.marcaTexto),
+      ),
+    );
+  }
+
+  Widget _pasoDias(BuildContext context) {
+    final dias = _diasConEventos;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (dias.isEmpty)
+          Text('No hay entrenamientos próximos en el calendario.', style: TextStyle(color: context.pivot.textoSecundario))
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final d in dias)
+                FilterChip(
+                  label: Text(ReglaAnticipada.nombresDias[d - 1][0].toUpperCase() + ReglaAnticipada.nombresDias[d - 1].substring(1)),
+                  selected: _dias.contains(d),
+                  onSelected: (_) => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
+                ),
+            ],
+          ),
+        const SizedBox(height: 16),
+        _vistaPrevia(context),
+      ],
+    );
+  }
+
+  Widget _pasoLugares(BuildContext context) {
+    final lugares = _lugaresConEventos;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (lugares.isEmpty)
+          Text('No hay entrenamientos próximos en el calendario.', style: TextStyle(color: context.pivot.textoSecundario))
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final l in lugares)
+                FilterChip(
+                  label: Text(l),
+                  selected: _lugares.any((x) => x.toLowerCase() == l.toLowerCase()),
+                  onSelected: (_) => setState(() {
+                    final ya = _lugares.where((x) => x.toLowerCase() == l.toLowerCase()).toList();
+                    ya.isEmpty ? _lugares.add(l) : _lugares.removeAll(ya);
+                  }),
+                ),
+            ],
+          ),
+        const SizedBox(height: 16),
+        _vistaPrevia(context),
+      ],
+    );
+  }
+
+  Future<void> _elegirHora(bool desde) async {
+    final actual = desde ? _horaDesde : _horaHasta;
+    final partes = (actual ?? (desde ? '10:00' : '19:00')).split(':');
+    final h = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: int.parse(partes[0]), minute: int.parse(partes[1])),
+    );
+    if (h == null || !mounted) return;
+    final txt = '${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}';
+    setState(() => desde ? _horaDesde = txt : _horaHasta = txt);
+  }
+
+  Widget _pasoHorario(BuildContext context) {
+    final p = context.pivot;
+    // Horas a las que empiezan los próximos entrenamientos, como guía.
+    final horas = ({for (final e in _futuros) e.horaInicio}.toList()..sort());
+    Widget boton(String titulo, String? valor, bool desde) => Expanded(
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+        onPressed: () => _elegirHora(desde),
+        child: Column(
+          children: [
+            Text(titulo, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
+            Text(
+              valor ?? 'Elegir',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: p.texto),
+            ),
+          ],
+        ),
+      ),
+    );
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(children: [boton('Desde', _horaDesde, true), const SizedBox(width: 12), boton('Hasta', _horaHasta, false)]),
+        if (_horaDesde != null && _horaHasta != null && !_horarioValido) ...[
+          const SizedBox(height: 10),
+          Text('La hora de inicio tiene que ser antes que la de fin.', style: TextStyle(color: p.marcaTexto)),
+        ],
+        if (horas.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text('Los próximos entrenamientos empiezan a las ${horas.join(', ')}.', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
+        ],
+        const SizedBox(height: 12),
+        _vistaPrevia(context),
       ],
     );
   }
