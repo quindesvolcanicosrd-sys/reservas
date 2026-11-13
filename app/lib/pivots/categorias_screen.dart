@@ -32,7 +32,7 @@ class _Persona {
   num p(int v) => v < puntos.length ? puntos[v] : 0;
 }
 
-/// Lo que pide una Categoría/Equipo.
+/// Lo que pide una Equipo.
 class _Regla {
   _Regla({required this.clases, required this.puntos, required this.logica, required this.ventana, required this.subir, required this.gracia});
   factory _Regla.de(Map<String, dynamic> t) {
@@ -69,7 +69,7 @@ class _Regla {
   }
 }
 
-/// Ajustes de la liga → Categorías/Equipos y puntos (Victor, 2026-11-13):
+/// Ajustes de la liga → Equipos y puntos (Victor, 2026-11-13):
 /// cada una explicada en palabras y con cuántas personas la cumplen hoy.
 /// Tocar una abre un asistente por pasos con ejemplos del equipo.
 class CategoriasScreen extends StatefulWidget {
@@ -138,7 +138,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
     final l = _tiers;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Categorías/Equipos y puntos', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Equipos y puntos', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
@@ -151,7 +151,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
                     child: Text(
-                      'Lo que pide cada Categoría/Equipo para mantenerse o subir. Toca una para cambiarlo: verás a quién del equipo afectaría antes de guardar.',
+                      'Lo que pide cada equipo para mantenerse o subir. Toca uno para cambiarlo: verás a quién del equipo afectaría antes de guardar.',
                       style: TextStyle(fontSize: 13.5, height: 1.35, color: p.textoSecundario),
                     ),
                   ),
@@ -191,10 +191,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.texto),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        piso ? 'Es la Categoría/Equipo inicial: no pide un mínimo.' : 'Para mantenerse: ${r.texto}.',
-                        style: TextStyle(fontSize: 14, color: p.texto),
-                      ),
+                      Text(piso ? 'Es el equipo inicial: no pide un mínimo.' : 'Para mantenerse: ${r.texto}.', style: TextStyle(fontSize: 14, color: p.texto)),
                       if (!piso) ...[
                         const SizedBox(height: 2),
                         Text(
@@ -219,7 +216,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
 enum _Paso { que, periodo, clases, puntos, subirBajar, resumen }
 
-/// Asistente para cambiar lo que pide una Categoría/Equipo, con el efecto
+/// Asistente para cambiar lo que pide una Equipo, con el efecto
 /// sobre personas reales del equipo en cada paso.
 class _CategoriaAsistente extends StatefulWidget {
   const _CategoriaAsistente({required this.sesion, required this.tier, required this.debajo, required this.gente});
@@ -251,7 +248,7 @@ class _CategoriaAsistenteState extends State<_CategoriaAsistente> {
     _Paso.resumen,
   ];
 
-  /// Quienes están en esta Categoría/Equipo y entran en el cálculo.
+  /// Quienes están en esta Equipo y entran en el cálculo.
   List<_Persona> get _miembros => widget.gente.where((x) => x.categoria == _nombre && x.evaluable && !x.usaEquipo).toList();
 
   /// Quienes podrían subir a esta (están en la de abajo).
@@ -536,7 +533,7 @@ class _CategoriaAsistenteState extends State<_CategoriaAsistente> {
         _Impacto(antes: _antes, ahora: _r, miembros: _miembros, candidatos: _candidatos, nombre: _nombre, debajo: _nombreDebajo, completo: true),
         const SizedBox(height: 12),
         Text(
-          'Nadie cambia de Categoría/Equipo al guardar: se aplica en el próximo cálculo, con los meses de margen que elegiste. Quien tiene la Categoría/Equipo fijada a mano, está de viaje o lesionadx no cambia.',
+          'Nadie cambia de equipo al guardar: se aplica en el próximo cálculo, con los meses de margen que elegiste. Quien tiene el equipo fijado a mano, está de viaje o lesionadx no cambia.',
           style: TextStyle(fontSize: 13, height: 1.35, color: p.textoSecundario),
         ),
       ],

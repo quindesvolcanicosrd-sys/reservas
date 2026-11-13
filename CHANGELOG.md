@@ -2,6 +2,12 @@
 
 Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.md anterior (que mezclaba estado actual + historial en un solo archivo de ~7000 líneas). Dentro de cada sección, más reciente primero. Las fechas exactas están confirmadas cuando el MANIFEST las traía en formato ISO; el resto del historial (desarrollado a lo largo de 2025 y 2026 sin registrar fecha por entrada) queda con el mes/año aproximado que se pudo inferir del contexto (migraciones con fecha en su nombre, menciones explícitas de mes, o posición relativa en el archivo original).
 
+## 2026-11-13 (sesión de las 4 p. m.)
+- **Bug de puntos:** los puntos de asistencia solo se recalculaban con el botón "Recalcular ahora" de Mi Liga web; desde que la lista se toma en la app (octubre) quedaron sin sumar. Ahora se recalculan al marcar a cada persona (`_recalcularPuntosAsistenciaPersona`) y el cron diario recalcula el mes actual y el anterior. Datos de septiembre a noviembre reparados sumando lo que faltaba (nunca se bajó un valor guardado).
+- **Regla de equipos:** mes calendario cerrado (en noviembre se evalúa octubre completo) y, por defecto, solo puntos de tareas (Victor). `config_tiers.puntos_fuente`, `periodo_unidad`, `gracia_unidad` (días, semanas, meses o años). recalcular-categorias, `getEstadisticasPersona` (período cerrado y en curso) usan la misma cuenta.
+- Estadísticas: "Quindes pide un mínimo de 3 clases asistidas o 5 puntos por tareas al mes."; si no llega: "No estás llegando a los mínimos de … Si sigues así 1 mes, bajarás a Mirlxs."
+- "Categoría/Equipo" pasa a "Equipo" y "Categorías/Equipos y puntos" a "Equipos y puntos".
+
 ## 2026-11-13 (tarde)
 - Comunidad: el campo del enlace ya no muestra el texto de ejemplo "Enlace del grupo o +593 99…".
 - Calendario: la pill de asistencia ocupa todo el ancho, como "Editar asistencia".

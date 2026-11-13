@@ -35,9 +35,9 @@ class MotivoAusencia {
   final String ayuda;
 
   static const todos = [
-    MotivoAusencia('De viaje', 'De viaje', Icons.flight_rounded, 'Tu Categoría/Equipo queda congelada durante el viaje.'),
-    MotivoAusencia('Lesionadx', 'Lesionadx', Icons.personal_injury_outlined, 'Tu Categoría/Equipo queda congelada mientras dure la lesión.'),
-    MotivoAusencia('Inactivx', 'Ausente', Icons.event_busy_outlined, 'Tu Categoría/Equipo sigue las reglas normales de asistencia.'),
+    MotivoAusencia('De viaje', 'De viaje', Icons.flight_rounded, 'Tu equipo no cambia durante el viaje.'),
+    MotivoAusencia('Lesionadx', 'Lesionadx', Icons.personal_injury_outlined, 'Tu equipo no cambia mientras dure la lesión.'),
+    MotivoAusencia('Inactivx', 'Ausente', Icons.event_busy_outlined, 'Tu equipo sigue las reglas normales de asistencia.'),
   ];
   static const ayudaComun = 'Si vienes a entrenar, vuelves a Activx automáticamente.';
 

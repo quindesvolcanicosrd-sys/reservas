@@ -121,7 +121,7 @@ class AjustesLigaScreen extends StatelessWidget {
                 FilaAjuste(
                   icono: Icons.workspace_premium_outlined,
                   seccion: 'cuota',
-                  titulo: 'Categorías/Equipos y puntos',
+                  titulo: 'Equipos y puntos',
                   valor: 'Qué pide cada una para mantenerse o subir',
                   alTocar: () => SubAjustes.abrir(context, CategoriasScreen(sesion: sesion)),
                 ),

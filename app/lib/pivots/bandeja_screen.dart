@@ -139,7 +139,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                 children: [
                   Text('Equipamiento para ${x.nombreMostrar}', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text('Mientras dure, puede usarlo sin cambiar de Categoría/Equipo por eso.', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
+                  Text('Mientras dure, puede usarlo sin cambiar de equipo por eso.', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
                   const SizedBox(height: 16),
                   Text(
                     '¿Por cuánto tiempo?',

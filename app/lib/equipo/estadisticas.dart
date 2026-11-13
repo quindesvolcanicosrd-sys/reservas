@@ -46,7 +46,7 @@ class _Anio {
 /// Mi perfil ("Mis estadísticas") y desde la ficha de Equipo ("Ver
 /// estadísticas"). Año y mes elegibles, porcentajes siempre en %, lecturas
 /// concretas ("del 1 al 13 de noviembre fuiste a 5 clases…"), gráfico de
-/// asistencia o puntos por mes y la tarjeta de Categoría/Equipo con lo que
+/// asistencia o puntos por mes y la tarjeta de Equipo con lo que
 /// falta, sin regañar.
 class EstadisticasScreen extends StatefulWidget {
   const EstadisticasScreen({super.key, required this.repo, required this.username, required this.nombre});
@@ -172,7 +172,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       }
       if (seguidas >= 3) out.add((Icons.local_fire_department_rounded, '${_yo ? 'Fuiste' : 'Fue'} a las últimas $seguidas clases seguidas.'));
     }
-    // Promedio de su Categoría/Equipo (solo el mes en curso, con la lista ya cargada).
+    // Promedio de su Equipo (solo el mes en curso, con la lista ya cargada).
     final p = _pct(ahora);
     final yo = repo.persona(widget.username);
     if (esActual && p != null && yo != null) {
@@ -437,7 +437,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
   }
 }
 
-/// Tarjeta de Categoría/Equipo (Victor, 2026-11-13): qué pide la actual,
+/// Tarjeta de Equipo (Victor, 2026-11-13): qué pide la actual,
 /// cuánto lleva, qué falta y cómo sumar, en tono amable.
 class _ProgresoCategoria extends StatelessWidget {
   const _ProgresoCategoria({required this.progreso, required this.yo, required this.verPrivado});
@@ -445,10 +445,30 @@ class _ProgresoCategoria extends StatelessWidget {
   final bool yo;
   final bool verPrivado;
 
-  static String _req(Map t) {
+  static String _unidad(Object? u, int n) => switch ('$u') {
+    'dia' => n == 1 ? 'día' : 'días',
+    'semana' => n == 1 ? 'semana' : 'semanas',
+    'anio' => n == 1 ? 'año' : 'años',
+    _ => n == 1 ? 'mes' : 'meses',
+  };
+
+  /// "un mínimo de 3 clases asistidas o 5 puntos por tareas al mes".
+  static String regla(Map t) {
     final c = (t['minClases'] as num).toInt(), p = (t['minPuntos'] as num).toInt();
-    final partes = [if (c > 0) c == 1 ? '1 clase' : '$c clases', if (p > 0) '$p puntos'];
-    return partes.join(t['logica'] == 'Y' ? ' y ' : ' o ');
+    final tareas = t['puntosFuente'] != 'todos';
+    final partes = [if (c > 0) c == 1 ? '1 clase asistida' : '$c clases asistidas', if (p > 0) '$p puntos${tareas ? ' por tareas' : ''}'];
+    final n = (t['ventana'] as num?)?.toInt() ?? 1;
+    final u = t['unidad'] ?? 'mes';
+    final cada = n == 1
+        ? (u == 'mes'
+              ? 'al mes'
+              : u == 'semana'
+              ? 'a la semana'
+              : u == 'anio'
+              ? 'al año'
+              : 'al día')
+        : 'cada $n ${_unidad(u, n)}';
+    return 'un mínimo de ${partes.join(t['logica'] == 'Y' ? ' y ' : ' o ')} $cada';
   }
 
   @override
@@ -463,46 +483,48 @@ class _ProgresoCategoria extends StatelessWidget {
     final actual = i >= 0 ? tiers[i] : null;
     final superior = i > 0 ? tiers[i - 1] : null;
     final esPiso = actual?['esDefault'] == true;
-    // En el piso se mira el siguiente; si no, la que se tiene.
+    // En el equipo inicial se mira el de arriba; si no, el propio.
     final meta = esPiso ? superior : actual;
+    final debajo = i >= 0 && i + 1 < tiers.length ? tiers[i + 1] : null;
     final lineas = <(IconData, String)>[];
-    final tu = yo ? 'Te' : 'Le';
 
     if (progreso['modo'] != 'auto') {
-      lineas.add((Icons.push_pin_outlined, 'Un Pivot fijó ${yo ? 'tu' : 'su'} Categoría/Equipo en $cat; no cambia sola.'));
+      lineas.add((Icons.push_pin_outlined, 'Un Pivot fijó ${yo ? 'tu' : 'su'} equipo en $cat; no cambia solo.'));
     } else if (progreso['estado'] == 'Lesionadx' || progreso['estado'] == 'De viaje') {
       lineas.add((
         Icons.pause_circle_outline_rounded,
-        'Mientras esté como ${progreso['estado'] == 'Lesionadx' ? 'lesionadx' : 'de viaje'}, la Categoría/Equipo queda congelada.',
+        'Mientras esté como ${progreso['estado'] == 'Lesionadx' ? 'lesionadx' : 'de viaje'}, el equipo no cambia.',
       ));
     } else if (meta != null) {
-      final clases = (meta['clases'] as num).toInt(), puntos = meta['puntos'] as num;
       final minC = (meta['minClases'] as num).toInt(), minP = (meta['minPuntos'] as num).toInt();
-      final faltaC = (minC - clases).clamp(0, 999), faltaP = (minP - puntos).clamp(0, 9999);
-      final cumple = meta['cumple'] == true;
-      if (cumple && !esPiso) {
-        lineas.add((Icons.verified_rounded, '${yo ? 'Cumples' : 'Cumple'} lo que pide $cat. ¡Bien!'));
-      } else if (cumple && esPiso) {
+      final cumpleAhora = meta['cumple'] == true;
+      final cumpleAntes = meta['cumpleCerrado'] == true;
+      final min = [
+        if (minC > 0) '$minC clases',
+        if (minP > 0) '$minP puntos${meta['puntosFuente'] != 'todos' ? ' por tareas' : ''}',
+      ].join(meta['logica'] == 'Y' ? ' y ' : ' o ');
+      if (esPiso) {
         final n = (progreso['mesesSeguidos'] as num?)?.toInt() ?? 0, m = (meta['mesesAscenso'] as num).toInt();
         lineas.add((
           Icons.trending_up_rounded,
-          '${yo ? 'Cumples' : 'Cumple'} lo que pide ${meta['nombre']}: ${yo ? 'llevas' : 'lleva'} $n de $m meses seguidos para subir.',
+          cumpleAntes
+              ? '${yo ? 'Llevas' : 'Lleva'} $n de $m meses seguidos cumpliendo lo de ${meta['nombre']} para subir.'
+              : 'Para subir a ${meta['nombre']} hacen falta $m meses seguidos cumpliendo $min.',
         ));
-      } else {
-        final faltas = [if (minC > 0 && faltaC > 0) faltaC == 1 ? '1 clase' : '$faltaC clases', if (minP > 0 && faltaP > 0) '${numero(faltaP)} puntos'];
+      } else if (!cumpleAntes) {
+        // Lo que decide: el período cerrado.
+        final g = (meta['gracia'] as num?)?.toInt() ?? 0;
         lineas.add((
           Icons.flag_outlined,
-          '$tu ${faltas.length > 1 && meta['logica'] == 'Y' ? 'faltan' : (faltas.first.startsWith('1 ') ? 'falta' : 'faltan')} ${faltas.join(meta['logica'] == 'Y' ? ' y ' : ' o ')} para ${esPiso ? 'llegar a' : 'mantener'} ${meta['nombre']}.',
+          '${yo ? 'No estás llegando' : 'No está llegando'} a los mínimos de $min. '
+              '${g > 0 ? 'Si ${yo ? 'sigues' : 'sigue'} así $g ${_unidad(meta['graciaUnidad'], g)}, ${yo ? 'bajarás' : 'bajará'} a ${debajo?['nombre'] ?? 'otro equipo'}.' : 'Al cierre ${yo ? 'bajarás' : 'bajará'} a ${debajo?['nombre'] ?? 'otro equipo'}.'}',
         ));
-        lineas.add((Icons.lightbulb_outline_rounded, 'Cada clase suma 1 punto (0,5 si llegas tarde) y las tareas suman lo que indique cada una.'));
-        final hasta = DateTime.tryParse('${progreso['riesgoHasta'] ?? ''}');
-        if (!esPiso && hasta != null) {
-          lineas.add((Icons.event_available_rounded, 'Hay tiempo hasta el ${Fechas.corta(hasta.toLocal())} para ponerse al día.'));
-        }
+      } else if (cumpleAhora) {
+        lineas.add((Icons.verified_rounded, '${yo ? 'Ya cumples' : 'Ya cumple'} con $cat este mes. ¡Bien!'));
       }
     }
     if (verPrivado && progreso['usaEquipo'] == true && progreso['modo'] == 'auto') {
-      lineas.add((Icons.inventory_2_outlined, 'Mientras use equipamiento del equipo, la Categoría/Equipo máxima es la inicial.'));
+      lineas.add((Icons.inventory_2_outlined, 'Mientras use equipamiento del equipo, queda en el equipo inicial.'));
     }
 
     return _Caja(
@@ -512,7 +534,7 @@ class _ProgresoCategoria extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Categoría/Equipo: $cat',
+              'Equipo: $cat',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: pal.texto),
             ),
           ),
@@ -522,13 +544,12 @@ class _ProgresoCategoria extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (meta != null) ...[
-            Text(
-              '${meta['nombre']} pide ${_req(meta)} desde el ${Fechas.corta(DateTime.parse('${meta['desde']}'))}.',
-              style: TextStyle(fontSize: 13.5, color: pal.textoSecundario),
-            ),
+            Text('${meta['nombre']} pide ${regla(meta)}.', style: TextStyle(fontSize: 13.5, color: pal.textoSecundario)),
             const SizedBox(height: 10),
-            if ((meta['minClases'] as num) > 0) _Avance(titulo: 'Clases', valor: meta['clases'] as num, meta: meta['minClases'] as num),
-            if ((meta['minPuntos'] as num) > 0) _Avance(titulo: 'Puntos', valor: meta['puntos'] as num, meta: meta['minPuntos'] as num),
+            if ((meta['minClases'] as num) > 0)
+              _Avance(titulo: (meta['unidad'] ?? 'mes') == 'mes' ? 'Clases este mes' : 'Clases', valor: meta['clases'] as num, meta: meta['minClases'] as num),
+            if ((meta['minPuntos'] as num) > 0)
+              _Avance(titulo: meta['puntosFuente'] != 'todos' ? 'Puntos por tareas' : 'Puntos', valor: meta['puntos'] as num, meta: meta['minPuntos'] as num),
             const SizedBox(height: 4),
           ],
           for (final (icono, texto) in lineas)

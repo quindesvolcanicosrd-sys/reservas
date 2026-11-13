@@ -477,9 +477,9 @@ class _AdministracionState extends State<_Administracion> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('Solo las ven los Pivots: pagos, Categoría/Equipo, permisos y más.', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                Text('Solo las ven los Pivots: pagos, Equipo, permisos y más.', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
                 const SizedBox(height: 14),
-                Text('Categoría/Equipo', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                Text('Equipo', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
                 const SizedBox(height: 6),
                 SegmentedButton<String>(
                   segments: const [
@@ -488,7 +488,7 @@ class _AdministracionState extends State<_Administracion> {
                     ButtonSegment(value: 'mirlxs', label: Text('Mirlxs')),
                   ],
                   selected: {p.tierModo},
-                  onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría/Equipo actualizada'),
+                  onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Equipo actualizada'),
                 ),
                 const SizedBox(height: 12),
                 // Selector tipo desplegable (más claro que las pills) y con

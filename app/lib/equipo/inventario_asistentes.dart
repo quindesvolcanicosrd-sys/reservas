@@ -322,7 +322,7 @@ class _NuevaListaAsistenteState extends State<NuevaListaAsistente> {
 
 /// 'registrar' (un Pivot anota que alguien tiene algo), 'salida' (la persona
 /// avisa que se llevó algo) o 'uso' (la persona pide usar equipamiento por
-/// un tiempo sin bajar de Categoría/Equipo).
+/// un tiempo sin bajar de Equipo).
 enum ModoPrestamo { registrar, salida, uso }
 
 enum _PasoPrestamo { persona, que, detalle, tiempo, motivo }
@@ -477,7 +477,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
           'Si alguien del equipo se llevó equipamiento para darle mantenimiento, limpiarlo o tenerlo por algún motivo, regístralo aquí. '
               'Si es temporal, a los 7 días se pregunta a los Pivots y a la persona si aún lo tiene.',
         _PasoPrestamo.que when modo == ModoPrestamo.uso =>
-          'Si se te rompió o estás lavando tu equipamiento, un Pivot decide por cuánto tiempo puedes usar el del equipo sin cambiar de Categoría/Equipo.',
+          'Si se te rompió o estás lavando tu equipamiento, un Pivot decide por cuánto tiempo puedes usar el del equipo sin cambiar de equipo.',
         _PasoPrestamo.que when modo == ModoPrestamo.salida =>
           'Para cuando te llevas algo del equipo fuera del entrenamiento (por ejemplo, a limpiarlo). Un Pivot lo aprueba.',
         _PasoPrestamo.tiempo => 'Lo temporal recibe un recordatorio cada 7 días hasta que se devuelve.',

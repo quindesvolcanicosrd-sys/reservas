@@ -48,6 +48,33 @@ function fechaISO(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Período que mide un Equipo (Victor, 2026-11-13): cantidad + unidad.
+// 'mes' = meses calendario CERRADOS (en noviembre con 1 mes se mide todo
+// octubre), así el resultado no cambia durante el mes. 'dia' | 'semana' |
+// 'anio' = hacia atrás desde hoy. Devuelve [desde, hasta) en 'AAAA-MM-DD'.
+function periodoTier(tier: any): { desde: string; hasta: string; mesDesde: number; mesHasta: number } {
+  const n = Math.max(1, Number(tier.ventana_meses) || 1);
+  const u = String(tier.periodo_unidad ?? 'mes');
+  const hoy = new Date();
+  const idx = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  if (u === 'mes') {
+    const d = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - n, 1));
+    const h = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 1));
+    return { desde: fechaISO(d), hasta: fechaISO(h), mesDesde: idx - n, mesHasta: idx - 1 };
+  }
+  const dias = u === 'dia' ? n : u === 'semana' ? n * 7 : n * 365;
+  const d = new Date(Date.parse(fechaISO(hoy)) - dias * 86400000);
+  return { desde: fechaISO(d), hasta: fechaISO(hoy), mesDesde: d.getUTCFullYear() * 12 + d.getUTCMonth(), mesHasta: idx };
+}
+
+// Suma cantidad + unidad a una fecha (gracia).
+function sumarPlazo(desde: Date, n: number, unidad: string): Date {
+  if (unidad === 'dia') return new Date(desde.getTime() + n * 86400000);
+  if (unidad === 'semana') return new Date(desde.getTime() + n * 7 * 86400000);
+  if (unidad === 'anio') return new Date(Date.UTC(desde.getUTCFullYear() + n, desde.getUTCMonth(), desde.getUTCDate()));
+  return new Date(Date.UTC(desde.getUTCFullYear(), desde.getUTCMonth() + n, desde.getUTCDate()));
+}
+
 function nombresDe(s: string | null | undefined): string[] {
   return String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
 }
@@ -166,7 +193,11 @@ Deno.serve(async (req: Request) => {
         mesesUltimoMes: r.meses_consecutivos_ultimo_mes ?? null,
       }));
 
-    const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
+        // El período más largo de todos los Equipos, en meses aproximados, para traer historial suficiente.
+    const maxVentana = Math.max(1, ...tiers.map((t: any) => {
+      const n = Number(t.ventana_meses) || 1, u = String(t.periodo_unidad ?? 'mes');
+      return u === 'mes' ? n + 1 : u === 'anio' ? n * 12 + 1 : u === 'semana' ? Math.ceil(n / 4) + 1 : Math.ceil(n / 30) + 1;
+    }));
 
     // Bug real (Cambio 62): este fetch no filtraba por `estado` en absoluto
     // -- eventos cancelados ('Evento Cancelado') o todavía no sucedidos
@@ -212,7 +243,7 @@ Deno.serve(async (req: Request) => {
     const anioDesde = inicioFetch.getUTCFullYear();
     const { data: puntosData, error: puntosError } = await supabase
       .from('puntos_mensuales')
-      .select('nombre_usuario, anio, mes, puntos_total')
+            .select('nombre_usuario, anio, mes, puntos_total, puntos_tareas')
       .gte('anio', anioDesde);
     if (puntosError) return json({ ok: false, error: puntosError.message }, 500);
 
@@ -231,34 +262,38 @@ Deno.serve(async (req: Request) => {
       return hastaSolape >= desdeSolape ? Math.round((hastaSolape - desdeSolape) / DIA_MS) + 1 : 0;
     }
 
-    function contarClases(username: string, ventanaMeses: number): number {
-      const desde = fechaISO(new Date(primerDiaMesesAtras(ventanaMeses).getTime() - diasExtraVentana(username, ventanaMeses) * DIA_MS));
+        // Clases y puntos en el período del Equipo (`periodoTier`). Con viaje
+    // (modo soloUsuario) el inicio se corre hacia atrás los días de viaje.
+    function contarClases(username: string, tier: any): number {
+      const p = periodoTier(tier);
+      const extra = diasExtraVentana(username, Number(tier.ventana_meses) || 1);
+      const desde = extra ? fechaISO(new Date(Date.parse(p.desde) - extra * DIA_MS)) : p.desde;
       const u = username.trim().toUpperCase();
       let n = 0;
       for (const fila of asistData ?? []) {
-        if (!fila.fecha || fila.fecha < desde) continue;
+        if (!fila.fecha || fila.fecha < desde || fila.fecha >= p.hasta) continue;
         if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) n++;
       }
-      // + asistencias externas de la misma ventana (ver `externasData` arriba).
+      // + asistencias externas del mismo período (ver `externasData` arriba).
       for (const ext of externasData ?? []) {
         const fechaExt = String(ext.fecha_entrenamiento ?? '').slice(0, 10);
-        if (!fechaExt || fechaExt < desde) continue;
+        if (!fechaExt || fechaExt < desde || fechaExt >= p.hasta) continue;
         if (String(ext.nombre_usuario ?? '').trim().toUpperCase() === u) n++;
       }
       return n;
     }
 
-    function sumarPuntos(username: string, ventanaMeses: number): number {
-      // `puntos_mensuales` es por mes -- la compensación del viaje se
-      // redondea hacia arriba a meses enteros (30 días = 1 mes extra).
-      const mesesExtra = Math.ceil(diasExtraVentana(username, ventanaMeses) / 30);
+    // Solo puntos de tareas (por defecto, Victor 2026-11-13) o todos.
+    function sumarPuntos(username: string, tier: any): number {
+      const p = periodoTier(tier);
+      const mesesExtra = Math.ceil(diasExtraVentana(username, Number(tier.ventana_meses) || 1) / 30);
+      const soloTareas = (tier.puntos_fuente ?? 'tareas') === 'tareas';
       let total = 0;
       for (const fila of puntosData ?? []) {
         if (fila.nombre_usuario !== username) continue;
         const idxFila = Number(fila.anio) * 12 + (Number(fila.mes) - 1);
-        const diff = idxActual - idxFila;
-        if (diff < 0 || diff > ventanaMeses + mesesExtra) continue;
-        total += Number(fila.puntos_total) || 0;
+        if (idxFila < p.mesDesde - mesesExtra || idxFila > p.mesHasta) continue;
+        total += Number(soloTareas ? fila.puntos_tareas : fila.puntos_total) || 0;
       }
       return total;
     }
@@ -281,9 +316,8 @@ Deno.serve(async (req: Request) => {
     // único valor), así que no hace falta bifurcar por `logica` en ese caso.
     function calcularTermometroPct(username: string): number {
       if (!tierTecho) return 0;
-      const ventanaMeses = Number(tierTecho.ventana_meses) || 0;
-      const clases = contarClases(username, ventanaMeses);
-      const puntos = sumarPuntos(username, ventanaMeses);
+            const clases = contarClases(username, tierTecho);
+      const puntos = sumarPuntos(username, tierTecho);
       const minClases = Number(tierTecho.min_clases) || 0;
       const minPuntos = Number(tierTecho.min_puntos) || 0;
       const ratios: number[] = [];
@@ -300,9 +334,8 @@ Deno.serve(async (req: Request) => {
     // existía) para reusarlo tanto contra el tier ACTUAL de la persona
     // (riesgo de demotion) como contra el tier SUPERIOR (re-ascenso).
     function evaluarCumpleTier(username: string, tier: any): boolean {
-      const ventanaMeses = Number(tier.ventana_meses) || 0;
-      const clases = contarClases(username, ventanaMeses);
-      const puntos = sumarPuntos(username, ventanaMeses);
+            const clases = contarClases(username, tier);
+      const puntos = sumarPuntos(username, tier);
       const cumpleClases = clases >= (Number(tier.min_clases) || 0);
       const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
       return tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
@@ -470,7 +503,7 @@ Deno.serve(async (req: Request) => {
               // lectura).
               categoriaAsignada = categoriaActual;
               const desde = hoy;
-              const hasta = new Date(Date.UTC(desde.getUTCFullYear(), desde.getUTCMonth() + mesesGracia, desde.getUTCDate()));
+                            const hasta = sumarPlazo(desde, mesesGracia, String(tierActualCfg.gracia_unidad ?? 'mes'));
               nuevoRiesgoDesde = desde.toISOString();
               nuevoRiesgoHasta = hasta.toISOString();
               nuevoRiesgoObjetivo = mejorTierPara(username);

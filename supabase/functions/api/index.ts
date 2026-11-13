@@ -3476,9 +3476,43 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   // se confirma que la asistencia quedó guardada -- antes solo pasaba con
   // el botón manual "Recalcular ahora" (recalcularStatsEquipo(), completo,
   // no se toca acá). Después del `return` de arriba (errores), nunca antes.
-  await recalcularStatsUsuario(nombre);
+    await recalcularStatsUsuario(nombre);
+
+  // Bug real (2026-11-13): los puntos de asistencia solo se recalculaban con
+  // el botón "Recalcular ahora" de Mi Liga web; desde que la lista se toma en
+  // la app (octubre) nadie lo apretaba y noviembre quedó en 0. Ahora se
+  // recalcula el mes del evento de ESTA persona al marcar, y el cron diario
+  // recalcula el mes actual y el anterior para todo el equipo.
+  try {
+    const { data: evFecha } = await supabase.from('asistencias').select('fecha').eq('id_evento', idEvento).maybeSingle();
+    const f = String(evFecha?.fecha ?? '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(f)) await _recalcularPuntosAsistenciaPersona(nombre, Number(f.slice(5, 7)), Number(f.slice(0, 4)));
+  } catch (e) { console.error('[puntos] persona:', e); }
 
   return { exito: true };
+}
+
+/** Puntos de asistencia de UNA persona en un mes (misma cuenta que
+ * recalcularPuntosAsistencia: última marca por evento, valores de la regla). */
+async function _recalcularPuntosAsistenciaPersona(nombre: string, mes: number, anio: number): Promise<void> {
+  const desde = `${anio}-${String(mes).padStart(2, '0')}-01`;
+  const hasta = mes === 12 ? `${anio + 1}-01-01` : `${anio}-${String(mes + 1).padStart(2, '0')}-01`;
+  const { data: logs } = await supabase.from('log_asistencias').select('id_evento, estado, marca_temporal')
+    .eq('nombre_usuario', nombre).in('origen', ['Admin', 'Externa'])
+    .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta);
+  const ultima: Record<string, { estado: string; marca: number }> = {};
+  for (const l of logs ?? []) {
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    if (!ultima[l.id_evento] || marca >= ultima[l.id_evento].marca) ultima[l.id_evento] = { estado: l.estado, marca };
+  }
+  const v = await _valoresPuntos();
+  const puntos = Object.values(ultima).reduce((s, x) => s + (x.estado === 'A tiempo' ? v.aTiempo : x.estado === 'Tarde' ? v.tarde : 0), 0);
+  await supabase.from('puntos_mensuales').upsert({ nombre_usuario: nombre, anio, mes, puntos_asistencia: puntos }, { onConflict: 'nombre_usuario,anio,mes' });
+}
+
+/** Cuánto vale cada marca (por ahora fijo; Mi Liga lo hará editable con fecha de inicio). */
+async function _valoresPuntos(): Promise<{ aTiempo: number; tarde: number }> {
+  return { aTiempo: 1, tarde: 0.5 };
 }
 
 // Asistencia externa (feat nueva, ver MANIFEST.md) -- una jugadora entrenó
@@ -6185,6 +6219,27 @@ function _periodoDesdeParams(params: Record<string, any>, hoy: Date): { desde: s
 // categoría con la MISMA cuenta que recalcular-categorias (clases y puntos
 // en la ventana de cada categoría). Cualquier sesión del equipo puede verlo
 // (igual que getEquipo); no hay datos sensibles.
+/** Período de un Equipo (igual que recalcular-categorias.periodoTier).
+ * cerrado: meses calendario ya terminados; en curso: el mes actual (y los
+ * anteriores si el período es de varios meses). Con días/semanas/años es
+ * hacia atrás desde hoy en ambos casos. */
+function _periodoTier(tier: any, enCurso: boolean): { desde: string; hasta: string; mesDesde: number; mesHasta: number } {
+  const n = Math.max(1, Number(tier.ventana_meses) || 1);
+  const u = String(tier.periodo_unidad ?? 'mes');
+  const hoy = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const idx = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  if (u === 'mes') {
+    const corr = enCurso ? 1 : 0;
+    const d = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - n + corr, 1));
+    const h = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + corr, 1));
+    return { desde: iso(d), hasta: iso(h), mesDesde: idx - n + corr, mesHasta: idx - 1 + corr };
+  }
+  const dias = u === 'dia' ? n : u === 'semana' ? n * 7 : n * 365;
+  const d = new Date(Date.parse(iso(hoy)) - dias * 86400000);
+  return { desde: iso(d), hasta: iso(new Date(Date.parse(iso(hoy)) + 86400000)), mesDesde: d.getUTCFullYear() * 12 + d.getUTCMonth(), mesHasta: idx };
+}
+
 async function _paginado(armar: (desde: number, hasta: number) => any, tam = 1000): Promise<any[]> {
   const out: any[] = [];
   for (let i = 0; i < 100; i++) {
@@ -6244,34 +6299,27 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
     .filter((e) => !e.externa || e.estado)
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  // Progreso de categoría: misma cuenta que recalcular-categorias.
+  // Progreso de Equipo: misma cuenta que recalcular-categorias (período
+  // cerrado) y además el período en curso ("vas 1 de 3 este mes").
   const tiers = tiersData ?? [];
-  const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
-  const atras = (n: number) => {
-    const y = hoy.getUTCFullYear(), m = hoy.getUTCMonth() - n;
-    const d = Math.min(hoy.getUTCDate(), new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
-    return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
-  };
   const hoyISO = hoy.toISOString().slice(0, 10);
-  const inicio = atras(maxVentana);
+  const periodos = tiers.map((t: any) => ({ cerrado: _periodoTier(t, false), curso: _periodoTier(t, true) }));
+  const inicio = periodos.reduce((m: string, p: any) => (p.cerrado.desde < m ? p.cerrado.desde : m), hoyISO);
   const [asis, { data: ext }, { data: pts }] = await Promise.all([
     _paginado((a, b) => supabase.from('asistencias').select('fecha, a_horario, tarde')
       .not('estado', 'in', '("Evento Cancelado","No se entrena")').gte('fecha', inicio).lt('fecha', hoyISO)
       .order('fecha', { ascending: true }).range(a, b)),
     supabase.from('log_asistencias').select('fecha_entrenamiento').eq('origen', 'Externa').eq('nombre_usuario', username)
       .gte('fecha_entrenamiento', inicio).lt('fecha_entrenamiento', hoyISO),
-    supabase.from('puntos_mensuales').select('anio, mes, puntos_total').eq('nombre_usuario', username).gte('anio', Number(inicio.slice(0, 4))),
+    supabase.from('puntos_mensuales').select('anio, mes, puntos_total, puntos_tareas').eq('nombre_usuario', username).gte('anio', Number(inicio.slice(0, 4))),
   ]);
   const esta = (s: unknown) => String(s ?? '').split(',').map((n) => n.trim().toUpperCase()).includes(U);
-  const idxHoy = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
-  const clasesEn = (v: number) => {
-    const d = atras(v);
-    return asis.filter((r: any) => r.fecha >= d && (esta(r.a_horario) || esta(r.tarde))).length
-      + (ext ?? []).filter((r: any) => String(r.fecha_entrenamiento).slice(0, 10) >= d).length;
-  };
-  const puntosEn = (v: number) => (pts ?? []).reduce((s: number, r: any) => {
-    const diff = idxHoy - (Number(r.anio) * 12 + Number(r.mes) - 1);
-    return diff >= 0 && diff <= v ? s + (Number(r.puntos_total) || 0) : s;
+  const clasesEn = (p: { desde: string; hasta: string }) =>
+    asis.filter((r: any) => r.fecha >= p.desde && r.fecha < p.hasta && (esta(r.a_horario) || esta(r.tarde))).length
+    + (ext ?? []).filter((r: any) => { const f = String(r.fecha_entrenamiento).slice(0, 10); return f >= p.desde && f < p.hasta; }).length;
+  const puntosEn = (p: { mesDesde: number; mesHasta: number }, soloTareas: boolean) => (pts ?? []).reduce((s: number, r: any) => {
+    const i = Number(r.anio) * 12 + Number(r.mes) - 1;
+    return i >= p.mesDesde && i <= p.mesHasta ? s + (Number(soloTareas ? r.puntos_tareas : r.puntos_total) || 0) : s;
   }, 0);
     const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
   // Con permiso vigente para usar equipamiento del equipo, no cuenta (2026-11-13).
@@ -6298,15 +6346,20 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
       mesesSeguidos: Number(fila.meses_consecutivos_cumplidos) || 0,
       riesgoHasta: fila.tier_riesgo_hasta ?? null,
       riesgoObjetivo: fila.tier_riesgo_objetivo ?? null,
-      tiers: tiers.map((t: any) => {
-        const v = Number(t.ventana_meses) || 0;
-        const clases = clasesEn(v), puntos = puntosEn(v);
+      tiers: tiers.map((t: any, i: number) => {
+        const soloTareas = (t.puntos_fuente ?? 'tareas') === 'tareas';
         const minC = Number(t.min_clases) || 0, minP = Number(t.min_puntos) || 0;
-        const cumple = t.logica === 'Y' ? clases >= minC && puntos >= minP : clases >= minC || puntos >= minP;
+        const ok = (c: number, p: number) => t.logica === 'Y' ? c >= minC && p >= minP : c >= minC || p >= minP;
+        const c1 = clasesEn(periodos[i].curso), p1 = puntosEn(periodos[i].curso, soloTareas);
+        const c0 = clasesEn(periodos[i].cerrado), p0 = puntosEn(periodos[i].cerrado, soloTareas);
         return {
           nombre: t.nombre, orden: t.orden, esDefault: !!t.es_default, minClases: minC, minPuntos: minP, logica: t.logica === 'Y' ? 'Y' : 'O',
-          ventana: v, desde: atras(v), mesesAscenso: Number(t.meses_consecutivos_ascenso) || 3, gracia: Number(t.meses_gracia_demotion) || 0,
-          clases, puntos: Math.round(puntos * 10) / 10, cumple,
+          ventana: Number(t.ventana_meses) || 1, unidad: t.periodo_unidad ?? 'mes', puntosFuente: soloTareas ? 'tareas' : 'todos',
+          desde: periodos[i].curso.desde, mesesAscenso: Number(t.meses_consecutivos_ascenso) || 3,
+          gracia: Number(t.meses_gracia_demotion) || 0, graciaUnidad: t.gracia_unidad ?? 'mes',
+          // En curso (lo que se muestra) y cerrado (lo que decide hoy).
+          clases: c1, puntos: Math.round(p1 * 10) / 10, cumple: ok(c1, p1),
+          clasesCerrado: c0, puntosCerrado: Math.round(p0 * 10) / 10, cumpleCerrado: ok(c0, p0),
         };
       }),
     },
@@ -7799,6 +7852,13 @@ async function adminEliminarTemporadaDescanso(params: Record<string, any>): Prom
 // acá, porque necesita leer `req.headers`, no `params`.
 async function cronDiario(): Promise<Record<string, any>> {
   try { await _extenderExcepcionesIndefinidas(); } catch (e) { console.error('[excepciones] extender:', e); }
+  // Puntos de asistencia del mes actual y el anterior (bug 2026-11-13: antes solo con botón manual).
+  try {
+    const h = _hoyEcuadorISO();
+    const a = Number(h.slice(0, 4)), m = Number(h.slice(5, 7));
+    await recalcularPuntosAsistencia(m === 1 ? 12 : m - 1, m === 1 ? a - 1 : a);
+    await recalcularPuntosAsistencia(m, a);
+  } catch (e) { console.error('[puntos] cron:', e); }
   try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'

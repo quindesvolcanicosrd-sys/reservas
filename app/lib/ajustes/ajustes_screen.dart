@@ -131,7 +131,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                       icono: Icons.admin_panel_settings_outlined,
                       seccion: 'roles',
                       titulo: 'Ajustes de la liga',
-                      valor: 'Categorías/Equipos, cobros, canal y más',
+                      valor: 'Equipos, cobros, canal y más',
                       alTocar: () => SubAjustes.abrir(context, AjustesLigaScreen(sesion: sesion)),
                     ),
                   ],

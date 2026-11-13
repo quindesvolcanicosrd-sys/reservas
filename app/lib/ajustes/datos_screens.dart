@@ -187,7 +187,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
           content: const Text(
             'Con equipamiento del equipo pasas a Mirlxs: solo podrás reservar por clase (con su precio), no por mes, '
             'y no vuelves a Quindes hasta tener tu equipamiento completo propio.\n\n'
-            'Si es por un tiempo (se te rompió o lo estás lavando), mejor pídelo: un Pivot decide por cuánto tiempo y no cambias de Categoría/Equipo.',
+            'Si es por un tiempo (se te rompió o lo estás lavando), mejor pídelo: un Pivot decide por cuánto tiempo y no cambias de equipo.',
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(c).pop('pedir'), child: const Text('Pedir por un tiempo')),
@@ -334,7 +334,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
                 leading: Icon(Icons.volunteer_activism_outlined, color: p.marcaTexto),
                 title: const Text('¿Necesitas equipamiento por un tiempo?', style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('Si se te rompió o lo estás lavando, pídelo: un Pivot decide por cuánto tiempo y no cambias de Categoría/Equipo.'),
+                subtitle: const Text('Si se te rompió o lo estás lavando, pídelo: un Pivot decide por cuánto tiempo y no cambias de equipo.'),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: _pedirUso,
               ),
