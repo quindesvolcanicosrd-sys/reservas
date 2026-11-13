@@ -1927,7 +1927,11 @@ async function getTareasApp(params: Record<string, any>): Promise<Record<string,
 async function adminGetTareasRecurrentes(params: Record<string, any>): Promise<Record<string, any>> {
   if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
   const { data } = await supabase.from('tareas_recurrentes').select('*').neq('estado', 'terminada').order('created_at');
-  return { exito: true, plantillas: (data ?? []).map((p: any) => ({ idPlantilla: p.id, titulo: p.titulo, notas: p.notas ?? '', area: p.area ?? '', puntos: p.puntos, cuposTotales: p.max_asignados, estado: p.estado })) };
+  return { exito: true, plantillas: (data ?? []).map((p: any) => ({
+    idPlantilla: p.id, titulo: p.titulo, notas: p.notas ?? '', area: p.area ?? '', puntos: p.puntos, cuposTotales: p.max_asignados, estado: p.estado,
+    unidad: p.unidad ?? 'mes', cadaN: p.cada_n ?? 1, inicio: p.inicio, venceEnDias: p.vence_en_dias, proxima: p.proxima,
+    frecuencia: _textoRecurrencia(p.unidad ?? 'mes', Number(p.cada_n) || 1),
+  })) };
 }
 
 // Editar una recurrente "esta y las siguientes": cambia la plantilla y las
@@ -2122,7 +2126,7 @@ async function adminEstadoTareaRecurrente(params: Record<string, any>): Promise<
   if (estado === 'activa') {
     const { data: p } = await supabase.from('tareas_recurrentes').select('*').eq('id', params.idPlantilla).maybeSingle();
     const { anio, mes } = _mesEcuadorActual();
-    if (p) await _generarInstanciaTareaRecurrente(p, anio, mes);
+    if (p) await _generarInstanciaTareaRecurrente(p);
   }
   if (estado === 'terminada') {
     const { data: abiertas } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', params.idPlantilla).eq('estado', 'no_iniciada');
@@ -2347,16 +2351,55 @@ function _mesEcuadorActual(): { anio: number; mes: number } {
 // asignar, igual que hace el cron para los meses siguientes -- mismo
 // criterio de idempotencia (nunca duplica si ya existe una instancia de
 // esta plantilla con ese `fecha_vencimiento` exacto).
-async function _generarInstanciaTareaRecurrente(p: Record<string, any>, anio: number, mes: number): Promise<boolean> {
-  const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
-  const fechaVencimiento = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
-  const { data: existe } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', p.id).eq('fecha_vencimiento', fechaVencimiento).maybeSingle();
+// Recurrencia flexible (Victor, 2026-11-12, migración 20261113070000):
+// cada `cada_n` días, semanas o meses desde `inicio` (en meses, el mismo día
+// del mes, ajustado a meses cortos). Vence `vence_en_dias` después de
+// aparecer o, si no, el día antes de la siguiente.
+function _isoUTC(t: number): string { return new Date(t).toISOString().slice(0, 10); }
+function _sumarDiasISO(f: string, n: number): string {
+  const [y, m, d] = f.split('-').map(Number);
+  return _isoUTC(Date.UTC(y, m - 1, d + n));
+}
+function _siguienteRecurrencia(f: string, unidad: string, n: number, diaBase: number): string {
+  const [y, m, d] = f.split('-').map(Number);
+  if (unidad === 'dia') return _isoUTC(Date.UTC(y, m - 1, d + n));
+  if (unidad === 'semana') return _isoUTC(Date.UTC(y, m - 1, d + 7 * n));
+  const ultimo = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate();
+  return _isoUTC(Date.UTC(y, m - 1 + n, Math.min(diaBase, ultimo)));
+}
+
+// Crea la instancia que toca hoy (como mucho una por corrida; si la
+// plantilla estuvo pausada, salta las que ya pasaron) y avanza `proxima`.
+async function _generarInstanciaTareaRecurrente(p: Record<string, any>): Promise<boolean> {
+  const hoy = _hoyEcuadorISO();
+  const unidad = ['dia', 'semana', 'mes'].includes(p.unidad) ? p.unidad : 'mes';
+  const n = Math.max(1, Number(p.cada_n) || 1);
+  const inicio = String(p.inicio ?? p.proxima ?? hoy).slice(0, 10);
+  const diaBase = Number(inicio.slice(8, 10)) || 1;
+  let prox = String(p.proxima ?? inicio).slice(0, 10);
+  if (prox > hoy) return false;
+  for (let i = 0; i < 1000; i++) {
+    const sig = _siguienteRecurrencia(prox, unidad, n, diaBase);
+    if (sig > hoy) break;
+    prox = sig;
+  }
+  const siguiente = _siguienteRecurrencia(prox, unidad, n, diaBase);
+  const vence = p.vence_en_dias != null ? _sumarDiasISO(prox, Number(p.vence_en_dias)) : _sumarDiasISO(siguiente, -1);
+  await supabase.from('tareas_recurrentes').update({ proxima: siguiente }).eq('id', p.id);
+  const { data: existe } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', p.id).eq('fecha_vencimiento', vence).maybeSingle();
   if (existe) return false;
   await supabase.from('tareas').insert({
     titulo: p.titulo, notas: p.notas, area: p.area, puntos: p.puntos, max_asignados: p.max_asignados,
-    fecha_vencimiento: fechaVencimiento, estado: 'no_iniciada', creado_por: p.creado_por, tarea_recurrente_id: p.id,
+    fecha_vencimiento: vence, estado: 'no_iniciada', creado_por: p.creado_por, tarea_recurrente_id: p.id,
   });
   return true;
+}
+
+// "Cada 3 meses", "Cada 15 días"...
+function _textoRecurrencia(unidad: string, n: number): string {
+  if (unidad === 'dia') return n === 1 ? 'Cada día' : `Cada ${n} días`;
+  if (unidad === 'semana') return n === 1 ? 'Cada semana' : `Cada ${n} semanas`;
+  return n === 1 ? 'Cada mes' : n === 12 ? 'Cada año' : `Cada ${n} meses`;
 }
 
 // Paso nuevo del wizard "Nueva tarea" ("Tipo de tarea": única/recurrente,
@@ -2370,15 +2413,20 @@ async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<R
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
+  const unidad = ['dia', 'semana', 'mes'].includes(datos.unidad) ? datos.unidad : 'mes';
+  const cadaN = Math.min(365, Math.max(1, Number(datos.cadaN) || 1));
+  const hoy = _hoyEcuadorISO();
+  const inicio = /^\d{4}-\d{2}-\d{2}$/.test(String(datos.inicio ?? '')) ? String(datos.inicio) : hoy;
+  const venceEnDias = datos.venceEnDias == null || datos.venceEnDias === '' ? null : Math.min(365, Math.max(0, Number(datos.venceEnDias) || 0));
   const { data: creada, error } = await supabase.from('tareas_recurrentes').insert({
     titulo: datos.titulo, notas: datos.notas ?? null, area: datos.area ?? null,
     puntos: datos.puntos ?? 1, max_asignados: datos.maxAsignados ?? 1,
     activa: true, creado_por: datos.creadoPor ?? null,
+    unidad, cada_n: cadaN, inicio, vence_en_dias: venceEnDias, proxima: inicio,
   }).select();
   if (error) return { exito: false, error: error.message };
     const plantilla = creada[0];
-  const { anio, mes } = _mesEcuadorActual();
-  if (await _generarInstanciaTareaRecurrente(plantilla, anio, mes)) {
+  if (await _generarInstanciaTareaRecurrente(plantilla)) {
     await _avisarTareasNuevas([{ titulo: plantilla.titulo, puntos: plantilla.puntos }], datos.creadoPor ?? null);
   }
   return { exito: true, idPlantilla: plantilla.id };
@@ -2445,10 +2493,9 @@ async function adminAplicarTareaRecurrenteHistorico(params: Record<string, any>)
 async function cronGenerarTareasRecurrentes(): Promise<Record<string, any>> {
   const { data: plantillas } = await supabase.from('tareas_recurrentes').select('*').eq('activa', true);
   if (!plantillas?.length) return { generadas: 0 };
-  const { anio, mes } = _mesEcuadorActual();
-    const nuevas: { titulo: string; puntos: number }[] = [];
+  const nuevas: { titulo: string; puntos: number }[] = [];
   for (const p of plantillas) {
-    if (await _generarInstanciaTareaRecurrente(p, anio, mes)) nuevas.push({ titulo: p.titulo, puntos: p.puntos });
+    if (await _generarInstanciaTareaRecurrente(p)) nuevas.push({ titulo: p.titulo, puntos: p.puntos });
   }
   await _avisarTareasNuevas(nuevas, null);
   return { generadas: nuevas.length };

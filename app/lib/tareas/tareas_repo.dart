@@ -149,6 +149,10 @@ class TareasRepo extends ChangeNotifier {
     DateTime? vence,
     bool recurrente = false,
     List<String> asignarA = const [],
+    String unidad = 'mes',
+    int cadaN = 1,
+    DateTime? inicio,
+    int? venceEnDias,
   }) {
     final datos = {
       'titulo': titulo,
@@ -159,6 +163,7 @@ class TareasRepo extends ChangeNotifier {
       'creadoPor': yo,
       if (!recurrente) 'fechaVencimiento': vence == null ? null : _iso(vence),
       if (!recurrente && asignarA.isNotEmpty) 'asignarA': asignarA,
+      if (recurrente) ...{'unidad': unidad, 'cadaN': cadaN, 'inicio': inicio == null ? null : _iso(inicio), 'venceEnDias': venceEnDias},
     };
     return _accion(recurrente ? 'adminCrearTareaRecurrente' : 'adminCrearTarea', {
       ..._admin,

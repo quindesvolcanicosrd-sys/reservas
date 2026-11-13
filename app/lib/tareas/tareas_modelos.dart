@@ -90,6 +90,7 @@ class Recurrente {
   int get puntos => (m['puntos'] as num?)?.toInt() ?? 0;
   int get cupos => (m['cuposTotales'] as num?)?.toInt() ?? 1;
   bool get pausada => m['estado'] == 'pausada';
+  String get frecuencia => '${m['frecuencia'] ?? 'Cada mes'}';
 }
 
 DateTime? _fecha(Object? v) {

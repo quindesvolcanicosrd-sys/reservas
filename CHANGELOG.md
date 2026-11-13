@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — Tareas recurrentes flexibles: "Una vez" o "Recurrente"; cada semana, 15 días, mes, 2, 3, 4 o 6 meses, año u otra frecuencia; desde qué día aparece y cuándo vence. Pin de la dirección guardado. Se cerraron todas las sesiones abiertas.
+
 2026-11-12 — Excepciones de cuota: el Pivot decide al aprobar cuánto dura (este mes, hasta un mes o indefinida) y, si es por dificultad económica, si paga media cuota o nada; panel de excepciones vigentes para cancelarlas (duran hasta fin del mes en curso). La persona ve sus solicitudes vigentes con la vigencia.
 
 2026-11-12 — Seguridad: la clave pública de la base ya no puede leer las sesiones (con las que se podía entrar como cualquier persona o Pivot), pagos, reservas, tareas ni la configuración. Cancelar un evento limpia sus marcas desde el servidor.

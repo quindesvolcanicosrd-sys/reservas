@@ -13,7 +13,25 @@ import 'tareas_repo.dart';
 
 enum ModoTarea { crear, editar, duplicar, proponer }
 
-enum _Paso { tipo, titulo, area, puntos, fecha, personas, revisar }
+enum _Paso { tipo, repeticion, titulo, area, puntos, fecha, personas, revisar }
+
+/// Frecuencias rápidas de una recurrente (Victor, 2026-11-12: flexible).
+const _frecuencias = [
+  ('semana', 1, 'Cada semana'),
+  ('dia', 15, 'Cada 15 días'),
+  ('mes', 1, 'Cada mes'),
+  ('mes', 2, 'Cada 2 meses'),
+  ('mes', 3, 'Cada 3 meses'),
+  ('mes', 4, 'Cada 4 meses'),
+  ('mes', 6, 'Cada 6 meses'),
+  ('mes', 12, 'Cada año'),
+];
+
+String textoFrecuencia(String unidad, int n) => switch (unidad) {
+  'dia' => n == 1 ? 'Cada día' : 'Cada $n días',
+  'semana' => n == 1 ? 'Cada semana' : 'Cada $n semanas',
+  _ => n == 1 ? 'Cada mes' : (n == 12 ? 'Cada año' : 'Cada $n meses'),
+};
 
 /// Asistente por pasos para crear, editar, duplicar o proponer una tarea
 /// (mismo marco que el resto de la app, `Asistente`).
@@ -51,6 +69,11 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
     _ => null,
   };
   final Set<String> _personas = {};
+  // Recurrente: cada cuánto, desde cuándo y cuándo vence.
+  String _unidad = 'mes';
+  int _cadaN = 1;
+  late DateTime _inicio = Fechas.hoy();
+  int? _venceEnDias; // null = el día antes de la siguiente
 
   int _i = 0;
   bool _adelante = true;
@@ -60,6 +83,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
 
   List<_Paso> get _pasos => [
     if (widget.modo == ModoTarea.crear || widget.modo == ModoTarea.duplicar) _Paso.tipo,
+    if ((widget.modo == ModoTarea.crear || widget.modo == ModoTarea.duplicar) && _recurrente == true) _Paso.repeticion,
     _Paso.titulo,
     _Paso.area,
     if (_admin) _Paso.puntos,
@@ -130,6 +154,10 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
             cupos: _cupos,
             vence: _fecha,
             recurrente: _recurrente == true,
+            unidad: _unidad,
+            cadaN: _cadaN,
+            inicio: _inicio,
+            venceEnDias: _venceEnDias,
             asignarA: _personas.toList(),
           );
       }
@@ -177,7 +205,8 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
   }
 
   String get _tituloPaso => switch (_paso) {
-    _Paso.tipo => '¿Se hace una vez o cada mes?',
+    _Paso.tipo => '¿Se hace una vez o se repite?',
+    _Paso.repeticion => '¿Cada cuánto se repite?',
     _Paso.titulo => '¿Qué hay que hacer?',
     _Paso.area => '¿De qué área es?',
     _Paso.puntos => 'Puntos y cupos',
@@ -187,7 +216,8 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
   };
 
   String? get _ayuda => switch (_paso) {
-    _Paso.tipo => 'Las recurrentes se crean solas el día 1 de cada mes y vencen el último día.',
+    _Paso.tipo => 'Una recurrente se crea sola cada cierto tiempo (cada semana, cada mes, cada 6 meses…). Puedes pausarla o terminarla cuando quieras.',
+    _Paso.repeticion => 'Elige cada cuánto aparece en el tablero, desde qué día y cuándo vence cada vez.',
     _Paso.titulo => widget.modo == ModoTarea.proponer ? 'Queda asignada a ti. Los puntos los define admin al aprobarla.' : null,
     _Paso.puntos => 'Los puntos se suman al aprobarla. Los cupos son cuántas personas pueden tomarla.',
     _Paso.fecha => widget.siguientes ? 'La fecha cambia solo en la de este mes.' : null,
@@ -213,8 +243,8 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
           ),
           OpcionAsistente(
             icono: Icons.event_repeat_rounded,
-            titulo: 'Cada mes',
-            texto: 'Se repite sola; puedes pausarla o terminarla cuando quieras.',
+            titulo: 'Recurrente',
+            texto: 'Se repite sola cada cierto tiempo: tú eliges cada cuánto.',
             activa: _recurrente == true,
             alTocar: () {
               setState(() => _recurrente = true);
@@ -277,6 +307,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
           _Contador(titulo: 'Cupos', texto: 'Personas que pueden tomarla', valor: _cupos, min: 1, max: 30, alCambiar: (v) => setState(() => _cupos = v)),
         ],
       ),
+      _Paso.repeticion => _repeticion(context),
       _Paso.fecha => ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
         children: [
@@ -311,7 +342,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
                 FilaAjuste(
                   icono: Icons.repeat_rounded,
                   titulo: 'Se hace',
-                  valor: _recurrente == true ? 'Cada mes' : 'Una vez',
+                  valor: _recurrente == true ? '${textoFrecuencia(_unidad, _cadaN)} · desde el ${Fechas.corta(_inicio)}' : 'Una vez',
                   alTocar: () => _saltar(_Paso.tipo),
                 ),
               if (_admin)
@@ -356,6 +387,149 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
       _adelante = false;
       _i = j;
     });
+  }
+
+  Widget _repeticion(BuildContext context) {
+    final p = context.pivot;
+    final rapida = _frecuencias.any((f) => f.$1 == _unidad && f.$2 == _cadaN);
+    Text titulo(String t) => Text(
+      t,
+      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+    );
+    final siguiente = switch (_unidad) {
+      'dia' => _inicio.add(Duration(days: _cadaN)),
+      'semana' => _inicio.add(Duration(days: 7 * _cadaN)),
+      _ => DateTime(_inicio.year, _inicio.month + _cadaN, _inicio.day),
+    };
+    final vence = _venceEnDias == null ? siguiente.subtract(const Duration(days: 1)) : _inicio.add(Duration(days: _venceEnDias!));
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      children: [
+        titulo('Frecuencia'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (u, n, t) in _frecuencias)
+              ChoiceChip(
+                showCheckmark: false,
+                label: Text(t),
+                selected: _unidad == u && _cadaN == n,
+                onSelected: (_) => setState(() {
+                  _unidad = u;
+                  _cadaN = n;
+                }),
+              ),
+            ChoiceChip(
+              showCheckmark: false,
+              label: Text(rapida ? 'Otra' : textoFrecuencia(_unidad, _cadaN)),
+              selected: !rapida,
+              onSelected: (_) => _otraFrecuencia(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        titulo('Aparece por primera vez'),
+        const SizedBox(height: 4),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.event_rounded, color: p.marcaTexto),
+          title: Text('${Fechas.dia(_inicio)} ${Fechas.corta(_inicio)}'),
+          subtitle: Text(_unidad == 'mes' ? 'Después, el día ${_inicio.day} de cada vez.' : 'Después, contando desde ese día.'),
+          trailing: const Icon(Icons.edit_calendar_rounded),
+          onTap: () async {
+            final d = await showDatePicker(
+              context: context,
+              initialDate: _inicio,
+              firstDate: Fechas.hoy(),
+              lastDate: Fechas.hoy().add(const Duration(days: 365)),
+            );
+            if (d != null) setState(() => _inicio = d);
+          },
+        ),
+        const SizedBox(height: 12),
+        titulo('Cada vez vence'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              showCheckmark: false,
+              label: const Text('Antes de la siguiente'),
+              selected: _venceEnDias == null,
+              onSelected: (_) => setState(() => _venceEnDias = null),
+            ),
+            for (final d in const [3, 7, 15])
+              ChoiceChip(showCheckmark: false, label: Text('A los $d días'), selected: _venceEnDias == d, onSelected: (_) => setState(() => _venceEnDias = d)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'La primera vez aparece el ${Fechas.corta(_inicio)} y vence el ${Fechas.corta(vence)}. La siguiente aparece el ${Fechas.corta(siguiente)}.',
+          style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _otraFrecuencia() async {
+    var n = _cadaN;
+    var u = _unidad;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (hoja) => StatefulBuilder(
+        builder: (hoja, refrescar) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Repetir cada…', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton.filledTonal(onPressed: n > 1 ? () => refrescar(() => n--) : null, icon: const Icon(Icons.remove_rounded)),
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        '$n',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(hoja).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    IconButton.filledTonal(onPressed: n < 365 ? () => refrescar(() => n++) : null, icon: const Icon(Icons.add_rounded)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: 'dia', label: Text('Días')),
+                    ButtonSegment(value: 'semana', label: Text('Semanas')),
+                    ButtonSegment(value: 'mes', label: Text('Meses')),
+                  ],
+                  selected: {u},
+                  onSelectionChanged: (s) => refrescar(() => u = s.first),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(onPressed: () => Navigator.of(hoja).pop(true), child: Text(textoFrecuencia(u, n))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok == true && mounted) {
+      setState(() {
+        _unidad = u;
+        _cadaN = n;
+      });
+    }
   }
 }
 

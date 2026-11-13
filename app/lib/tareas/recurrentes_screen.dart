@@ -7,7 +7,7 @@ import '../core/tema.dart';
 import 'tareas_modelos.dart';
 import 'tareas_repo.dart';
 
-/// Tareas recurrentes (admins): las plantillas que crean una tarea cada mes.
+/// Tareas recurrentes (admins): plantillas que crean una tarea cada cierto tiempo.
 /// Se editan (cambia la de este mes y las siguientes), se pausan, se
 /// reanudan o se terminan sin borrar el historial.
 class RecurrentesScreen extends StatefulWidget {
@@ -42,7 +42,7 @@ class _RecurrentesScreenState extends State<RecurrentesScreen> {
             ListTile(
               leading: Icon(r.pausada ? Icons.play_arrow_rounded : Icons.pause_rounded),
               title: Text(r.pausada ? 'Reanudar' : 'Pausar'),
-              subtitle: Text(r.pausada ? 'Vuelve a crearse cada mes, empezando por este.' : 'Deja de crearse hasta que la reanudes.'),
+              subtitle: Text(r.pausada ? 'Vuelve a crearse según su frecuencia.' : 'Deja de crearse hasta que la reanudes.'),
               onTap: () => Navigator.pop(c, r.pausada ? 'activa' : 'pausada'),
             ),
             ListTile(
@@ -62,7 +62,7 @@ class _RecurrentesScreenState extends State<RecurrentesScreen> {
         context: context,
         builder: (c) => AlertDialog(
           title: const Text('¿Terminar la recurrente?'),
-          content: const Text('Deja de crearse cada mes. Si la de este mes no la tomó nadie, también se quita.'),
+          content: const Text('Deja de crearse. Si la que está en curso no la tomó nadie, también se quita.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
             FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Terminar')),
@@ -155,13 +155,12 @@ class _RecurrentesScreenState extends State<RecurrentesScreen> {
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    'No hay tareas recurrentes. Créalas desde "Nueva tarea" eligiendo "Cada mes".',
+                    'No hay tareas recurrentes. Créalas desde "Nueva tarea" eligiendo "Recurrente".',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: p.textoSecundario),
                   ),
                 ),
-              if (activas.isNotEmpty)
-                GrupoAjustes(titulo: 'ACTIVAS', pie: 'Se crean solas el día 1 de cada mes y vencen el último día.', filas: [for (final r in activas) _fila(r)]),
+              if (activas.isNotEmpty) GrupoAjustes(titulo: 'ACTIVAS', pie: 'Se crean solas según su frecuencia.', filas: [for (final r in activas) _fila(r)]),
               if (pausadas.isNotEmpty) GrupoAjustes(titulo: 'PAUSADAS', filas: [for (final r in pausadas) _fila(r)]),
             ],
           );
@@ -176,7 +175,7 @@ class _RecurrentesScreenState extends State<RecurrentesScreen> {
       icono: r.pausada ? Icons.pause_rounded : a.icono,
       seccion: a.seccion,
       titulo: r.titulo,
-      valor: '${textoPuntos(r.puntos)} · ${r.cupos == 1 ? '1 cupo' : '${r.cupos} cupos'}',
+      valor: '${r.frecuencia} · ${textoPuntos(r.puntos)} · ${r.cupos == 1 ? '1 cupo' : '${r.cupos} cupos'}',
       alTocar: () => _opciones(r),
     );
   }

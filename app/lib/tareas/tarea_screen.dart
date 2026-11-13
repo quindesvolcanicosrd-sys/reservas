@@ -85,7 +85,7 @@ class _TareaScreenState extends State<TareaScreen> {
     showDragHandle: true,
     builder: (c) => HojaBase(
       titulo: 'Editar tarea recurrente',
-      ayuda: 'Esta tarea se repite cada mes.',
+      ayuda: 'Esta tarea se repite sola.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -274,7 +274,7 @@ class _TareaScreenState extends State<TareaScreen> {
           case 'asignar':
             await _asignar(t);
           case 'pausar':
-            if (await _confirmar('¿Pausar la recurrente?', 'Deja de crearse cada mes hasta que la reanudes. La de este mes sigue disponible.', 'Pausar')) {
+            if (await _confirmar('¿Pausar la recurrente?', 'Deja de crearse hasta que la reanudes. La que está en curso sigue disponible.', 'Pausar')) {
               await _hacer(() => repo.estadoPlantilla(t.idPlantilla!, 'pausada'), 'Recurrente pausada');
             }
           case 'archivar':
