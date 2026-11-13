@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — Excepciones de cuota: el Pivot decide al aprobar cuánto dura (este mes, hasta un mes o indefinida) y, si es por dificultad económica, si paga media cuota o nada; panel de excepciones vigentes para cancelarlas (duran hasta fin del mes en curso). La persona ve sus solicitudes vigentes con la vigencia.
+
 2026-11-12 — Seguridad: la clave pública de la base ya no puede leer las sesiones (con las que se podía entrar como cualquier persona o Pivot), pagos, reservas, tareas ni la configuración. Cancelar un evento limpia sus marcas desde el servidor.
 
 2026-11-12 — App Android: Mis estadísticas (comparaciones con el mes anterior y con tu categoría, gráfico de 6 meses); filtros del Calendario con varios a la vez en filas deslizables y mensajes según el filtro; el timeline no salta al filtrar; tarjeta del mes en tareas con clases o puntos; Comunidad en cuadrícula; contacto de emergencia compacto; Mi perfil sin títulos ni fila de foto.

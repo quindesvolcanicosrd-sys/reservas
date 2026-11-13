@@ -412,11 +412,9 @@ class _ExcepcionScreenState extends State<ExcepcionScreen> {
         AvisoPrivado(
           texto: ausencias
               ? 'Solo lxs administradorxs que elegiste podrán leer y aprobar tu solicitud. Recibirás una notificación con la '
-                    'respuesta. Si se aprueba, se aplica automáticamente un descuento del 50 % en la cuota de este mes. Si lo necesitas otro mes, '
-                    'envía una nueva solicitud por cada mes.'
+                    'respuesta. Si se aprueba, pagas media cuota desde este mes; un Pivot decide por cuánto tiempo.'
               : 'Solo lxs administradorxs que elegiste podrán leer y aprobar tu solicitud. Recibirás una notificación con la '
-                    'respuesta. Si se aprueba, la subvención se aplica a la cuota de este mes. Si lo necesitas otro mes, envía una nueva solicitud '
-                    'por cada mes.',
+                    'respuesta. Si se aprueba, la subvención se aplica desde este mes; un Pivot decide cuánto y por cuánto tiempo.',
         ),
       ],
     );

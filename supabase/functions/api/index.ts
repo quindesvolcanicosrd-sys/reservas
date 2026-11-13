@@ -3146,7 +3146,7 @@ async function getMisExcepciones(params: Record<string, any>): Promise<Record<st
   const username = await _validarToken(params.token);
   if (!username) return { exito: false, error: 'Sesión inválida.' };
   const [{ data: sols }, { data: exc }, admins] = await Promise.all([
-    supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, admins_destino').eq('nombre', username).order('created_at', { ascending: false }),
+    supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, admins_destino, vigente_hasta, indefinida, efecto, cancelada_en').eq('nombre', username).order('created_at', { ascending: false }),
     supabase.from('cuota_excepcion').select('mes, tipo, monto, notas, creado_en').eq('id_miembro', username).order('mes', { ascending: false }),
     _administradorxs(),
   ]);
@@ -3156,6 +3156,7 @@ async function getMisExcepciones(params: Record<string, any>): Promise<Record<st
     exito: true,
     solicitudes: (sols ?? []).map((s: any) => ({
       id: s.id, tipo: s.tipo, estado: s.estado, mes: s.mes_aplicacion, nota: s.nota_admin ?? '', creada: s.created_at,
+      hasta: s.indefinida ? null : (s.vigente_hasta ?? s.mes_aplicacion), indefinida: !!s.indefinida, efecto: s.efecto ?? null, cancelada: !!s.cancelada_en,
       leen: (s.admins_destino ?? []).length ? (s.admins_destino as string[]).map((u) => nombre[u] ?? u) : [],
     })),
     excepciones: (exc ?? []).map((e: any) => ({ mes: e.mes, tipo: e.tipo, monto: e.monto, notas: e.notas ?? '', creada: e.creado_en })),
@@ -3226,6 +3227,94 @@ async function adminGetExcepciones(params: Record<string, any>): Promise<any[]> 
   return visibles.map((r: any) => ({ id: r.id, nombre: r.nombre, tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, createdAt: r.created_at, adminsDestino: r.admins_destino ?? [] }));
 }
 
+const _MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function _mesLegible(m: string): string {
+  const [a, mm] = m.split('-').map(Number);
+  return a && mm ? `${_MESES_ES[mm - 1]} de ${a}` : m;
+}
+function _mesClave(anio: number, mes: number): string {
+  const d = new Date(Date.UTC(anio, mes - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+function _mesActualClave(): string {
+  const { anio, mes } = _mesEcuadorActual();
+  return _mesClave(anio, mes);
+}
+
+// Escribe en `cuota_excepcion` los meses que cubre una excepción aprobada:
+// del mes pedido hasta `vigente_hasta` (o, si es indefinida, hasta el mes en
+// curso; el cron diario agrega cada mes nuevo). La nota lleva la solicitud
+// para poder quitar los meses futuros si se cancela.
+async function _aplicarExcepcionCuota(sol: { id: any; nombre: string; tipo: string; mes_aplicacion: string; efecto: string; vigente_hasta: string | null; indefinida: boolean }): Promise<{ mitad: number }> {
+  const precios = await getPreciosClases();
+  const mitad = Math.round(Number(precios.precioMensual ?? 0) * 50) / 100;
+  const actual = _mesActualClave();
+  const fin = sol.indefinida ? (actual > sol.mes_aplicacion ? actual : sol.mes_aplicacion) : (sol.vigente_hasta ?? sol.mes_aplicacion);
+  const [a0, m0] = sol.mes_aplicacion.split('-').map(Number);
+  const nota = (sol.efecto === 'exenta' ? 'No paga cuota' : (sol.tipo === 'ausencias' ? 'Media cuota por ausencias justificadas' : 'Media cuota por dificultad económica')) + ` (solicitud ${sol.id})`;
+  const filas: any[] = [];
+  for (let i = 0; i < 120; i++) {
+    const clave = _mesClave(a0, m0 + i);
+    if (clave > fin) break;
+    filas.push(sol.efecto === 'exenta'
+      ? { id_miembro: sol.nombre, mes: clave, tipo: 'exenta', monto: null, notas: nota }
+      : { id_miembro: sol.nombre, mes: clave, tipo: 'pago', monto: mitad, notas: nota });
+  }
+  if (filas.length) await supabase.from('cuota_excepcion').upsert(filas, { onConflict: 'id_miembro,mes' });
+  return { mitad };
+}
+
+// Excepciones vigentes (aprobadas, sin terminar), para el panel de Pivots.
+async function adminGetExcepcionesVigentes(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const actual = _mesActualClave();
+  const { data } = await supabase.from('solicitudes_excepcion')
+    .select('id, nombre, tipo, mes_aplicacion, vigente_hasta, indefinida, efecto, cancelada_en, admins_destino')
+    .eq('estado', 'aprobada').or(`indefinida.eq.true,vigente_hasta.gte.${actual}`).order('mes_aplicacion', { ascending: true });
+  const visibles: any[] = [];
+  for (const r of data ?? []) if (await _puedeVerExcepcion(adminEmail, r.admins_destino)) visibles.push(r);
+  const usuarios = [...new Set(visibles.map((r) => r.nombre))];
+  const { data: per } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby, foto_perfil').in('username', usuarios) : { data: [] as any[] };
+  const pe: Record<string, any> = {}; (per ?? []).forEach((p: any) => { pe[p.username] = p; });
+  return {
+    exito: true,
+    actual,
+    excepciones: visibles.map((r) => ({
+      id: r.id, nombre: r.nombre, nombreMostrar: pe[r.nombre]?.nombre_derby || r.nombre, foto: pe[r.nombre]?.foto_perfil || '',
+      tipo: r.tipo, desde: r.mes_aplicacion, hasta: r.indefinida ? null : r.vigente_hasta, efecto: r.efecto ?? 'media', cancelada: !!r.cancelada_en,
+    })),
+  };
+}
+
+// Cancelar: dura hasta el fin del mes en curso (Victor, 2026-11-12); los
+// meses siguientes se quitan.
+async function adminCancelarExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { data: sol } = await supabase.from('solicitudes_excepcion').select('id, nombre, tipo, admins_destino, estado').eq('id', params.id).maybeSingle();
+  if (!sol || sol.estado !== 'aprobada') return { exito: false, error: 'La excepción no existe.' };
+  if (!(await _puedeVerExcepcion(adminEmail, sol.admins_destino))) return { exito: false, error: 'Esta excepción no está dirigida a ti.' };
+  const actual = _mesActualClave();
+  const { error } = await supabase.from('solicitudes_excepcion').update({ indefinida: false, vigente_hasta: actual, cancelada_en: new Date().toISOString() }).eq('id', sol.id);
+  if (error) return { exito: false, error: 'No se pudo cancelar.' };
+  await supabase.from('cuota_excepcion').delete().eq('id_miembro', sol.nombre).gt('mes', actual).like('notas', `%(solicitud ${sol.id})%`);
+  await sendPush({
+    tipo: 'solicitud_resuelta',
+    include_external_user_ids: [sol.nombre],
+    headings: { es: 'Tu excepción de cuota termina este mes' },
+    contents: { es: `Sigue vigente hasta el fin de ${_mesLegible(actual)}. Desde el mes que viene la cuota vuelve a ser la normal.` },
+    url: APP_URL + '/',
+  });
+  return { exito: true, hasta: actual };
+}
+
+// Cron diario: las excepciones indefinidas suman el mes nuevo.
+async function _extenderExcepcionesIndefinidas(): Promise<void> {
+  const { data } = await supabase.from('solicitudes_excepcion').select('id, nombre, tipo, mes_aplicacion, efecto').eq('estado', 'aprobada').eq('indefinida', true);
+  for (const s of data ?? []) await _aplicarExcepcionCuota({ ...s, efecto: s.efecto ?? 'media', vigente_hasta: null, indefinida: true });
+}
+
 async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -3236,18 +3325,29 @@ async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Rec
   const { data: sol } = await supabase.from('solicitudes_excepcion').select('nombre, tipo, mes_aplicacion, admins_destino').eq('id', id).maybeSingle();
   if (!sol) return { exito: false, error: 'La solicitud no existe.' };
   if (!(await _puedeVerExcepcion(adminEmail, sol.admins_destino))) return { exito: false, error: 'Esta solicitud no está dirigida a ti.' };
-  const { error } = await supabase.from('solicitudes_excepcion').update({ estado, nota_admin: notaAdmin }).eq('id', id);
+  // Duración y efecto que decide el Pivot al aprobar (Victor, 2026-11-12):
+  // duracion 'mes' (solo el mes pedido), 'hasta' (hasta el mes `hasta`,
+  // 'AAAA-MM') o 'indefinida'; efecto 'media' (media cuota) o 'exenta' (no
+  // paga). Ausencias justificadas siempre es media cuota.
+  const duracion = ['mes', 'hasta', 'indefinida'].includes(String(params.duracion)) ? String(params.duracion) : 'mes';
+  const hasta = duracion === 'hasta' && /^\d{4}-\d{2}$/.test(String(params.hasta ?? '')) ? String(params.hasta) : null;
+  if (duracion === 'hasta' && (!hasta || hasta < sol.mes_aplicacion)) return { exito: false, error: 'Elige hasta qué mes dura.' };
+  const efecto = sol.tipo === 'ausencias' ? 'media' : (params.efecto === 'exenta' ? 'exenta' : 'media');
+  const cambios: Record<string, any> = { estado, nota_admin: notaAdmin };
+  if (estado === 'aprobada') {
+    cambios.efecto = efecto;
+    cambios.indefinida = duracion === 'indefinida';
+    cambios.vigente_hasta = duracion === 'indefinida' ? null : (hasta ?? sol.mes_aplicacion);
+  }
+  const { error } = await supabase.from('solicitudes_excepcion').update(cambios).eq('id', id);
   if (error) return { exito: false, error: error.message };
-  // Ausencias aprobadas: media cuota de ese mes, sin pasos manuales.
   let detalle = '';
-  if (estado === 'aprobada' && sol.tipo === 'ausencias') {
-    const precios = await getPreciosClases();
-    const mitad = Math.round(Number(precios.precioMensual ?? 0) * 50) / 100;
-    await supabase.from('cuota_excepcion').upsert(
-      { id_miembro: sol.nombre, mes: sol.mes_aplicacion, tipo: 'pago', monto: mitad, notas: 'Media cuota por ausencias justificadas' },
-      { onConflict: 'id_miembro,mes' },
-    );
-    detalle = ` Este mes pagas media cuota ($${mitad.toFixed(2)}).`;
+  if (estado === 'aprobada') {
+    const r = await _aplicarExcepcionCuota({ id, nombre: sol.nombre, tipo: sol.tipo, mes_aplicacion: sol.mes_aplicacion, efecto, vigente_hasta: cambios.vigente_hasta, indefinida: cambios.indefinida });
+    const cuanto = efecto === 'exenta' ? 'no pagas cuota' : `pagas media cuota ($${r.mitad.toFixed(2)})`;
+    detalle = duracion === 'indefinida'
+      ? ` Desde ${_mesLegible(sol.mes_aplicacion)} ${cuanto}, hasta que un Pivot lo cambie.`
+      : duracion === 'hasta' ? ` De ${_mesLegible(sol.mes_aplicacion)} a ${_mesLegible(hasta!)} ${cuanto}.` : ` En ${_mesLegible(sol.mes_aplicacion)} ${cuanto}.`;
   }
   await sendPush({
     tipo: 'solicitud_resuelta',
@@ -6907,6 +7007,7 @@ async function adminEliminarTemporadaDescanso(params: Record<string, any>): Prom
 // con el header `x-cron-secret` -- validado en el router (Deno.serve), no
 // acá, porque necesita leer `req.headers`, no `params`.
 async function cronDiario(): Promise<Record<string, any>> {
+  try { await _extenderExcepcionesIndefinidas(); } catch (e) { console.error('[excepciones] extender:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'
   const diaDelMes = Number(hoyIso.substring(8, 10));
@@ -7197,7 +7298,9 @@ Deno.serve(async (req: Request) => {
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
             case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
             case 'adminBandeja':                    return json(await adminBandeja(params));
-                  case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
+                  case 'adminGetExcepcionesVigentes':     return json(await adminGetExcepcionesVigentes(params));
+      case 'adminCancelarExcepcion':          return json(await adminCancelarExcepcion(params));
+      case 'getMisRectificaciones':           return json(await getMisRectificaciones(params));
       case 'getComunidad':                    return json(await getComunidad(params));
       case 'adminGuardarComunidad':           return json(await adminGuardarComunidad(params));
       case 'getRolesEquipo':                  return json(await getRolesEquipo());

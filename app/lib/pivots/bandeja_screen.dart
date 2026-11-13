@@ -46,12 +46,21 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       if (n == null || !mounted) return;
       nota = n;
     }
+    // Al aprobar una excepción, el Pivot decide cuánto dura (y, si es por
+    // dificultad económica, si paga media cuota o nada).
+    var extra = const <String, Object?>{};
+    if (aprobar && p.tipo == TipoPedido.excepcion) {
+      final r = await elegirDuracionExcepcion(context, p);
+      if (r == null || !mounted) return;
+      extra = r;
+    }
+    if (!mounted) return;
     final m = ScaffoldMessenger.of(context);
     // La tarjeta se cierra con una animación antes de salir de la lista.
     setState(() => _saliendo.add(_clave(p)));
     await Future<void>.delayed(const Duration(milliseconds: 260));
     try {
-      await repo.resolver(p, aprobar: aprobar, nota: nota);
+      await repo.resolver(p, aprobar: aprobar, nota: nota, extra: extra);
       m
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(aprobar ? 'Aprobado' : 'Rechazado')));
@@ -92,6 +101,13 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bandeja de Pivots', style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            tooltip: 'Excepciones vigentes',
+            icon: const Icon(Icons.event_repeat_rounded),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExcepcionesVigentesScreen(repo: repo))),
+          ),
+        ],
       ),
       body: ListenableBuilder(
         listenable: repo,
@@ -321,4 +337,244 @@ class _Entrar extends StatelessWidget {
     ),
     child: child,
   );
+}
+
+/// Duración (y efecto) de una excepción al aprobarla.
+Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedido p) {
+  final desde = DateTime.tryParse('${p.m['mesAplicacion'] ?? ''}-01') ?? DateTime(Fechas.hoy().year, Fechas.hoy().month);
+  final meses = [for (var i = 1; i <= 12; i++) DateTime(desde.year, desde.month + i)];
+  var duracion = 'mes';
+  var hasta = meses[1];
+  var efecto = 'media';
+  final economica = p.m['tipo'] != 'ausencias';
+  String clave(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}';
+  return showModalBottomSheet<Map<String, Object?>>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (hoja) => StatefulBuilder(
+      builder: (hoja, refrescar) {
+        final pal = hoja.pivot;
+        Text titulo(String t) => Text(
+          t,
+          style: TextStyle(fontWeight: FontWeight.w700, color: pal.texto),
+        );
+        final resumen = duracion == 'mes'
+            ? 'Solo ${Fechas.mes(desde)}.'
+            : duracion == 'hasta'
+            ? 'De ${Fechas.mes(desde)} a ${Fechas.mes(hasta)} de ${hasta.year}.'
+            : 'Desde ${Fechas.mes(desde)}, hasta que la canceles.';
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Aprobar excepción de ${p.nombreMostrar}', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                if (economica) ...[
+                  titulo('Cuánto paga'),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 'media', label: Text('Media cuota')),
+                      ButtonSegment(value: 'exenta', label: Text('No paga')),
+                    ],
+                    selected: {efecto},
+                    onSelectionChanged: (s) => refrescar(() => efecto = s.first),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                titulo('Cuánto dura'),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: 'mes', label: Text('Este mes')),
+                    ButtonSegment(value: 'hasta', label: Text('Hasta…')),
+                    ButtonSegment(value: 'indefinida', label: Text('Indefinida')),
+                  ],
+                  selected: {duracion},
+                  onSelectionChanged: (s) => refrescar(() => duracion = s.first),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: duracion != 'hasta'
+                      ? const SizedBox(width: double.infinity)
+                      : Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            height: 40,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                for (final m in meses)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ChoiceChip(
+                                      showCheckmark: false,
+                                      label: Text(m.year == desde.year ? Fechas.mesNombre(m) : Fechas.mesAnio(m)),
+                                      selected: m == hasta,
+                                      onSelected: (_) => refrescar(() => hasta = m),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$resumen Puedes cancelarla cuando quieras desde Excepciones vigentes; si la cancelas, dura hasta el fin del mes en curso.',
+                  style: TextStyle(fontSize: 13, color: pal.textoSecundario),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.of(hoja).pop({'duracion': duracion, if (duracion == 'hasta') 'hasta': clave(hasta), if (economica) 'efecto': efecto}),
+                  child: const Text('Aprobar'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+/// Pivots: excepciones aprobadas que siguen vigentes, para cancelarlas.
+class ExcepcionesVigentesScreen extends StatefulWidget {
+  const ExcepcionesVigentesScreen({super.key, required this.repo});
+  final BandejaRepo repo;
+
+  @override
+  State<ExcepcionesVigentesScreen> createState() => _ExcepcionesVigentesScreenState();
+}
+
+class _ExcepcionesVigentesScreenState extends State<ExcepcionesVigentesScreen> {
+  List<ExcepcionVigente>? _lista;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    try {
+      final l = await widget.repo.excepcionesVigentes();
+      if (mounted) {
+        setState(() {
+          _lista = l;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.');
+    }
+  }
+
+  static String _mes(String clave) {
+    final d = DateTime.tryParse('$clave-01');
+    return d == null ? clave : (d.year == Fechas.hoy().year ? Fechas.mes(d) : '${Fechas.mes(d)} de ${d.year}');
+  }
+
+  Future<void> _cancelar(ExcepcionVigente e) async {
+    final h = Fechas.hoy();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Cancelar la excepción de ${e.nombreMostrar}?'),
+        content: Text('Sigue vigente hasta el fin de ${Fechas.mes(h)}. Desde el mes que viene paga la cuota normal. Se le avisará.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Cancelar excepción')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await widget.repo.cancelarExcepcion(e);
+      m.showSnackBar(SnackBar(content: Text('Cancelada. Termina el fin de ${Fechas.mes(h)}.')));
+      await _cargar();
+    } catch (x) {
+      m.showSnackBar(SnackBar(content: Text(x is ApiException ? x.message : 'No se pudo cancelar.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final l = _lista;
+    final Widget cuerpo;
+    if (l == null) {
+      cuerpo = _error != null ? Center(key: const ValueKey('e'), child: Text(_error!)) : const Center(key: ValueKey('c'), child: PivotCargando());
+    } else if (l.isEmpty) {
+      cuerpo = Center(
+        key: const ValueKey('v'),
+        child: Text('No hay excepciones vigentes.', style: TextStyle(color: p.textoSecundario)),
+      );
+    } else {
+      cuerpo = RefreshIndicator(
+        key: const ValueKey('l'),
+        onRefresh: _cargar,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+          children: [
+            for (final e in l)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: p.tarjeta,
+                  borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                    child: Row(
+                      children: [
+                        AvatarPersona(nombre: e.nombreMostrar, foto: e.foto, tamano: 40),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                e.nombreMostrar,
+                                style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                              ),
+                              Text(
+                                '${e.exenta ? 'No paga' : 'Media cuota'} · ${e.tipo == 'ausencias' ? 'ausencias' : 'dificultad económica'}',
+                                style: TextStyle(fontSize: 13.5, color: p.texto),
+                              ),
+                              Text(
+                                e.hasta == null
+                                    ? 'Desde ${_mes(e.desde)}, indefinida'
+                                    : 'De ${_mes(e.desde)} a ${_mes(e.hasta!)}${e.cancelada ? ' (cancelada)' : ''}',
+                                style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!e.cancelada) TextButton(onPressed: () => _cancelar(e), child: const Text('Cancelar')),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Excepciones vigentes', style: TextStyle(fontWeight: FontWeight.w700)),
+      ),
+      body: AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: cuerpo),
+    );
+  }
 }

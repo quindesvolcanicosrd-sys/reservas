@@ -21,6 +21,20 @@ class Pedido {
   DateTime? get fechaEvento => DateTime.tryParse('${evento?['fecha'] ?? m['fechaEvento'] ?? ''}');
 }
 
+/// Excepción de cuota aprobada y vigente (panel de Pivots).
+class ExcepcionVigente {
+  ExcepcionVigente(this.m);
+  final Map<String, dynamic> m;
+  String get id => '${m['id']}';
+  String get nombreMostrar => '${m['nombreMostrar'] ?? m['nombre']}';
+  String get foto => '${m['foto'] ?? ''}';
+  String get tipo => '${m['tipo']}';
+  String get desde => '${m['desde'] ?? ''}';
+  String? get hasta => m['hasta'] == null ? null : '${m['hasta']}';
+  bool get exenta => m['efecto'] == 'exenta';
+  bool get cancelada => m['cancelada'] == true;
+}
+
 /// Bandeja de Pivots (etapa 3, Victor 2026-11-12): pagos y reservas,
 /// rectificaciones, excepciones de cuota, lesiones y tareas por validar.
 /// Se abre desde Calendario; el número va en el ícono.
@@ -81,9 +95,23 @@ class BandejaRepo extends ChangeNotifier {
     }
   }
 
+  Future<List<ExcepcionVigente>> excepcionesVigentes() async {
+    final r = await _api.get('adminGetExcepcionesVigentes', {'adminToken': sesion.adminToken});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo cargar.'}');
+    return [
+      for (final x in (r['excepciones'] as List? ?? const []))
+        if (x is Map<String, dynamic>) ExcepcionVigente(x),
+    ];
+  }
+
+  Future<void> cancelarExcepcion(ExcepcionVigente e) async {
+    final r = await _api.post('adminCancelarExcepcion', {'adminToken': sesion.adminToken, 'id': e.id});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo cancelar.'}');
+  }
+
   /// Aprueba o rechaza. Quita el pedido de la lista al instante; si falla,
   /// lo devuelve y lanza el error.
-  Future<void> resolver(Pedido p, {required bool aprobar, String nota = ''}) async {
+  Future<void> resolver(Pedido p, {required bool aprobar, String nota = '', Map<String, Object?> extra = const {}}) async {
     final i = pedidos.indexOf(p);
     pedidos = [...pedidos]..remove(p);
     notifyListeners();
@@ -101,6 +129,7 @@ class BandejaRepo extends ChangeNotifier {
           'id': p.id,
           'estado': aprobar ? 'aprobada' : 'rechazada',
           if (nota.trim().isNotEmpty) 'notaAdmin': nota.trim(),
+          ...extra,
         }),
         TipoPedido.lesion => await _api.post(aprobar ? 'adminAprobarLesion' : 'adminRechazarLesion', {'adminToken': token, 'nombre': p.nombre}),
         TipoPedido.tarea => await _api.post('adminValidarTarea', {

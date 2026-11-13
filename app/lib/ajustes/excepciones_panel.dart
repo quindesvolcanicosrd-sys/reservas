@@ -31,6 +31,18 @@ class _Solicitud {
   List<String> get leen => [for (final x in (m['leen'] as List? ?? const [])) '$x'];
   bool get pendiente => estado == 'pendiente';
   bool get aprobada => estado == 'aprobada';
+  String? get hasta => m['hasta'] == null ? null : '${m['hasta']}';
+  bool get indefinida => m['indefinida'] == true;
+  bool get cancelada => m['cancelada'] == true;
+
+  /// Aprobada y todavía vigente este mes (indefinida o hasta un mes futuro).
+  bool get vigente => aprobada && (indefinida || (hasta ?? mes).compareTo(_mesActual()) >= 0);
+
+  String get vigencia => indefinida
+      ? 'Desde ${_mesTexto(mes)}, hasta que un Pivot la cambie'
+      : (hasta == null || hasta == mes)
+      ? _mesTexto(mes)
+      : 'De ${_mesTexto(mes)} a ${_mesTexto(hasta!)}${cancelada ? ' (cancelada)' : ''}';
 }
 
 class _Excepcion {
@@ -96,7 +108,9 @@ class _ExcepcionesPanelScreenState extends State<ExcepcionesPanelScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     final listo = _sols != null && _excs != null;
-    final yaPidio = (_sols ?? const <_Solicitud>[]).any((s) => s.mes == _mesActual() && s.estado != 'rechazada');
+    // Una solicitud a la vez: no se pide otra si hay una en revisión o una
+    // aprobada que sigue vigente (el Pivot decide cuánto dura).
+    final yaPidio = (_sols ?? const <_Solicitud>[]).any((s) => s.pendiente || s.vigente);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Excepción de cuota', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -155,7 +169,20 @@ class _ExcepcionesPanelScreenState extends State<ExcepcionesPanelScreen> {
               pie: 'Te llegará una notificación cuando la aprueben o la rechacen.',
               filas: [for (final s in pendientes) _filaSolicitud(s)],
             ),
-          if (vigentes.isNotEmpty) GrupoAjustes(titulo: 'VIGENTES', filas: [for (final e in vigentes) _filaExcepcion(e)]),
+          if (sols.any((s) => s.vigente))
+            GrupoAjustes(
+              titulo: 'SOLICITUDES VIGENTES',
+              filas: [
+                for (final s in sols.where((s) => s.vigente))
+                  FilaAjuste(
+                    icono: Icons.verified_rounded,
+                    seccion: 'cuota',
+                    titulo: s.tipo == 'ausencias' ? 'Ausencias justificadas' : 'Dificultades económicas',
+                    valor: s.vigencia,
+                  ),
+              ],
+            ),
+          if (vigentes.isNotEmpty) GrupoAjustes(titulo: 'MESES CON EXCEPCIÓN', filas: [for (final e in vigentes) _filaExcepcion(e)]),
           if (hayHistorial)
             GrupoAjustes(
               filas: [
@@ -172,7 +199,7 @@ class _ExcepcionesPanelScreenState extends State<ExcepcionesPanelScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
               child: Text(
-                'Ya enviaste una solicitud para este mes. Puedes pedir otra el mes que viene.',
+                'Ya tienes una solicitud en revisión o una excepción vigente. Cuando termine podrás pedir otra.',
                 style: TextStyle(fontSize: 13, color: p.textoSecundario),
               ),
             ),
@@ -295,7 +322,7 @@ class _Explicacion extends StatelessWidget {
           punto(Icons.event_busy_rounded, 'Ausencias justificadas', 'Si no pudiste entrenar por viaje, trabajo o salud, pagas media cuota.'),
           punto(Icons.savings_rounded, 'Dificultades económicas', 'Subvención parcial o completa, a cambio de aportar con tareas del equipo.'),
           punto(Icons.lock_rounded, 'Confidencial', 'Eliges qué administradorxs la leen y aprueban. Nadie más la ve.'),
-          punto(Icons.notifications_active_rounded, 'Respuesta', 'Te llega una notificación al aprobarla o rechazarla. Se pide una por mes.'),
+          punto(Icons.notifications_active_rounded, 'Respuesta', 'Te llega una notificación al aprobarla o rechazarla. Un Pivot decide cuánto dura.'),
         ],
       ),
     );
@@ -327,8 +354,9 @@ class _HistorialScreen extends StatelessWidget {
                   FilaAjuste(
                     icono: s.aprobada ? Icons.check_circle_rounded : Icons.cancel_rounded,
                     seccion: 'cuota',
-                    titulo: '${s.tipo == 'ausencias' ? 'Ausencias justificadas' : 'Dificultades económicas'} · ${s.aprobada ? 'aprobada' : 'rechazada'}',
-                    valor: [_mesTexto(s.mes), if (s.nota.isNotEmpty) s.nota].join(' · '),
+                    titulo:
+                        '${s.tipo == 'ausencias' ? 'Ausencias justificadas' : 'Dificultades económicas'} · ${s.aprobada ? (s.vigente ? 'vigente' : 'terminada') : 'rechazada'}',
+                    valor: [s.aprobada ? s.vigencia : _mesTexto(s.mes), if (s.nota.isNotEmpty) s.nota].join(' · '),
                   ),
               ],
             ),
