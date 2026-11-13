@@ -428,6 +428,15 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
        - Cuota: día de vencimiento, recargo por mora (o ninguno), meses de gracia de pago.
        - Privacidad dentro del equipo: qué ve cada persona de las demás (porcentaje de asistencia, puntos, equipo, cumpleaños), si hay ranking o no.
        - Historial: cada cambio de estos ajustes queda registrado (quién, cuándo, antes/después) en Mi Liga.
+   20. **Respuestas de Victor a la lista 19 (15:57) — todo va en Mi Liga, visible y editable:**
+       - Equipos: nombre, logo y orden editables. **Enlaces de invitación por equipo**: un enlace para entrar directo a Quindes aplica los requisitos de Quindes al unirse (hoy: equipamiento propio); si no los cumple, entra al equipo inicial. Los requisitos de entrada de cada equipo los edita el Pivot (ej. "al menos protecciones" o ninguno). Bajar dos equipos de una vez: explicado a Victor (con 3+ equipos), pendiente de su respuesta; por defecto, de a uno.
+       - Qué cuenta: botón "Todo suma" o "Solo algunos eventos" con interruptores por tipo de evento. Si llegar tarde cuenta y cuánto vale (0,5, 0 o lo que diga el Pivot).
+       - Tolerancia de llegada (hoy 15 min): editable. Al tomar asistencia después de la tolerancia, **sugerir** "Tarde" (preseleccionado o destacado), nunca forzarlo: quien llegó 19:13 puede marcarse "A horario" aunque la lista se tome 19:20.
+       - Puntos y rachas: valores claros y editables (revisar cuántas clases forman racha hoy y mostrarlo). "Dividir puntos a la mitad" y "Califica para fondos de viaje" en la sección de Puntos y rachas (por equipo).
+       - Estados que congelan: cuáles congelan y máximo de tiempo o sin fin.
+       - Inactividad, eventos (sugerir cancelar con menos de N personas; siempre se puede cancelar), rectificaciones, cuota y privacidad: editables en Mi Liga.
+       - Historial de ajustes: visible los últimos 6 meses (propuesta: guardar más tiempo sin mostrarlo, o borrar a los 6 meses; preguntó Victor, falta su respuesta).
+       - **REGLA DE ORO: un cambio de reglas de puntos nunca cambia puntos ya ganados.** Los puntos se calculan y guardan con la regla vigente el día del evento; un cambio aplica desde ese momento en adelante. Guardar en cada regla su fecha de inicio (versionado) para que un recálculo use la regla de cada fecha. Esto vale también para arreglar el bug K.0 (recalcular octubre y noviembre con las reglas de esos meses).
 5. [ ] "Categorías/Equipos y puntos" → **"Equipos y puntos"**; donde dice "Categoría/Equipo" pasa a **"Equipo"** (revertir el cambio de hoy).
 6. [ ] Equipos y puntos: poder editar también Mirlxs (la inicial) y un + para crear equipos nuevos con asistente completo.
 7. [ ] Asistente de puntos: textos más cortos y claros; explicar qué significa "Solo puntos".
