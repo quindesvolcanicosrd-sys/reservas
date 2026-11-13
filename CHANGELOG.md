@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — Seguridad: la clave pública de la base ya no puede leer las sesiones (con las que se podía entrar como cualquier persona o Pivot), pagos, reservas, tareas ni la configuración. Cancelar un evento limpia sus marcas desde el servidor.
+
+2026-11-12 — App Android: Mis estadísticas (comparaciones con el mes anterior y con tu categoría, gráfico de 6 meses); filtros del Calendario con varios a la vez en filas deslizables y mensajes según el filtro; el timeline no salta al filtrar; tarjeta del mes en tareas con clases o puntos; Comunidad en cuadrícula; contacto de emergencia compacto; Mi perfil sin títulos ni fila de foto.
+
 2026-11-12 — App Android: "¿Es correcto?" para pedir corregir tu asistencia en eventos pasados (con "Revisión pendiente" y días restantes) y, para Pivots, lo que cada persona reservó junto a su nombre en el detalle del evento.
 
 2026-11-12 — App Android (etapa 3): Bandeja de Pivots en Calendario (pagos y reservas, rectificaciones, excepciones, lesiones y tareas por validar); registrar pago y "No paga un mes" desde la ficha; Comunidad e Inventario en Equipo; Ajustes de la liga en Mi perfil (roles, comunidad, inventario). Las excepciones de cuota de otras personas ya no se pueden consultar sin ser Pivot.

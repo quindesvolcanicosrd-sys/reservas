@@ -1174,9 +1174,13 @@ async function adminCancelarEvento(params: Record<string, any>): Promise<Record<
   if (!email) return { exito: false, error: 'Sesión admin inválida.' };
   if (!params.idEvento) return { exito: false, error: 'Falta el evento.' };
   const { error } = await supabase.from('asistencias')
-    .update({ es_excepcion: true, estado: 'Evento Cancelado' })
+        .update({ es_excepcion: true, estado: 'Evento Cancelado', a_horario: '', tarde: '' })
     .eq('id_evento', params.idEvento);
   if (error) return { exito: false, error: error.message };
+  // Limpieza que antes hacía la web directo contra la base (ya no se
+  // permite con la clave pública, 2026-11-12): un evento cancelado no deja
+  // marcas de "A tiempo"/"Tarde".
+  await supabase.from('log_asistencias').delete().eq('id_evento', params.idEvento).in('estado', ['A tiempo', 'Tarde']);
   return { exito: true };
 }
 
