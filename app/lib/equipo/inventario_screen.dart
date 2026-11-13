@@ -133,12 +133,15 @@ class _InventarioScreenState extends State<InventarioScreen> {
     await _guardarStock([for (final x in _tallas) (talla: x.talla, cantidad: x.cantidad), (talla: t, cantidad: 1)], _protecciones);
   }
 
-  /// "Me llevé algo" (persona) o "Registrar préstamo" (Pivot, eligiendo a quién).
+  static const _piezas = ['Casco', 'Rodilleras', 'Coderas', 'Muñequeras', 'Protector bucal'];
+
+  /// Alguien se llevó cosas del equipo a su casa (por ejemplo, a limpiarlas).
+  /// No es para usarlas en un entrenamiento: eso se reserva al confirmar.
   Future<void> _prestamo({required bool comoPivot}) async {
     var articulo = 'patines';
     String? persona;
     String talla = _tallas.isEmpty ? '' : _tallas.first.talla;
-    final detalle = TextEditingController();
+    final piezas = <String, int>{};
     final equipo = EquipoRepo.de(s);
     if (comoPivot) await equipo.cargar();
     if (!mounted) return;
@@ -150,88 +153,144 @@ class _InventarioScreenState extends State<InventarioScreen> {
         builder: (hoja, refrescar) {
           final p = hoja.pivot;
           final personas = [...?equipo.personas]..sort((a, b) => a.nombreMostrar.toLowerCase().compareTo(b.nombreMostrar.toLowerCase()));
-          final listo = (!comoPivot || persona != null) && (articulo != 'otro' || detalle.text.trim().isNotEmpty);
+          final listo = (!comoPivot || persona != null) && (articulo == 'patines' ? talla.isNotEmpty : piezas.isNotEmpty);
           return Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(hoja).bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(comoPivot ? 'Registrar préstamo' : '¿Qué te llevaste?', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(
-                  comoPivot
-                      ? 'Quedará visible para el equipo hasta que lo marques como devuelto.'
-                      : 'Un Pivot lo aprueba para evitar errores. Después se ve en Inventario.',
-                  style: TextStyle(color: p.textoSecundario),
-                ),
-                const SizedBox(height: 14),
-                if (comoPivot) ...[
-                  DropdownButtonFormField<String>(
-                    initialValue: persona,
-                    decoration: const InputDecoration(labelText: 'Quién lo tiene'),
-                    items: [for (final x in personas) DropdownMenuItem(value: x.username, child: Text(x.nombreMostrar))],
-                    onChanged: (v) => refrescar(() => persona = v),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    comoPivot ? 'Alguien se llevó equipamiento' : '¿Te llevaste equipamiento?',
+                    style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Para cuando alguien se lleva cosas del equipo fuera del entrenamiento (por ejemplo, a limpiarlas). '
+                    'Para usarlas en una clase se reservan al confirmar asistencia.${comoPivot ? '' : ' Un Pivot lo aprueba.'}',
+                    style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+                  ),
+                  const SizedBox(height: 14),
+                  if (comoPivot) ...[
+                    DropdownButtonFormField<String>(
+                      initialValue: persona,
+                      decoration: const InputDecoration(labelText: 'Quién se lo llevó'),
+                      items: [for (final x in personas) DropdownMenuItem(value: x.username, child: Text(x.nombreMostrar))],
+                      onChanged: (v) => refrescar(() => persona = v),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 'patines', label: Text('Patines')),
+                      ButtonSegment(value: 'protecciones', label: Text('Protecciones')),
+                    ],
+                    selected: {articulo},
+                    onSelectionChanged: (x) => refrescar(() => articulo = x.first),
                   ),
                   const SizedBox(height: 12),
-                ],
-                SegmentedButton<String>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(value: 'patines', label: Text('Patines')),
-                    ButtonSegment(value: 'protecciones', label: Text('Protecciones')),
-                    ButtonSegment(value: 'otro', label: Text('Otro')),
-                  ],
-                  selected: {articulo},
-                  onSelectionChanged: (x) => refrescar(() => articulo = x.first),
-                ),
-                const SizedBox(height: 12),
-                if (articulo == 'patines' && _tallas.isNotEmpty)
-                  SizedBox(
-                    height: 40,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        for (final t in _tallas)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              showCheckmark: false,
-                              label: Text('Talla ${t.talla}'),
-                              selected: talla == t.talla,
-                              onSelected: (_) => refrescar(() => talla = t.talla),
-                            ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: articulo == 'patines'
+                        ? (_tallas.isEmpty
+                              ? Text('No hay patines cargados.', style: TextStyle(color: p.textoSecundario))
+                              : SizedBox(
+                                  height: 40,
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    children: [
+                                      for (final t in _tallas)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: ChoiceChip(
+                                            showCheckmark: false,
+                                            label: Text('Talla ${t.talla}'),
+                                            selected: talla == t.talla,
+                                            onSelected: (_) => refrescar(() => talla = t.talla),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ))
+                        : Column(
+                            children: [
+                              for (final pieza in _piezas)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CheckboxListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        controlAffinity: ListTileControlAffinity.leading,
+                                        title: Text(pieza),
+                                        value: piezas.containsKey(pieza),
+                                        onChanged: (v) => refrescar(() => v == true ? piezas[pieza] = 1 : piezas.remove(pieza)),
+                                      ),
+                                    ),
+                                    AnimatedOpacity(
+                                      duration: const Duration(milliseconds: 180),
+                                      opacity: piezas.containsKey(pieza) ? 1 : 0,
+                                      child: IgnorePointer(
+                                        ignoring: !piezas.containsKey(pieza),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              tooltip: 'Menos',
+                                              onPressed: (piezas[pieza] ?? 1) > 1 ? () => refrescar(() => piezas[pieza] = piezas[pieza]! - 1) : null,
+                                              icon: const Icon(Icons.remove_rounded),
+                                            ),
+                                            Text('${piezas[pieza] ?? 1}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                                            IconButton(
+                                              tooltip: 'Más',
+                                              onPressed: (piezas[pieza] ?? 1) < 10 ? () => refrescar(() => piezas[pieza] = (piezas[pieza] ?? 1) + 1) : null,
+                                              icon: const Icon(Icons.add_rounded),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  )
-                else
-                  TextField(
-                    controller: detalle,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => refrescar(() {}),
-                    decoration: InputDecoration(
-                      labelText: articulo == 'protecciones' ? 'Cuáles (opcional)' : 'Qué es',
-                      hintText: articulo == 'protecciones' ? 'Ej. rodilleras y casco' : 'Ej. silbato, conos',
-                    ),
                   ),
-                const SizedBox(height: 18),
-                FilledButton(onPressed: listo ? () => Navigator.of(hoja).pop(true) : null, child: Text(comoPivot ? 'Registrar' : 'Avisar')),
-              ],
+                  const SizedBox(height: 18),
+                  FilledButton(onPressed: listo ? () => Navigator.of(hoja).pop(true) : null, child: Text(comoPivot ? 'Registrar' : 'Avisar')),
+                ],
+              ),
             ),
           );
         },
       ),
     );
     if (ok != true || !mounted) return;
-    final d = articulo == 'patines' ? talla : detalle.text.trim();
+    // "1 casco y 2 muñequeras"
+    final partes = [for (final e in piezas.entries) '${e.value} ${e.value == 1 ? _singular(e.key) : _plural(e.key)}'];
+    final d = articulo == 'patines' ? talla : (partes.length <= 1 ? partes.join() : '${partes.sublist(0, partes.length - 1).join(', ')} y ${partes.last}');
     await _hacer(
       () => comoPivot
           ? _api.post('adminPrestamo', {..._admin, 'accion': 'registrar', 'nombre': persona, 'articulo': articulo, 'detalle': d})
           : _api.post('pedirPrestamo', {'articulo': articulo, 'detalle': d}),
-      ok: comoPivot ? 'Préstamo registrado' : 'Aviso enviado. Un Pivot lo aprobará.',
+      ok: comoPivot ? 'Registrado' : 'Aviso enviado. Un Pivot lo aprobará.',
     );
   }
+
+  static String _plural(String pieza) => switch (pieza) {
+    'Casco' => 'cascos',
+    'Protector bucal' => 'protectores bucales',
+    _ => pieza.toLowerCase(),
+  };
+
+  static String _singular(String pieza) => switch (pieza) {
+    'Rodilleras' => 'rodillera',
+    'Coderas' => 'codera',
+    'Muñequeras' => 'muñequera',
+    _ => pieza.toLowerCase(),
+  };
 
   Future<void> _accionPrestamo(Map<String, dynamic> pr, String accion, String ok) =>
       _hacer(() => _api.post('adminPrestamo', {..._admin, 'accion': accion, 'id': pr['id']}), ok: ok);
@@ -240,7 +299,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
     final d = '${pr['detalle'] ?? ''}'.trim();
     return switch (pr['articulo']) {
       'patines' => d.isEmpty ? 'Patines' : 'Patines talla $d',
-      'protecciones' => d.isEmpty ? 'Protecciones' : 'Protecciones: $d',
+      'protecciones' => d.isEmpty ? 'Protecciones' : '${d[0].toUpperCase()}${d.substring(1)}',
       _ => d.isEmpty ? 'Equipamiento' : d,
     };
   }
@@ -302,14 +361,6 @@ class _InventarioScreenState extends State<InventarioScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
-            if (proxTxt != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                child: Text(
-                  '$proxTxt${prox?['lugar'] == null ? '' : ' en ${prox!['lugar']}'}: lo que queda sin reservar ni prestar.',
-                  style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
-                ),
-              ),
             seccion('PATINES'),
             const SizedBox(height: 8),
             tarjeta([
@@ -336,14 +387,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 _pivot ? (d) => _guardarStock([for (final x in tallas) (talla: x.talla, cantidad: x.cantidad)], (_protecciones + d).clamp(0, 99)) : null,
               ),
             ]),
-            seccion('QUIÉN TIENE COSAS DEL EQUIPO'),
-            const SizedBox(height: 8),
-            if (activos.isEmpty && misPendientes.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
-                child: Text('Todo está en su lugar.', style: TextStyle(color: p.textoSecundario)),
-              )
-            else
+            // Solo si alguien tiene cosas del equipo (Victor, 2026-11-13).
+            if (activos.isNotEmpty || misPendientes.isNotEmpty) ...[
+              seccion('QUIÉN TIENE COSAS DEL EQUIPO'),
+              const SizedBox(height: 8),
               tarjeta([
                 for (final pr in [...misPendientes, ...activos])
                   Padding(
@@ -384,6 +431,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                     ),
                   ),
               ]),
+            ],
             // A los 7 días, el Pivot confirma si aún lo tiene.
             for (final pr in activos.where((x) => x['preguntar'] == true && _pivot))
               Padding(
@@ -413,36 +461,29 @@ class _InventarioScreenState extends State<InventarioScreen> {
                   ),
                 ),
               ),
-            if (_pivot) ...[
+            if (_pivot && _reservas.isNotEmpty) ...[
               seccion('RESERVADO PARA LOS PRÓXIMOS ENTRENAMIENTOS'),
               const SizedBox(height: 8),
-              if (_reservas.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Text('Nadie reservó equipamiento todavía.', style: TextStyle(color: p.textoSecundario)),
-                )
-              else
-                tarjeta([
-                  for (final r in _reservas)
-                    ListTile(
-                      title: Text('${r['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        [
-                          '${r['fecha']}',
-                          if ('${r['patines']}'.isNotEmpty && r['patines'] != 'No') 'Patines ${r['patines']}',
-                          if ('${r['protecciones']}'.isNotEmpty && r['protecciones'] != 'No')
-                            r['protecciones'] == 'Sí' ? 'Protecciones' : '${r['protecciones']}',
-                        ].join(' · '),
-                      ),
-                      trailing: '${r['waLink'] ?? ''}'.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Escribir por WhatsApp',
-                              icon: const Icon(Icons.chat_rounded),
-                              onPressed: () => launchUrl(Uri.parse('${r['waLink']}'), mode: LaunchMode.externalApplication),
-                            ),
+              tarjeta([
+                for (final r in _reservas)
+                  ListTile(
+                    title: Text('${r['nombre']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      [
+                        '${r['fecha']}',
+                        if ('${r['patines']}'.isNotEmpty && r['patines'] != 'No') 'Patines ${r['patines']}',
+                        if ('${r['protecciones']}'.isNotEmpty && r['protecciones'] != 'No') r['protecciones'] == 'Sí' ? 'Protecciones' : '${r['protecciones']}',
+                      ].join(' · '),
                     ),
-                ]),
+                    trailing: '${r['waLink'] ?? ''}'.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Escribir por WhatsApp',
+                            icon: const Icon(Icons.chat_rounded),
+                            onPressed: () => launchUrl(Uri.parse('${r['waLink']}'), mode: LaunchMode.externalApplication),
+                          ),
+                  ),
+              ]),
             ],
           ],
         ),
@@ -461,7 +502,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
           : FloatingActionButton.extended(
               onPressed: _guardando ? null : () => _prestamo(comoPivot: _pivot),
               icon: Icon(_pivot ? Icons.assignment_ind_outlined : Icons.back_hand_outlined),
-              label: Text(_pivot ? 'Registrar préstamo' : 'Me llevé algo'),
+              label: Text(_pivot ? 'Alguien se llevó algo' : 'Me llevé algo'),
             ),
       body: AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: cuerpo),
     );

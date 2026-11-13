@@ -13,7 +13,7 @@ import 'tareas_repo.dart';
 
 enum ModoTarea { crear, editar, duplicar, proponer }
 
-enum _Paso { tipo, repeticion, titulo, area, puntos, fecha, personas, revisar }
+enum _Paso { tipo, repeticion, calendario, titulo, area, puntos, fecha, personas, revisar }
 
 /// Frecuencias rápidas de una recurrente (Victor, 2026-11-12: flexible).
 const _frecuencias = [
@@ -83,7 +83,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
 
   List<_Paso> get _pasos => [
     if (widget.modo == ModoTarea.crear || widget.modo == ModoTarea.duplicar) _Paso.tipo,
-    if ((widget.modo == ModoTarea.crear || widget.modo == ModoTarea.duplicar) && _recurrente == true) _Paso.repeticion,
+    if ((widget.modo == ModoTarea.crear || widget.modo == ModoTarea.duplicar) && _recurrente == true) ...[_Paso.repeticion, _Paso.calendario],
     _Paso.titulo,
     _Paso.area,
     if (_admin) _Paso.puntos,
@@ -207,6 +207,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
   String get _tituloPaso => switch (_paso) {
     _Paso.tipo => '¿Se hace una vez o se repite?',
     _Paso.repeticion => '¿Cada cuánto se repite?',
+    _Paso.calendario => '¿Desde cuándo y con cuánto tiempo?',
     _Paso.titulo => '¿Qué hay que hacer?',
     _Paso.area => '¿De qué área es?',
     _Paso.puntos => 'Puntos y cupos',
@@ -217,7 +218,8 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
 
   String? get _ayuda => switch (_paso) {
     _Paso.tipo => 'Una recurrente se crea sola cada cierto tiempo (cada semana, cada mes, cada 6 meses…). Puedes pausarla o terminarla cuando quieras.',
-    _Paso.repeticion => 'Elige cada cuánto aparece en el tablero, desde qué día y cuándo vence cada vez.',
+    _Paso.repeticion => 'Cada vez que toca, la tarea aparece sola en el tablero.',
+    _Paso.calendario => 'El día en que aparece por primera vez y cuánto tiempo hay para hacerla cada vez.',
     _Paso.titulo => widget.modo == ModoTarea.proponer ? 'Queda asignada a ti. Los puntos los define admin al aprobarla.' : null,
     _Paso.puntos => 'Los puntos se suman al aprobarla. Los cupos son cuántas personas pueden tomarla.',
     _Paso.fecha => widget.siguientes ? 'La fecha cambia solo en la de este mes.' : null,
@@ -308,6 +310,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
         ],
       ),
       _Paso.repeticion => _repeticion(context),
+      _Paso.calendario => _calendario(context),
       _Paso.fecha => ListView(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
         children: [
@@ -396,12 +399,6 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
       t,
       style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
     );
-    final siguiente = switch (_unidad) {
-      'dia' => _inicio.add(Duration(days: _cadaN)),
-      'semana' => _inicio.add(Duration(days: 7 * _cadaN)),
-      _ => DateTime(_inicio.year, _inicio.month + _cadaN, _inicio.day),
-    };
-    final vence = _venceEnDias == null ? siguiente.subtract(const Duration(days: 1)) : _inicio.add(Duration(days: _venceEnDias!));
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
@@ -429,7 +426,26 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // Segundo paso de la recurrente (Victor, 2026-11-13: era mucho en uno).
+  Widget _calendario(BuildContext context) {
+    final p = context.pivot;
+    Text titulo(String t) => Text(
+      t,
+      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+    );
+    final siguiente = switch (_unidad) {
+      'dia' => _inicio.add(Duration(days: _cadaN)),
+      'semana' => _inicio.add(Duration(days: 7 * _cadaN)),
+      _ => DateTime(_inicio.year, _inicio.month + _cadaN, _inicio.day),
+    };
+    final vence = _venceEnDias == null ? siguiente.subtract(const Duration(days: 1)) : _inicio.add(Duration(days: _venceEnDias!));
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      children: [
         titulo('Aparece por primera vez'),
         const SizedBox(height: 4),
         ListTile(
@@ -449,7 +465,7 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
           },
         ),
         const SizedBox(height: 12),
-        titulo('Cada vez vence'),
+        titulo('Tiempo para hacerla cada vez'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -457,12 +473,12 @@ class _CrearTareaScreenState extends State<CrearTareaScreen> {
           children: [
             ChoiceChip(
               showCheckmark: false,
-              label: const Text('Antes de la siguiente'),
+              label: const Text('Hasta la siguiente'),
               selected: _venceEnDias == null,
               onSelected: (_) => setState(() => _venceEnDias = null),
             ),
             for (final d in const [3, 7, 15])
-              ChoiceChip(showCheckmark: false, label: Text('A los $d días'), selected: _venceEnDias == d, onSelected: (_) => setState(() => _venceEnDias = d)),
+              ChoiceChip(showCheckmark: false, label: Text('$d días'), selected: _venceEnDias == d, onSelected: (_) => setState(() => _venceEnDias = d)),
           ],
         ),
         const SizedBox(height: 16),

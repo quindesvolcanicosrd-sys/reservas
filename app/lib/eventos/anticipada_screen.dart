@@ -212,6 +212,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   late final Set<int> _dias = {...?widget.editando?.diasSemana};
   late final Set<String> _lugares = {...?widget.editando?.lugares};
   List<String>? _lugaresDisponibles;
+  bool _soloAlgunos = false;
 
   @override
   void initState() {
@@ -392,7 +393,9 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
         _Paso.alcance => _pasoAlcance(context),
       },
       textoBoton: _paso == _Paso.alcance ? (widget.editando == null ? 'Aplicar' : 'Guardar cambios') : (_siguienteVisible ? 'Siguiente' : null),
-      alContinuar: _paso == _Paso.alcance ? _aplicar : (_paso == _Paso.fechas ? (_fechasValidas ? () => _ir(1) : null) : () => _ir(1)),
+      alContinuar: _paso == _Paso.alcance
+          ? (_soloAlgunos && _dias.isEmpty && _lugares.isEmpty ? null : _aplicar)
+          : (_paso == _Paso.fechas ? (_fechasValidas ? () => _ir(1) : null) : () => _ir(1)),
       ocupado: _ocupado,
     );
   }
@@ -417,11 +420,13 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
 
   Widget _pasoAlcance(BuildContext context) {
     final p = context.pivot;
-    final todos = _dias.isEmpty && _lugares.isEmpty;
+    final algunos = _soloAlgunos || _dias.isNotEmpty || _lugares.isNotEmpty;
     Text titulo(String t) => Text(
       t,
       style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
     );
+    // Primero "¿todos o algunos?"; los días y lugares aparecen solo si eligen
+    // "Solo algunos" (Victor, 2026-11-13: era mucho en un paso).
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -429,60 +434,79 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
           icono: Icons.event_available_rounded,
           titulo: 'Todos los entrenamientos',
           texto: 'Sin importar el día ni el lugar.',
-          activa: todos,
+          activa: !algunos,
           alTocar: () => setState(() {
+            _soloAlgunos = false;
             _dias.clear();
             _lugares.clear();
           }),
         ),
-        const SizedBox(height: 12),
-        titulo('Solo estos días'),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            for (var d = 1; d <= 7; d++)
-              FilterChip(
-                showCheckmark: false,
-                label: Text(ReglaAnticipada.nombresDias[d - 1].substring(0, 3)),
-                tooltip: ReglaAnticipada.nombresDias[d - 1],
-                selected: _dias.contains(d),
-                onSelected: (_) => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
-              ),
-          ],
+        const SizedBox(height: 10),
+        OpcionAsistente(
+          icono: Icons.filter_alt_outlined,
+          titulo: 'Solo algunos',
+          texto: 'Ciertos días de la semana o ciertos lugares.',
+          activa: algunos,
+          alTocar: () => setState(() => _soloAlgunos = true),
         ),
-        const SizedBox(height: 18),
-        titulo('Solo en estos lugares'),
-        const SizedBox(height: 8),
-        if (_lugaresDisponibles == null)
-          const Center(child: PivotCargando(tamano: 40))
-        else if (_lugaresDisponibles!.isEmpty)
-          Text('No hay lugares guardados.', style: TextStyle(color: p.textoSecundario))
-        else
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final l in {..._lugaresDisponibles!, ..._lugares})
-                FilterChip(
-                  showCheckmark: false,
-                  label: Text(l),
-                  selected: _lugares.contains(l),
-                  onSelected: (_) => setState(() => _lugares.contains(l) ? _lugares.remove(l) : _lugares.add(l)),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: !algunos
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      titulo('Días'),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (var d = 1; d <= 7; d++)
+                            FilterChip(
+                              showCheckmark: false,
+                              label: Text(ReglaAnticipada.nombresDias[d - 1].substring(0, 3)),
+                              tooltip: ReglaAnticipada.nombresDias[d - 1],
+                              selected: _dias.contains(d),
+                              onSelected: (_) => setState(() => _dias.contains(d) ? _dias.remove(d) : _dias.add(d)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      titulo('Lugares'),
+                      const SizedBox(height: 8),
+                      if (_lugaresDisponibles == null)
+                        const Center(child: PivotCargando(tamano: 40))
+                      else if (_lugaresDisponibles!.isEmpty)
+                        Text('No hay lugares guardados.', style: TextStyle(color: p.textoSecundario))
+                      else
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final l in {..._lugaresDisponibles!, ..._lugares})
+                              FilterChip(
+                                showCheckmark: false,
+                                label: Text(l),
+                                selected: _lugares.contains(l),
+                                onSelected: (_) => setState(() => _lugares.contains(l) ? _lugares.remove(l) : _lugares.add(l)),
+                              ),
+                          ],
+                        ),
+                      const SizedBox(height: 14),
+                      Text(
+                        _dias.isEmpty && _lugares.isEmpty
+                            ? 'Elige al menos un día o un lugar. Si eliges los dos, aplica cuando coinciden.'
+                            : 'Aplica ${ReglaAnticipada(tipo: TipoRango.indefinido, estado: EstadoRsvp.asistire, diasSemana: _dias.toList(), lugares: _lugares.toList()).resumenFiltros.toLowerCase()}.',
+                        style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+                      ),
+                    ],
+                  ),
                 ),
-            ],
-          ),
-        const SizedBox(height: 18),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: Text(
-            todos
-                ? 'Se aplica a todos tus entrenamientos del rango elegido.'
-                : 'Se aplica solo a ${ReglaAnticipada(tipo: TipoRango.indefinido, estado: EstadoRsvp.asistire, diasSemana: _dias.toList(), lugares: _lugares.toList()).resumenFiltros.replaceFirst('Solo ', '').toLowerCase()}.',
-            key: ValueKey('${_dias.length}-${_lugares.length}-$todos'),
-            style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
-          ),
         ),
       ],
     );
