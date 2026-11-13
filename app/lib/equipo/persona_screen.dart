@@ -133,7 +133,8 @@ class _Ficha extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: pal.textoSecundario),
               ),
             ],
-            if (repo.esAdmin && !yo) ...[const SizedBox(height: 18), _Administracion(repo: repo, p: p)],
+            // También en tu propia ficha: un Pivot puede registrar su pago.
+            if (repo.esAdmin) ...[const SizedBox(height: 18), _Administracion(repo: repo, p: p)],
           ],
         ),
       ),
@@ -456,6 +457,20 @@ class _AdministracionState extends State<_Administracion> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Título para encontrarla (Victor, 2026-11-13: no la veía).
+                Row(
+                  children: [
+                    Icon(Icons.admin_panel_settings_outlined, size: 20, color: pal.marcaTexto),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Funciones de Pivot',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: pal.texto),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('Solo las ven los Pivots: pagos, categoría, permisos y más.', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                const SizedBox(height: 14),
                 Text('Categoría', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
                 const SizedBox(height: 6),
                 SegmentedButton<String>(
@@ -504,23 +519,25 @@ class _AdministracionState extends State<_Administracion> {
                   value: !p.exentaCuota,
                   onChanged: (v) => _hacer(() => repo.cambiarPagaCuota(p, v), v ? 'Ahora paga cuota' : 'Ya no paga cuota'),
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Acceso de administradorx'),
-                  value: p.esAdminMiembro,
-                  onChanged: p.email.isEmpty
-                      ? null
-                      : (v) async {
-                          if (!await _confirmar(
-                            v ? '¿Dar acceso de administradorx?' : '¿Quitar acceso de administradorx?',
-                            v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
-                            v ? 'Dar acceso' : 'Quitar acceso',
-                          )) {
-                            return;
-                          }
-                          _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso de administradorx otorgado' : 'Acceso de administradorx quitado');
-                        },
-                ),
+                // En tu propia ficha no puedes quitarte el acceso.
+                if (!repo.esYo(p))
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Acceso de administradorx'),
+                    value: p.esAdminMiembro,
+                    onChanged: p.email.isEmpty
+                        ? null
+                        : (v) async {
+                            if (!await _confirmar(
+                              v ? '¿Dar acceso de administradorx?' : '¿Quitar acceso de administradorx?',
+                              v ? '${p.nombreMostrar} podrá ver y cambiar todo lo de Mi Liga.' : '${p.nombreMostrar} dejará de ver Mi Liga.',
+                              v ? 'Dar acceso' : 'Quitar acceso',
+                            )) {
+                              return;
+                            }
+                            _hacer(() => repo.cambiarAdmin(p, v), v ? 'Acceso de administradorx otorgado' : 'Acceso de administradorx quitado');
+                          },
+                  ),
 
                 // Viaje (web `_eqAbrirSheetViaje()`): "De viaje" solo se marca con fechas.
                 if (p.deViaje)
@@ -570,7 +587,7 @@ class _AdministracionState extends State<_Administracion> {
                 ),
                 // Archivar solo con inactividad (Victor, 2026-11-07); el
                 // servidor además lo impide con reservas o cuotas activas.
-                if (p.inactivx)
+                if (p.inactivx && !repo.esYo(p))
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.archive_outlined, color: pal.marcaTexto),

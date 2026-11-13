@@ -557,33 +557,43 @@ class _DetalleScreenState extends State<DetalleScreen> {
         children: [
           // Tu asistencia real y "¿Es correcto?" (rectificaciones, 2026-11-12).
           if (BotonRectificacion.aplica(ev))
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              decoration: BoxDecoration(color: p.tarjeta, borderRadius: BorderRadius.circular(PivotRadios.grande)),
-              child: Row(
-                children: [
-                  Icon(switch (mia) {
-                    EstadoReal.aTiempo => Icons.check_circle_rounded,
-                    EstadoReal.tarde => Icons.schedule_rounded,
-                    null => Icons.cancel_outlined,
-                  }, color: p.marcaTexto),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            // Toda la tarjeta se toca para pedir la revisión.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Material(
+                color: p.tarjeta,
+                borderRadius: BorderRadius.circular(PivotRadios.grande),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(PivotRadios.grande),
+                  onTap: () => BotonRectificacion(repo: repo, ev: ev).tocar(context),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                    child: Row(
                       children: [
-                        Text('Tu asistencia', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                        Text(switch (mia) {
-                          EstadoReal.aTiempo => 'Llegaste a horario',
-                          EstadoReal.tarde => 'Llegaste tarde',
-                          null => 'No asististe',
-                        }, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
+                        Icon(switch (mia) {
+                          EstadoReal.aTiempo => Icons.check_circle_rounded,
+                          EstadoReal.tarde => Icons.schedule_rounded,
+                          null => Icons.cancel_outlined,
+                        }, color: p.marcaTexto),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Tu asistencia', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                              Text(switch (mia) {
+                                EstadoReal.aTiempo => 'Llegaste a horario',
+                                EstadoReal.tarde => 'Llegaste tarde',
+                                null => 'No asististe',
+                              }, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto)),
+                            ],
+                          ),
+                        ),
+                        BotonRectificacion(repo: repo, ev: ev),
                       ],
                     ),
                   ),
-                  BotonRectificacion(repo: repo, ev: ev),
-                ],
+                ),
               ),
             ),
           Padding(

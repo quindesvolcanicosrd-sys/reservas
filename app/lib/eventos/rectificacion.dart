@@ -113,35 +113,108 @@ class BotonRectificacion extends StatelessWidget {
     );
   }
 
+  /// Tocar la asistencia: pedir revisión o, si ya hay una, ver su estado.
+  void tocar(BuildContext context) {
+    final r = repo.rectificaciones[ev.id];
+    final d = r?['decision'];
+    if (d == 'Pendiente' || d == 'Rechazada') {
+      _info(context, r!);
+    } else if (d != 'Aprobada') {
+      _pedir(context);
+    }
+  }
+
+  /// Texto de la acción: "¿Es correcto?", "En revisión" o nada si ya se aprobó.
+  String? accion() => switch (repo.rectificaciones[ev.id]?['decision']) {
+    'Pendiente' => 'En revisión',
+    'Rechazada' => 'Revisada',
+    'Aprobada' => null,
+    _ => '¿Es correcto?',
+  };
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: repo,
+    builder: (context, _) {
+      final txt = aplica(ev) ? accion() : null;
+      if (txt == null) return const SizedBox.shrink();
+      return _SegmentoAccion(texto: txt, info: txt != '¿Es correcto?');
+    },
+  );
+}
+
+class _SegmentoAccion extends StatelessWidget {
+  const _SegmentoAccion({required this.texto, required this.info});
+  final String texto;
+  final bool info;
+
   @override
   Widget build(BuildContext context) {
-    if (!aplica(ev)) return const SizedBox.shrink();
+    final p = context.pivot;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (info) ...[Icon(Icons.info_outline_rounded, size: 14, color: p.marcaTexto), const SizedBox(width: 3)],
+        Text(
+          texto,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.marcaTexto),
+        ),
+        Icon(Icons.chevron_right_rounded, size: 16, color: p.marcaTexto),
+      ],
+    );
+  }
+}
+
+/// Pill de tu asistencia real con "¿Es correcto?" dentro (Victor,
+/// 2026-11-13: suelto se veía sin sentido). Toda la pill se toca.
+class PillAsistencia extends StatelessWidget {
+  const PillAsistencia({super.key, required this.repo, required this.ev, required this.texto, this.icono});
+  final EventosRepo repo;
+  final Evento ev;
+  final String texto;
+  final IconData? icono;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final b = BotonRectificacion(repo: repo, ev: ev);
     return ListenableBuilder(
       listenable: repo,
       builder: (context, _) {
-        final p = context.pivot;
-        final r = repo.rectificaciones[ev.id];
-        final decision = r?['decision'];
-        final Widget boton;
-        if (decision == 'Pendiente' || decision == 'Rechazada') {
-          boton = TextButton.icon(
-            key: ValueKey(decision),
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact, foregroundColor: p.textoSecundario),
-            onPressed: () => _info(context, r!),
-            icon: const Icon(Icons.info_outline_rounded, size: 18),
-            label: Text(decision == 'Pendiente' ? 'Revisión pendiente' : 'Revisión rechazada'),
-          );
-        } else if (decision == 'Aprobada') {
-          boton = const SizedBox.shrink(key: ValueKey('ok'));
-        } else {
-          boton = TextButton(
-            key: const ValueKey('pedir'),
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            onPressed: () => _pedir(context),
-            child: const Text('¿Es correcto?'),
-          );
-        }
-        return AnimatedSwitcher(duration: const Duration(milliseconds: 220), child: boton);
+        final accion = BotonRectificacion.aplica(ev) ? b.accion() : null;
+        return Material(
+          color: p.suave,
+          shape: const StadiumBorder(),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: accion == null ? null : () => b.tocar(context),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 5, 6, 5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icono != null) ...[Icon(icono, size: 15, color: p.sobreSuave), const SizedBox(width: 4)],
+                  Text(
+                    texto,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.sobreSuave),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    child: accion == null
+                        ? const SizedBox(width: 4)
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 1, height: 14, margin: const EdgeInsets.symmetric(horizontal: 8), color: p.sobreSuave.withValues(alpha: 0.3)),
+                              _SegmentoAccion(texto: accion, info: accion != '¿Es correcto?'),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }

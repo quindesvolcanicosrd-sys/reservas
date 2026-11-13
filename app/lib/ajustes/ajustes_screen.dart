@@ -5,7 +5,7 @@ import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../equipo/estadisticas.dart';
-import '../equipo/roles_screen.dart';
+import '../pivots/ajustes_liga_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
@@ -128,11 +128,11 @@ class _AjustesScreenState extends State<AjustesScreen> {
                 GrupoAjustes(
                   filas: [
                     FilaAjuste(
-                      icono: Icons.shield_outlined,
+                      icono: Icons.admin_panel_settings_outlined,
                       seccion: 'roles',
-                      titulo: 'Roles del equipo',
-                      valor: 'Crear, renombrar o borrar roles',
-                      alTocar: () => SubAjustes.abrir(context, RolesScreen(repo: EquipoRepo.de(sesion))),
+                      titulo: 'Ajustes de la liga',
+                      valor: 'Solo Pivots: categorías y roles',
+                      alTocar: () => SubAjustes.abrir(context, AjustesLigaScreen(sesion: sesion)),
                     ),
                   ],
                 ),

@@ -1569,13 +1569,7 @@ class _TarjetaEvento extends StatelessWidget {
                     Etiqueta(texto: textoEstadoEvento(ev), apagada: true)
                   else if (miReal != null)
                     // Evento pasado con asistencia tomada (Victor, 2026-11-12): lo que pasó de verdad.
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Etiqueta(texto: miReal.$1, icono: miReal.$2),
-                        BotonRectificacion(repo: repo, ev: ev),
-                      ],
-                    )
+                    PillAsistencia(repo: repo, ev: ev, texto: miReal.$1, icono: miReal.$2)
                   else if (ev.miEstado != null && !ev.finalizado)
                     Etiqueta(texto: textoMiEstado(ev.miEstado!), icono: iconoMiEstado(ev.miEstado!)),
                 ],
