@@ -174,6 +174,14 @@ async function _validarAdminToken(token: string): Promise<string | null> {
   return data.email;
 }
 
+const ACCIONES_SOLO_PIVOTS = new Set([
+  'adminGetVenues', 'adminCrearVenue', 'adminEditarVenue', 'adminEliminarVenue',
+  'adminGetEquipamiento', 'adminGuardarEquipamiento', 'adminGetTareasActivas', 'adminBuscarPersonasParaEvento',
+  'adminGetEstadoPagosMes', 'adminGetPagosAnual', 'adminGetBalanceFinanciero', 'adminGetUsuarios',
+  'adminGetCandidatosAdmin', 'adminGetRosterEquipo', 'adminGetQueLlevar', 'adminEnviarPush',
+  'adminGetReservas', 'adminGetSolicitudesPago', 'adminResolverSolicitudPago',
+]);
+
 async function _esAdmin(email: string): Promise<boolean> {
   if (!email) return false;
   if (email.toLowerCase() === ADMIN_PRINCIPAL.toLowerCase()) return true;
@@ -3523,12 +3531,15 @@ async function crearSolicitudPago(params: Record<string, any>): Promise<Record<s
   return { exito: true };
 }
 
-async function adminGetSolicitudesPago(): Promise<any[]> {
+// Solo Pivots (antes no pedía sesión, arreglo 2026-11-12).
+async function adminGetSolicitudesPago(params: Record<string, any>): Promise<any[]> {
+  if (!await _validarAdminToken(params.adminToken)) return [];
   const { data } = await supabase.from('solicitudes_pago').select('*').order('created_at', { ascending: false });
   return data ?? [];
 }
 
 async function adminResolverSolicitudPago(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
   const { id, accion } = params; // accion: 'aprobar' | 'rechazar'
   const estado = accion === 'aprobar' ? 'aprobada' : 'rechazada';
   await supabase.from('solicitudes_pago').update({ estado }).eq('id', id);
@@ -6888,6 +6899,8 @@ async function cronDiario(): Promise<Record<string, any>> {
 // ─── Acciones: reservas admin ─────────────────────────────────────────────────
 
 async function adminGetReservas(params: Record<string, any>): Promise<any[]> {
+  // Pagos con nombres y montos: solo Pivots (antes no pedía sesión, arreglo 2026-11-12).
+  if (!await _validarAdminToken(params.adminToken)) return [];
   const { data: reservas } = await supabase.from('reservas').select('*').order('fecha_pago', { ascending: false });
   if (!reservas?.length) return [];
   const ids = reservas.filter((r: any) => r.id_evento).map((r: any) => r.id_evento);
@@ -6990,7 +7003,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     const params = await parseParams(req);
-    const action = params.action;
+        const action = params.action;
+
+    // Acciones de Pivots que antes no pedían sesión (revisión 2026-11-12):
+    // sin un adminToken válido no se ejecutan. La web y la app siempre lo mandan.
+    if (ACCIONES_SOLO_PIVOTS.has(String(action)) && !(await _validarAdminToken(String(params.adminToken ?? '')))) {
+      return json({ exito: false, error: 'Sesión admin inválida.' });
+    }
 
     switch (action) {
       // Auth
@@ -7161,7 +7180,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetPagosAnual':              return json(await adminGetPagosAnual(params));
       case 'adminGetBalanceFinanciero':       return json(await adminGetBalanceFinanciero());
       case 'crearSolicitudPago':              return json(await crearSolicitudPago(params));
-      case 'adminGetSolicitudesPago':         return json(await adminGetSolicitudesPago());
+            case 'adminGetSolicitudesPago':         return json(await adminGetSolicitudesPago(params));
       case 'adminResolverSolicitudPago':      return json(await adminResolverSolicitudPago(params));
       // Usuarios / admins
       case 'adminGetUsuarios':               return json(await adminGetUsuarios());

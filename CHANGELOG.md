@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — Seguridad: 19 acciones de Pivots (pagos, balance, usuarios, enviar avisos al equipo, lugares, equipamiento…) ahora exigen una sesión de Pivot válida; antes se podían llamar sin sesión.
+
 2026-11-12 — App Android: Calendario con todos los filtros en un botón junto a la lupa (qué mostrar, tipo, lugar y área de tarea); la lupa queda solo para buscar texto, avisa si hay filtros activos y ofrece "Buscar en todo".
 
 2026-11-12 — App Android: roles del equipo editables por Pivots (Mi perfil → Ajustes de la liga); "del club" pasa a "del equipo"; ícono de cámara en el avatar de Mi perfil.
