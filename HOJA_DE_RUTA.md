@@ -3,6 +3,7 @@
 Fuente de verdad del trabajo pendiente. La lee cada corrida de la tarea programada (cada 2 días, 3:00 Ecuador) junto con MANIFEST.md.
 - Detalle de diseño de Calendario, Yo, audiencias, personalización y crear liga: `PENDIENTES_2026-11-12.md` (secciones A–H).
 - Revisión y respuestas de Victor del 2026-11-12: https://claude.ai/artifact/MqCCxzsXEGrYZr3KBhGXfE
+- Puntos del documento original que no estaban en las etapas: `PENDIENTES_2026-11-12.md` sección I.
 - Pedidos nuevos de Victor: documento "Pivot — Bandeja" (claude.ai); lo hecho se pasa aquí y a MANIFEST.
 
 Reglas de siempre:

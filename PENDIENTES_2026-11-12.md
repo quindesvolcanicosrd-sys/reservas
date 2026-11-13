@@ -358,6 +358,31 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
   - Si la app sale en iPhone y ofrece Google, Apple exige también "Continuar con Apple".
   - Recuperar contraseña por correo.
 
+## I. Del documento original "Cambios" (revisión 2026-11-13): lo que no estaba en la hoja de ruta
+- [ ] **Rectificaciones a un Pivot elegido**: como en las excepciones, la persona puede elegir a qué Pivots enviarla.
+- [ ] **Qué llevar, recordatorio configurable**: el aviso de equipamiento a llevar 1 h antes por defecto; cada Pivot puede cambiarlo a 2 o 3 h antes.
+- [ ] **Enviar notificaciones (hoy en Mi Liga web)**: versión más completa y bonita en la app, con envío programado en una fecha y hora específicas, además del envío inmediato.
+- [ ] **Pago por clase aprobado**: la persona queda como "Asistiré" sola en ese evento (el servidor ya lo hace con Mirlxs); si no puede ir, una hoja con "Cancelar o reagendar". Verificar que en la app sea así para todos los casos.
+- [ ] **Precios de clases y cupones en un solo lugar** (hoy son dos pills separadas en la web).
+- [ ] **Tesorería, extras** (sumar a la etapa 5):
+  - porcentaje de pagos por medio (De Una, banco, efectivo);
+  - un tablero con vistas rápidas (saldo, ingresos y egresos del mes, deudas, números rojos);
+  - saldo inicial y transparencia como pasos opcionales del asistente de crear liga;
+  - consentimiento de quien ve las finanzas y aviso de que Pivot no responde por fondos mal administrados.
+- [ ] **Pagos por defecto según categoría**: en el asistente, la categoría A paga por mes y B o C por clase (editable).
+- [ ] **Datos sensibles**: siempre que una liga los active, al menos una persona debe poder verlos; cada persona (Pivot o no) elige qué Pivots ven sus datos de emergencia y domicilio.
+- [ ] **Partidos y torneos (solo roller derby)**, detalle para la etapa 11:
+  - equipos de la liga y de otras ligas en Pivot, invitados por solicitud a sus Pivots;
+  - rosters por partido, editables hasta 5 días antes;
+  - reglas básicas de pista plana, con tiempos y medios tiempos personalizables;
+  - oficiales (SO y NSO) de la liga u otras ligas, con solicitud para aceptar; la app no deja poner a la misma persona como jugadora y oficial del mismo partido;
+  - cronograma tipo calendario con tiempos entre partidos (y partidos simultáneos en un torneo);
+  - tareas del torneo (anfitriones: preparar la cancha, con fechas límite) y de equipos invitados (firmar documentos, pagar inscripción);
+  - adjuntos (ej. documentos legales) visibles para los equipos invitados;
+  - merch: inventario y precios visibles para otros equipos;
+  - una pantalla de torneos con próximos partidos, invitaciones y pendientes; quizás con lugar propio en la barra.
+- [ ] **No se pasan a la app**: "Estado actual del equipo" y "Usuarios" de Mi Liga web (archivar queda en Equipo; eliminar, como último recurso y conservando los pagos).
+
 ## Orden propuesto
 0. Prioridad 1 de la auditoría (consultas de `log_asistencias` + índices).
 1. Ronda de 11 cambios de arriba y la migración pendiente.
