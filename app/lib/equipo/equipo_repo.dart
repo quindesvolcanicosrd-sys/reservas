@@ -34,7 +34,40 @@ class EquipoRepo extends ChangeNotifier {
 
   /// Roles elegidos; filtran la lista sin ir al servidor.
   final Set<String> filtroRoles = {};
-  static const rolesCatalogo = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
+
+  /// Catálogo de roles de la liga (editable por Pivots, Victor 2026-11-12).
+  /// Hasta que llega del servidor, los de roller derby.
+  List<String> roles = const ['Jammer', 'Pivot', 'Blocker', 'Bench', 'Coach', 'SO', 'NSO'];
+
+  /// Cuántas personas tienen cada rol.
+  Map<String, int> rolesEnUso = const {};
+
+  /// Para filtrar Equipo: el catálogo y "No definido".
+  List<String> get rolesCatalogo => [...roles, 'No definido'];
+
+  Future<void> cargarRoles() async {
+    try {
+      final r = await _api.get('getRolesEquipo', {});
+      roles = [for (final x in (r['roles'] as List? ?? const [])) '$x'];
+      rolesEnUso = {for (final e in ((r['enUso'] as Map?) ?? const {}).entries) '${e.key}': (e.value as num).toInt()};
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// crear (nombre), renombrar (nombre → nuevo), borrar (nombre), ordenar (lista).
+  /// Devuelve el error, o null si salió bien.
+  Future<String?> cambiarRol(String accion, {String? nombre, String? nuevo, List<String>? lista}) async {
+    try {
+      final r = await _api.post('adminRolesEquipo', {'adminToken': sesion.adminToken, 'accion': accion, 'nombre': ?nombre, 'nuevo': ?nuevo, 'roles': ?lista});
+      if (r['exito'] != true) return '${r['error'] ?? 'No se pudo guardar.'}';
+      roles = [for (final x in (r['roles'] as List? ?? const [])) '$x'];
+      notifyListeners();
+      await cargar(forzar: true); // también trae el catálogo y los conteos
+      return null;
+    } catch (_) {
+      return 'No se pudo guardar. Revisa tu conexión.';
+    }
+  }
 
   bool get hayFiltros => filtroRoles.isNotEmpty;
 
@@ -102,7 +135,9 @@ class EquipoRepo extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       favoritos = (prefs.getStringList(_prefFavoritos) ?? const []).toSet();
+      final rolesF = cargarRoles();
       final r = await _api.get('getEquipo', {if (esAdmin) 'adminToken': sesion.adminToken});
+      await rolesF;
       personas = [
         for (final m in (r['personas'] as List? ?? const []))
           if (m is Map<String, dynamic>) Integrante(m),

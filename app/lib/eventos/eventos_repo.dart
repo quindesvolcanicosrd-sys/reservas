@@ -176,7 +176,7 @@ class EventosRepo extends ChangeNotifier {
       return 'Para responder necesitas tener pagado el mes de ${Fechas.mes(ev.fecha)}.';
     }
     if (ev.tipo == 'Entrenamiento' && (d['necesitaPatines'] == 'Sí' || d['necesitaProtecciones'] == 'Sí')) {
-      return 'Como usas equipo del club, tu lugar en los entrenamientos se confirma con la reserva.';
+      return 'Como usas equipamiento del equipo, tu lugar en los entrenamientos se confirma con la reserva.';
     }
     if (_modo == 'mirlxs' && c != null && !c.alDia) return 'Para responder necesitas tener tu cuota al día.';
     if (c != null && c.tieneReserva(ev.id)) return 'Ya tienes una reserva para este evento.';

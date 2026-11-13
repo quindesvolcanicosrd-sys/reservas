@@ -644,9 +644,10 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   for (const camel of Object.keys(datos ?? {})) { if (CAMPO_MAP[camel]) update[CAMPO_MAP[camel]] = datos[camel]; }
   // `fecha_nacimiento` es `date`: '' o un formato raro romperían el UPDATE entero.
     if ('fecha_nacimiento' in update) update.fecha_nacimiento = _normalizarFechaNac(update.fecha_nacimiento);
-  // Roles: solo los del catálogo (web `_EQ_ROLES`).
+    // Roles: solo los del catálogo de la liga (`_rolesEquipo`, editable por
+  // Pivots desde 2026-11-12).
   if ('roles' in update) {
-    const validos = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
+    const validos = await _rolesEquipo();
     const lista = Array.isArray(update.roles) ? update.roles : String(update.roles ?? '').split(',');
     update.roles = lista.map((x: any) => String(x).trim()).filter((x: string) => validos.includes(x));
   }
@@ -1927,6 +1928,79 @@ async function adminEditarTareaRecurrente(params: Record<string, any>): Promise<
   if (error) return { exito: false, error: 'No se pudo guardar.' };
   await supabase.from('tareas').update(cambios).eq('tarea_recurrente_id', params.idPlantilla).in('estado', ['no_iniciada', 'en_progreso', 'expirada']);
   return { exito: true };
+}
+
+// ─── Catálogo de roles de la liga (Victor, 2026-11-12) ──────────────────
+// Lista ordenada en `config_app.roles_equipo` (JSON). Sin guardar: los de
+// roller derby. Pivots renombran (cambia en todas las fichas), crean y
+// borran (se quita de las fichas, con confirmación en la app).
+const ROLES_DEPORTE = ['Jammer', 'Pivot', 'Blocker', 'Bench', 'Coach', 'SO', 'NSO'];
+
+async function _rolesEquipo(): Promise<string[]> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'roles_equipo').maybeSingle();
+  try {
+    const l = JSON.parse(String(data?.value ?? ''));
+    if (Array.isArray(l)) return l.map((x: any) => String(x).trim()).filter(Boolean);
+  } catch (_) { /* sin guardar */ }
+  return [...ROLES_DEPORTE];
+}
+
+async function _guardarRolesEquipo(roles: string[]): Promise<boolean> {
+  const { error } = await supabase.from('config_app').upsert({ key: 'roles_equipo', value: JSON.stringify(roles) }, { onConflict: 'key' });
+  return !error;
+}
+
+async function getRolesEquipo(): Promise<Record<string, any>> {
+  const roles = await _rolesEquipo();
+  const { data } = await supabase.from('equipo').select('roles').is('eliminado_en', null).not('roles', 'is', null);
+  const enUso: Record<string, number> = {};
+  for (const f of data ?? []) for (const r of (Array.isArray(f.roles) ? f.roles : [])) enUso[r] = (enUso[r] ?? 0) + 1;
+  return { exito: true, roles, enUso };
+}
+
+// accion: crear (nombre), renombrar (nombre → nuevo), borrar (nombre), ordenar (roles).
+async function adminRolesEquipo(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!await _validarAdminToken(params.adminToken)) return { exito: false, error: 'Sesión admin inválida.' };
+  const accion = String(params.accion ?? '');
+  const nombre = String(params.nombre ?? '').trim().replace(/\s+/g, ' ');
+  const nuevo = String(params.nuevo ?? '').trim().replace(/\s+/g, ' ');
+  const roles = await _rolesEquipo();
+  const existe = (n: string) => roles.some((r) => r.toLowerCase() === n.toLowerCase());
+  if (accion === 'crear') {
+    if (!nombre || nombre.length > 30) return { exito: false, error: 'Escribe un nombre de hasta 30 letras.' };
+    if (existe(nombre)) return { exito: false, error: 'Ese rol ya existe.' };
+    roles.push(nombre);
+  } else if (accion === 'renombrar') {
+    const i = roles.indexOf(nombre);
+    if (i < 0) return { exito: false, error: 'Ese rol ya no existe.' };
+    if (!nuevo || nuevo.length > 30) return { exito: false, error: 'Escribe un nombre de hasta 30 letras.' };
+    if (nuevo !== nombre && existe(nuevo) && nuevo.toLowerCase() !== nombre.toLowerCase()) return { exito: false, error: 'Ese rol ya existe.' };
+    roles[i] = nuevo;
+  } else if (accion === 'borrar') {
+    if (!roles.includes(nombre)) return { exito: false, error: 'Ese rol ya no existe.' };
+    roles.splice(roles.indexOf(nombre), 1);
+  } else if (accion === 'ordenar') {
+    const lista = Array.isArray(params.roles) ? params.roles.map((x: any) => String(x)) : [];
+    if (lista.length !== roles.length || !lista.every((r: string) => roles.includes(r))) return { exito: false, error: 'La lista cambió. Vuelve a abrirla.' };
+    roles.splice(0, roles.length, ...lista);
+  } else {
+    return { exito: false, error: 'Acción inválida.' };
+  }
+  if (!await _guardarRolesEquipo(roles)) return { exito: false, error: 'No se pudo guardar.' };
+  // Fichas que tienen el rol: se cambia o se quita.
+  let cambiadas = 0;
+  if (accion === 'renombrar' || accion === 'borrar') {
+    const { data: filas } = await supabase.from('equipo').select('username, roles').contains('roles', [nombre]);
+    for (const f of filas ?? []) {
+      const actual: string[] = Array.isArray(f.roles) ? f.roles : [];
+      const nueva = accion === 'borrar'
+        ? actual.filter((r) => r !== nombre)
+        : [...new Set(actual.map((r) => (r === nombre ? nuevo : r)))];
+      const { error } = await supabase.from('equipo').update({ roles: nueva }).eq('username', f.username);
+      if (!error) cambiadas++;
+    }
+  }
+  return { exito: true, roles, cambiadas };
 }
 
 // Pausar (deja de generarse cada mes), reanudar o terminar una recurrente.
@@ -6967,7 +7041,9 @@ Deno.serve(async (req: Request) => {
             case 'getTareasApp':                    return json(await getTareasApp(params));
       case 'adminGetTareasRecurrentes':       return json(await adminGetTareasRecurrentes(params));
       case 'adminEditarTareaRecurrente':      return json(await adminEditarTareaRecurrente(params));
-      case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
+            case 'adminEstadoTareaRecurrente':      return json(await adminEstadoTareaRecurrente(params));
+      case 'getRolesEquipo':                  return json(await getRolesEquipo());
+      case 'adminRolesEquipo':                return json(await adminRolesEquipo(params));
       case 'cronRecordatorioTareas': {
         const secretHeader = req.headers.get('x-cron-secret') ?? '';
         if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);

@@ -102,6 +102,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   String _consulta = '';
   String? _filtroLugar;
   String? _filtroTipo;
+  String? _filtroArea; // área de tarea
   DateTime _mesVisible = Fechas.hoy();
   // Título de la barra ("Noviembre"): se actualiza solo, sin reconstruir la
   // pantalla (antes cada cambio de mes al scrollear o deslizar redibujaba
@@ -159,6 +160,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
 
   static const _kTexto = 'eventos.busqueda', _kLugar = 'eventos.filtroLugar', _kTipo = 'eventos.filtroTipo';
+  static const _kVista = 'eventos.filtroVista', _kArea = 'eventos.filtroArea';
 
   Future<void> _cargarFiltros() async {
     try {
@@ -169,6 +171,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
         _textoBusqueda.text = _consulta;
         _filtroLugar = pr.getString(_kLugar);
         _filtroTipo = pr.getString(_kTipo);
+        _filtroArea = pr.getString(_kArea);
+        _vista = _Vista.values.firstWhere((v) => v.name == pr.getString(_kVista), orElse: () => _Vista.todo);
+        _claveFilas = null;
       });
     } catch (_) {}
   }
@@ -179,11 +184,16 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       _consulta.trim().isEmpty ? await pr.remove(_kTexto) : await pr.setString(_kTexto, _consulta);
       _filtroLugar == null ? await pr.remove(_kLugar) : await pr.setString(_kLugar, _filtroLugar!);
       _filtroTipo == null ? await pr.remove(_kTipo) : await pr.setString(_kTipo, _filtroTipo!);
+      _filtroArea == null ? await pr.remove(_kArea) : await pr.setString(_kArea, _filtroArea!);
+      _vista == _Vista.todo ? await pr.remove(_kVista) : await pr.setString(_kVista, _vista.name);
     } catch (_) {}
   }
 
   void _cambiarFiltros(VoidCallback cambio) {
-    setState(cambio);
+    setState(() {
+      cambio();
+      _claveFilas = null;
+    });
     _guardarFiltros();
   }
 
@@ -252,7 +262,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
 
   bool _pasaFiltros(_Item it) {
     if (!_coincideTexto(it)) return false;
-    if (it.esTarea) return _filtroLugar == null && _filtroTipo == null;
+    // Con filtros solo de eventos se ocultan las tareas, y al revés (el
+    // área ya se aplicó al armar las tareas).
+    final deEventos = _filtroLugar != null || _filtroTipo != null;
+    if (it.esTarea) return !deEventos || _filtroArea != null;
+    if (_filtroArea != null && !deEventos) return false;
     final ev = it.evento;
     if (_filtroLugar != null && ev?.lugar != _filtroLugar) return false;
     if (_filtroTipo != null) {
@@ -263,7 +277,21 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     return true;
   }
 
-  bool get _hayFiltros => _consulta.trim().isNotEmpty || _filtroLugar != null || _filtroTipo != null;
+  bool get _hayFiltros => _consulta.trim().isNotEmpty || _cantidadFiltros > 0;
+
+  /// Filtros del botón de filtros (la lupa es solo para el texto).
+  int get _cantidadFiltros => (_vista != _Vista.todo ? 1 : 0) + (_filtroLugar != null ? 1 : 0) + (_filtroTipo != null ? 1 : 0) + (_filtroArea != null ? 1 : 0);
+
+  /// "Eventos · Pista" para el aviso de la búsqueda.
+  String get _resumenFiltros =>
+      [if (_vista == _Vista.eventos) 'Eventos', if (_vista == _Vista.tareas) 'Tareas', ?_filtroTipo, ?_filtroLugar, ?_filtroArea].join(' · ');
+
+  void _quitarFiltros() {
+    _vista = _Vista.todo;
+    _filtroLugar = null;
+    _filtroTipo = null;
+    _filtroArea = null;
+  }
 
   List<_Item> _todos() => [
     if (_vista != _Vista.tareas) ...[
@@ -281,12 +309,14 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     final items = <_Item>[];
     for (final m in _tareas.mias) {
       if (m.vence == null || _atrasada(m)) continue;
+      if (_filtroArea != null && m.tarea.area != _filtroArea) continue;
       items.add(_Item.mia(m));
     }
     final porDia = <DateTime, List<Tarea>>{};
     for (final t in _tareas.tablero) {
       final v = t.vence;
       if (v == null || t.personas.isEmpty || t.tiene(_tareas.yo)) continue;
+      if (_filtroArea != null && t.area != _filtroArea) continue;
       porDia.putIfAbsent(Fechas.soloDia(v), () => []).add(t);
     }
     porDia.forEach((d, l) => items.add(_Item.grupo(l, d)));
@@ -506,8 +536,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void _limpiarFiltros() {
     _consulta = '';
     _textoBusqueda.clear();
-    _filtroLugar = null;
-    _filtroTipo = null;
+    _quitarFiltros();
   }
 
   // ─── Construcción ───────────────────────────────────────────────────────
@@ -528,6 +557,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           _consulta,
           _filtroLugar,
           _filtroTipo,
+          _filtroArea,
           ahora.day,
           ahora.hour,
           ahora.minute,
@@ -704,11 +734,26 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
             onPressed: _abrirTablero,
           ),
+          // Filtros en un solo lugar (Victor, 2026-11-12): qué mostrar, tipo
+          // y lugar de evento, área de tarea. Con el número de activos.
+          IconButton(
+            tooltip: _cantidadFiltros > 0 ? 'Filtros ($_cantidadFiltros activos)' : 'Filtros',
+            icon: Badge(
+              isLabelVisible: _cantidadFiltros > 0,
+              backgroundColor: p.marca,
+              label: Text('$_cantidadFiltros'),
+              child: const Icon(Icons.tune_rounded),
+            ),
+            onPressed: () {
+              _cerrarCalendario();
+              _abrirFiltros();
+            },
+          ),
           IconButton(
             key: _kBuscar,
-            tooltip: _hayFiltros ? 'Buscar (hay filtros activos)' : 'Buscar',
-            // Punto rojo: quedó una búsqueda o un filtro activo.
-            icon: Badge(isLabelVisible: _hayFiltros, smallSize: 9, backgroundColor: p.marca, child: const Icon(Icons.search_rounded)),
+            tooltip: _consulta.trim().isNotEmpty ? 'Buscar (hay una búsqueda activa)' : 'Buscar',
+            // Punto rojo: quedó una búsqueda guardada.
+            icon: Badge(isLabelVisible: _consulta.trim().isNotEmpty, smallSize: 9, backgroundColor: p.marca, child: const Icon(Icons.search_rounded)),
             onPressed: () {
               _cerrarCalendario();
               setState(() => _buscando = true);
@@ -721,16 +766,15 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     );
   }
 
-  int get _cantidadFiltros => (_filtroLugar != null ? 1 : 0) + (_filtroTipo != null ? 1 : 0);
-
   void _cerrarBusqueda() {
     FocusScope.of(context).unfocus();
     setState(() => _buscando = false);
     WidgetsBinding.instance.addPostFrameCallback((_) => _irA(Fechas.hoy(), animado: false));
   }
 
-  /// ← cierra (la búsqueda y los filtros quedan guardados), el campo al
-  /// centro con × para borrar el texto, y el botón de filtros a la derecha.
+  /// ← cierra (la búsqueda queda guardada) y el campo con × para borrar el
+  /// texto. Si hay filtros activos se respetan, y debajo se avisa con
+  /// "Con filtros: … · Quitar".
   Widget _barraBusqueda(BuildContext context) {
     final p = context.pivot;
     return Padding(
@@ -764,17 +808,6 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
                   ),
                 ),
               ),
-              const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Filtros',
-                onPressed: _abrirFiltros,
-                icon: Badge(
-                  isLabelVisible: _cantidadFiltros > 0,
-                  backgroundColor: p.marca,
-                  label: Text('$_cantidadFiltros'),
-                  child: const Icon(Icons.tune_rounded),
-                ),
-              ),
             ],
           ),
           AnimatedSize(
@@ -784,23 +817,20 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             child: _cantidadFiltros == 0
                 ? const SizedBox(width: double.infinity)
                 : Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 6, 0, 0),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
+                    padding: const EdgeInsets.fromLTRB(16, 2, 0, 0),
+                    child: Row(
                       children: [
-                        if (_filtroLugar != null)
-                          InputChip(
-                            avatar: const Icon(Icons.place_outlined, size: 18),
-                            label: Text(_filtroLugar!),
-                            onDeleted: () => _cambiarFiltros(() => _filtroLugar = null),
+                        Icon(Icons.tune_rounded, size: 16, color: p.textoSecundario),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Con filtros: $_resumenFiltros',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
                           ),
-                        if (_filtroTipo != null)
-                          InputChip(
-                            avatar: const Icon(Icons.category_outlined, size: 18),
-                            label: Text(_filtroTipo!),
-                            onDeleted: () => _cambiarFiltros(() => _filtroTipo = null),
-                          ),
+                        ),
+                        TextButton(onPressed: () => _cambiarFiltros(_quitarFiltros), child: const Text('Quitar')),
                       ],
                     ),
                   ),
@@ -810,8 +840,9 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     );
   }
 
-  /// Hoja de filtros: opciones que existen en lo que ya coincide con el
-  /// texto buscado (y con el otro filtro), igual que la web. Se aplican al
+  /// Hoja de filtros (todo en un lugar, Victor 2026-11-12): qué mostrar,
+  /// tipo y lugar de evento (solo opciones que existen en lo que coincide
+  /// con la búsqueda y el otro filtro) y área de tarea. Se aplican al
   /// instante.
   Future<void> _abrirFiltros() async {
     FocusScope.of(context).unfocus();
@@ -827,63 +858,97 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             refrescar(() {});
           }
 
-          Widget grupo(String titulo, IconData icono, String? valor, List<String> opciones, void Function(String?) alElegir) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Widget titulo(String texto, IconData icono) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(icono, size: 20, color: p.textoSecundario),
-                    const SizedBox(width: 8),
-                    Text(
-                      titulo,
-                      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(label: const Text('Todos'), selected: valor == null, onSelected: (_) => elegir(() => alElegir(null))),
-                    for (final o in opciones)
-                      ChoiceChip(label: Text(o), selected: valor == o, onSelected: (_) => elegir(() => alElegir(valor == o ? null : o))),
-                  ],
+                Icon(icono, size: 20, color: p.textoSecundario),
+                const SizedBox(width: 8),
+                Text(
+                  texto,
+                  style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
                 ),
               ],
-            );
-          }
+            ),
+          );
 
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          Widget grupo(String texto, IconData icono, String? valor, List<String> opciones, void Function(String?) alElegir) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 20),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Filtros', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 16),
-                  grupo('Lugar', Icons.place_outlined, _filtroLugar, _opcionesLugar(), (v) => _filtroLugar = v),
-                  const SizedBox(height: 20),
-                  grupo('Tipo', Icons.category_outlined, _filtroTipo, _opcionesTipo(), (v) => _filtroTipo = v),
-                  const SizedBox(height: 24),
-                  Row(
+                  titulo(texto, icono),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      TextButton(
-                        onPressed: _cantidadFiltros == 0
-                            ? null
-                            : () => elegir(() {
-                                _filtroLugar = null;
-                                _filtroTipo = null;
-                              }),
-                        child: const Text('Limpiar filtros'),
-                      ),
-                      const Spacer(),
-                      FilledButton(onPressed: () => Navigator.of(hoja).pop(), child: const Text('Listo')),
+                      ChoiceChip(label: const Text('Todos'), selected: valor == null, onSelected: (_) => elegir(() => alElegir(null))),
+                      for (final o in opciones)
+                        ChoiceChip(label: Text(o), selected: valor == o, onSelected: (_) => elegir(() => alElegir(valor == o ? null : o))),
                     ],
                   ),
                 ],
+              ),
+            );
+          }
+
+          final areas = <String>{for (final m in _tareas.mias) m.tarea.area, for (final t in _tareas.tablero) t.area}.toList()..sort();
+          return SafeArea(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(hoja).height * 0.85),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Filtros', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 16),
+                    titulo('Mostrar', Icons.visibility_outlined),
+                    SegmentedButton<_Vista>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: _Vista.todo, label: Text('Todo')),
+                        ButtonSegment(value: _Vista.eventos, label: Text('Eventos')),
+                        ButtonSegment(value: _Vista.tareas, label: Text('Tareas')),
+                      ],
+                      selected: {_vista},
+                      onSelectionChanged: (s) => elegir(() {
+                        _vista = s.first;
+                        if (_vista == _Vista.tareas) {
+                          _filtroLugar = null;
+                          _filtroTipo = null;
+                        }
+                        if (_vista == _Vista.eventos) _filtroArea = null;
+                      }),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.topCenter,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_vista != _Vista.tareas) ...[
+                            grupo('Tipo de evento', Icons.category_outlined, _filtroTipo, _opcionesTipo(), (v) => _filtroTipo = v),
+                            grupo('Lugar', Icons.place_outlined, _filtroLugar, _opcionesLugar(), (v) => _filtroLugar = v),
+                          ],
+                          if (_vista != _Vista.eventos && areas.isNotEmpty)
+                            grupo('Área de tarea', Icons.checklist_rounded, _filtroArea, areas, (v) => _filtroArea = v),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        TextButton(onPressed: _cantidadFiltros == 0 ? null : () => elegir(_quitarFiltros), child: const Text('Quitar filtros')),
+                        const Spacer(),
+                        FilledButton(onPressed: () => Navigator.of(hoja).pop(), child: const Text('Listo')),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -918,12 +983,22 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'No hay eventos que coincidan con la búsqueda.',
+                _consulta.trim().isNotEmpty && _cantidadFiltros > 0
+                    ? 'No hay resultados con los filtros activos ($_resumenFiltros).'
+                    : _cantidadFiltros > 0
+                    ? 'No hay nada con estos filtros.'
+                    : 'No hay nada que coincida con la búsqueda.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: p.textoSecundario),
               ),
               const SizedBox(height: 12),
-              OutlinedButton(onPressed: () => _cambiarFiltros(_limpiarFiltros), child: const Text('Quitar búsqueda y filtros')),
+              // Con texto y filtros: buscar lo mismo sin filtros.
+              if (_consulta.trim().isNotEmpty && _cantidadFiltros > 0)
+                FilledButton.tonal(onPressed: () => _cambiarFiltros(_quitarFiltros), child: const Text('Buscar en todo'))
+              else if (_cantidadFiltros > 0)
+                OutlinedButton(onPressed: () => _cambiarFiltros(_quitarFiltros), child: const Text('Quitar filtros'))
+              else
+                OutlinedButton(onPressed: () => _cambiarFiltros(_limpiarFiltros), child: const Text('Quitar búsqueda')),
             ],
           ),
         ),
@@ -1035,8 +1110,8 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => TareasScreen(repo: _tareas)));
   }
 
-  /// Bajo la barra: Todo · Eventos · Tareas, las tareas atrasadas (fijas,
-  /// en rojo) y el acceso a las que están para tomar.
+  /// Bajo la barra: las tareas atrasadas (fijas, en rojo) y el acceso a las
+  /// que están para tomar. Qué se muestra se elige en el botón de filtros.
   Widget _cabeceraTareas(BuildContext context) {
     final p = context.pivot;
     final atrasadas = _vista == _Vista.eventos ? const <MiTarea>[] : _tareas.mias.where(_atrasada).toList();
@@ -1045,28 +1120,6 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              for (final (v, t) in const [(_Vista.todo, 'Todo'), (_Vista.eventos, 'Eventos'), (_Vista.tareas, 'Tareas')])
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(t),
-                    selected: _vista == v,
-                    visualDensity: VisualDensity.compact,
-                    onSelected: (_) => setState(() {
-                      _vista = v;
-                      _claveFilas = null;
-                    }),
-                  ),
-                ),
-            ],
-          ),
-        ),
         AnimatedSize(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
@@ -1183,7 +1236,11 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
           titulo: 'Tareas del equipo',
           texto: 'Aquí ves las tareas para tomar. Las tuyas aparecen en el calendario el día que vencen, y las atrasadas, arriba en rojo.',
         ),
-        PasoTour(clave: _kBuscar, titulo: 'Busca y filtra', texto: 'Busca eventos, tareas, cumpleaños o lugares, o filtra por lugar y tipo.'),
+        PasoTour(
+          clave: _kBuscar,
+          titulo: 'Busca y filtra',
+          texto: 'Con la lupa buscas eventos, tareas, cumpleaños o lugares. Con el botón de al lado eliges qué ver: eventos o tareas, tipo, lugar o área.',
+        ),
         PasoTour(clave: _kTarjeta, titulo: 'Detalle del evento', texto: 'Toca un evento para ver quiénes van, cambiar tu respuesta y ver cómo llegar.'),
         PasoTour(
           clave: ClavesTour.navegacion,

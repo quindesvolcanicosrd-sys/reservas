@@ -122,7 +122,7 @@ class _PagosScreenState extends State<PagosScreen> {
       ('Fecha de pago', Fechas.corta(_fechaDe(r))),
       if ('${r['talla'] ?? ''}'.trim().isNotEmpty) ('Patines', 'Talla ${r['talla']}'),
       if ('${r['protecciones'] ?? ''}'.trim().isNotEmpty && '${r['protecciones']}' != 'No')
-        ('Protecciones', '${r['protecciones']}' == 'Sí' ? 'Todas del club' : '${r['protecciones']}'),
+        ('Protecciones', '${r['protecciones']}' == 'Sí' ? 'Todas del equipo' : '${r['protecciones']}'),
       if (r['uso_cupon'] == true) ('Descuento', 'Cupón aplicado'),
       if (r['tipo'] == 'mensual' && '${r['validezHasta'] ?? ''}'.isNotEmpty) ('Vigente hasta', '${r['validezHasta']}'),
     ];

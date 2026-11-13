@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
+import '../equipo/roles_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
@@ -121,6 +122,20 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     ),
                   ],
                 ),
+              // Ajustes de la liga, solo Pivots (etapa 3, Victor 2026-11-12).
+              if (sesion.esAdmin && sesion.adminToken != null)
+                GrupoAjustes(
+                  titulo: 'AJUSTES DE LA LIGA',
+                  filas: [
+                    FilaAjuste(
+                      icono: Icons.shield_outlined,
+                      seccion: 'roles',
+                      titulo: 'Roles del equipo',
+                      valor: 'Crear, renombrar o borrar roles',
+                      alTocar: () => SubAjustes.abrir(context, RolesScreen(repo: EquipoRepo.de(sesion))),
+                    ),
+                  ],
+                ),
               GrupoAjustes(
                 titulo: 'APLICACIÓN',
                 filas: [
@@ -173,11 +188,36 @@ class _CabeceraPerfil extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 20),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => cambiarFoto(context, sesion),
-            child: HeroAvatar(
-              tag: 'avatar-${sesion.nombre}',
-              child: AvatarPersona(nombre: sesion.nombreMostrar, foto: sesion.fotoPerfil, tamano: 72),
+          // Toda el área del avatar cambia la foto; la cámara lo indica
+          // (Victor, 2026-11-12).
+          Semantics(
+            button: true,
+            label: 'Cambiar foto de perfil',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => cambiarFoto(context, sesion),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  HeroAvatar(
+                    tag: 'avatar-${sesion.nombre}',
+                    child: AvatarPersona(nombre: sesion.nombreMostrar, foto: sesion.fotoPerfil, tamano: 72),
+                  ),
+                  Positioned(
+                    right: -4,
+                    bottom: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: p.marca,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: p.fondo, width: 2.5),
+                      ),
+                      child: Icon(Icons.photo_camera_rounded, size: 14, color: p.sobreMarca),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -213,8 +253,8 @@ String textoEquipamiento(Map<String, dynamic> d) {
   final pat = '${d['necesitaPatines'] ?? ''}' == 'Sí';
   final talla = '${d['talla'] ?? ''}'.trim();
   final pro = '${d['necesitaProtecciones'] ?? ''}'.trim();
-  final patTxt = pat ? 'Patines del club${talla.isEmpty ? '' : ' ($talla)'}' : 'Patines propios';
-  final proTxt = pro.isEmpty || pro == 'No' ? 'protecciones propias' : (pro == 'Sí' ? 'protecciones del club' : 'del club: ${pro.toLowerCase()}');
+  final patTxt = pat ? 'Patines del equipo${talla.isEmpty ? '' : ' ($talla)'}' : 'Patines propios';
+  final proTxt = pro.isEmpty || pro == 'No' ? 'protecciones propias' : (pro == 'Sí' ? 'protecciones del equipo' : 'del equipo: ${pro.toLowerCase()}');
   return '$patTxt · $proTxt';
 }
 

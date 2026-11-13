@@ -134,7 +134,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
               ? 'Puedes pagar varios meses de una vez.'
               : _r.resumenEquipo == null
               ? null
-              : 'Usarás del club: ${_r.resumenEquipo!.toLowerCase()}.',
+              : 'Usarás del equipo: ${_r.resumenEquipo!.toLowerCase()}.',
         _Paso.pago =>
           total.monto == 0 ? 'No tienes nada que pagar.' : 'Al elegir cómo pagar, tu reserva queda registrada y pendiente hasta que el equipo revise el pago.',
       },

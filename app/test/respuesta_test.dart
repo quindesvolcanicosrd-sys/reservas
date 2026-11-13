@@ -43,7 +43,7 @@ void main() {
   });
   test('Quindes responde normal; equipo del club no en entrenamientos', () {
     expect(_repo({'categoria': 'Quindes'}).motivoSinRespuesta(_ev(futuro)), isNull);
-    expect(_repo({'categoria': 'Quindes', 'necesitaPatines': 'Sí'}).motivoSinRespuesta(_ev(futuro)), contains('equipo del club'));
+    expect(_repo({'categoria': 'Quindes', 'necesitaPatines': 'Sí'}).motivoSinRespuesta(_ev(futuro)), contains('equipamiento del equipo'));
     expect(_repo({'categoria': 'Quindes', 'necesitaPatines': 'Sí'}).motivoSinRespuesta(_ev(futuro, tipo: 'Partido')), isNull);
   });
   test('Con reserva para el evento no responde', () {

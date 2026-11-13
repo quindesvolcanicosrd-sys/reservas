@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — App Android: Calendario con todos los filtros en un botón junto a la lupa (qué mostrar, tipo, lugar y área de tarea); la lupa queda solo para buscar texto, avisa si hay filtros activos y ofrece "Buscar en todo".
+
+2026-11-12 — App Android: roles del equipo editables por Pivots (Mi perfil → Ajustes de la liga); "del club" pasa a "del equipo"; ícono de cámara en el avatar de Mi perfil.
+
 2026-11-12 — Arreglo urgente: desde el despliegue de las ~17:30 Equipo mostraba a todas las personas como inactivas y las respuestas de los eventos salían vacías. La migración de consultas escalables quitó el permiso de ejecutar las funciones también a la función del servidor; la migración 20261112220000 se lo devuelve. No se marcó asistencia ni se recalcularon rachas en esa ventana, así que no hubo datos dañados.
 
 2026-11-12 — App Android: la entrada usa el fondo claro u oscuro con la animación en rojo, más chica y con fundido; las cargas dentro de la app usan el loader animado de Pivot.

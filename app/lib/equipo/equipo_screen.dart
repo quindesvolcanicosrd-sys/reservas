@@ -717,7 +717,7 @@ class _HojaFiltros extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  for (final r in EquipoRepo.rolesCatalogo)
+                  for (final r in repo.rolesCatalogo)
                     FilterChip(label: Text(r), selected: repo.filtroRoles.contains(r), onSelected: (_) => repo.alternarRol(r)),
                 ],
               ),

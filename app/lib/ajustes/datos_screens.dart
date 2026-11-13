@@ -70,13 +70,7 @@ class MiPerfilEditable extends StatelessWidget {
                       titulo: 'Roles en el equipo',
                       valor: roles.join(', '),
                       alTocar: () async {
-                        final v = await elegirOpciones(
-                          context,
-                          titulo: 'Roles en el equipo',
-                          opciones: EquipoRepo.rolesCatalogo,
-                          valor: roles.join(', '),
-                          multi: true,
-                        );
+                        final v = await elegirOpciones(context, titulo: 'Roles en el equipo', opciones: equipo.roles, valor: roles.join(', '), multi: true);
                         if (v == null || !context.mounted) return;
                         final ok = await guardarCampos(context, s, {'roles': v});
                         if (ok) await equipo.cargar(forzar: true);
@@ -172,7 +166,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
       return;
     }
     if (_protModo == 'algunas' && _algunas.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Elige qué protecciones usas del club.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Elige qué protecciones usas del equipo.')));
       return;
     }
     if (_usaClub && valorDe(s, 'categoria') == 'Quindes') {
@@ -181,7 +175,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
         builder: (c) => AlertDialog(
           title: const Text('Pasas a Mirlxs'),
           content: const Text(
-            'Con equipamiento del club pasas a Mirlxs: solo podrás reservar por clase (con su precio), no por mes, '
+            'Con equipamiento del equipo pasas a Mirlxs: solo podrás reservar por clase (con su precio), no por mes, '
             'y no vuelves a Quindes hasta tener tu equipamiento completo propio.',
           ),
           actions: [
@@ -227,7 +221,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
           SegmentedButton<bool>(
             segments: const [
               ButtonSegment(value: false, label: Text('Propios')),
-              ButtonSegment(value: true, label: Text('Del club')),
+              ButtonSegment(value: true, label: Text('Del equipo')),
             ],
             selected: {_patinesClub},
             onSelectionChanged: (x) => setState(() => _patinesClub = x.first),
@@ -255,7 +249,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
           SegmentedButton<String>(
             segments: const [
               ButtonSegment(value: 'propias', label: Text('Propias')),
-              ButtonSegment(value: 'todas', label: Text('Del club')),
+              ButtonSegment(value: 'todas', label: Text('Del equipo')),
               ButtonSegment(value: 'algunas', label: Text('Algunas')),
             ],
             selected: {_protModo},
@@ -272,7 +266,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('¿Cuáles usas del club?', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
+                        Text('¿Cuáles usas del equipo?', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -296,7 +290,7 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
             child: Text(
               key: ValueKey(_usaClub),
               _usaClub
-                  ? 'Con equipamiento del club reservas por clase, y el club te lo tiene listo.'
+                  ? 'Con equipamiento del equipo reservas por clase, y el equipo te lo tiene listo.'
                   : 'Con todo tu equipamiento propio puedes pagar la mensualidad.',
               style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
             ),
