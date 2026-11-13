@@ -390,6 +390,25 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] **Desactivar cobros, planes y cupones**: con Finanzas (etapas 5 y 6).
 - [ ] **Inventario**: fotos y etiqueta por artículo.
 
+## K. Notas del 2026-11-13, 14:58 (para la ronda de las 4 p. m.)
+0. [ ] **BUG (prioridad):** `puntos_mensuales` no suma puntos de asistencia desde octubre (noviembre en 0 para todo el equipo; tareas también en 0). Por eso Tormento no "cumple" con "Solo puntos". Encontrar dónde se escribían (¿al tomar lista? ¿cron?), arreglar y recalcular octubre y noviembre.
+1. [ ] Tareas: quitar el recuadro rojo de puntos (se consulta en Estadísticas).
+2. [ ] Tareas recurrentes: no como subsección, sino tarjetas que se deslizan de lado.
+3. [ ] Bandeja → pagos y reservas: decir dónde se pagó (ej. Deuna, banco internacional) para saber dónde revisar.
+4. [ ] Inventario:
+   1. Quitar el texto de arriba "Lo libre es para el entrenamiento…".
+   2. Íconos más generales y una lista más completa.
+   3. Estructura (confirmar con Victor): Inventario → **Equipamiento deportivo** (Con talla · Sets completos), **Insumos de entrenamiento** (conos, cintas…), **Botiquín** (insumos médicos con vencimiento) y **Misceláneos**. Sin los tipos técnicos "unidades/insumo".
+   4. El + muestra botones encima (como en Calendario), no una hoja.
+   5. Botiquín: qué hay, cantidades, fechas de vencimiento, registrar lo que se usó, avisos cuando falta algo, se usó o está por vencer/venció.
+   6. Mi equipamiento: si tenías equipamiento propio, tocar la sección lleva al asistente con "Necesito equipamiento por un tiempo"; si nunca tuviste, deja cambiar talla/protecciones o decir que ya tienes propio. Posible: mover "Mi equipamiento" a Equipo → Inventario y quitarlo de Mi perfil (Victor duda si sobrecarga).
+   7. **Reglas de préstamo (Pivots)** con + (como asistencia anticipada): prestar o no, temporal a quien tenía propio, por Categoría/Equipo, con costo o sin costo, por período / indefinidas / que pisan a otras (ej. indefinida "se presta a Quindes sin costo" y del 15-ene al 12-feb no se presta). Poder desactivar el equipamiento de la liga (se oculta, no se borra) y dejar solo insumos/botiquín. Vivirían en Equipo → Inventario.
+5. [ ] "Categorías/Equipos y puntos" → **"Equipos y puntos"**; donde dice "Categoría/Equipo" pasa a **"Equipo"** (revertir el cambio de hoy).
+6. [ ] Equipos y puntos: poder editar también Mirlxs (la inicial) y un + para crear equipos nuevos con asistente completo.
+7. [ ] Asistente de puntos: textos más cortos y claros; explicar qué significa "Solo puntos".
+8. [ ] Cobros: subsección propia con más personalización: formas de pago (cómo se configuran y a quién aplican), planes (ej. semestre de clases). Va con Finanzas.
+9. [ ] Canal de comunicación: quitar SMS; si la liga no usa ninguna de la lista, se usa el número de teléfono (llamar).
+
 ## Orden propuesto
 0. Prioridad 1 de la auditoría (consultas de `log_asistencias` + índices).
 1. Ronda de 11 cambios de arriba y la migración pendiente.
