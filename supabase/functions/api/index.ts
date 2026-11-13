@@ -168,8 +168,15 @@ async function _validarToken(token: string): Promise<string | null> {
   return data.username;
 }
 
+// Token que solo existe en memoria de esta función: lo usa el servidor para
+// aprobar por su cuenta (pedidos de Pivots con aprobación automática). Nunca
+// sale en una respuesta.
+const _TOKEN_INTERNO = 'interno-' + crypto.randomUUID();
+const _EMAIL_SISTEMA = 'sistema@pivot';
+
 async function _validarAdminToken(token: string): Promise<string | null> {
   if (!token) return null;
+  if (token === _TOKEN_INTERNO) return _EMAIL_SISTEMA;
   const { data } = await supabase.from('admin_sessions').select('email, expires_at').eq('token', token).maybeSingle();
   if (!data) return null;
   if (new Date(data.expires_at) <= new Date()) return null;
@@ -774,6 +781,69 @@ async function cambiarUsuario(params: Record<string, any>): Promise<Record<strin
     return { exito: false, error: 'No se pudo cambiar el usuario.' };
   }
   return { exito: true, username: nuevo };
+}
+
+// ─── Ajustes de la liga (Victor, 2026-11-13) ─────────────────────────────
+// Pedidos de Pivots: 'otro' (por defecto, lo aprueba otro Pivot) o 'auto'
+// (se aprueba solo). Si hay un solo Pivot, siempre se aprueba solo.
+// Canal de comunicación: con qué app se escribe a las personas del equipo.
+const CANALES_LIGA = ['whatsapp', 'telegram', 'signal', 'sms'];
+const CLAVES_LIGA: Record<string, string> = {
+  solicitudesPivots: 'solicitudes_pivots', canal: 'canal_comunicacion', pais: 'pais_equipo', zonaHoraria: 'zona_horaria',
+};
+
+async function _configLiga(): Promise<Record<string, string>> {
+  const { data } = await supabase.from('config_app').select('key, value').in('key', Object.values(CLAVES_LIGA));
+  const m: Record<string, string> = {};
+  (data ?? []).forEach((r: any) => { m[r.key] = r.value; });
+  return {
+    solicitudesPivots: m.solicitudes_pivots === 'auto' ? 'auto' : 'otro',
+    canal: CANALES_LIGA.includes(m.canal_comunicacion) ? m.canal_comunicacion : 'whatsapp',
+    pais: m.pais_equipo || 'EC',
+    zonaHoraria: m.zona_horaria || 'America/Guayaquil',
+  };
+}
+
+/** ¿El pedido de esta persona se aprueba solo? (solo si es Pivot). */
+async function _pedidoDePivot(username: string): Promise<{ auto: boolean; email: string | null }> {
+  const pivots = await _administradorxs();
+  const yo = pivots.find((a) => a.username === username);
+  if (!yo) return { auto: false, email: null };
+  if (pivots.length <= 1) return { auto: true, email: yo.email };
+  return { auto: (await _configLiga()).solicitudesPivots === 'auto', email: yo.email };
+}
+
+async function getConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarToken(params.token)) && !(params.adminToken && await _validarAdminToken(String(params.adminToken)))) {
+    return { exito: false, error: 'Sesión inválida.' };
+  }
+  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()) };
+}
+
+async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const filas: { key: string; value: string }[] = [];
+  if (params.solicitudesPivots != null) filas.push({ key: 'solicitudes_pivots', value: params.solicitudesPivots === 'auto' ? 'auto' : 'otro' });
+  if (params.canal != null) {
+    if (!CANALES_LIGA.includes(String(params.canal))) return { exito: false, error: 'Canal inválido.' };
+    filas.push({ key: 'canal_comunicacion', value: String(params.canal) });
+  }
+  if (params.pais != null) {
+    if (!/^[A-Z]{2}$/.test(String(params.pais))) return { exito: false, error: 'País inválido.' };
+    filas.push({ key: 'pais_equipo', value: String(params.pais) });
+  }
+  if (params.zonaHoraria != null) {
+    try { new Intl.DateTimeFormat('es', { timeZone: String(params.zonaHoraria) }); } catch { return { exito: false, error: 'Zona horaria inválida.' }; }
+    filas.push({ key: 'zona_horaria', value: String(params.zonaHoraria) });
+  }
+  for (const [k, clave] of [['precioPorClase', 'precio_por_clase'], ['precioMensual', 'precio_mensual']]) {
+    if (params[k] == null) continue;
+    const n = Number(params[k]);
+    if (!Number.isFinite(n) || n < 0 || n > 10000) return { exito: false, error: 'Precio inválido.' };
+    filas.push({ key: clave, value: String(n) });
+  }
+  if (filas.length) await supabase.from('config_app').upsert(filas, { onConflict: 'key' });
+  return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()) };
 }
 
 // País del equipo (prefijo y documento por defecto en Ajustes).
@@ -1670,7 +1740,8 @@ async function enviarRevisionTarea(params: Record<string, any>): Promise<Record<
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
   if (a.nombre_usuario !== nombre) return { exito: false, error: 'No autorizado.' };
   if (a.estado !== 'iniciada') return { exito: false, error: 'La asignación no está iniciada.' };
-  if (await _esAdminPorUsername(nombre)) return await _aprobarAsignacionTarea(idAsignacion);
+    // Pivots: según "Pedidos de Pivots" en Ajustes de la liga (2026-11-13).
+  if ((await _pedidoDePivot(nombre)).auto) return await _aprobarAsignacionTarea(idAsignacion);
   await supabase.from('asignaciones_tareas').update({ estado: 'pendiente_revision', fecha_envio: new Date().toISOString() }).eq('id', idAsignacion);
   return { exito: true };
 }
@@ -1970,8 +2041,20 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
     supabase.from('equipo').select('username').eq('solicitud_lesion_pendiente', true).is('eliminado_en', null),
     supabase.from('asignaciones_tareas').select('id, tarea_id, nombre_usuario, fecha_envio').eq('estado', 'pendiente_revision').order('fecha_envio', { ascending: true }),
   ]);
-  const excVisibles: any[] = [];
+    const excVisibles: any[] = [];
   for (const r of exc.data ?? []) if (await _puedeVerExcepcion(adminEmail, r.admins_destino)) excVisibles.push(r);
+  // Lo que pidió este mismo Pivot lo resuelve otro (Victor, 2026-11-13),
+  // salvo que sea el único Pivot de la liga.
+  const pivots = await _administradorxs();
+  const yoPivot = pivots.find((a) => a.email === String(adminEmail).toLowerCase())?.username ?? null;
+  const ajeno = (u: unknown) => !yoPivot || pivots.length <= 1 || String(u) !== yoPivot;
+  if (res.data) res.data = res.data.filter((r: any) => ajeno(r.nombre_usuario));
+  if (rect.data) rect.data = rect.data.filter((r: any) => ajeno(r.nombre));
+  if (les.data) les.data = les.data.filter((r: any) => ajeno(r.username));
+  if (asig.data) asig.data = asig.data.filter((r: any) => ajeno(r.nombre_usuario));
+  for (let i = excVisibles.length - 1; i >= 0; i--) if (!ajeno(excVisibles[i].nombre)) excVisibles.splice(i, 1);
+  const prestPendAjenos = (prestPend ?? []).filter((p: any) => ajeno(p.username));
+
 
   // Datos de apoyo: eventos, tareas y personas mencionadas.
   const idsEv = [...new Set([...(res.data ?? []).map((r: any) => r.id_evento), ...(rect.data ?? []).map((r: any) => r.id_evento)].filter(Boolean))];
@@ -1979,7 +2062,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const nombres = [...new Set([
     ...(res.data ?? []).map((r: any) => r.nombre_usuario), ...(rect.data ?? []).map((r: any) => r.nombre),
     ...excVisibles.map((r: any) => r.nombre), ...(les.data ?? []).map((r: any) => r.username), ...(asig.data ?? []).map((a: any) => a.nombre_usuario),
-    ...(prestPend ?? []).map((p: any) => p.username),
+        ...prestPendAjenos.map((p: any) => p.username),
   ].filter(Boolean))];
   const [evs, tareas, personas] = await Promise.all([
     idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, donde, inicia, tipo').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
@@ -2000,7 +2083,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
     rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
     excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
     lesiones: (les.data ?? []).map((r: any) => ({ ...persona(r.username) })),
-    prestamos: (prestPend ?? []).map((p: any) => ({ id: p.id, ...persona(p.username), articulo: p.articulo, detalle: p.detalle ?? '', creada: p.created_at })),
+        prestamos: prestPendAjenos.map((p: any) => ({ id: p.id, ...persona(p.username), articulo: p.articulo, detalle: p.detalle ?? '', creada: p.created_at })),
     tareas: (asig.data ?? []).map((a: any) => ({
       idAsignacion: a.id, ...persona(a.nombre_usuario), enviada: a.fecha_envio,
       tarea: ta[a.tarea_id] ? { idTarea: a.tarea_id, titulo: ta[a.tarea_id].titulo, puntos: Number(ta[a.tarea_id].puntos) || 0, area: ta[a.tarea_id].area ?? '' } : null,
@@ -2151,11 +2234,17 @@ async function pedirPrestamo(params: Record<string, any>): Promise<Record<string
   const articulo = ARTICULOS_INVENTARIO.includes(String(params.articulo)) ? String(params.articulo) : 'otro';
   const detalle = String(params.detalle ?? '').trim().slice(0, 80);
   if (articulo === 'otro' && !detalle) return { exito: false, error: 'Escribe qué te llevaste.' };
-  const { error } = await supabase.from('inventario_prestamos').insert({ username: yo, articulo, detalle: detalle || null, estado: 'pendiente', pedido_por: 'persona' });
+    const { data: nuevo, error } = await supabase.from('inventario_prestamos')
+    .insert({ username: yo, articulo, detalle: detalle || null, estado: 'pendiente', pedido_por: 'persona' }).select('id').maybeSingle();
   if (error) return { exito: false, error: 'No se pudo enviar.' };
+  const pivot = await _pedidoDePivot(yo);
+  if (pivot.auto && nuevo?.id) {
+    await adminPrestamo({ adminToken: _TOKEN_INTERNO, accion: 'aprobar', id: nuevo.id });
+    return { exito: true, aprobada: true };
+  }
   const { data: f } = await supabase.from('equipo').select('nombre_derby').eq('username', yo).maybeSingle();
   await sendPush({
-    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(),
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined),
     headings: { es: 'Equipamiento del equipo' },
     contents: { es: `${f?.nombre_derby || yo} avisa que se llevó ${_textoArticulo(articulo, detalle)}. Apruébalo en la Bandeja.` },
     url: APP_URL + '/',
@@ -3294,18 +3383,23 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
     .eq('nombre', username).eq('id_evento', idEvento).eq('decision', 'Pendiente').gte('created_at', desde).limit(1).maybeSingle();
   if (abierta) return { exito: false, error: 'Ya pediste revisar esta asistencia. Un Pivot la revisará pronto.' };
   const { data: ev } = await supabase.from('asistencias').select('fecha, tipo').eq('id_evento', idEvento).maybeSingle();
-  const { error } = await supabase.from('rectificaciones_asistencia').insert({
+    const { data: nueva, error } = await supabase.from('rectificaciones_asistencia').insert({
     nombre: username,
     id_evento: idEvento,
     fecha_evento: ev?.fecha ?? null,
     estado_solicitado: estadoSolicitado,
     decision: 'Pendiente',
-  });
+  }).select('id').maybeSingle();
   if (error) return { exito: false, error: 'No se pudo enviar. Intenta de nuevo.' };
+  const pivot = await _pedidoDePivot(username);
+  if (pivot.auto && nueva?.id) {
+    await adminSetEstadoRectificacion({ adminToken: _TOKEN_INTERNO, id: nueva.id, decision: 'Aprobada' });
+    return { exito: true, aprobada: true };
+  }
   const { data: fila } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(),
+    include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined),
     headings: { es: 'Revisión de asistencia' },
     contents: { es: `${fila?.nombre_derby || username} pide corregir su asistencia${ev?.fecha ? ' del ' + ev.fecha : ''}: ${estadoSolicitado}.` },
     url: APP_URL + '/',
@@ -3439,8 +3533,13 @@ async function solicitarExcepcion(params: Record<string, any>): Promise<Record<s
   const { data, error } = await supabase.from('solicitudes_excepcion').insert({
     nombre: username, tipo, datos: datos ?? {}, mes_aplicacion: mesAplicacion, estado: 'pendiente', admins_destino: destino,
   }).select('id').maybeSingle();
-  if (error) return { exito: false, error: error.message };
-  const todos = await _adminDestinatariosPush();
+    if (error) return { exito: false, error: error.message };
+  const pivot = await _pedidoDePivot(username);
+  if (pivot.auto && data?.id) {
+    await adminSetEstadoExcepcion({ adminToken: _TOKEN_INTERNO, id: data.id, estado: 'aprobada' });
+    return { exito: true, id: data.id, aprobada: true };
+  }
+  const todos = await _adminDestinatariosPush(pivot.email ?? undefined);
   await sendPush({
     tipo: 'avisos_admin',
     include_external_user_ids: destino.length ? todos.filter((u) => destino.includes(u)) : todos,
@@ -3470,7 +3569,7 @@ async function getAdministradorxs(params: Record<string, any>): Promise<Record<s
 
 /** ¿Este admin puede ver la solicitud? (vacío = todxs). */
 async function _puedeVerExcepcion(adminEmail: string, destino: string[] | null): Promise<boolean> {
-  if (!destino || destino.length === 0) return true;
+    if (!destino || destino.length === 0 || adminEmail === _EMAIL_SISTEMA) return true;
   const yo = (await _administradorxs()).find((a) => a.email === adminEmail.toLowerCase());
   return !!yo && destino.includes(yo.username);
 }
@@ -5059,7 +5158,13 @@ async function recalcularStatsUsuario(username: string): Promise<{ exito: boolea
 // `adminRechazarLesion` siguen vivas solo para resolver las solicitudes
 // pendientes que ya existían antes del cambio.
 async function solicitarLesion(params: Record<string, any>): Promise<Record<string, any>> {
-  return await autodeclararEstado({ token: params.token, estado: 'Lesionadx' });
+  const r = await autodeclararEstado({ token: params.token, estado: 'Lesionadx' });
+  const username = await _validarToken(params.token);
+  if (r?.exito !== false && username && (await _pedidoDePivot(username)).auto) {
+    await adminAprobarLesion({ adminToken: _TOKEN_INTERNO, nombre: username });
+    return { ...r, aprobada: true };
+  }
+  return r;
 }
 
 async function cancelarSolicitudLesion(params: Record<string, any>): Promise<Record<string, any>> {
@@ -7647,7 +7752,9 @@ Deno.serve(async (req: Request) => {
             case 'cambiarUsuario':                  return json(await cambiarUsuario(params));
       case 'crearTareaPropia':                return json(await crearTareaPropia(params));
       case 'getAdministradorxs':              return json(await getAdministradorxs(params));
-      case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
+            case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
+      case 'getConfigLiga':                   return json(await getConfigLiga(params));
+      case 'adminGuardarConfigLiga':          return json(await adminGuardarConfigLiga(params));
       case 'restaurarSesion':                 return json(await restaurarSesion(params));
       case 'cerrarSesion':                    return json(await cerrarSesion(params));
       case 'resolverNombre':                  return json(await resolverNombre(params));

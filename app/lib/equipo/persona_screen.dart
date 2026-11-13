@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/iconos_marca.dart';
+import '../core/config_liga.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
@@ -151,15 +151,14 @@ class _Ficha extends StatelessWidget {
   }
 
   Widget _acciones(BuildContext context, PivotPaleta pal, bool yo) {
+    final canal = ConfigLiga.de(repo.sesion);
+
     final tel = p.telefono;
     final completo = tel.isEmpty ? '' : '+${p.prefijo.isEmpty ? '593' : p.prefijo}${tel.startsWith('0') ? tel.substring(1) : tel}';
     final botones = <Widget>[
       if (!yo && tel.isNotEmpty)
-        _Accion(
-          icono: IconosMarca.whatsapp,
-          texto: 'WhatsApp',
-          alTocar: () => launchUrl(Uri.parse('https://wa.me/${completo.substring(1)}'), mode: LaunchMode.externalApplication),
-        ),
+        // Con la app que use la liga (Ajustes de la liga → Canal de comunicación).
+        _Accion(icono: canal.icono, texto: canal.nombreCanalCorto, alTocar: () => canal.escribir(completo)),
       if (!yo && tel.isNotEmpty) _Accion(icono: Icons.call_rounded, texto: 'Llamar', alTocar: () => launchUrl(Uri.parse('tel:$completo'))),
       // En Equipo, Emergencia está siempre disponible para admins (Victor, 2026-11-07).
       if (repo.esAdmin && !yo)
@@ -478,9 +477,9 @@ class _AdministracionState extends State<_Administracion> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('Solo las ven los Pivots: pagos, categoría, permisos y más.', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                Text('Solo las ven los Pivots: pagos, Categoría/Equipo, permisos y más.', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
                 const SizedBox(height: 14),
-                Text('Categoría', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
+                Text('Categoría/Equipo', style: TextStyle(fontSize: 13, color: pal.textoSecundario)),
                 const SizedBox(height: 6),
                 SegmentedButton<String>(
                   segments: const [
@@ -489,7 +488,7 @@ class _AdministracionState extends State<_Administracion> {
                     ButtonSegment(value: 'mirlxs', label: Text('Mirlxs')),
                   ],
                   selected: {p.tierModo},
-                  onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría actualizada'),
+                  onSelectionChanged: (s) => _hacer(() => repo.cambiarTier(p, s.first), 'Categoría/Equipo actualizada'),
                 ),
                 const SizedBox(height: 12),
                 // Selector tipo desplegable (más claro que las pills) y con
