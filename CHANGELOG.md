@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-12 — App Android: la entrada usa el fondo claro u oscuro con la animación en rojo, más chica y con fundido; las cargas dentro de la app usan el loader animado de Pivot.
+
 2026-11-12 — App Android: ícono nuevo de la app.
 
 2026-11-12 — App Android: nueva entrada con el logo de Pivot como pantalla de arranque, animación en bucle mientras carga y animación de entrada que revela la app ya cargada.
