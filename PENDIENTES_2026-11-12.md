@@ -452,3 +452,20 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 5. G (auditoría), antes de construir la base para varias ligas.
 6. E (personalización completa) sobre la base multi-liga (F.7).
 7. H (inicio de sesión, crear cuenta y crear liga), junto con la base multi-liga y Supabase Auth.
+
+
+## L. Estado al cierre de la ronda de las 4 p. m. (2026-11-13)
+- [x] K.0 Bug de puntos · K.1 Tareas sin recuadro rojo · K.2 Recurrentes en carrusel · K.3 Dónde se pagó.
+- [x] K.4 Inventario completo (secciones, interruptor, Tu equipamiento, botiquín, reglas y plazos de préstamo).
+- [x] K.13 Pivots y permisos · K.14 Avisos de Pivot por área.
+- [x] K.15–18 Equipos y puntos (resumen por filas, plazos con unidad, corte con revisión en la Bandeja, aplicación automática y aviso).
+- [x] K.19 Ajustes editables: qué cuenta como clase, tarde, tolerancia (sugiere Tarde), puntos versionados (regla de oro), rectificaciones, mínimo de personas, inactividad, logos, enlace de invitación por equipo con requisitos, historial de 6 meses.
+- [x] Tesorería (etapa 5) y Cobros → Formas de pago.
+- [x] Inicio y cuenta con correo: preparado y apagado (falta activarlo; pedir a Victor).
+- [ ] Estados que congelan (lesión, viaje, técnico) editables con máximo: hoy siguen fijos en recalcular-categorias.
+- [ ] Privacidad (qué ven otras personas, ranking) editable.
+- [ ] Cuota: día de vencimiento, recargo y gracia.
+- [ ] Rachas y "puntos por defecto de una tarea" editables.
+- [ ] Cobros: planes (semestre de clases), cupones por persona o equipo (etapa 6), cursos, inscripción rápida.
+- [ ] Al cobrar la cuota, avisar el saldo a favor/en contra y aplicarlo según lo elegido.
+- [ ] Bandeja doc: casillas "En prueba".
