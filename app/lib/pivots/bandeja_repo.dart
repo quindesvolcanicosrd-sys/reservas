@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api.dart';
 import '../sesion/sesion.dart';
@@ -35,6 +36,26 @@ class ExcepcionVigente {
   bool get cancelada => m['cancelada'] == true;
 }
 
+/// Un pedido propio y cómo quedó (`getMiBandeja`).
+class MiPedido {
+  MiPedido(this.m);
+  final Map<String, dynamic> m;
+  String get tipo => '${m['tipo']}';
+  String get titulo => '${m['titulo'] ?? ''}';
+  String get detalle => '${m['detalle'] ?? ''}';
+  String get estado => '${m['estado'] ?? 'pendiente'}';
+  DateTime? get fecha => DateTime.tryParse('${m['fecha'] ?? ''}');
+}
+
+/// Ajuste que la app recomienda completar.
+class Recomendacion {
+  Recomendacion(this.m);
+  final Map<String, dynamic> m;
+  String get clave => '${m['clave']}';
+  String get titulo => '${m['titulo'] ?? ''}';
+  String get texto => '${m['texto'] ?? ''}';
+}
+
 /// Bandeja de Pivots (etapa 3, Victor 2026-11-12): pagos y reservas,
 /// rectificaciones, excepciones de cuota, lesiones y tareas por validar.
 /// Se abre desde Calendario; el número va en el ícono.
@@ -53,6 +74,65 @@ class BandejaRepo extends ChangeNotifier {
 
   List<Pedido> pedidos = [];
   int get total => pedidos.length;
+
+  // Bandeja de cada persona (Victor, 2026-11-13): sus pedidos y lo que la
+  // app recomienda. La campana suena con lo nuevo desde la última vez que
+  // abrió la Bandeja (fecha guardada en el teléfono, solo como comodidad).
+  List<MiPedido> misPedidos = [];
+  List<Recomendacion> recomendaciones = [];
+  DateTime? _ultimaVista;
+  Set<String> _recomVistas = {};
+  bool _cargandoMia = false;
+
+  bool get hayNovedades {
+    final u = _ultimaVista;
+    if (u == null) return misPedidos.isNotEmpty || pedidos.isNotEmpty || recomendaciones.isNotEmpty;
+    final nuevoMio = misPedidos.any((x) => x.estado != 'pendiente' && (x.fecha?.isAfter(u) ?? false));
+    final nuevoPivot = pedidos.any((x) => (DateTime.tryParse('${x.m['creada'] ?? x.m['enviada'] ?? ''}')?.isAfter(u) ?? false));
+    final recomNueva = recomendaciones.any((r) => !_recomVistas.contains(r.clave));
+    return nuevoMio || nuevoPivot || recomNueva;
+  }
+
+  Future<void> cargarMia() async {
+    if (_cargandoMia) return;
+    _cargandoMia = true;
+    try {
+      try {
+        final pr = await SharedPreferences.getInstance();
+        _ultimaVista = DateTime.tryParse(pr.getString('bandeja.vista.${sesion.nombre}') ?? '');
+        _recomVistas = (pr.getStringList('bandeja.recom.${sesion.nombre}') ?? const []).toSet();
+      } catch (_) {}
+      final r = await _api.get('getMiBandeja', {});
+      if (r['exito'] != false) {
+        misPedidos = [
+          for (final x in (r['solicitudes'] as List? ?? const []))
+            if (x is Map<String, dynamic>) MiPedido(x),
+        ];
+        recomendaciones = [
+          for (final x in (r['recomendaciones'] as List? ?? const []))
+            if (x is Map<String, dynamic>) Recomendacion(x),
+        ];
+      }
+    } catch (_) {
+      // La Bandeja propia es secundaria: si falla, no se muestra la campana.
+    } finally {
+      _cargandoMia = false;
+      notifyListeners();
+    }
+  }
+
+  /// Al abrir la Bandeja: lo de ahora queda visto y la campana vuelve a ser bandeja.
+  Future<void> marcarVista() async {
+    _ultimaVista = DateTime.now();
+    _recomVistas = {for (final r in recomendaciones) r.clave};
+    notifyListeners();
+    try {
+      final pr = await SharedPreferences.getInstance();
+      await pr.setString('bandeja.vista.${sesion.nombre}', _ultimaVista!.toIso8601String());
+      await pr.setStringList('bandeja.recom.${sesion.nombre}', _recomVistas.toList());
+    } catch (_) {}
+  }
+
   bool cargado = false;
   String? error;
   bool _cargando = false;
@@ -103,6 +183,12 @@ class BandejaRepo extends ChangeNotifier {
       for (final x in (r['excepciones'] as List? ?? const []))
         if (x is Map<String, dynamic>) ExcepcionVigente(x),
     ];
+  }
+
+  /// Cambia duración o efecto de una excepción ya aprobada (se avisa a la persona).
+  Future<void> editarExcepcion(ExcepcionVigente e, Map<String, Object?> cambios) async {
+    final r = await _api.post('adminSetEstadoExcepcion', {'adminToken': sesion.adminToken, 'id': e.id, 'estado': 'aprobada', 'editar': true, ...cambios});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo guardar.'}');
   }
 
   Future<void> cancelarExcepcion(ExcepcionVigente e) async {

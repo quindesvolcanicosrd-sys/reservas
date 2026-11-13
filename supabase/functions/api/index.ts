@@ -2044,7 +2044,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { data: prestPend } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, created_at, tipo, motivo, permanente').eq('estado', 'pendiente').order('created_at');
   const [res, rect, exc, les, asig] = await Promise.all([
-    supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
+    supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
       .gte('created_at', new Date(Date.now() - DIAS_RECTIFICACION * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
@@ -2075,7 +2075,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
         ...prestPendAjenos.map((p: any) => p.username),
   ].filter(Boolean))];
   const [evs, tareas, personas] = await Promise.all([
-    idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, donde, inicia, tipo').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
+    idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, donde, inicia, tipo_evento').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
     idsTarea.length ? supabase.from('tareas').select('id, titulo, puntos, area').in('id', idsTarea) : Promise.resolve({ data: [] as any[] }),
     nombres.length ? supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria').in('username', nombres) : Promise.resolve({ data: [] as any[] }),
   ]);
@@ -2083,12 +2083,12 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const ta: Record<string, any> = {}; (tareas.data ?? []).forEach((t: any) => { ta[t.id] = t; });
   const pe: Record<string, any> = {}; (personas.data ?? []).forEach((p: any) => { pe[p.username] = p; });
   const persona = (u: string) => ({ nombre: u, nombreMostrar: pe[u]?.nombre_derby || u, foto: pe[u]?.foto_perfil || '', categoria: pe[u]?.categoria || '' });
-  const evento = (id: string) => ev[id] ? { idEvento: id, fecha: ev[id].fecha, lugar: ev[id].donde ?? '', hora: String(ev[id].inicia ?? '').substring(0, 5), tipo: ev[id].tipo ?? '' } : null;
+  const evento = (id: string) => ev[id] ? { idEvento: id, fecha: ev[id].fecha, lugar: ev[id].donde ?? '', hora: String(ev[id].inicia ?? '').substring(0, 5), tipo: ev[id].tipo_evento ?? '' } : null;
 
   const items = {
     reservas: (res.data ?? []).map((r: any) => ({
       id: r.id, ...persona(r.nombre_usuario), tipo: r.tipo, mesTexto: r.mes_texto ?? '', talla: r.talla ?? '', protecciones: r.protecciones ?? '',
-      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento),
+      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', fechaPago: r.fecha_pago ?? null,
     })),
     rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
     excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
@@ -3950,9 +3950,17 @@ async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Rec
   const estado = String(params.estado ?? '').trim();
   if (!id || !['aprobada', 'rechazada'].includes(estado)) return { exito: false, error: 'Parámetros inválidos.' };
     const notaAdmin = params.notaAdmin != null && params.notaAdmin !== '' ? String(params.notaAdmin) : null;
-  const { data: sol } = await supabase.from('solicitudes_excepcion').select('nombre, tipo, mes_aplicacion, admins_destino').eq('id', id).maybeSingle();
+    const { data: sol } = await supabase.from('solicitudes_excepcion').select('nombre, tipo, mes_aplicacion, admins_destino, estado').eq('id', id).maybeSingle();
   if (!sol) return { exito: false, error: 'La solicitud no existe.' };
   if (!(await _puedeVerExcepcion(adminEmail, sol.admins_destino))) return { exito: false, error: 'Esta solicitud no está dirigida a ti.' };
+  // Editar una ya aprobada (Victor, 2026-11-13: todo pedido es editable por
+  // un Pivot y se avisa a la persona): se quitan los meses desde el actual
+  // que puso esta solicitud y se vuelven a aplicar con lo nuevo. Los meses
+  // pasados no se tocan.
+  const editando = sol.estado === 'aprobada' && estado === 'aprobada' && (params.editar === true || params.editar === 'true');
+  if (editando) {
+    await supabase.from('cuota_excepcion').delete().eq('id_miembro', sol.nombre).gte('mes', _mesActualClave()).like('notas', `%(solicitud ${id})%`);
+  }
   // Duración y efecto que decide el Pivot al aprobar (Victor, 2026-11-12):
   // duracion 'mes' (solo el mes pedido), 'hasta' (hasta el mes `hasta`,
   // 'AAAA-MM') o 'indefinida'; efecto 'media' (media cuota) o 'exenta' (no
@@ -3980,10 +3988,10 @@ async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Rec
   await sendPush({
     tipo: 'solicitud_resuelta',
     include_external_user_ids: [sol.nombre],
-    headings: { es: estado === 'aprobada' ? 'Tu solicitud fue aprobada' : 'Tu solicitud fue rechazada' },
+        headings: { es: editando ? 'Un Pivot cambió tu excepción de cuota' : estado === 'aprobada' ? 'Tu solicitud fue aprobada' : 'Tu solicitud fue rechazada' },
     contents: {
       es: (sol.tipo === 'ausencias' ? 'Media cuota por ausencias justificadas: ' : 'Subvención por dificultad económica: ')
-        + (estado === 'aprobada' ? 'aprobada.' : 'rechazada.') + detalle + (notaAdmin ? ` Nota: ${notaAdmin}` : ''),
+                + (editando ? 'ahora queda así.' : estado === 'aprobada' ? 'aprobada.' : 'rechazada.') + detalle + (notaAdmin ? ` Nota: ${notaAdmin}` : ''),
     },
     url: APP_URL + '/',
   });
@@ -4076,8 +4084,10 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
         estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null,
-        validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
+                validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
     uso_cupon: usoCupon,
+    // Dónde dice que pagó (2026-11-13), para que el Pivot sepa dónde revisar.
+    medio_pago: ['deuna', 'transferencia', 'efectivo'].includes(String(params.medio ?? '')) ? String(params.medio) : null,
   });
   return { exito: true };
 }
@@ -6421,6 +6431,84 @@ async function adminDatosCategorias(params: Record<string, any>): Promise<Record
   return { exito: true, personas, desdes };
 }
 
+// ─── Bandeja de cada persona (Victor, 2026-11-13) ───────────────────────
+// Sus pedidos de los últimos 60 días y cómo quedaron (pendiente, aprobado,
+// rechazado), y ajustes que la app recomienda completar. `fecha` es el
+// último cambio: la app compara con la última vez que abrió la Bandeja para
+// mostrar la campana.
+async function getMiBandeja(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  if (!yo) return { exito: false, error: 'Sesión inválida.' };
+  const desde = new Date(Date.now() - 60 * 86400000).toISOString();
+  const [res, rect, exc, prest, asig, { data: fila }] = await Promise.all([
+    supabase.from('reservas').select('id, id_evento, tipo, mes_texto, estado, monto, created_at').eq('nombre_usuario', yo).gte('created_at', desde),
+    supabase.from('rectificaciones_asistencia').select('id, fecha_evento, estado_solicitado, decision, created_at').eq('nombre', yo).gte('created_at', desde),
+    supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, vigente_hasta, indefinida, efecto').eq('nombre', yo).gte('created_at', desde),
+    supabase.from('inventario_prestamos').select('id, detalle, estado, tipo, hasta, created_at, desde, devuelto_en').eq('username', yo).gte('created_at', desde),
+    supabase.from('asignaciones_tareas').select('id, tarea_id, estado, nota_rechazo, fecha_envio, fecha_revision').eq('nombre_usuario', yo).not('fecha_envio', 'is', null).gte('fecha_envio', desde),
+    supabase.from('equipo').select('foto_perfil, fecha_nacimiento, emerg1_nombre, emerg1_telefono, necesita_patines, necesita_protecciones, push_notificaciones_activas, solicitud_lesion_pendiente').eq('username', yo).maybeSingle(),
+  ]);
+  const idsEv = [...new Set((res.data ?? []).map((r: any) => r.id_evento).filter(Boolean))];
+  const idsT = [...new Set((asig.data ?? []).map((a: any) => a.tarea_id))];
+  const [{ data: evs }, { data: tareas }] = await Promise.all([
+    idsEv.length ? supabase.from('asistencias').select('id_evento, fecha, inicia, tipo_evento').in('id_evento', idsEv) : Promise.resolve({ data: [] as any[] }),
+    idsT.length ? supabase.from('tareas').select('id, titulo').in('id', idsT) : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const ev: Record<string, any> = {}; (evs ?? []).forEach((e: any) => { ev[e.id_evento] = e; });
+  const ta: Record<string, string> = {}; (tareas ?? []).forEach((t: any) => { ta[t.id] = t.titulo; });
+  const dia = (f: string) => { const d = new Date(f + 'T12:00:00Z'); return `${d.getUTCDate()} de ${['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][d.getUTCMonth()]}`; };
+  const items: any[] = [];
+  for (const r of res.data ?? []) {
+    const e = ev[r.id_evento];
+    items.push({
+      tipo: 'reserva', id: r.id,
+      titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`,
+      detalle: r.estado === 'Pendiente' ? 'Un Pivot confirmará tu pago.' : r.estado === 'Confirmada' ? 'Pago confirmado.' : 'Reserva cancelada.',
+      estado: r.estado === 'Pendiente' ? 'pendiente' : r.estado === 'Confirmada' ? 'aprobada' : 'rechazada', fecha: r.created_at,
+    });
+  }
+  for (const r of rect.data ?? []) {
+    const d = r.decision;
+    items.push({
+      tipo: 'rectificacion', id: r.id, titulo: `Corregir tu asistencia del ${r.fecha_evento ? dia(String(r.fecha_evento).slice(0, 10)) : ''}`.trim(),
+      detalle: d === 'Aprobada' ? 'Se corrigió.' : d === 'Rechazada' ? 'Quedó como estaba.' : d === 'Descartada' ? 'Nadie la revisó a tiempo; puedes pedirla de nuevo.' : 'Un Pivot la revisará.',
+      estado: d === 'Aprobada' ? 'aprobada' : d === 'Rechazada' ? 'rechazada' : d === 'Descartada' ? 'vencida' : 'pendiente', fecha: r.created_at,
+    });
+  }
+  for (const r of exc.data ?? []) {
+    items.push({
+      tipo: 'excepcion', id: r.id, titulo: r.tipo === 'ausencias' ? 'Excepción de cuota por ausencias' : 'Excepción de cuota por dificultad económica',
+      detalle: r.estado === 'aprobada' ? (r.indefinida ? 'Aprobada, sin fecha de fin.' : r.vigente_hasta ? `Aprobada hasta ${r.vigente_hasta}.` : 'Aprobada.') : r.estado === 'rechazada' ? (r.nota_admin ? `No se aprobó: ${r.nota_admin}` : 'No se aprobó.') : 'Un Pivot la revisará.',
+      estado: r.estado === 'aprobada' ? 'aprobada' : r.estado === 'rechazada' ? 'rechazada' : 'pendiente', fecha: r.created_at,
+    });
+  }
+  for (const p of prest.data ?? []) {
+    items.push({
+      tipo: 'prestamo', id: p.id, titulo: `${p.tipo === 'uso' ? 'Usar' : 'Te llevaste'} ${p.detalle ?? 'equipamiento del equipo'}`,
+      detalle: p.estado === 'pendiente' ? 'Un Pivot lo revisará.' : p.estado === 'activo' ? (p.hasta ? `Aprobado hasta el ${dia(p.hasta)}.` : 'Aprobado.') : p.estado === 'devuelto' ? 'Devuelto.' : 'No se aprobó.',
+      estado: p.estado === 'pendiente' ? 'pendiente' : p.estado === 'rechazado' ? 'rechazada' : 'aprobada', fecha: p.devuelto_en ?? p.desde ?? p.created_at,
+    });
+  }
+  for (const a of asig.data ?? []) {
+    items.push({
+      tipo: 'tarea', id: a.id, titulo: ta[a.tarea_id] ?? 'Tarea',
+      detalle: a.estado === 'aprobada' ? 'Tarea aprobada; sumaste sus puntos.' : a.estado === 'rechazada' ? (a.nota_rechazo ? `Hay que corregirla: ${a.nota_rechazo}` : 'Hay que corregirla.') : 'Un Pivot la revisará.',
+      estado: a.estado === 'aprobada' ? 'aprobada' : a.estado === 'rechazada' ? 'rechazada' : 'pendiente', fecha: a.fecha_revision ?? a.fecha_envio,
+    });
+  }
+  if (fila?.solicitud_lesion_pendiente) items.push({ tipo: 'lesion', id: 'lesion', titulo: 'Pasar a Lesionadx', detalle: 'Un Pivot lo revisará.', estado: 'pendiente', fecha: new Date().toISOString() });
+  items.sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+
+  const recomendaciones = [
+    ...(!fila?.emerg1_nombre || !fila?.emerg1_telefono ? [{ clave: 'contacto', titulo: 'Agrega un contacto de emergencia', texto: 'Si te pasa algo en un entrenamiento, el equipo sabrá a quién llamar.' }] : []),
+    ...(!fila?.foto_perfil ? [{ clave: 'foto', titulo: 'Agrega tu foto', texto: 'Así el equipo te reconoce en las listas.' }] : []),
+    ...(!fila?.fecha_nacimiento ? [{ clave: 'identidad', titulo: 'Agrega tu fecha de nacimiento', texto: 'Para tu ficha y, si quieres, para saludarte en tu cumpleaños.' }] : []),
+    ...(fila && fila.necesita_patines == null && fila.necesita_protecciones == null ? [{ clave: 'equipamiento', titulo: 'Cuéntanos tu equipamiento', texto: 'Si tienes el tuyo o necesitas el del equipo.' }] : []),
+    ...(fila && fila.push_notificaciones_activas === false ? [{ clave: 'notificaciones', titulo: 'Activa las notificaciones', texto: 'Para enterarte de entrenamientos, cambios y respuestas a tus pedidos.' }] : []),
+  ];
+  return { exito: true, solicitudes: items, recomendaciones };
+}
+
 async function getDesglosePuntos(params: Record<string, any>): Promise<Record<string, any>> {
   const solicitante = await _validarToken(params.token);
   if (!solicitante) return { exito: false, error: 'Sesión inválida.' };
@@ -8109,7 +8197,8 @@ Deno.serve(async (req: Request) => {
       case 'crearTareaPropia':                return json(await crearTareaPropia(params));
       case 'getAdministradorxs':              return json(await getAdministradorxs(params));
             case 'getConfigEquipo':                 return json(await getConfigEquipo(params));
-            case 'getConfigLiga':                   return json(await getConfigLiga(params));
+                  case 'getConfigLiga':                   return json(await getConfigLiga(params));
+      case 'getMiBandeja':                    return json(await getMiBandeja(params));
       case 'adminDatosCategorias':            return json(await adminDatosCategorias(params));
       case 'adminGuardarConfigLiga':          return json(await adminGuardarConfigLiga(params));
       case 'restaurarSesion':                 return json(await restaurarSesion(params));

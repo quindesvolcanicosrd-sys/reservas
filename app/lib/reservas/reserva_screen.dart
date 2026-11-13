@@ -568,6 +568,8 @@ class _ReservaScreenState extends State<ReservaScreen> {
       meses: _mesesSel.toList()..sort(),
       tallaPorFecha: _tallaPorFecha,
       total: total,
+      // Dónde dice que pagó, para que el Pivot sepa dónde revisar.
+      medio: total.monto == 0 ? null : (urlPago == Pagos.deuna ? 'deuna' : 'transferencia'),
     );
     if (!mounted) return;
     if (resultado.guardados.isEmpty) {

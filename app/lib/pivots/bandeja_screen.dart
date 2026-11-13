@@ -5,6 +5,14 @@ import '../core/cargando.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/widgets_comunes.dart';
+import '../ajustes/ajustes_screen.dart';
+import '../ajustes/componentes.dart';
+import '../ajustes/contacto_screen.dart';
+import '../ajustes/datos_screens.dart';
+import '../ajustes/identidad_screen.dart';
+import '../ajustes/notificaciones_screen.dart';
+import '../equipo/equipo_repo.dart';
+import '../equipo/persona_screen.dart';
 import 'bandeja_repo.dart';
 
 /// Bandeja de Pivots (etapa 3, Victor 2026-11-12): todo lo que espera una
@@ -34,7 +42,25 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
   }
 
   Future<void> _recargar() async {
-    await Future.wait([repo.cargar(forzar: true), _cargarVigentes()]);
+    await Future.wait([repo.cargar(forzar: true), repo.cargarMia(), if (repo.esPivot) _cargarVigentes()]);
+    // Al verla, lo de ahora queda visto: la campana vuelve a ser bandeja.
+    await repo.marcarVista();
+  }
+
+  void _abrirRecomendacion(Recomendacion r) {
+    final s = repo.sesion;
+    switch (r.clave) {
+      case 'foto':
+        cambiarFoto(context, s);
+      case 'contacto':
+        SubAjustes.abrir(context, ContactoScreen(sesion: s, n: '1'));
+      case 'identidad':
+        SubAjustes.abrir(context, IdentidadScreen(sesion: s));
+      case 'equipamiento':
+        SubAjustes.abrir(context, EquipamientoScreen(sesion: s));
+      case 'notificaciones':
+        SubAjustes.abrir(context, NotificacionesScreen(sesion: s));
+    }
   }
 
   Future<void> _cargarVigentes() async {
@@ -43,6 +69,19 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       if (mounted) setState(() => _vigentes = l);
     } catch (_) {
       // El carrusel es secundario: si falla, la Bandeja sigue funcionando.
+    }
+  }
+
+  Future<void> _editarExcepcion(ExcepcionVigente e) async {
+    final cambios = await elegirDuracionExcepcion(context, Pedido(TipoPedido.excepcion, {...e.m, 'mesAplicacion': e.desde}), editar: true);
+    if (cambios == null || !mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await repo.editarExcepcion(e, cambios);
+      m.showSnackBar(SnackBar(content: Text('Guardado. Se le avisó a ${e.nombreMostrar}.')));
+      await _cargarVigentes();
+    } catch (x) {
+      m.showSnackBar(SnackBar(content: Text(x is ApiException ? x.message : 'No se pudo guardar.')));
     }
   }
 
@@ -209,7 +248,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     final p = context.pivot;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bandeja de Pivots', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text('Bandeja', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
         listenable: repo,
@@ -247,10 +286,27 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                     duration: const Duration(milliseconds: 200),
                     child: _saliendo.contains(c)
                         ? const SizedBox(width: double.infinity)
-                        : _TarjetaPedido(pedido: x, alResolver: _saliendo.isEmpty ? (a) => _resolver(x, a) : null),
+                        : _TarjetaPedido(
+                            pedido: x,
+                            alResolver: _saliendo.isEmpty ? (a) => _resolver(x, a) : null,
+                            alAbrirFicha: () => PersonaScreen.abrir(context, EquipoRepo.de(repo.sesion), x.nombre),
+                          ),
                   ),
                 ),
               );
+            }
+          }
+          // Lo de cada persona: sus pedidos y lo que la app recomienda.
+          if (repo.misPedidos.isNotEmpty) {
+            hijos.add(_Encabezado(titulo: 'Tus pedidos', icono: Icons.send_rounded, cantidad: repo.misPedidos.length));
+            for (final x in repo.misPedidos.take(20)) {
+              hijos.add(_TarjetaMiPedido(x: x));
+            }
+          }
+          if (repo.recomendaciones.isNotEmpty) {
+            hijos.add(_Encabezado(titulo: 'Te recomendamos', icono: Icons.lightbulb_outline_rounded, cantidad: repo.recomendaciones.length));
+            for (final r in repo.recomendaciones) {
+              hijos.add(_TarjetaRecomendacion(r: r, alTocar: () => _abrirRecomendacion(r)));
             }
           }
           final vacia = hijos.isEmpty;
@@ -264,7 +320,8 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                   clipBehavior: Clip.none,
                   itemCount: _vigentes.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 10),
-                  itemBuilder: (_, i) => _TarjetaExcepcion(e: _vigentes[i], alCancelar: () => _cancelarExcepcion(_vigentes[i])),
+                  itemBuilder: (_, i) =>
+                      _TarjetaExcepcion(e: _vigentes[i], alCancelar: () => _cancelarExcepcion(_vigentes[i]), alEditar: () => _editarExcepcion(_vigentes[i])),
                 ),
               ),
             );
@@ -288,7 +345,9 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Aquí llegan pagos, rectificaciones, excepciones, lesiones, tareas por validar y equipamiento que alguien se llevó.',
+                          repo.esPivot
+                              ? 'Aquí llegan pagos, rectificaciones, excepciones, lesiones, tareas por validar y equipamiento, y lo que tú pidas.'
+                              : 'Aquí verás tus pedidos (pagos, excepciones, equipamiento, tareas) y si se aprobaron.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: p.textoSecundario),
                         ),
@@ -350,10 +409,24 @@ class _Encabezado extends StatelessWidget {
         if (v('protecciones').isNotEmpty && v('protecciones') != 'No')
           v('protecciones') == 'Sí' ? 'todas las protecciones' : 'protecciones: ${v('protecciones').toLowerCase()}',
       ].join(' · ');
+      // Qué reservó y cuándo, y dónde dice que pagó (Victor, 2026-11-13).
+      final ev = x.evento;
       final que = m['tipo'] == 'mensual'
           ? 'Mensualidad ${m['mesTexto'] ?? ''}'.trim()
-          : 'Clase del $cuando${x.evento?['lugar'] != null && '${x.evento!['lugar']}'.isNotEmpty ? ' · ${x.evento!['lugar']}' : ''}';
-      return ('$que · ${m['usoCupon'] == true ? 'con cupón' : plata(m['monto'])}', equipo.isEmpty ? null : 'Equipamiento del equipo: $equipo');
+          : [
+              '${ev?['tipo'] ?? ''}'.isEmpty ? 'Clase' : '${ev!['tipo']}',
+              if (f != null) 'del ${Fechas.corta(f)}',
+              if ('${ev?['hora'] ?? ''}'.isNotEmpty) 'a las ${ev!['hora']}',
+              if ('${ev?['lugar'] ?? ''}'.isNotEmpty) '· ${ev!['lugar']}',
+            ].join(' ');
+      final medio = switch (v('medio')) {
+        'deuna' => 'Pagó con DeUna',
+        'transferencia' => 'Pagó por transferencia bancaria',
+        'efectivo' => 'Pagó en efectivo',
+        _ => m['usoCupon'] == true || (m['monto'] as num? ?? 0) == 0 ? '' : 'No dijo dónde pagó',
+      };
+      final detalles = [if (medio.isNotEmpty) medio, if (equipo.isNotEmpty) 'Equipamiento del equipo: $equipo'];
+      return ('$que · ${m['usoCupon'] == true ? 'con cupón' : plata(m['monto'])}', detalles.isEmpty ? null : detalles.join('\n'));
     case TipoPedido.rectificacion:
       return ('Pide corregir su asistencia del $cuando', 'Debería decir: ${m['estadoSolicitado'] ?? ''}');
     case TipoPedido.excepcion:
@@ -393,9 +466,10 @@ class _Encabezado extends StatelessWidget {
 }
 
 class _TarjetaPedido extends StatelessWidget {
-  const _TarjetaPedido({required this.pedido, required this.alResolver});
+  const _TarjetaPedido({required this.pedido, required this.alResolver, this.alAbrirFicha});
   final Pedido pedido;
   final void Function(bool aprobar)? alResolver;
+  final VoidCallback? alAbrirFicha;
 
   @override
   Widget build(BuildContext context) {
@@ -415,15 +489,23 @@ class _TarjetaPedido extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AvatarPersona(nombre: pedido.nombreMostrar, foto: pedido.foto, tamano: 40),
+                    // Tocar el avatar o el nombre abre su ficha (contacto y datos).
+                    InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: alAbrirFicha,
+                      child: AvatarPersona(nombre: pedido.nombreMostrar, foto: pedido.foto, tamano: 40),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            pedido.nombreMostrar,
-                            style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                          GestureDetector(
+                            onTap: alAbrirFicha,
+                            child: Text(
+                              pedido.nombreMostrar,
+                              style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(linea, style: TextStyle(fontSize: 14, color: p.texto)),
@@ -470,7 +552,7 @@ class _Entrar extends StatelessWidget {
 }
 
 /// Duración (y efecto) de una excepción al aprobarla.
-Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedido p) {
+Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedido p, {bool editar = false}) {
   final desde = DateTime.tryParse('${p.m['mesAplicacion'] ?? ''}-01') ?? DateTime(Fechas.hoy().year, Fechas.hoy().month);
   final meses = [for (var i = 1; i <= 12; i++) DateTime(desde.year, desde.month + i)];
   var duracion = 'mes';
@@ -501,7 +583,10 @@ Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedi
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Aprobar excepción de ${p.nombreMostrar}', style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  editar ? 'Excepción de ${p.nombreMostrar}' : 'Aprobar excepción de ${p.nombreMostrar}',
+                  style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 16),
                 if (economica) ...[
                   titulo('Cuánto paga'),
@@ -565,7 +650,7 @@ Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedi
                 FilledButton(
                   onPressed: () =>
                       Navigator.of(hoja).pop({'duracion': duracion, if (duracion == 'hasta') 'hasta': clave(hasta), if (economica) 'efecto': efecto}),
-                  child: const Text('Aprobar'),
+                  child: Text(editar ? 'Guardar cambios' : 'Aprobar'),
                 ),
               ],
             ),
@@ -579,9 +664,10 @@ Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedi
 /// Excepción vigente como tarjeta del carrusel (Victor, 2026-11-13: dentro
 /// de la Bandeja, deslizable de lado para no ocupar espacio vertical).
 class _TarjetaExcepcion extends StatelessWidget {
-  const _TarjetaExcepcion({required this.e, required this.alCancelar});
+  const _TarjetaExcepcion({required this.e, required this.alCancelar, required this.alEditar});
   final ExcepcionVigente e;
   final VoidCallback alCancelar;
+  final VoidCallback alEditar;
 
   static String mes(String clave) {
     final d = DateTime.tryParse('$clave-01');
@@ -629,9 +715,113 @@ class _TarjetaExcepcion extends StatelessWidget {
               const Spacer(),
               Align(
                 alignment: Alignment.centerRight,
-                child: e.cancelada ? const SizedBox(height: 40) : TextButton(onPressed: alCancelar, child: const Text('Cancelar')),
+                child: e.cancelada
+                    ? const SizedBox(height: 40)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(onPressed: alEditar, child: const Text('Editar')),
+                          TextButton(onPressed: alCancelar, child: const Text('Cancelar')),
+                        ],
+                      ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Un pedido propio y cómo quedó.
+class _TarjetaMiPedido extends StatelessWidget {
+  const _TarjetaMiPedido({required this.x});
+  final MiPedido x;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final (icono, texto) = switch (x.estado) {
+      'aprobada' => (Icons.check_circle_rounded, 'Aprobado'),
+      'rechazada' => (Icons.cancel_outlined, 'No aprobado'),
+      'vencida' => (Icons.history_rounded, 'Venció'),
+      _ => (Icons.hourglass_top_rounded, 'Pendiente'),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: _Entrar(
+        child: Material(
+          color: p.tarjeta,
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        x.titulo,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                      ),
+                      if (x.detalle.isNotEmpty) ...[const SizedBox(height: 2), Text(x.detalle, style: TextStyle(fontSize: 13, color: p.textoSecundario))],
+                      if (x.fecha != null) ...[
+                        const SizedBox(height: 2),
+                        Text(Fechas.corta(x.fecha!.toLocal()), style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Etiqueta(texto: texto, icono: icono),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ajuste recomendado: toca y abre la pantalla para completarlo.
+class _TarjetaRecomendacion extends StatelessWidget {
+  const _TarjetaRecomendacion({required this.r, required this.alTocar});
+  final Recomendacion r;
+  final VoidCallback alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: p.suave,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+          onTap: alTocar,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.titulo,
+                        style: TextStyle(fontWeight: FontWeight.w700, color: p.sobreSuave),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(r.texto, style: TextStyle(fontSize: 13, color: p.sobreSuave)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: p.sobreSuave),
+              ],
+            ),
           ),
         ),
       ),

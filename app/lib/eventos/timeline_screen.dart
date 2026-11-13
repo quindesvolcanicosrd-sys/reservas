@@ -31,6 +31,7 @@ import '../tareas/tareas_repo.dart';
 import '../tareas/tareas_screen.dart' hide PilaAvatares;
 import '../pivots/bandeja_repo.dart';
 import '../pivots/bandeja_screen.dart';
+import '../pivots/icono_bandeja.dart';
 
 /// Timeline de Eventos (maqueta aprobada + pedido 2026-11-06):
 /// - Barra: "Noviembre ⌄" despliega el calendario del mes hacia abajo (como
@@ -164,6 +165,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     _tareas.cargar(forzar: _tareas.cargado);
     _bandeja.addListener(_alPasarMinuto);
     _bandeja.cargar(forzar: true);
+    _bandeja.cargarMia();
   }
 
   // ─── Búsqueda y filtros guardados (pedido 2026-11-06: siempre) ─────────
@@ -753,21 +755,15 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             ),
           ),
           const Spacer(),
-          // Bandeja de Pivots: lo que espera una decisión (etapa 3).
-          if (_bandeja.esPivot)
-            IconButton(
-              tooltip: _bandeja.total > 0 ? 'Bandeja de Pivots (${_bandeja.total} pendientes)' : 'Bandeja de Pivots',
-              icon: Badge(
-                isLabelVisible: _bandeja.total > 0,
-                backgroundColor: p.marca,
-                label: Text('${_bandeja.total}'),
-                child: const Icon(Icons.inbox_rounded),
-              ),
-              onPressed: () {
-                _cerrarCalendario();
-                SubAjustes.abrir(context, BandejaPivotsScreen(repo: _bandeja));
-              },
-            ),
+          // Bandeja para todas las personas (2026-11-13): campana con novedades.
+          IconButton(
+            tooltip: _bandeja.hayNovedades ? 'Bandeja (hay novedades)' : (_bandeja.total > 0 ? 'Bandeja (${_bandeja.total} por revisar)' : 'Bandeja'),
+            icon: IconoBandeja(novedades: _bandeja.hayNovedades, pendientes: _bandeja.esPivot ? _bandeja.total : 0),
+            onPressed: () {
+              _cerrarCalendario();
+              SubAjustes.abrir(context, BandejaPivotsScreen(repo: _bandeja));
+            },
+          ),
           // Tablero de tareas, con el número de tareas para tomar.
           IconButton(
             key: _kTareas,
@@ -1083,7 +1079,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       onNotification: _alScrollearTimeline,
       child: RefreshIndicator(
         key: _kLista,
-        onRefresh: () => Future.wait([repo.cargar(forzar: true), _bandeja.cargar(forzar: true)]),
+        onRefresh: () => Future.wait([repo.cargar(forzar: true), _bandeja.cargar(forzar: true), _bandeja.cargarMia()]),
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
