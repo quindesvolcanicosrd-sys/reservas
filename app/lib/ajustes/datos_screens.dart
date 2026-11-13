@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/paises.dart';
 import '../core/tema.dart';
 import '../equipo/equipo_repo.dart';
+import '../equipo/roles_screen.dart';
 import '../sesion/sesion.dart';
 import 'ajustes_screen.dart';
 import 'campos.dart';
@@ -61,7 +62,23 @@ class MiPerfilEditable extends StatelessWidget {
                       titulo: 'Roles en el equipo',
                       valor: roles.join(', '),
                       alTocar: () async {
-                        final v = await elegirOpciones(context, titulo: 'Roles en el equipo', opciones: equipo.roles, valor: roles.join(', '), multi: true);
+                        final v = await elegirOpciones(
+                          context,
+                          titulo: 'Roles en el equipo',
+                          opciones: equipo.roles,
+                          valor: roles.join(', '),
+                          multi: true,
+                          // Pivots: editar el catálogo desde aquí (Victor, 2026-11-13).
+                          secundaria: s.esAdmin && s.adminToken != null
+                              ? (
+                                  'Agregar o editar roles',
+                                  () {
+                                    Navigator.of(context).pop();
+                                    SubAjustes.abrir(context, RolesScreen(repo: equipo));
+                                  },
+                                )
+                              : null,
+                        );
                         if (v == null || !context.mounted) return;
                         final ok = await guardarCampos(context, s, {'roles': v});
                         if (ok) await equipo.cargar(forzar: true);

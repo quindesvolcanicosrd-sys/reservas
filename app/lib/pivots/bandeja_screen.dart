@@ -24,10 +24,50 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
   final _saliendo = <String>{};
   static String _clave(Pedido x) => '${x.tipo.name}-${x.id}';
 
+  /// Excepciones de cuota aprobadas y vigentes (carrusel al final).
+  List<ExcepcionVigente> _vigentes = const [];
+
   @override
   void initState() {
     super.initState();
-    repo.cargar(forzar: true);
+    _recargar();
+  }
+
+  Future<void> _recargar() async {
+    await Future.wait([repo.cargar(forzar: true), _cargarVigentes()]);
+  }
+
+  Future<void> _cargarVigentes() async {
+    try {
+      final l = await repo.excepcionesVigentes();
+      if (mounted) setState(() => _vigentes = l);
+    } catch (_) {
+      // El carrusel es secundario: si falla, la Bandeja sigue funcionando.
+    }
+  }
+
+  Future<void> _cancelarExcepcion(ExcepcionVigente e) async {
+    final h = Fechas.hoy();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Cancelar la excepción de ${e.nombreMostrar}?'),
+        content: Text('Sigue vigente hasta el fin de ${Fechas.mes(h)}. Desde el mes que viene paga la cuota normal. Se le avisará.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Cancelar excepción')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await repo.cancelarExcepcion(e);
+      m.showSnackBar(SnackBar(content: Text('Cancelada. Termina el fin de ${Fechas.mes(h)}.')));
+      await _cargarVigentes();
+    } catch (x) {
+      m.showSnackBar(SnackBar(content: Text(x is ApiException ? x.message : 'No se pudo cancelar.')));
+    }
   }
 
   static const _grupos = [
@@ -102,13 +142,6 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bandeja de Pivots', style: TextStyle(fontWeight: FontWeight.w700)),
-        actions: [
-          IconButton(
-            tooltip: 'Excepciones vigentes',
-            icon: const Icon(Icons.event_repeat_rounded),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExcepcionesVigentesScreen(repo: repo))),
-          ),
-        ],
       ),
       body: ListenableBuilder(
         listenable: repo,
@@ -152,13 +185,30 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
               );
             }
           }
+          final vacia = hijos.isEmpty;
+          if (_vigentes.isNotEmpty) {
+            hijos.add(_Encabezado(titulo: 'Excepciones vigentes', icono: Icons.event_repeat_rounded, cantidad: _vigentes.length));
+            hijos.add(
+              SizedBox(
+                height: 150,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
+                  itemCount: _vigentes.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 10),
+                  itemBuilder: (_, i) => _TarjetaExcepcion(e: _vigentes[i], alCancelar: () => _cancelarExcepcion(_vigentes[i])),
+                ),
+              ),
+            );
+          }
           return RefreshIndicator(
-            onRefresh: () => repo.cargar(forzar: true),
+            onRefresh: _recargar,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 260),
-              child: hijos.isEmpty
+              child: vacia
                   ? ListView(
                       key: const ValueKey('vacia'),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                       children: [
                         const SizedBox(height: 120),
                         Icon(Icons.inbox_rounded, size: 56, color: p.textoSecundario),
@@ -174,6 +224,8 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(color: p.textoSecundario),
                         ),
+                        if (hijos.isNotEmpty) const SizedBox(height: 24),
+                        ...hijos,
                       ],
                     )
                   : ListView(key: const ValueKey('lista'), padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: hijos),
@@ -455,135 +507,65 @@ Future<Map<String, Object?>?> elegirDuracionExcepcion(BuildContext context, Pedi
   );
 }
 
-/// Pivots: excepciones aprobadas que siguen vigentes, para cancelarlas.
-class ExcepcionesVigentesScreen extends StatefulWidget {
-  const ExcepcionesVigentesScreen({super.key, required this.repo});
-  final BandejaRepo repo;
+/// Excepción vigente como tarjeta del carrusel (Victor, 2026-11-13: dentro
+/// de la Bandeja, deslizable de lado para no ocupar espacio vertical).
+class _TarjetaExcepcion extends StatelessWidget {
+  const _TarjetaExcepcion({required this.e, required this.alCancelar});
+  final ExcepcionVigente e;
+  final VoidCallback alCancelar;
 
-  @override
-  State<ExcepcionesVigentesScreen> createState() => _ExcepcionesVigentesScreenState();
-}
-
-class _ExcepcionesVigentesScreenState extends State<ExcepcionesVigentesScreen> {
-  List<ExcepcionVigente>? _lista;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargar();
-  }
-
-  Future<void> _cargar() async {
-    try {
-      final l = await widget.repo.excepcionesVigentes();
-      if (mounted) {
-        setState(() {
-          _lista = l;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.');
-    }
-  }
-
-  static String _mes(String clave) {
+  static String mes(String clave) {
     final d = DateTime.tryParse('$clave-01');
     return d == null ? clave : (d.year == Fechas.hoy().year ? Fechas.mes(d) : '${Fechas.mes(d)} de ${d.year}');
-  }
-
-  Future<void> _cancelar(ExcepcionVigente e) async {
-    final h = Fechas.hoy();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (d) => AlertDialog(
-        title: Text('¿Cancelar la excepción de ${e.nombreMostrar}?'),
-        content: Text('Sigue vigente hasta el fin de ${Fechas.mes(h)}. Desde el mes que viene paga la cuota normal. Se le avisará.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
-          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Cancelar excepción')),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    final m = ScaffoldMessenger.of(context);
-    try {
-      await widget.repo.cancelarExcepcion(e);
-      m.showSnackBar(SnackBar(content: Text('Cancelada. Termina el fin de ${Fechas.mes(h)}.')));
-      await _cargar();
-    } catch (x) {
-      m.showSnackBar(SnackBar(content: Text(x is ApiException ? x.message : 'No se pudo cancelar.')));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    final l = _lista;
-    final Widget cuerpo;
-    if (l == null) {
-      cuerpo = _error != null ? Center(key: const ValueKey('e'), child: Text(_error!)) : const Center(key: ValueKey('c'), child: PivotCargando());
-    } else if (l.isEmpty) {
-      cuerpo = Center(
-        key: const ValueKey('v'),
-        child: Text('No hay excepciones vigentes.', style: TextStyle(color: p.textoSecundario)),
-      );
-    } else {
-      cuerpo = RefreshIndicator(
-        key: const ValueKey('l'),
-        onRefresh: _cargar,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-          children: [
-            for (final e in l)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Material(
-                  color: p.tarjeta,
-                  borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                    child: Row(
-                      children: [
-                        AvatarPersona(nombre: e.nombreMostrar, foto: e.foto, tamano: 40),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                e.nombreMostrar,
-                                style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
-                              ),
-                              Text(
-                                '${e.exenta ? 'No paga' : 'Media cuota'} · ${e.tipo == 'ausencias' ? 'ausencias' : 'dificultad económica'}',
-                                style: TextStyle(fontSize: 13.5, color: p.texto),
-                              ),
-                              Text(
-                                e.hasta == null
-                                    ? 'Desde ${_mes(e.desde)}, indefinida'
-                                    : 'De ${_mes(e.desde)} a ${_mes(e.hasta!)}${e.cancelada ? ' (cancelada)' : ''}',
-                                style: TextStyle(fontSize: 13, color: p.textoSecundario),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!e.cancelada) TextButton(onPressed: () => _cancelar(e), child: const Text('Cancelar')),
-                      ],
+    return SizedBox(
+      width: 270,
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AvatarPersona(nombre: e.nombreMostrar, foto: e.foto, tamano: 34),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      e.nombreMostrar,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
                     ),
                   ),
-                ),
+                ],
               ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                '${e.exenta ? 'No paga' : 'Media cuota'} · ${e.tipo == 'ausencias' ? 'ausencias' : 'dificultad económica'}',
+                style: TextStyle(fontSize: 13.5, color: p.texto),
+              ),
+              Text(
+                e.hasta == null ? 'Desde ${mes(e.desde)}, indefinida' : 'De ${mes(e.desde)} a ${mes(e.hasta!)}${e.cancelada ? ' (cancelada)' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: p.textoSecundario),
+              ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.centerRight,
+                child: e.cancelada ? const SizedBox(height: 40) : TextButton(onPressed: alCancelar, child: const Text('Cancelar')),
+              ),
+            ],
+          ),
         ),
-      );
-    }
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Excepciones vigentes', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: AnimatedSwitcher(duration: const Duration(milliseconds: 250), child: cuerpo),
     );
   }
 }

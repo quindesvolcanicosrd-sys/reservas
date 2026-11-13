@@ -2,6 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/api.dart';
 import '../core/fechas.dart';
 import '../core/reloj.dart';
 import '../core/tema.dart';
@@ -544,6 +545,45 @@ class _DetalleScreenState extends State<DetalleScreen> {
     }
   }
 
+  /// Pivots: cambiar cómo llegó alguien sin abrir la toma de asistencia.
+  Future<void> _cambiarReal(Evento ev, AsistenciaReal a) async {
+    final elegido = await showModalBottomSheet<(EstadoReal?,)>(
+      context: context,
+      showDragHandle: true,
+      builder: (hoja) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(a.persona.nombreMostrar, style: Theme.of(hoja).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+            for (final (estado, texto, icono) in const [
+              (EstadoReal.aTiempo, 'Llegó a horario', Icons.check_circle_rounded),
+              (EstadoReal.tarde, 'Llegó tarde', Icons.schedule_rounded),
+              (null, 'No asistió', Icons.cancel_outlined),
+            ])
+              ListTile(
+                leading: Icon(icono),
+                title: Text(texto),
+                trailing: estado == a.estado ? Icon(Icons.check_rounded, color: hoja.pivot.marcaTexto) : null,
+                onTap: () => Navigator.of(hoja).pop((estado,)),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (elegido == null || elegido.$1 == a.estado || !mounted) return;
+    try {
+      await repo.marcarReal(ev, a.persona, elegido.$1);
+      _avisar('Asistencia de ${a.persona.nombreMostrar} actualizada.');
+    } catch (e) {
+      _avisar(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.');
+    }
+  }
+
   /// Evento pasado: quién fue y cómo llegó (Victor, 2026-11-12).
   Widget _quienesFueron(BuildContext context, Evento ev) {
     final p = context.pivot;
@@ -629,7 +669,18 @@ class _DetalleScreenState extends State<DetalleScreen> {
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: p.texto),
                         ),
                       ),
-                      Etiqueta(texto: a.estado.etiqueta, icono: a.estado == EstadoReal.aTiempo ? Icons.check_rounded : Icons.schedule_rounded),
+                      // Pivots: tocar el estado lo cambia; el avatar o el nombre abren la ficha (2026-11-13).
+                      InkWell(
+                        customBorder: const StadiumBorder(),
+                        onTap: _esAdmin ? () => _cambiarReal(ev, a) : null,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Etiqueta(texto: a.estado.etiqueta, icono: a.estado == EstadoReal.aTiempo ? Icons.check_rounded : Icons.schedule_rounded),
+                            if (_esAdmin) Icon(Icons.expand_more_rounded, size: 18, color: p.textoSecundario),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

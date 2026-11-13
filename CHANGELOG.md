@@ -3,6 +3,13 @@
 Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.md anterior (que mezclaba estado actual + historial en un solo archivo de ~7000 líneas). Dentro de cada sección, más reciente primero. Las fechas exactas están confirmadas cuando el MANIFEST las traía en formato ISO; el resto del historial (desarrollado a lo largo de 2025 y 2026 sin registrar fecha por entrada) queda con el mes/año aproximado que se pudo inferir del contexto (migraciones con fecha en su nombre, menciones explícitas de mes, o posición relativa en el archivo original).
 
 ## 2026-11-13 (tarde)
+- Calendario: la pill de asistencia ocupa todo el ancho, como "Editar asistencia".
+- Detalle de evento (Pivots): tocar "A tiempo"/"Tarde" de alguien abre una hoja para cambiarlo; el avatar o nombre siguen abriendo la ficha.
+- Bandeja de Pivots: "Excepciones vigentes" deja de ser pantalla aparte; es un carrusel horizontal al final de la Bandeja.
+- Equipo: el buscador se ve igual que el de Calendario (flecha para volver, campo con fondo, X para borrar).
+- Comunidad: al pegar el texto que comparte WhatsApp ("Abre este enlace…: https://chat.whatsapp.com/…") se guarda solo el enlace (app y servidor); se corrigieron los dos grupos guardados mal, por eso "Unirse" no hacía nada.
+- Equipo: sin "No definido" en filtros ni etiquetas.
+- Mi perfil → Roles en el equipo: botón "Agregar o editar roles" para Pivots debajo de Guardar.
 - Calendario: la pill de asistencia ("Llegaste a horario | ¿Es correcto?") pasa a su propia línea debajo del lugar; al lado del título lo aplastaba.
 
 ## Eventos

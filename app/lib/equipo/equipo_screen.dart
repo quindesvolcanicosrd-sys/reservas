@@ -82,16 +82,29 @@ class _EquipoScreenState extends State<EquipoScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
+          // Igual que el buscador de Calendario (2026-11-13): flecha para
+          // volver, campo con fondo y la X para borrar dentro del campo.
           titleSpacing: _buscando ? 0 : null,
+          leading: _buscando ? IconButton(tooltip: 'Cerrar búsqueda', icon: const Icon(Icons.arrow_back_rounded), onPressed: _alternarBusqueda) : null,
           title: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             child: _buscando
-                ? TextField(
+                ? Padding(
                     key: const ValueKey('buscar'),
-                    controller: _busqueda,
-                    focusNode: _focoBusqueda,
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(hintText: 'Buscar en el equipo', border: InputBorder.none),
+                    padding: const EdgeInsets.only(right: 12),
+                    child: TextField(
+                      controller: _busqueda,
+                      focusNode: _focoBusqueda,
+                      textInputAction: TextInputAction.search,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar en el equipo',
+                        isDense: true,
+                        suffixIcon: _busqueda.text.isEmpty
+                            ? null
+                            : IconButton(tooltip: 'Borrar texto', icon: const Icon(Icons.close_rounded), onPressed: () => setState(_busqueda.clear)),
+                      ),
+                    ),
                   )
                 : Text(
                     'Equipo',
@@ -109,11 +122,7 @@ class _EquipoScreenState extends State<EquipoScreen> {
                   icon: Badge(isLabelVisible: repo.hayFiltros, smallSize: 8, child: const Icon(Icons.tune_rounded)),
                 ),
               ),
-            IconButton(
-              tooltip: _buscando ? 'Cerrar búsqueda' : 'Buscar',
-              onPressed: _alternarBusqueda,
-              icon: Icon(_buscando ? Icons.close_rounded : Icons.search_rounded),
-            ),
+            if (!_buscando) IconButton(tooltip: 'Buscar', onPressed: _alternarBusqueda, icon: const Icon(Icons.search_rounded)),
           ],
         ),
         body: ListenableBuilder(

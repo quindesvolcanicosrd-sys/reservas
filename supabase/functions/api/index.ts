@@ -2229,7 +2229,11 @@ async function adminGuardarComunidad(params: Record<string, any>): Promise<Recor
   for (const e of lista) {
     const red = REDES_COMUNIDAD.includes(String(e?.red)) ? String(e.red) : 'otro';
     const nombre = String(e?.nombre ?? '').trim().slice(0, 60);
-    let url = String(e?.url ?? '').trim().slice(0, 500);
+    let url = String(e?.url ?? '').trim();
+    // Texto compartido ("Abre este enlace…: https://…"): solo el enlace.
+    const enlaces = url.match(/https?:\/\/\S+/gi);
+    if (enlaces?.length) url = enlaces[enlaces.length - 1];
+    url = url.slice(0, 500);
     if (red === 'correo' && url && !url.startsWith('mailto:')) url = 'mailto:' + url;
     if (red !== 'correo' && url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
     if (!nombre || !url) return { exito: false, error: 'Cada enlace necesita nombre y dirección.' };

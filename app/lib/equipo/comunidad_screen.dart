@@ -33,6 +33,14 @@ class EnlaceComunidad {
   String get nombreRed => (redes[red] ?? redes['otro']!).$1;
   String get accion => red == 'whatsapp' ? 'Unirse' : 'Abrir';
 
+  /// Del texto que se comparte ("Abre este enlace para unirte a mi grupo de
+  /// WhatsApp: https://chat.whatsapp.com/…") se queda solo con el enlace.
+  static String limpiar(String v) {
+    final t = v.trim();
+    final m = RegExp(r'https?://\S+', caseSensitive: false).allMatches(t).toList();
+    return m.isEmpty ? t : m.last.group(0)!;
+  }
+
   /// Reconoce la red por el enlace pegado (Victor, 2026-11-12).
   static String detectar(String url) {
     final u = url.toLowerCase();
@@ -117,7 +125,10 @@ class ComunidadRepo extends ChangeNotifier {
 }
 
 Future<void> abrirEnlace(BuildContext context, String url) async {
-  final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication).catchError((_) => false);
+  final ok = await launchUrl(
+    Uri.parse(url.startsWith('mailto:') ? url : EnlaceComunidad.limpiar(url)),
+    mode: LaunchMode.externalApplication,
+  ).catchError((_) => false);
   if (!ok && context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir el enlace.')));
   }
@@ -439,7 +450,8 @@ Future<EnlaceComunidad?> mostrarHojaEnlace(BuildContext context, {EnlaceComunida
                 onPressed: () {
                   if (url.text.trim().isEmpty) return;
                   final n = nombre.text.trim().isEmpty ? EnlaceComunidad.nombreSugerido(red) : nombre.text.trim();
-                  final enlace = red == 'whatsapp' ? EnlaceComunidad.normalizarWhatsapp(url.text) : url.text.trim();
+                  final limpio = EnlaceComunidad.limpiar(url.text);
+                  final enlace = red == 'whatsapp' ? EnlaceComunidad.normalizarWhatsapp(limpio) : limpio;
                   Navigator.of(hoja).pop(EnlaceComunidad(red, n, enlace));
                 },
                 child: Text(actual == null ? 'Agregar' : 'Guardar'),

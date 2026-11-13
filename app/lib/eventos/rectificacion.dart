@@ -168,11 +168,14 @@ class _SegmentoAccion extends StatelessWidget {
 /// Pill de tu asistencia real con "¿Es correcto?" dentro (Victor,
 /// 2026-11-13: suelto se veía sin sentido). Toda la pill se toca.
 class PillAsistencia extends StatelessWidget {
-  const PillAsistencia({super.key, required this.repo, required this.ev, required this.texto, this.icono});
+  const PillAsistencia({super.key, required this.repo, required this.ev, required this.texto, this.icono, this.completa = false});
   final EventosRepo repo;
   final Evento ev;
   final String texto;
   final IconData? icono;
+
+  /// Ocupa todo el ancho, como el botón de asistencia de abajo (2026-11-13).
+  final bool completa;
 
   @override
   Widget build(BuildContext context) {
@@ -189,15 +192,16 @@ class PillAsistencia extends StatelessWidget {
             customBorder: const StadiumBorder(),
             onTap: accion == null ? null : () => b.tocar(context),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 5, 6, 5),
+              padding: completa ? const EdgeInsets.fromLTRB(16, 11, 12, 11) : const EdgeInsets.fromLTRB(10, 5, 6, 5),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: completa ? MainAxisSize.max : MainAxisSize.min,
                 children: [
                   if (icono != null) ...[Icon(icono, size: 15, color: p.sobreSuave), const SizedBox(width: 4)],
                   Text(
                     texto,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.sobreSuave),
+                    style: TextStyle(fontSize: completa ? 13.5 : 12, fontWeight: FontWeight.w700, color: p.sobreSuave),
                   ),
+                  if (completa) const Spacer(),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 200),
                     child: accion == null

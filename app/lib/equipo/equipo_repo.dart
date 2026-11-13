@@ -43,8 +43,9 @@ class EquipoRepo extends ChangeNotifier {
   /// Cuántas personas tienen cada rol.
   Map<String, int> rolesEnUso = const {};
 
-  /// Para filtrar Equipo: el catálogo y "No definido".
-  List<String> get rolesCatalogo => [...roles, 'No definido'];
+  /// Para filtrar Equipo: solo el catálogo. Quien no tiene rol simplemente
+  /// no lleva etiqueta (Victor, 2026-11-13: sin "No definido").
+  List<String> get rolesCatalogo => roles;
 
   Future<void> cargarRoles() async {
     try {
@@ -74,8 +75,7 @@ class EquipoRepo extends ChangeNotifier {
 
   bool pasaRoles(Integrante p) {
     if (filtroRoles.isEmpty) return true;
-    final r = p.roles.isEmpty ? const ['No definido'] : p.roles;
-    return r.any(filtroRoles.contains);
+    return p.roles.any(filtroRoles.contains);
   }
 
   void alternarRol(String r) {

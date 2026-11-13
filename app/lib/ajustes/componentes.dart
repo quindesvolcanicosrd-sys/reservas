@@ -292,17 +292,27 @@ Future<String?> elegirOpciones(
   bool multi = false,
   bool otro = false,
   String? ayuda,
+  (String, VoidCallback)? secundaria,
 }) {
   return showModalBottomSheet<String>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => _HojaOpciones(titulo: titulo, opciones: opciones, valor: valor, multi: multi, otro: otro, ayuda: ayuda),
+    builder: (_) => _HojaOpciones(titulo: titulo, opciones: opciones, valor: valor, multi: multi, otro: otro, ayuda: ayuda, secundaria: secundaria),
   );
 }
 
 class _HojaOpciones extends StatefulWidget {
-  const _HojaOpciones({required this.titulo, required this.opciones, required this.valor, required this.multi, required this.otro, required this.ayuda});
+  const _HojaOpciones({
+    required this.titulo,
+    required this.opciones,
+    required this.valor,
+    required this.multi,
+    required this.otro,
+    required this.ayuda,
+    this.secundaria,
+  });
+  final (String, VoidCallback)? secundaria;
   final String titulo;
   final List<String> opciones;
   final String valor;
@@ -352,6 +362,7 @@ class _HojaOpcionesState extends State<_HojaOpciones> {
       titulo: widget.titulo,
       ayuda: widget.ayuda,
       accion: ('Guardar', _listo),
+      secundaria: widget.secundaria,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -392,11 +403,14 @@ class _HojaOpcionesState extends State<_HojaOpciones> {
 
 /// Estructura común de las hojas: título, ayuda, contenido y botón.
 class HojaBase extends StatelessWidget {
-  const HojaBase({super.key, required this.titulo, this.ayuda, required this.child, this.accion});
+  const HojaBase({super.key, required this.titulo, this.ayuda, required this.child, this.accion, this.secundaria});
   final String titulo;
   final String? ayuda;
   final Widget child;
   final (String, VoidCallback?)? accion;
+
+  /// Botón de texto debajo del principal (ej. "Agregar o editar roles").
+  final (String, VoidCallback?)? secundaria;
 
   @override
   Widget build(BuildContext context) {
@@ -422,6 +436,7 @@ class HojaBase extends StatelessWidget {
                   child: Text(accion!.$1),
                 ),
               ],
+              if (secundaria != null) ...[const SizedBox(height: 4), TextButton(onPressed: secundaria!.$2, child: Text(secundaria!.$1))],
             ],
           ),
         ),

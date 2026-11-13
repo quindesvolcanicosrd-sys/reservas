@@ -1573,7 +1573,10 @@ class _TarjetaEvento extends StatelessWidget {
               ),
               // Evento pasado con asistencia tomada (Victor, 2026-11-12): lo que pasó de verdad.
               // Va en su propia línea para no aplastar el título (2026-11-13).
-              if (!apagado && miReal != null) ...[const SizedBox(height: 10), PillAsistencia(repo: repo, ev: ev, texto: miReal.$1, icono: miReal.$2)],
+              if (!apagado && miReal != null) ...[
+                const SizedBox(height: 10),
+                PillAsistencia(repo: repo, ev: ev, texto: miReal.$1, icono: miReal.$2, completa: true),
+              ],
               if (!apagado && asisten.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Row(
