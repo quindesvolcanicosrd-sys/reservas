@@ -404,7 +404,6 @@ Future<EnlaceComunidad?> mostrarHojaEnlace(BuildContext context, {EnlaceComunida
                 onChanged: alCambiarEnlace,
                 decoration: InputDecoration(
                   labelText: 'Enlace, número o correo',
-                  hintText: 'Enlace del grupo o +593 99…',
                   prefixIcon: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: Icon((EnlaceComunidad.redes[red] ?? EnlaceComunidad.redes['otro']!).$2, key: ValueKey(red)),
