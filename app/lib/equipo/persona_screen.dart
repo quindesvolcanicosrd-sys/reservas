@@ -125,7 +125,15 @@ class _Ficha extends StatelessWidget {
             const SizedBox(height: 18),
             _acciones(context, pal, yo),
             const SizedBox(height: 18),
-            EstadisticasPersona(repo: repo, p: p),
+            // Estadísticas en su propia pantalla (Victor, 2026-11-13).
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () => EstadisticasScreen.abrir(context, repo, p),
+                icon: const Icon(Icons.insights_rounded, size: 18),
+                label: const Text('Ver estadísticas'),
+              ),
+            ),
+            const SizedBox(height: 14),
             if (p.fechaIngreso != null) ...[
               const SizedBox(height: 4),
               Text(

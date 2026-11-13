@@ -9,6 +9,7 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 - Equipo: el buscador se ve igual que el de Calendario (flecha para volver, campo con fondo, X para borrar).
 - Comunidad: al pegar el texto que comparte WhatsApp ("Abre este enlace…: https://chat.whatsapp.com/…") se guarda solo el enlace (app y servidor); se corrigieron los dos grupos guardados mal, por eso "Unirse" no hacía nada.
 - Equipo: sin "No definido" en filtros ni etiquetas.
+- Estadísticas en su propia pantalla (título "Estadísticas" y el nombre debajo): desde Mi perfil ("Mis estadísticas") y desde la ficha de Equipo ("Ver estadísticas"). Selector de año si hay datos de años anteriores, siempre en %, lecturas concretas ("Del 1 al 13 de noviembre fuiste a 5 clases: 2 más que en esas mismas fechas de octubre"), puntualidad, clases seguidas, gráfico por mes de asistencia o puntos, y tarjeta "Categoría/Equipo" con lo que pide, barras de clases y puntos, lo que falta y cómo sumar. Endpoint nuevo `getEstadisticasPersona` (misma cuenta que recalcular-categorias).
 - Mi perfil → Roles en el equipo: botón "Agregar o editar roles" para Pivots debajo de Guardar.
 - Calendario: la pill de asistencia ("Llegaste a horario | ¿Es correcto?") pasa a su propia línea debajo del lugar; al lado del título lo aplastaba.
 

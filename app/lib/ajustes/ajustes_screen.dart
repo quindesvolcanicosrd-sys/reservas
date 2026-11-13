@@ -234,7 +234,8 @@ class _CabeceraPerfil extends StatelessWidget {
                 if (sesion.datos.isNotEmpty)
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    onPressed: () => SubAjustes.abrir(context, MisEstadisticasScreen(repo: EquipoRepo.de(sesion))),
+                    onPressed: () =>
+                        SubAjustes.abrir(context, EstadisticasScreen(repo: EquipoRepo.de(sesion), username: sesion.nombre ?? '', nombre: sesion.nombreMostrar)),
                     icon: const Icon(Icons.insights_rounded, size: 18),
                     label: const Text('Mis estadísticas'),
                   ),

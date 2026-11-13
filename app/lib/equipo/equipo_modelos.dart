@@ -157,4 +157,4 @@ List<DatoFila> datosRelevantes(Integrante p, DateTime hoy, {String periodo = 'es
 String normalizarPronombres(String s) => s.replaceAll(RegExp(r'/(ella|él|elle)', caseSensitive: false), '').trim();
 
 String _num(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
-String numero(double v) => _num(v);
+String numero(num v) => _num(v.toDouble());

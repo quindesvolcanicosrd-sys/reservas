@@ -5834,6 +5834,139 @@ function _periodoDesdeParams(params: Record<string, any>, hoy: Date): { desde: s
 // cualquier sesión ve los puntos de cualquier persona) -- FIN nuevo sí
 // pide al menos una sesión válida, `getEquipo()` en los hechos no exige
 // ninguna.
+// ─── Estadísticas de una persona (Victor, 2026-11-13) ─────────────────────
+// Todo lo que muestra la pantalla "Estadísticas" (Mi perfil y la ficha de
+// Equipo): cada evento con asistencia tomada del año elegido y cómo le fue a
+// la persona (así la app calcula meses, comparaciones "del 1 al 13" y
+// porcentajes), sus puntos por mes, los años con datos y su progreso de
+// categoría con la MISMA cuenta que recalcular-categorias (clases y puntos
+// en la ventana de cada categoría). Cualquier sesión del equipo puede verlo
+// (igual que getEquipo); no hay datos sensibles.
+async function _paginado(armar: (desde: number, hasta: number) => any, tam = 1000): Promise<any[]> {
+  const out: any[] = [];
+  for (let i = 0; i < 100; i++) {
+    const { data, error } = await armar(i * tam, i * tam + tam - 1);
+    if (error || !data) break;
+    out.push(...data);
+    if (data.length < tam) break;
+  }
+  return out;
+}
+
+async function getEstadisticasPersona(params: Record<string, any>): Promise<Record<string, any>> {
+  const quien = params.adminToken ? await _validarAdminToken(String(params.adminToken)) : null;
+  const yo = quien ? null : await _validarToken(String(params.token ?? ''));
+  if (!quien && !yo) return { exito: false, error: 'Sesión inválida.' };
+  const username = String(params.nombreUsuario ?? yo ?? '').trim();
+  if (!username) return { exito: false, error: 'Falta la persona.' };
+  const hoy = new Date();
+  const anio = Number(params.anio) || hoy.getUTCFullYear();
+  const desde = `${anio}-01-01`, hasta = `${anio + 1}-01-01`;
+  const U = username.toUpperCase();
+
+  const [logs, { data: puntos }, { data: anios }, { data: fila }, { data: tiersData }] = await Promise.all([
+    _paginado((a, b) => supabase.from('log_asistencias')
+      .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
+      .in('origen', ['Admin', 'Externa'])
+      .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta)
+      .order('id', { ascending: true }).range(a, b)),
+    supabase.from('puntos_mensuales').select('mes, puntos_asistencia, puntos_tareas, puntos_bonificacion, puntos_extra, puntos_total')
+      .eq('nombre_usuario', username).eq('anio', anio),
+    supabase.from('puntos_mensuales').select('anio').eq('nombre_usuario', username),
+    supabase.from('equipo').select('categoria, tier_modo, estado_miembro, necesita_patines, necesita_protecciones, meses_consecutivos_cumplidos, tier_riesgo_hasta, tier_riesgo_objetivo, fecha_ingreso')
+      .eq('username', username).maybeSingle(),
+    supabase.from('config_tiers').select('*').order('orden', { ascending: true }),
+  ]);
+  if (!fila) return { exito: false, error: 'No encontramos a esa persona.' };
+
+  // Última marca por evento+persona (mismo criterio que getEquipo/getDesglosePuntos).
+  const ultima: Record<string, { estado: string; u: string; fecha: string; marca: number }> = {};
+  const fechaEvento: Record<string, string> = {};
+  for (const l of logs) {
+    const u = String(l.nombre_usuario ?? '').trim();
+    const ev = String(l.id_evento);
+    const f = String(l.fecha_entrenamiento ?? '').slice(0, 10);
+    if (f) fechaEvento[ev] = f;
+    if (!u) continue;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    const k = ev + '|' + u.toUpperCase();
+    if (!ultima[k] || marca >= ultima[k].marca) ultima[k] = { estado: l.estado, u, fecha: f, marca };
+  }
+  const eventos = Object.keys(fechaEvento).map((ev) => {
+    const m = ultima[ev + '|' + U];
+    const est = m && (m.estado === 'A tiempo' || m.estado === 'Tarde') ? m.estado : null;
+    return { fecha: fechaEvento[ev], estado: est, externa: ev.startsWith('ext_') };
+  })
+    // Las externas son solo de quien las registró: no cuentan como evento del equipo para el resto.
+    .filter((e) => !e.externa || e.estado)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  // Progreso de categoría: misma cuenta que recalcular-categorias.
+  const tiers = tiersData ?? [];
+  const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
+  const atras = (n: number) => {
+    const y = hoy.getUTCFullYear(), m = hoy.getUTCMonth() - n;
+    const d = Math.min(hoy.getUTCDate(), new Date(Date.UTC(y, m + 1, 0)).getUTCDate());
+    return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+  };
+  const hoyISO = hoy.toISOString().slice(0, 10);
+  const inicio = atras(maxVentana);
+  const [asis, { data: ext }, { data: pts }] = await Promise.all([
+    _paginado((a, b) => supabase.from('asistencias').select('fecha, a_horario, tarde')
+      .not('estado', 'in', '("Evento Cancelado","No se entrena")').gte('fecha', inicio).lt('fecha', hoyISO)
+      .order('fecha', { ascending: true }).range(a, b)),
+    supabase.from('log_asistencias').select('fecha_entrenamiento').eq('origen', 'Externa').eq('nombre_usuario', username)
+      .gte('fecha_entrenamiento', inicio).lt('fecha_entrenamiento', hoyISO),
+    supabase.from('puntos_mensuales').select('anio, mes, puntos_total').eq('nombre_usuario', username).gte('anio', Number(inicio.slice(0, 4))),
+  ]);
+  const esta = (s: unknown) => String(s ?? '').split(',').map((n) => n.trim().toUpperCase()).includes(U);
+  const idxHoy = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  const clasesEn = (v: number) => {
+    const d = atras(v);
+    return asis.filter((r: any) => r.fecha >= d && (esta(r.a_horario) || esta(r.tarde))).length
+      + (ext ?? []).filter((r: any) => String(r.fecha_entrenamiento).slice(0, 10) >= d).length;
+  };
+  const puntosEn = (v: number) => (pts ?? []).reduce((s: number, r: any) => {
+    const diff = idxHoy - (Number(r.anio) * 12 + Number(r.mes) - 1);
+    return diff >= 0 && diff <= v ? s + (Number(r.puntos_total) || 0) : s;
+  }, 0);
+  const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
+
+  return {
+    exito: true,
+    anio,
+    anios: [...new Set([...(anios ?? []).map((r: any) => Number(r.anio)), hoy.getUTCFullYear()])].sort((a, b) => b - a),
+    eventos,
+    puntos: (puntos ?? []).map((r: any) => ({
+      mes: Number(r.mes),
+      asistencia: Number(r.puntos_asistencia) || 0,
+      tareas: Number(r.puntos_tareas) || 0,
+      racha: (Number(r.puntos_bonificacion) || 0) + (Number(r.puntos_extra) || 0),
+      total: Number(r.puntos_total) || 0,
+    })),
+    progreso: {
+      categoria: fila.categoria ?? null,
+      modo: fila.tier_modo ?? 'auto',
+      estado: fila.estado_miembro ?? null,
+      usaEquipo: usa(fila.necesita_patines) || usa(fila.necesita_protecciones),
+      mesesSeguidos: Number(fila.meses_consecutivos_cumplidos) || 0,
+      riesgoHasta: fila.tier_riesgo_hasta ?? null,
+      riesgoObjetivo: fila.tier_riesgo_objetivo ?? null,
+      tiers: tiers.map((t: any) => {
+        const v = Number(t.ventana_meses) || 0;
+        const clases = clasesEn(v), puntos = puntosEn(v);
+        const minC = Number(t.min_clases) || 0, minP = Number(t.min_puntos) || 0;
+        const cumple = t.logica === 'Y' ? clases >= minC && puntos >= minP : clases >= minC || puntos >= minP;
+        return {
+          nombre: t.nombre, orden: t.orden, esDefault: !!t.es_default, minClases: minC, minPuntos: minP, logica: t.logica === 'Y' ? 'Y' : 'O',
+          ventana: v, desde: atras(v), mesesAscenso: Number(t.meses_consecutivos_ascenso) || 3, gracia: Number(t.meses_gracia_demotion) || 0,
+          clases, puntos: Math.round(puntos * 10) / 10, cumple,
+        };
+      }),
+    },
+  };
+}
+
 async function getDesglosePuntos(params: Record<string, any>): Promise<Record<string, any>> {
   const solicitante = await _validarToken(params.token);
   if (!solicitante) return { exito: false, error: 'Sesión inválida.' };
@@ -7714,7 +7847,8 @@ Deno.serve(async (req: Request) => {
       case 'adminGetRosterEquipo':           return json(await adminGetRosterEquipo());
             case 'getEquipo':                      return json(await getEquipo(params));
       case 'adminFichaEmergencia':           return json(await adminFichaEmergencia(params));
-      case 'getDesglosePuntos':              return json(await getDesglosePuntos(params));
+            case 'getDesglosePuntos':              return json(await getDesglosePuntos(params));
+      case 'getEstadisticasPersona':         return json(await getEstadisticasPersona(params));
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
