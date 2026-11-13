@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-11-13 — Seguridad: la clave pública de la base queda solo para leer eventos, asistencias, lugares y temporadas; crear o editar eventos, lugares y asistencia anticipada pasa por el servidor, que valida quién escribe.
+
 2026-11-13 — Inventario para todo el equipo: cuánto hay por talla y cuánto queda libre para la próxima clase; quién tiene cosas del equipo ("Las tiene X"); cualquiera puede avisar que se llevó algo (lo aprueba un Pivot en la Bandeja); a los 7 días se pregunta a los Pivots si aún lo tiene.
 
 2026-11-13 — Asistencia anticipada por día de la semana o lugar (ej. solo lunes, solo en CCI); si una regla se cruza con otra, la app avisa antes de guardar. La web respeta los mismos filtros.
