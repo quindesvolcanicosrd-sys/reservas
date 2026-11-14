@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/vidrio.dart';
 import '../core/fechas.dart';
 import '../core/reloj.dart';
 import '../core/tema.dart';
@@ -249,7 +251,7 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
   void _alDesplazar() {
     // La fila de arriba cuenta solo si se ve de verdad (no un borde de la
     // anterior que asoma): si no, al ir al día 1 el título quedaba en el mes previo.
-    final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > 0.06).toList();
+    final pos = _posiciones.itemPositions.value.where((p) => p.itemTrailingEdge > _bajoCabecera + 0.06).toList();
     if (pos.isEmpty || _filas.isEmpty) return;
     pos.sort((a, b) => a.index.compareTo(b.index));
     final i = pos.first.index.clamp(0, _filas.length - 1);
@@ -426,6 +428,15 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     return _filas.isEmpty ? 0 : _filas.length - 1;
   }
 
+  /// Alto de la barra de vidrio de arriba (el timeline pasa por detrás) y
+  /// del área visible: para alinear el día justo debajo de la barra.
+  double _altoCabecera = 0, _altoVista = 1;
+  double get _bajoCabecera => _altoVista <= 0 ? 0 : (_altoCabecera / _altoVista).clamp(0, 0.5);
+
+  /// La lista agrega el espacio de la barra solo antes de la primera fila:
+  /// para cualquier otra, el día se alinea justo debajo de la barra.
+  double _alineacion(int i) => i == 0 ? 0.02 : _bajoCabecera + 0.02;
+
   void _irA(DateTime dia, {bool animado = true}) {
     _diaArriba = Fechas.soloDia(dia);
     if (!_scroll.isAttached || _filas.isEmpty) return;
@@ -433,10 +444,10 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
     if (animado) {
       _desplazandoProgramado = true;
       _scroll
-          .scrollTo(index: i, duration: const Duration(milliseconds: 500), curve: Curves.easeInOutCubic, alignment: 0.02)
+          .scrollTo(index: i, duration: const Duration(milliseconds: 500), curve: Curves.easeInOutCubic, alignment: _alineacion(i))
           .whenComplete(() => _desplazandoProgramado = false);
     } else {
-      _scroll.jumpTo(index: i, alignment: 0.02);
+      _scroll.jumpTo(index: i, alignment: _alineacion(i));
     }
   }
 
@@ -629,79 +640,111 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
             floatingActionButton: _acciones.isEmpty || _buscando
                 ? null
                 : FloatingActionButton(key: _kMas, tooltip: 'Crear', onPressed: _abrirAcciones, child: const Icon(Icons.add_rounded)),
-            body: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (c, a) => FadeTransition(
-                      opacity: a,
-                      child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
-                    ),
-                    child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
-                  ),
-                  if (!_buscando) _cabeceraTareas(context),
-                  // Calendario sobre el timeline. Para que abrir/cerrar (también
-                  // con el dedo) sea fluido, nada cambia de tamaño mientras se
-                  // mueve: el panel baja desde la barra y el timeline se corre
-                  // hacia abajo con transformaciones (solo se repinta, no se
-                  // vuelve a medir cada fila en cada cuadro).
-                  Expanded(
-                    child: ClipRect(
-                      child: AnimatedBuilder(
-                        // El panel se arma una sola vez por build: en cada cuadro
-                        // solo cambian las transformaciones (instancia idéntica =
-                        // Flutter no lo reconstruye).
-                        animation: _calCtrl,
-                        builder: (context, hijo) {
-                          final alto = _altoPanel;
-                          final v = _calCtrl.value;
-                          return Stack(
-                            children: [
-                              Positioned.fill(
-                                child: Transform.translate(offset: Offset(0, alto * v), child: hijo),
-                              ),
-                              if (panel != null)
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  top: 0,
-                                  child: Transform.translate(
-                                    offset: Offset(0, -alto * (1 - v)),
-                                    // Sin fundido (como Google Calendar): solo se desliza bajo la barra.
-                                    child: panel,
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                        // Con el calendario abierto, arrastrar el timeline mueve
-                        // todo junto (acordeón) en vez de desplazarlo por dentro.
-                        // Una capa transparente encima del timeline se queda con los
-                        // arrastres verticales (gana antes que la lista) y deja
-                        // pasar los toques a las tarjetas. Así la lista nunca
-                        // cambia de física (bug real 1.0.15: al cambiarla, después
-                        // no se podía volver hacia arriba y saltaba el "tirar para
-                        // actualizar").
-                        child: Stack(
-                          children: [
-                            RepaintBoundary(child: _cuerpo(context)),
-                            if (_calMontado)
-                              Positioned.fill(
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.translucent,
-                                  onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
-                                  onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
-                                ),
-                              ),
-                          ],
-                        ),
+            // Barra de vidrio (Victor, 2026-11-13): el timeline pasa por detrás
+            // de la barra desenfocado; el calendario es sólido y baja debajo.
+            body: LayoutBuilder(
+              builder: (context, caja) {
+                _altoVista = caja.maxHeight;
+                final cabecera = Vidrio(
+                  child: SafeArea(
+                    bottom: false,
+                    child: _Medida(
+                      alMedir: (alto) {
+                        final total = alto + MediaQuery.paddingOf(context).top;
+                        if ((total - _altoCabecera).abs() > 0.5) setState(() => _altoCabecera = total);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (c, a) => FadeTransition(
+                              opacity: a,
+                              child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
+                            ),
+                            child: _buscando ? _barraBusqueda(context) : _barraNormal(context),
+                          ),
+                          if (!_buscando) _cabeceraTareas(context),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                );
+                return Stack(
+                  children: [
+                    // Calendario sobre el timeline. Para que abrir/cerrar (también
+                    // con el dedo) sea fluido, nada cambia de tamaño mientras se
+                    // mueve: el panel baja desde la barra y el timeline se corre
+                    // hacia abajo con transformaciones (solo se repinta, no se
+                    // vuelve a medir cada fila en cada cuadro).
+                    Positioned.fill(
+                      child: ClipRect(
+                        child: AnimatedBuilder(
+                          // El panel se arma una sola vez por build: en cada cuadro
+                          // solo cambian las transformaciones (instancia idéntica =
+                          // Flutter no lo reconstruye).
+                          animation: _calCtrl,
+                          builder: (context, hijo) {
+                            final alto = _altoPanel;
+                            final v = _calCtrl.value;
+                            return Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Transform.translate(
+                                    offset: Offset(0, alto * v),
+                                    // Con el calendario abierto, lo que estaba detrás de la
+                                    // barra no asoma debajo del calendario.
+                                    child: ClipRect(clipper: _RecorteArriba(v > 0 ? _altoCabecera : 0), child: hijo),
+                                  ),
+                                ),
+                                if (panel != null)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    top: _altoCabecera,
+                                    bottom: 0,
+                                    child: ClipRect(
+                                      child: Align(
+                                        alignment: Alignment.topCenter,
+                                        child: Transform.translate(
+                                          offset: Offset(0, -alto * (1 - v)),
+                                          // Sin fundido (como Google Calendar): solo se desliza bajo la barra.
+                                          child: panel,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                          // Con el calendario abierto, arrastrar el timeline mueve
+                          // todo junto (acordeón) en vez de desplazarlo por dentro.
+                          // Una capa transparente encima del timeline se queda con los
+                          // arrastres verticales (gana antes que la lista) y deja
+                          // pasar los toques a las tarjetas. Así la lista nunca
+                          // cambia de física (bug real 1.0.15: al cambiarla, después
+                          // no se podía volver hacia arriba y saltaba el "tirar para
+                          // actualizar").
+                          child: Stack(
+                            children: [
+                              RepaintBoundary(child: _cuerpo(context)),
+                              if (_calMontado)
+                                Positioned.fill(
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.translucent,
+                                    onVerticalDragUpdate: (d) => _arrastrar(d.delta.dy),
+                                    onVerticalDragEnd: (d) => _soltar(d.primaryVelocity ?? 0),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(left: 0, right: 0, top: 0, child: cabecera),
+                  ],
+                );
+              },
             ),
           ),
         );
@@ -1079,14 +1122,16 @@ class _TimelineScreenState extends State<TimelineScreen> with TickerProviderStat
       onNotification: _alScrollearTimeline,
       child: RefreshIndicator(
         key: _kLista,
+        edgeOffset: _altoCabecera,
         onRefresh: () => Future.wait([repo.cargar(forzar: true), _bandeja.cargar(forzar: true), _bandeja.cargarMia()]),
         child: ScrollablePositionedList.builder(
           itemScrollController: _scroll,
           itemPositionsListener: _posiciones,
           // Al volver a aparecer (después de un filtro sin resultados) sigue en el mismo día.
           initialScrollIndex: _filas.isEmpty ? 0 : _indiceDeDia(_diaArriba ?? Fechas.hoy()),
+          initialAlignment: _alineacion(_filas.isEmpty ? 0 : _indiceDeDia(_diaArriba ?? Fechas.hoy())),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(8, 4, 16, 96 + MediaQuery.paddingOf(context).bottom + (_calMontado ? _altoPanel : 0)),
+          padding: EdgeInsets.fromLTRB(8, 4 + _altoCabecera, 16, 96 + MediaQuery.paddingOf(context).bottom + (_calMontado ? _altoPanel : 0)),
           itemCount: _filas.length,
           itemBuilder: (context, i) => _fila(context, _filas[i]),
         ),
@@ -2274,4 +2319,38 @@ class _FranjaParaTomar extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Avisa el alto de su hijo después de cada layout (para la barra de vidrio).
+class _Medida extends SingleChildRenderObjectWidget {
+  const _Medida({required this.alMedir, super.child});
+  final void Function(double alto) alMedir;
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderMedida(alMedir);
+  @override
+  void updateRenderObject(BuildContext context, _RenderMedida r) => r.alMedir = alMedir;
+}
+
+class _RenderMedida extends RenderProxyBox {
+  _RenderMedida(this.alMedir);
+  void Function(double alto) alMedir;
+  double? _ultimo;
+  @override
+  void performLayout() {
+    super.performLayout();
+    final alto = size.height;
+    if (_ultimo != alto) {
+      _ultimo = alto;
+      WidgetsBinding.instance.addPostFrameCallback((_) => alMedir(alto));
+    }
+  }
+}
+
+class _RecorteArriba extends CustomClipper<Rect> {
+  const _RecorteArriba(this.arriba);
+  final double arriba;
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(0, arriba, size.width, size.height);
+  @override
+  bool shouldReclip(_RecorteArriba old) => old.arriba != arriba;
 }

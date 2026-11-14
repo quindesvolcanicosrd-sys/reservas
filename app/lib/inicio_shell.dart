@@ -127,9 +127,20 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
     return Scaffold(
       // Barra de abajo de vidrio: el contenido pasa por detrás desenfocado.
       extendBody: true,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
+      // Con extendBody, el "+" de cada pestaña quedaba detrás de la barra
+      // (bug, Victor 2026-11-13: "desapareció el FAB de Calendario"): el
+      // Scaffold de adentro ubica el botón con viewPadding, que no incluía la barra.
+      body: Builder(
+        builder: (context) {
+          final mq = MediaQuery.of(context);
+          return MediaQuery(
+            data: mq.copyWith(viewPadding: mq.viewPadding.copyWith(bottom: mq.padding.bottom)),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: KeyedSubtree(key: ValueKey(indice), child: destinos[indice].$2),
+            ),
+          );
+        },
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,

@@ -329,7 +329,7 @@ class _ExcepcionScreenState extends State<ExcepcionScreen> {
             padding: EdgeInsets.all(16),
             child: Center(child: PivotCargando()),
           ),
-        if (libres != null && libres.isEmpty) Text('Ahora no hay tareas libres: crea la tuya.', style: TextStyle(color: p.textoSecundario)),
+        if (libres != null && libres.isEmpty) Text('Ahora no hay tareas disponibles: crea la tuya.', style: TextStyle(color: p.textoSecundario)),
         for (final t in libres ?? const <Map<String, dynamic>>[])
           _TarjetaTarea(
             titulo: '${t['titulo'] ?? ''}',

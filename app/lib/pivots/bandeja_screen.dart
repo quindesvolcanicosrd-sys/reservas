@@ -256,10 +256,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                 children: [
                   Text('¿Por qué se rechaza?', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
-                  Text(
-                    '${p.m['nombreMostrar'] ?? 'La persona'} recibe el aviso al momento y la reserva se cancela.',
-                    style: TextStyle(color: pal.textoSecundario),
-                  ),
+                  Text('${p.nombreMostrar} recibe el aviso al momento y la reserva se cancela.', style: TextStyle(color: pal.textoSecundario)),
                   const SizedBox(height: 8),
                   for (final e in [..._motivos.keys, 'otro'])
                     ListTile(

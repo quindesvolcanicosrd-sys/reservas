@@ -146,7 +146,7 @@ class _TareasScreenState extends State<TareasScreen> {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      repo.esAdmin ? 'No hay tareas libres. Crea una con "Nueva tarea".' : 'No hay tareas libres por ahora. Puedes proponer una.',
+                      repo.esAdmin ? 'No hay tareas disponibles. Crea una con "Nueva tarea".' : 'No hay tareas disponibles por ahora. Puedes proponer una.',
                       style: TextStyle(color: p.textoSecundario),
                     ),
                   ),

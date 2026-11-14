@@ -16,6 +16,16 @@ class Vidrio extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
+    // Barras de arriba (Victor, 2026-11-13): solo el desenfoque, sin tinte,
+    // degradado ni borde.
+    if (!abajo) {
+      return ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: PivotVidrio.desenfoque, sigmaY: PivotVidrio.desenfoque),
+          child: ColoredBox(color: PivotVidrio.plano(p), child: child),
+        ),
+      );
+    }
     final linea = BorderSide(color: PivotVidrio.borde(p), width: 0.6);
     return ClipRect(
       child: BackdropFilter(
