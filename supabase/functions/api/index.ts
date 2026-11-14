@@ -1076,14 +1076,50 @@ async function _cronCorteEquipos(): Promise<void> {
   else if (hoy === corte.llega) await aviso('Lista de cambios de equipo', `${n} ${n === 1 ? 'persona cambia' : 'personas cambian'} de equipo. Revísalo en la Bandeja antes del corte.`);
 }
 
+// ─── Medios de pago (Cobros, Victor 2026-11-13) ───────────────────────────
+// Genéricos (sin marcas locales): billetera virtual, cuenta bancaria,
+// efectivo, enlace de pago u otro. Cada reserva guarda el nombre del medio,
+// así quitar o renombrar uno nunca cambia pagos pasados.
+const TIPOS_MEDIO = ['billetera', 'banco', 'efectivo', 'enlace', 'otro'];
+const COLORES_MEDIO = ['rojo', 'naranja', 'amarillo', 'verde', 'azul', 'morado', 'gris'];
+function _limpiarFormasPago(f: any): Record<string, any> {
+  const texto = (x: unknown, n = 120) => String(x ?? '').trim().slice(0, n);
+  const url = (x: unknown) => { const u = texto(x, 400); return /^https:\/\//.test(u) ? u : ''; };
+  const medios = (Array.isArray(f.medios) ? f.medios : []).slice(0, 12).map((m: any, i: number) => ({
+    id: /^[a-z0-9_-]{1,40}$/.test(String(m?.id ?? '')) ? String(m.id) : `medio${Date.now().toString(36)}${i}`,
+    nombre: texto(m?.nombre, 40) || 'Medio de pago',
+    tipo: TIPOS_MEDIO.includes(String(m?.tipo)) ? String(m.tipo) : 'otro',
+    color: COLORES_MEDIO.includes(String(m?.color)) ? String(m.color) : 'gris',
+    logo: url(m?.logo), enlace: url(m?.enlace),
+    datos: (Array.isArray(m?.datos) ? m.datos : []).slice(0, 8).map((d: any) => [texto(d?.[0], 30), texto(d?.[1], 60)]).filter((d: string[]) => d[0] && d[1]),
+    indicaciones: texto(m?.indicaciones, 200),
+    cuentaId: /^[0-9a-f-]{36}$/.test(String(m?.cuentaId ?? '')) ? String(m.cuentaId) : null,
+    activo: m?.activo !== false,
+  }));
+  return { version: 2, medios, whatsapp: texto(f.whatsapp, 20).replace(/[^0-9]/g, '') };
+}
+
+/** Formas de pago guardadas; convierte el formato anterior (deuna/transferencia/efectivo). */
+async function _formasPago(): Promise<Record<string, any> | null> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'formas_pago').maybeSingle();
+  let f: any = null;
+  try { f = data?.value ? JSON.parse(data.value) : null; } catch { f = null; }
+  if (!f) return null;
+  if (Array.isArray(f.medios)) return f;
+  const medios: any[] = [];
+  if (f.deuna) medios.push({ id: 'deuna', nombre: 'Billetera virtual', tipo: 'billetera', color: 'verde', logo: '', enlace: f.deuna.enlace ?? '', datos: [], indicaciones: '', cuentaId: null, activo: f.deuna.activa !== false });
+  if (f.transferencia) medios.push({ id: 'transferencia', nombre: f.transferencia.banco || 'Cuenta bancaria', tipo: 'banco', color: 'azul', logo: '', enlace: '', datos: f.transferencia.datos ?? [], indicaciones: '', cuentaId: null, activo: f.transferencia.activa !== false });
+  if (f.efectivo) medios.push({ id: 'efectivo', nombre: 'Efectivo', tipo: 'efectivo', color: 'gris', logo: '', enlace: '', datos: [], indicaciones: f.efectivo.texto ?? '', cuentaId: null, activo: f.efectivo.activa === true });
+  return { version: 2, medios, whatsapp: f.whatsapp ?? '' };
+}
+
 async function getConfigLiga(params: Record<string, any>): Promise<Record<string, any>> {
   if (!(await _validarToken(params.token)) && !(params.adminToken && await _validarAdminToken(String(params.adminToken)))) {
     return { exito: false, error: 'Sesión inválida.' };
   }
-      const { data: extra } = await supabase.from('config_app').select('key, value').in('key', ['logo_liga', 'formas_pago']);
+        const { data: extra } = await supabase.from('config_app').select('key, value').in('key', ['logo_liga']);
   const v = (k: string) => (extra ?? []).find((r: any) => r.key === k)?.value ?? '';
-  let formasPago: any = null;
-  try { formasPago = v('formas_pago') ? JSON.parse(v('formas_pago')) : null; } catch { formasPago = null; }
+  const formasPago = await _formasPago();
   return { exito: true, ...(await _configLiga()), ...(await getPreciosClases()), reglas: await _reglasLiga(), logo: v('logo_liga'), formasPago };
 }
 
@@ -1109,22 +1145,12 @@ async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Reco
     if (!Number.isFinite(n) || n < 0 || n > 10000) return { exito: false, error: 'Precio inválido.' };
     filas.push({ key: clave, value: String(n) });
   }
-      // Formas de pago (Cobros, 2026-11-13): DeUna, transferencia y efectivo.
+  // Formas de pago (Cobros, 2026-11-13): lista editable de medios genéricos.
   if (params.formasPago != null) {
     let f: any = null;
     try { f = typeof params.formasPago === 'object' ? params.formasPago : JSON.parse(String(params.formasPago)); } catch { f = null; }
-    if (!f || typeof f !== 'object') return { exito: false, error: 'Formas de pago inválidas.' };
-    const texto = (x: unknown, n = 120) => String(x ?? '').trim().slice(0, n);
-    const limpio = {
-      deuna: { activa: f.deuna?.activa !== false, enlace: /^https:\/\//.test(texto(f.deuna?.enlace, 300)) ? texto(f.deuna?.enlace, 300) : '' },
-      transferencia: {
-        activa: f.transferencia?.activa !== false, banco: texto(f.transferencia?.banco, 60),
-        datos: (Array.isArray(f.transferencia?.datos) ? f.transferencia.datos : []).slice(0, 8).map((d: any) => [texto(d?.[0], 30), texto(d?.[1], 60)]).filter((d: string[]) => d[0] && d[1]),
-      },
-      efectivo: { activa: f.efectivo?.activa === true, texto: texto(f.efectivo?.texto, 200) },
-      whatsapp: texto(f.whatsapp, 20).replace(/[^0-9]/g, ''),
-    };
-    filas.push({ key: 'formas_pago', value: JSON.stringify(limpio) });
+    if (!f || typeof f !== 'object' || !Array.isArray(f.medios)) return { exito: false, error: 'Formas de pago inválidas.' };
+    filas.push({ key: 'formas_pago', value: JSON.stringify(_limpiarFormasPago(f)) });
   }
   if (params.logo != null) {
     const u = String(params.logo).trim();
@@ -1536,12 +1562,14 @@ async function adminSubirLogo(params: Record<string, any>): Promise<Record<strin
   if (base64Data) {
     const parsed = await _base64ToBuffer(base64Data);
     if (!parsed) return { exito: false, error: 'Formato de imagen inválido.' };
-    const path = `logos/${destino === 'liga' ? 'liga' : 'equipo-' + destino.replace(/[^a-z0-9-]/gi, '')}.png`;
+        const path = `logos/${destino === 'liga' ? 'liga' : destino.startsWith('medio-') ? destino.replace(/[^a-z0-9_-]/gi, '') : 'equipo-' + destino.replace(/[^a-z0-9-]/gi, '')}.png`;
     const { error } = await supabase.storage.from('fotos-perfil').upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
     if (error) return { exito: false, error: 'Error al subir imagen: ' + error.message };
     url = `${supabase.storage.from('fotos-perfil').getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
   }
-  if (destino === 'liga') {
+    if (destino.startsWith('medio-')) {
+    // Logo de un medio de pago: se guarda con el medio en Formas de pago.
+  } else if (destino === 'liga') {
     await supabase.from('config_app').upsert({ key: 'logo_liga', value: url }, { onConflict: 'key' });
   } else {
     const { error } = await supabase.from('config_tiers').update({ logo: url || null }).eq('id', destino);
@@ -2374,7 +2402,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { data: prestPend } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, created_at, tipo, motivo, permanente').eq('estado', 'pendiente').order('created_at');
   const [res, rect, exc, les, asig] = await Promise.all([
-    supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
+        supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago, medio_nombre').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
       .gte('created_at', new Date(Date.now() - (await _diasRectificacion()) * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
@@ -2418,7 +2446,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const items = {
     reservas: (res.data ?? []).map((r: any) => ({
       id: r.id, ...persona(r.nombre_usuario), tipo: r.tipo, mesTexto: r.mes_texto ?? '', talla: r.talla ?? '', protecciones: r.protecciones ?? '',
-      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', fechaPago: r.fecha_pago ?? null,
+      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', medioNombre: r.medio_nombre ?? '', fechaPago: r.fecha_pago ?? null,
     })),
     rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
     excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
@@ -4611,7 +4639,8 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
                 validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
     uso_cupon: usoCupon,
     // Dónde dice que pagó (2026-11-13), para que el Pivot sepa dónde revisar.
-    medio_pago: ['deuna', 'transferencia', 'efectivo'].includes(String(params.medio ?? '')) ? String(params.medio) : null,
+        medio_pago: /^[a-z0-9_-]{1,40}$/.test(String(params.medio ?? '')) ? String(params.medio) : null,
+    medio_nombre: String(params.medioNombre ?? '').trim().slice(0, 60) || null,
   });
   return { exito: true };
 }
@@ -4800,7 +4829,14 @@ function _num2(n: number): number { return Math.round(n * 100) / 100; }
 
 /** Cuenta que corresponde a un medio de pago ('deuna' | 'transferencia' | 'efectivo'). */
 async function _cuentaPorMedio(medio: string): Promise<string | null> {
-  const tipo = medio === 'deuna' ? 'deuna' : medio === 'transferencia' ? 'banco' : medio === 'efectivo' ? 'efectivo' : '';
+  // El medio puede decir a qué cuenta entra; si no, se busca por tipo.
+  const m = ((await _formasPago())?.medios ?? []).find((x: any) => x.id === medio);
+  if (m?.cuentaId) {
+    const { data: c } = await supabase.from('tesoreria_cuentas').select('id').eq('id', m.cuentaId).eq('activa', true).maybeSingle();
+    if (c) return c.id;
+  }
+  const t = m?.tipo ?? medio;
+  const tipo = t === 'deuna' || t === 'billetera' || t === 'enlace' ? 'deuna' : t === 'transferencia' || t === 'banco' ? 'banco' : t === 'efectivo' ? 'efectivo' : '';
   if (!tipo) return null;
   const { data } = await supabase.from('tesoreria_cuentas').select('id').eq('tipo', tipo).eq('activa', true).order('orden').limit(1).maybeSingle();
   return data?.id ?? null;
@@ -4844,7 +4880,7 @@ async function _saldosCuentas(): Promise<any[]> {
     const ultima = (conc ?? []).find((x: any) => x.cuenta_id === c.id) ?? null;
     return {
       id: c.id, nombre: c.nombre, tipo: c.tipo, responsable: c.responsable ?? '', saldoInicial: Number(c.saldo_inicial) || 0,
-      fechaInicial: c.fecha_inicial, activa: c.activa, saldo: _num2(saldo),
+            fechaInicial: c.fecha_inicial, activa: c.activa && !c.archivada, archivada: !!c.archivada, saldo: _num2(saldo),
       conciliacion: ultima ? { fecha: ultima.fecha, saldoReal: Number(ultima.saldo_real), diferencia: Number(ultima.diferencia) } : null,
     };
   });
@@ -4949,6 +4985,30 @@ async function adminTesoreria(params: Record<string, any>): Promise<Record<strin
     }
     await _registrarAjuste('cuenta', antes, fila, email);
     return adminTesoreria({ ...params, accion: 'resumen' });
+  }
+
+    if (accion === 'borrarCuenta') {
+    // Una cuenta creada por error se borra; con movimientos se archiva para
+    // no perder el historial (Victor, 2026-11-13).
+    const { data: c } = await supabase.from('tesoreria_cuentas').select('*').eq('id', d.id).maybeSingle();
+    if (!c) return { exito: false, error: 'No se encontró la cuenta.' };
+    const [{ count: movs }, { count: conc }] = await Promise.all([
+      supabase.from('tesoreria_movimientos').select('id', { count: 'exact', head: true }).or(`cuenta_id.eq.${c.id},cuenta_destino_id.eq.${c.id}`),
+      supabase.from('tesoreria_conciliaciones').select('id', { count: 'exact', head: true }).eq('cuenta_id', c.id),
+    ]);
+    if ((movs ?? 0) + (conc ?? 0) > 0) {
+      await supabase.from('tesoreria_cuentas').update({ archivada: true, activa: false }).eq('id', c.id);
+      await _registrarAjuste('cuenta', c, { ...c, archivada: true }, email);
+      return { exito: true, archivada: true };
+    }
+    await supabase.from('tesoreria_cuentas').delete().eq('id', c.id);
+    await _registrarAjuste('cuenta', c, null, email);
+    return { exito: true, borrada: true };
+  }
+
+  if (accion === 'restaurarCuenta') {
+    await supabase.from('tesoreria_cuentas').update({ archivada: false, activa: true }).eq('id', d.id);
+    return { exito: true };
   }
 
   if (accion === 'registrar') {
@@ -9073,7 +9133,7 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const id = params.id ?? params.fila;
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
-    const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, mes_texto, uso_cupon').eq('id', id).maybeSingle();
+        const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, medio_nombre, mes_texto, uso_cupon').eq('id', id).maybeSingle();
     // Rechazo con motivo (Victor, 2026-11-13): se guarda y se le avisa de inmediato.
   const motivo = String(params.motivo ?? '').trim().slice(0, 120);
   const mensaje = String(params.mensaje ?? '').trim().slice(0, 400);
@@ -9098,7 +9158,7 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
       await _registrarMovimiento({
         tipo: 'ingreso', monto: Number(reservaAntes.monto), cuenta_id: cuenta, categoria: reservaAntes.tipo === 'mensual' ? 'cuota' : 'clase',
         descripcion: reservaAntes.tipo === 'mensual' ? `Mensualidad ${reservaAntes.mes_texto ?? ''}`.trim() : 'Clase', persona: reservaAntes.nombre_usuario,
-        origen: 'reserva', origen_id: String(id), registrado_por: adminEmail,
+                origen: 'reserva', origen_id: String(id), registrado_por: adminEmail, medio_nombre: reservaAntes.medio_nombre ?? null,
       });
     }
   } else if (estado === 'Cancelada') {

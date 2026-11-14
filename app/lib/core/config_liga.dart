@@ -28,21 +28,16 @@ class ConfigLiga extends ChangeNotifier {
   num? precioMensual;
   String logo = '';
 
-  /// Formas de pago (Cobros). Sin configurar, las del club de siempre.
+  /// Formas de pago (Cobros, Victor 2026-11-13): lista editable de medios
+  /// genéricos. Sin configurar, los del club de siempre.
   Map<String, dynamic>? formasPago;
-  bool get deunaActiva => (formasPago?['deuna'] as Map?)?['activa'] != false && deunaEnlace.isNotEmpty;
-  String get deunaEnlace =>
-      '${(formasPago?['deuna'] as Map?)?['enlace'] ?? ''}'.isNotEmpty ? '${formasPago!['deuna']['enlace']}' : (formasPago == null ? Pagos.deuna : '');
-  bool get transferenciaActiva => (formasPago?['transferencia'] as Map?)?['activa'] != false;
-  String get banco => formasPago == null ? Pagos.banco : '${(formasPago!['transferencia'] as Map?)?['banco'] ?? ''}';
-  List<(String, String)> get datosBancarios => formasPago == null
-      ? Pagos.cuenta
+  List<MedioPago> get medios => formasPago == null
+      ? MedioPago.porDefecto
       : [
-          for (final d in ((formasPago!['transferencia'] as Map?)?['datos'] as List? ?? const []))
-            if (d is List && d.length == 2) ('${d[0]}', '${d[1]}'),
+          for (final m in (formasPago!['medios'] as List? ?? const []))
+            if (m is Map<String, dynamic>) MedioPago(m),
         ];
-  bool get efectivoActivo => (formasPago?['efectivo'] as Map?)?['activa'] == true;
-  String get efectivoTexto => '${(formasPago?['efectivo'] as Map?)?['texto'] ?? ''}';
+  List<MedioPago> get mediosActivos => medios.where((m) => m.activo).toList();
 
   /// WhatsApp para comprobantes de la liga cargada (o el del club).
   static String get whatsappActual => _instancia?.whatsappComprobante ?? Pagos.whatsapp;
@@ -123,4 +118,48 @@ class ConfigLiga extends ChangeNotifier {
   }
 
   Future<void> escribir(String telefono, {String texto = ''}) => launchUrl(enlace(telefono, texto: texto), mode: LaunchMode.externalApplication);
+}
+
+/// Un medio de pago de la liga (billetera virtual, cuenta bancaria, efectivo,
+/// enlace de pago u otro). El `nombre` queda guardado en cada pago.
+class MedioPago {
+  MedioPago(this.m);
+  final Map<String, dynamic> m;
+  String get id => '${m['id'] ?? ''}';
+  String get nombre => '${m['nombre'] ?? 'Medio de pago'}';
+  String get tipo => '${m['tipo'] ?? 'otro'}';
+  String get color => '${m['color'] ?? 'gris'}';
+  String get logo => '${m['logo'] ?? ''}';
+  String get enlace => '${m['enlace'] ?? ''}';
+  String get indicaciones => '${m['indicaciones'] ?? ''}';
+  String? get cuentaId => m['cuentaId'] as String?;
+  bool get activo => m['activo'] != false;
+  List<(String, String)> get datos => [
+    for (final d in (m['datos'] as List? ?? const []))
+      if (d is List && d.length == 2) ('${d[0]}', '${d[1]}'),
+  ];
+
+  static const tipos = {
+    'billetera': ('Billetera virtual', Icons.account_balance_wallet_outlined),
+    'banco': ('Cuenta bancaria', Icons.account_balance_outlined),
+    'efectivo': ('Efectivo', Icons.payments_outlined),
+    'enlace': ('Enlace de pago', Icons.link_rounded),
+    'otro': ('Otro', Icons.more_horiz_rounded),
+  };
+  IconData get icono => tipos[tipo]?.$2 ?? Icons.payments_outlined;
+  String get nombreTipo => tipos[tipo]?.$1 ?? 'Otro';
+
+  /// Los del club antes de configurar nada.
+  static final porDefecto = [
+    MedioPago({'id': 'deuna', 'nombre': 'Billetera virtual', 'tipo': 'billetera', 'color': 'verde', 'enlace': Pagos.deuna}),
+    MedioPago({
+      'id': 'transferencia',
+      'nombre': Pagos.banco,
+      'tipo': 'banco',
+      'color': 'azul',
+      'datos': [
+        for (final (e, v) in Pagos.cuenta) [e, v],
+      ],
+    }),
+  ];
 }

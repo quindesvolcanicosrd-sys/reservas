@@ -295,6 +295,7 @@ class ReservasRepo {
     required Map<String, String> tallaPorFecha,
     required Total total,
     String? medio,
+    String? medioNombre,
   }) async {
     final tallaBase = necesitaPatines ? talla : 'No';
     final protec = necesitaProtecciones ? (_d['necesitaProtecciones'] ?? '').toString() : 'No';
@@ -318,6 +319,7 @@ class ReservasRepo {
             'monto': total.precio.toStringAsFixed(2),
             'email': email,
             'medio': ?medio,
+            'medioNombre': ?medioNombre,
           });
           if (r['exito'] == false) throw ApiException('${r['mensaje'] ?? r['error'] ?? 'No se pudo guardar'}');
           guardados.add(etiqueta);
@@ -344,6 +346,7 @@ class ReservasRepo {
             'monto': gratis ? '0.00' : total.precio.toStringAsFixed(2),
             'email': email,
             if (!gratis) 'medio': ?medio,
+            if (!gratis) 'medioNombre': ?medioNombre,
           });
           if (r['exito'] == false) throw ApiException('${r['mensaje'] ?? r['error'] ?? 'No se pudo guardar'}');
           guardados.add(etiqueta);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/config_liga.dart';
 import '../core/api.dart';
 import '../core/cargando.dart';
 import '../core/fechas.dart';
@@ -189,9 +190,18 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       return null;
     }
     if (cuentas.isEmpty || !mounted) return null;
-    final medio = '${p.m['medio'] ?? ''}';
-    final tipoMedio = medio == 'deuna' ? 'deuna' : (medio == 'transferencia' ? 'banco' : (medio == 'efectivo' ? 'efectivo' : ''));
-    String? elegida = cuentas.where((c) => c['tipo'] == tipoMedio).map((c) => c['id'] as String).firstOrNull ?? cuentas.first['id'] as String;
+    final medioId = '${p.m['medio'] ?? ''}';
+    final medio = nombreMedio(p.m);
+    // El medio puede decir a qué cuenta entra; si no, se busca por tipo.
+    final m = ConfigLiga.de(repo.sesion).medios.where((x) => x.id == medioId).firstOrNull;
+    final t = m?.tipo ?? medioId;
+    final tipoMedio = t == 'deuna' || t == 'billetera' || t == 'enlace'
+        ? 'deuna'
+        : (t == 'transferencia' || t == 'banco' ? 'banco' : (t == 'efectivo' ? 'efectivo' : ''));
+    String? elegida =
+        (m?.cuentaId != null && cuentas.any((c) => c['id'] == m!.cuentaId) ? m!.cuentaId : null) ??
+        cuentas.where((c) => c['tipo'] == tipoMedio).map((c) => c['id'] as String).firstOrNull ??
+        cuentas.first['id'] as String;
     final ok = await showModalBottomSheet<bool>(
       context: context,
       showDragHandle: true,
@@ -206,7 +216,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                 Text('¿A qué cuenta entró?', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
                 Text(
-                  medio.isEmpty ? 'La persona no dijo dónde pagó.' : 'Dijo que pagó por ${medio == 'deuna' ? 'DeUna' : medio}. Confírmalo.',
+                  medio.isEmpty ? 'La persona no dijo dónde pagó.' : 'Dijo que pagó con $medio. Confírmalo.',
                   style: TextStyle(color: h.pivot.textoSecundario),
                 ),
                 const SizedBox(height: 12),
@@ -525,12 +535,8 @@ class _CuentaCorte extends StatelessWidget {
               if ('${ev?['hora'] ?? ''}'.isNotEmpty) 'a las ${ev!['hora']}',
               if ('${ev?['lugar'] ?? ''}'.isNotEmpty) '· ${ev!['lugar']}',
             ].join(' ');
-      final medio = switch (v('medio')) {
-        'deuna' => 'Pagó con DeUna',
-        'transferencia' => 'Pagó por transferencia bancaria',
-        'efectivo' => 'Pagó en efectivo',
-        _ => m['usoCupon'] == true || (m['monto'] as num? ?? 0) == 0 ? '' : 'No dijo dónde pagó',
-      };
+      final n = nombreMedio(m);
+      final medio = n.isNotEmpty ? 'Pagó con $n' : (m['usoCupon'] == true || (m['monto'] as num? ?? 0) == 0 ? '' : 'No dijo dónde pagó');
       final detalles = [if (medio.isNotEmpty) medio, if (equipo.isNotEmpty) 'Equipamiento del equipo: $equipo'];
       return ('$que · ${m['usoCupon'] == true ? 'con cupón' : plata(m['monto'])}', detalles.isEmpty ? null : detalles.join('\n'));
     case TipoPedido.rectificacion:
@@ -941,4 +947,18 @@ class _TarjetaRecomendacion extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Nombre del medio con que dice que pagó (el guardado en la reserva; los
+/// pagos anteriores a los medios editables tienen solo la clave).
+String nombreMedio(Map<String, dynamic> m) {
+  final n = '${m['medioNombre'] ?? ''}'.trim();
+  if (n.isNotEmpty) return n;
+  return switch ('${m['medio'] ?? ''}') {
+    'deuna' => 'billetera virtual',
+    'transferencia' => 'transferencia bancaria',
+    'efectivo' => 'efectivo',
+    '' => '',
+    final otro => otro,
+  };
 }

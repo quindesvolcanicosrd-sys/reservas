@@ -218,7 +218,7 @@ class AjustesLigaScreen extends StatelessWidget {
                   icono: Icons.credit_card_rounded,
                   seccion: 'cuota',
                   titulo: 'Formas de pago',
-                  valor: [if (c.deunaActiva) 'DeUna', if (c.transferenciaActiva) 'Transferencia', if (c.efectivoActivo) 'Efectivo'].join(' · '),
+                  valor: c.mediosActivos.isEmpty ? 'Sin medios de pago' : c.mediosActivos.map((m) => m.nombre).join(' · '),
                   alTocar: () => SubAjustes.abrir(context, FormasPagoScreen(config: c)),
                 ),
                 FilaAjuste(

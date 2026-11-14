@@ -17,9 +17,9 @@ import 'tesoreria_repo.dart';
 
 IconData _iconoCuenta(String t) => switch (t) {
   'efectivo' => Icons.payments_outlined,
-  'deuna' => Icons.qr_code_2_rounded,
+  'deuna' => Icons.account_balance_wallet_outlined,
   'banco' => Icons.account_balance_outlined,
-  _ => Icons.account_balance_wallet_outlined,
+  _ => Icons.savings_outlined,
 };
 
 void _aviso(BuildContext context, String t) => ScaffoldMessenger.of(context)
@@ -99,7 +99,8 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
   Map<String, dynamic>? _r;
   String? _error_;
 
-  List<Map<String, dynamic>> get _cuentas => [for (final c in (_r?['cuentas'] as List? ?? const [])) c as Map<String, dynamic>];
+  List<Map<String, dynamic>> get _todas => [for (final c in (_r?['cuentas'] as List? ?? const [])) c as Map<String, dynamic>];
+  List<Map<String, dynamic>> get _cuentas => _todas.where((c) => c['archivada'] != true).toList();
 
   @override
   void initState() {
@@ -156,6 +157,7 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
                   children: [
                     for (final e in tiposCuenta.entries)
                       ChoiceChip(
+                        showCheckmark: false,
                         avatar: Icon(_iconoCuenta(e.key), size: 18),
                         label: Text(e.value),
                         selected: tipo == e.key,
@@ -236,7 +238,7 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Según la app: ${plata(c['saldo'] as num)}. Escribe el saldo real (estado de cuenta, DeUna o lo que hay en la caja).'),
+            Text('Según la app: ${plata(c['saldo'] as num)}. Escribe el saldo real (estado de cuenta, billetera virtual o lo que hay en la caja).'),
             const SizedBox(height: 12),
             TextField(
               controller: ctl,
@@ -294,6 +296,12 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
             ),
             ListTile(leading: const Icon(Icons.list_alt_rounded), title: const Text('Ver movimientos'), onTap: () => Navigator.of(h).pop('m')),
             ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Editar cuenta'), onTap: () => Navigator.of(h).pop('e')),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: const Text('Borrar cuenta'),
+              subtitle: const Text('Si tiene movimientos, se archiva y el historial queda'),
+              onTap: () => Navigator.of(h).pop('b'),
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -307,6 +315,72 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
         await _abrir(MovimientosScreen(repo: repo, cuentas: _cuentas, cuentaId: c['id'] as String?));
       case 'e':
         await _cuenta(c);
+      case 'b':
+        await _borrarCuenta(c);
+    }
+  }
+
+  /// Borrar una cuenta creada por error; con movimientos se archiva (Victor, 2026-11-13).
+  Future<void> _borrarCuenta(Map<String, dynamic> c) async {
+    final saldo = (c['saldo'] as num?) ?? 0;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Borrar ${c['nombre']}?'),
+        content: Text(
+          [
+            'Si la creaste por error y no tiene movimientos, se borra.',
+            'Si ya tiene movimientos, se archiva: deja de aparecer y de sumar al total, pero su historial queda y la puedes recuperar.',
+            if (saldo != 0) 'Ojo: todavía tiene ${plata(saldo)}. Si el dinero está en otra cuenta, regístralo antes con una transferencia.',
+          ].join('\n\n'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Borrar')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final r = await repo.accion('borrarCuenta', {'id': c['id']});
+      if (mounted) _aviso(context, r['archivada'] == true ? '${c['nombre']} quedó archivada con su historial.' : '${c['nombre']} borrada.');
+      await _cargar();
+    } catch (e) {
+      if (mounted) _aviso(context, _error(e));
+    }
+  }
+
+  Future<void> _archivadas() async {
+    final l = _todas.where((c) => c['archivada'] == true).toList();
+    final r = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Cuentas archivadas', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+            for (final c in l)
+              ListTile(
+                leading: Icon(_iconoCuenta('${c['tipo']}')),
+                title: Text('${c['nombre']}'),
+                subtitle: Text('Saldo ${plata(c['saldo'] as num)}'),
+                trailing: TextButton(onPressed: () => Navigator.of(h).pop('${c['id']}'), child: const Text('Recuperar')),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (r == null) return;
+    try {
+      await repo.accion('restaurarCuenta', {'id': r});
+      if (mounted) _aviso(context, 'Cuenta recuperada');
+      await _cargar();
+    } catch (e) {
+      if (mounted) _aviso(context, _error(e));
     }
   }
 
@@ -372,7 +446,7 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
       ),
       const SizedBox(height: 8),
       Text(
-        'Efectivo, DeUna y banco. El saldo inicial es lo que la liga ya tenía. Desde ahí, cada pago aprobado entra a su cuenta.',
+        'Efectivo, billeteras virtuales y cuentas bancarias. El saldo inicial es lo que la liga ya tenía. Desde ahí, cada pago aprobado entra a su cuenta.',
         textAlign: TextAlign.center,
         style: TextStyle(color: p.textoSecundario),
       ),
@@ -475,13 +549,9 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
         () => _abrir(SaldosScreen(repo: repo, cuentas: _cuentas)),
       ),
       _fila(context, Icons.flight_takeoff_rounded, 'Fondos de viaje', 'Reparto por asistencia', () => _abrir(FondosViajeScreen(repo: repo))),
-      _fila(
-        context,
-        Icons.manage_search_rounded,
-        'Todos los movimientos',
-        'Filtrar y exportar',
-        () => _abrir(MovimientosScreen(repo: repo, cuentas: _cuentas)),
-      ),
+      _fila(context, Icons.manage_search_rounded, 'Todos los movimientos', 'Filtrar y exportar', () => _abrir(MovimientosScreen(repo: repo, cuentas: _todas))),
+      if (_todas.any((c) => c['archivada'] == true))
+        _fila(context, Icons.inventory_outlined, 'Cuentas archivadas', '${_todas.where((c) => c['archivada'] == true).length} con su historial', _archivadas),
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Material(
@@ -757,6 +827,7 @@ Future<bool?> abrirFormularioMovimiento(
                   children: [
                     for (final c in activas)
                       ChoiceChip(
+                        showCheckmark: false,
                         avatar: Icon(_iconoCuenta('${c['tipo']}'), size: 18),
                         label: Text('${c['nombre']}'),
                         selected: cuenta == c['id'],
@@ -773,6 +844,7 @@ Future<bool?> abrirFormularioMovimiento(
                       for (final c in activas)
                         if (c['id'] != cuenta)
                           ChoiceChip(
+                            showCheckmark: false,
                             avatar: Icon(_iconoCuenta('${c['tipo']}'), size: 18),
                             label: Text('${c['nombre']}'),
                             selected: destino == c['id'],

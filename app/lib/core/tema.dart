@@ -210,6 +210,20 @@ class PivotVidrio {
   static Color reflejo(PivotPaleta p) => _osc(p) ? const Color(0x14FFFFFF) : const Color(0x66FFFFFF);
 }
 
+/// Colores de énfasis que un Pivot elige para cada medio de pago.
+class PivotMedios {
+  static const colores = {
+    'rojo': Color(0xFFE8000D),
+    'naranja': Color(0xFFF97316),
+    'amarillo': Color(0xFFEAB308),
+    'verde': Color(0xFF16A34A),
+    'azul': Color(0xFF2563EB),
+    'morado': Color(0xFF7C3AED),
+    'gris': Color(0xFF6B7280),
+  };
+  static Color de(String clave) => colores[clave] ?? colores['gris']!;
+}
+
 class PivotRadios {
   static const iconoDia = 7.0; // ícono de Eventos con el día
   static const tarjeta = 16.0;

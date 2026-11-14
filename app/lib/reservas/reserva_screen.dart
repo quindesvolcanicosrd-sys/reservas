@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../pivots/formas_pago_screen.dart' show LogoMedio, copiarDato;
 import '../core/config_liga.dart';
 import '../core/iconos_marca.dart';
 import '../core/asistente.dart';
@@ -17,7 +17,7 @@ enum _Paso { elegir, pago }
 /// Reserva por clase o por mes desde el "+" (Fase 3), como el flujo de la
 /// web (s4 → s-pago → s6) pero en el marco de asistente de la app:
 /// 1) elegir clases o meses, con el total siempre a la vista;
-/// 2) pagar: DeUna (enlace) o transferencia al banco; al elegir, la reserva
+/// 2) pagar con uno de los medios de la liga (enlace o datos); al elegir, la reserva
 ///    queda registrada como pendiente, igual que en la web;
 /// después, pantalla de éxito con el botón para mandar el comprobante.
 class ReservaScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
   final _clasesSel = <String>{};
   final _tallaPorFecha = <String, String>{};
   Set<DateTime> _mesesSel = {};
-  bool _transferenciaAbierta = false;
+  String? _medioAbierto;
 
   bool get _esMes => widget.tipo == TipoReserva.mes;
 
@@ -421,41 +421,15 @@ class _ReservaScreenState extends State<ReservaScreen> {
             ),
           ),
         ],
-        // Formas de pago de la liga (Mi Liga → Cobros).
-        if (t.monto > 0 && _cfg.deunaActiva) ...[
+        // Formas de pago de la liga (Mi Liga → Cobros): cada medio con su color.
+        if (t.monto > 0) ...[
           const SizedBox(height: 20),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
-            onPressed: _guardando ? null : () => _confirmar(_cfg.deunaEnlace, medio: 'deuna'),
-            icon: const Icon(Icons.qr_code_2_rounded),
-            label: Text('Paga con DeUna · ${ReservasRepo.dinero(t.monto)}'),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            child: Text(
-              'Se abre DeUna: escribe el monto ${ReservasRepo.dinero(t.monto)} y paga. Después vuelve a Pivot.',
+          for (final m in _cfg.mediosActivos) Padding(padding: const EdgeInsets.only(bottom: 12), child: _medio(context, t, m)),
+          if (_cfg.mediosActivos.isEmpty)
+            Text(
+              'La liga todavía no tiene formas de pago. Escríbele a un Pivot.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
-            ),
-          ),
-        ],
-        if (t.monto > 0 && _cfg.transferenciaActiva) ...[const SizedBox(height: 16), _transferencia(context, t)],
-        if (t.monto > 0 && _cfg.efectivoActivo) ...[
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
-            onPressed: _guardando ? null : () => _confirmar(null, medio: 'efectivo'),
-            icon: const Icon(Icons.payments_outlined),
-            label: Text('Pago en efectivo · ${ReservasRepo.dinero(t.monto)}'),
-          ),
-          if (_cfg.efectivoTexto.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: Text(
-                _cfg.efectivoTexto,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
-              ),
+              style: TextStyle(color: p.textoSecundario),
             ),
         ],
       ],
@@ -503,73 +477,88 @@ class _ReservaScreenState extends State<ReservaScreen> {
     );
   }
 
-  Widget _transferencia(BuildContext context, Total t) {
+  /// Un medio de pago: con enlace, botón que lo abre; con datos, tarjeta que
+  /// se despliega con los datos para copiar; si no, solo confirmar.
+  Widget _medio(BuildContext context, Total t, MedioPago m) {
     final p = context.pivot;
+    final color = PivotMedios.de(m.color);
+    final abierto = _medioAbierto == m.id;
+    final conDatos = m.datos.isNotEmpty || m.indicaciones.isNotEmpty;
+    Future<void> pagar() => _confirmar(m.enlace.isNotEmpty ? m.enlace : null, medio: m.id, medioNombre: m.nombre);
     return Material(
       color: p.tarjeta,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          ListTile(
-            leading: Icon(Icons.account_balance_outlined, color: p.marcaTexto),
-            title: const Text('Transferencia bancaria'),
-            subtitle: Text(_cfg.banco),
-            trailing: AnimatedRotation(
-              turns: _transferenciaAbierta ? 0.5 : 0,
-              duration: const Duration(milliseconds: 220),
-              child: const Icon(Icons.expand_more_rounded),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: color, width: 5)),
+        ),
+        child: Column(
+          children: [
+            ListTile(
+              leading: LogoMedio(medio: m, tamano: 40),
+              title: Text(m.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(m.enlace.isNotEmpty ? 'Se abre para pagar ${ReservasRepo.dinero(t.monto)}' : m.nombreTipo),
+              trailing: conDatos && m.enlace.isEmpty
+                  ? AnimatedRotation(turns: abierto ? 0.5 : 0, duration: const Duration(milliseconds: 220), child: const Icon(Icons.expand_more_rounded))
+                  : Icon(Icons.chevron_right_rounded, color: color),
+              onTap: _guardando ? null : (conDatos && m.enlace.isEmpty ? () => setState(() => _medioAbierto = abierto ? null : m.id) : pagar),
             ),
-            onTap: () => setState(() => _transferenciaAbierta = !_transferenciaAbierta),
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 260),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
-            child: !_transferenciaAbierta
-                ? const SizedBox(width: double.infinity)
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 8, 16),
-                    child: Column(
-                      children: [
-                        for (final (etiqueta, valor) in _cfg.datosBancarios)
-                          Row(
-                            children: [
-                              SizedBox(
-                                width: 104,
-                                child: Text(etiqueta, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                              ),
-                              Expanded(
+            AnimatedSize(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topCenter,
+              child: !(abierto || (conDatos && m.enlace.isNotEmpty))
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 8, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final (etiqueta, valor) in m.datos)
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 104,
+                                  child: Text(etiqueta, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    valor,
+                                    style: TextStyle(fontWeight: FontWeight.w600, color: p.texto),
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Copiar',
+                                  icon: const Icon(Icons.copy_rounded, size: 18),
+                                  onPressed: () => copiarDato(context, etiqueta, valor),
+                                ),
+                              ],
+                            ),
+                          if (m.indicaciones.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4, right: 8),
+                              child: Text(m.indicaciones, style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                            ),
+                          if (m.enlace.isEmpty) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: PivotPaleta.sobreSeccion),
+                                onPressed: _guardando ? null : pagar,
                                 child: Text(
-                                  valor,
-                                  style: TextStyle(fontWeight: FontWeight.w600, color: p.texto),
+                                  m.tipo == 'efectivo' ? 'Pagaré ${ReservasRepo.dinero(t.monto)} en efectivo' : 'Ya pagué ${ReservasRepo.dinero(t.monto)}',
                                 ),
                               ),
-                              IconButton(
-                                tooltip: 'Copiar',
-                                icon: const Icon(Icons.copy_rounded, size: 18),
-                                onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: valor));
-                                  ScaffoldMessenger.of(context)
-                                    ..hideCurrentSnackBar()
-                                    ..showSnackBar(SnackBar(content: Text('$etiqueta copiado')));
-                                },
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _guardando ? null : () => _confirmar(null, medio: 'transferencia'),
-                            child: Text('Ya transferí ${ReservasRepo.dinero(t.monto)}'),
-                          ),
-                        ),
-                      ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -578,7 +567,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
 
   ConfigLiga get _cfg => ConfigLiga.de(widget.repo.sesion);
 
-  Future<void> _confirmar(String? urlPago, {String? medio}) async {
+  Future<void> _confirmar(String? urlPago, {String? medio, String? medioNombre}) async {
     if (_guardando) return;
     setState(() => _guardando = true);
     final total = _total;
@@ -590,6 +579,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
       total: total,
       // Dónde dice que pagó, para que el Pivot sepa dónde revisar.
       medio: total.monto == 0 ? null : medio,
+      medioNombre: total.monto == 0 ? null : medioNombre,
     );
     if (!mounted) return;
     if (resultado.guardados.isEmpty) {
@@ -597,7 +587,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo guardar tu reserva. Intenta de nuevo.')));
       return;
     }
-    // La reserva ya quedó registrada; recién ahí se abre DeUna (como la web).
+    // La reserva ya quedó registrada; recién ahí se abre el enlace de pago.
     if (urlPago != null) await launchUrl(Uri.parse(urlPago), mode: LaunchMode.inAppBrowserView);
     widget.repo.cargar(forzar: true);
     if (!mounted) return;

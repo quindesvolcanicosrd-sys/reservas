@@ -30,7 +30,8 @@ const categoriasTesoreria = {
   'otro': 'Otro',
 };
 
-const tiposCuenta = {'efectivo': 'Efectivo', 'deuna': 'DeUna', 'banco': 'Banco', 'otro': 'Otra'};
+// 'deuna' es la clave guardada de las billeteras virtuales (sin marcas en pantalla).
+const tiposCuenta = {'efectivo': 'Efectivo', 'deuna': 'Billetera virtual', 'banco': 'Cuenta bancaria', 'otro': 'Otra'};
 
 String plata(num v) {
   final neg = v < 0;
