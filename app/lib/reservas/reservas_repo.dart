@@ -203,12 +203,15 @@ class ReservasRepo {
   }
 
   /// Saldo propio con el equipo (Tesorería), ya descontado lo apartado en reservas pendientes.
-  Future<double> miSaldo() async {
+  Future<double> miSaldo() async => (await miSaldoDetalle()).saldo;
+
+  /// Saldo y la deuda de clases que pasaron a deuda (se cobra sí o sí en la próxima reserva).
+  Future<({double saldo, double deudaClases})> miSaldoDetalle() async {
     try {
       final r = await _api.get('getMiSaldo');
-      return (r['saldo'] as num?)?.toDouble() ?? 0;
+      return (saldo: (r['saldo'] as num?)?.toDouble() ?? 0, deudaClases: (r['deudaClases'] as num?)?.toDouble() ?? 0);
     } catch (_) {
-      return 0;
+      return (saldo: 0.0, deudaClases: 0.0);
     }
   }
 
@@ -309,13 +312,16 @@ class ReservasRepo {
     Iterable<DateTime> meses = const [],
     DateTime? hoy,
     double saldo = 0,
+    double deudaObligatoria = 0,
   }) {
     if (tipo == TipoReserva.mes) {
       final h = hoy ?? DateTime.now();
       final rec = [for (final m in meses) p.recargoPara(m, h)].where((r) => r > 0).toList();
       final suma = rec.fold<double>(0, (a, b) => a + b);
       final base = cantidad * p.mensual + suma;
-      final aplicado = cantidad == 0 ? 0.0 : (saldo > 0 ? (saldo < base ? saldo : base) : saldo);
+      // Sin elegir usar o pagar el saldo, igual se suma lo que pasó a deuda.
+      final s = saldo == 0 && deudaObligatoria > 0 ? -deudaObligatoria : saldo;
+      final aplicado = cantidad == 0 ? 0.0 : (s > 0 ? (s < base ? s : base) : s);
       return Total(
         cantidad: cantidad,
         aFavor: 0,
@@ -331,7 +337,17 @@ class ReservasRepo {
     final aFavor = creditos < cantidad ? creditos : cantidad;
     final conCupon = cupon && cantidad > aFavor ? 1 : 0;
     final cobradas = cantidad - aFavor - conCupon;
-    return Total(cantidad: cantidad, aFavor: aFavor, cupon: conCupon, cobradas: cobradas, monto: cobradas * p.porClase, precio: p.porClase);
+    // Clases que pasaron a deuda: se pagan con la primera clase cobrada.
+    final deuda = cobradas > 0 ? deudaObligatoria : 0.0;
+    return Total(
+      cantidad: cantidad,
+      aFavor: aFavor,
+      cupon: conCupon,
+      cobradas: cobradas,
+      monto: double.parse((cobradas * p.porClase + deuda).toStringAsFixed(2)),
+      precio: p.porClase,
+      saldo: -deuda,
+    );
   }
 
   static String dinero(double v) => '\$${v.toStringAsFixed(2)}';

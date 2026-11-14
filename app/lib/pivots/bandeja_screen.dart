@@ -115,6 +115,32 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     }
   }
 
+  Future<void> _pasarADeuda(Pedido x) async {
+    final monto = (x.m['monto'] as num? ?? 0).toDouble();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: Text('¿Pasar a deuda de ${x.nombreMostrar}?'),
+        content: Text(
+          'La reserva se cierra y ${x.nombreMostrar} queda debiendo ${plata(monto)}. '
+          'Cuando vuelva a reservar, la app le suma esa deuda al pago. Se le avisa.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Pasar a deuda')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await repo.pasarADeuda(x);
+      m.showSnackBar(SnackBar(content: Text('${x.nombreMostrar} queda debiendo ${plata(monto)}.')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo. Revisa tu conexión.')));
+    }
+  }
+
   Future<void> _pedirComprobante(Pedido x) async {
     final m = ScaffoldMessenger.of(context);
     try {
@@ -424,6 +450,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                         : _TarjetaPedido(
                             pedido: x,
                             alPedirComprobante: () => _pedirComprobante(x),
+                            alDeuda: () => _pasarADeuda(x),
                             alResolver: _saliendo.isEmpty ? (a) => _resolver(x, a) : null,
                             alAbrirFicha: () => PersonaScreen.abrir(context, EquipoRepo.de(repo.sesion), x.nombre),
                           ),
@@ -641,9 +668,18 @@ class _CuentaCorte extends StatelessWidget {
 }
 
 class _TarjetaPedido extends StatelessWidget {
-  const _TarjetaPedido({required this.pedido, required this.alResolver, this.alAbrirFicha, this.alPedirComprobante});
+  const _TarjetaPedido({required this.pedido, required this.alResolver, this.alAbrirFicha, this.alPedirComprobante, this.alDeuda});
   final Pedido pedido;
   final VoidCallback? alPedirComprobante;
+  final VoidCallback? alDeuda;
+
+  /// Clase con monto cuya fecha ya pasó: se puede pasar a deuda.
+  bool get _puedeDeuda {
+    if (pedido.tipo != TipoPedido.reserva || pedido.m['tipo'] == 'mensual' || ((pedido.m['monto'] as num?) ?? 0) <= 0) return false;
+    final f = DateTime.tryParse('${(pedido.m['evento'] as Map?)?['fecha'] ?? ''}');
+    return f != null && f.isBefore(Fechas.hoy());
+  }
+
   final void Function(bool aprobar)? alResolver;
   final VoidCallback? alAbrirFicha;
 
@@ -696,6 +732,7 @@ class _TarjetaPedido extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    if (_puedeDeuda) ...[TextButton(onPressed: alResolver == null ? null : alDeuda, child: const Text('Pasar a deuda')), const Spacer()],
                     TextButton(
                       onPressed: alResolver == null ? null : () => alResolver!(false),
                       child: Text(pedido.tipo == TipoPedido.equipo ? 'Dejar como está' : 'Rechazar'),

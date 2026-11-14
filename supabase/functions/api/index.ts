@@ -4723,17 +4723,25 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   if (esMensual) {
     const vig = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10), anioMes);
     recargo = vig ? _recargoCuota(vig.slice(0, 7), _hoyEcuadorISO(), await _reglasLiga()) : 0;
-        montoFinal += recargo;
-    // Saldo con el equipo (Victor: se le pregunta al pagar). 'usar' descuenta
-    // el saldo a favor; 'pagar' suma la deuda. Se registra al confirmar.
+                montoFinal += recargo;
+  }
+  // Saldo con el equipo (cuotas y clases). 'usar' descuenta el saldo a favor
+  // (solo cuotas); 'pagar' suma la deuda. Las clases que pasaron a deuda
+  // (Victor, 2026-11-14) se cobran siempre en la próxima reserva pagada,
+  // aunque no se pida. Solo con la sesión de la misma persona. Se registra
+  // al confirmar la reserva.
+  if (montoFinal > 0 && (await _validarToken(String(params.token ?? ''))) === nombre) {
     const pide = String(params.saldo ?? '');
-        // Solo con la sesión de la misma persona: el saldo no se puede usar a nombre de otra.
-    if ((pide === 'usar' || pide === 'pagar') && (await _validarToken(String(params.token ?? ''))) === nombre) {
-      const disp = await _saldoDisponible(nombre);
-      if (pide === 'usar' && disp > 0) { saldoAplicado = _num2(Math.min(disp, montoFinal)); montoFinal = _num2(montoFinal - saldoAplicado); }
-      if (pide === 'pagar' && disp < 0) { saldoAplicado = _num2(disp); montoFinal = _num2(montoFinal - disp); }
+    const disp = await _saldoDisponible(nombre);
+    if (pide === 'usar' && esMensual && disp > 0) {
+      saldoAplicado = _num2(Math.min(disp, montoFinal)); montoFinal = _num2(montoFinal - saldoAplicado);
+    } else if (disp < 0) {
+      const obligada = await _deudaClases(nombre, disp);
+      const deuda = pide === 'pagar' ? -disp : obligada;
+      if (deuda > 0) { saldoAplicado = _num2(-deuda); montoFinal = _num2(montoFinal + deuda); }
     }
   }
+
 
     // Consumir crédito o cupón -- solo cuando el cliente pidió esa clase gratis
   // (manda monto 0, web y app, 2026-11-07); antes se aplicaba siempre, aunque
@@ -5122,10 +5130,50 @@ async function cancelarMiSolicitud(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+/**
+ * Deuda por clases o cuotas que un Pivot pasó a deuda (`aplicar` 'con_cuota'),
+ * menos lo ya pagado así; nunca más que la deuda total disponible (`disp` < 0).
+ */
+async function _deudaClases(username: string, disp?: number): Promise<number> {
+  const d = disp ?? await _saldoDisponible(username);
+  if (d >= 0) return 0;
+  const { data } = await supabase.from('saldos_movimientos').select('monto').eq('username', username).eq('anulado', false).eq('aplicar', 'con_cuota');
+  const pendiente = -(data ?? []).reduce((s: number, r: any) => s + (Number(r.monto) || 0), 0);
+  return _num2(Math.max(0, Math.min(pendiente, -d)));
+}
+
 async function getMiSaldo(params: Record<string, any>): Promise<Record<string, any>> {
   const yo = await _validarToken(String(params.token ?? ''));
   if (!yo) return { exito: false, error: 'Sesión inválida.' };
-  return { exito: true, saldo: await _saldoDisponible(yo) };
+  const saldo = await _saldoDisponible(yo);
+  return { exito: true, saldo, deudaClases: await _deudaClases(yo, saldo) };
+}
+
+/**
+ * Pasar a deuda (Victor, 2026-11-14): alguien vino y su reserva nunca se
+ * confirmó (sin comprobante o el pago no apareció). La reserva se cierra y
+ * queda una deuda que se cobra junto con su próxima reserva pagada.
+ */
+async function adminDeudaReserva(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const { data: r } = await supabase.from('reservas').select('id, nombre_usuario, tipo, mes_texto, monto, id_evento').eq('id', String(params.id ?? '')).eq('estado', 'Pendiente').maybeSingle();
+  if (!r) return { exito: false, error: 'Esa reserva ya no está pendiente.' };
+  const monto = _num2(Number(r.monto) || 0);
+  if (!(monto > 0)) return { exito: false, error: 'Esta reserva no tiene monto a pagar.' };
+  let que = r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : 'Clase';
+  if (r.tipo !== 'mensual' && r.id_evento) {
+    const { data: ev } = await supabase.from('asistencias').select('fecha').eq('id_evento', r.id_evento).maybeSingle();
+    if (ev?.fecha) que = `Clase del ${String(ev.fecha).slice(8, 10)}/${String(ev.fecha).slice(5, 7)}`;
+  }
+  await supabase.from('reservas').update({ estado: 'Cancelada', motivo_rechazo: 'Pasó a deuda' }).eq('id', r.id);
+  await supabase.from('saldos_movimientos').insert({
+    username: r.nombre_usuario, persona_nombre: await _nombrePersona(r.nombre_usuario), fecha: _hoyEcuadorISO(),
+    monto: -monto, tipo: 'cargo', aplicar: 'con_cuota', concepto: `${que} sin pagar`, por: email,
+  });
+  await sendPush({ tipo: 'solicitud_resuelta', include_external_user_ids: [r.nombre_usuario], headings: { es: 'Quedó una deuda' },
+    contents: { es: `No pudimos confirmar el pago de tu ${que.toLowerCase()}. Quedó una deuda de $${monto.toFixed(2)} que pagarás junto con tu próxima reserva.` }, url: APP_URL }).catch(() => {});
+  return { exito: true };
 }
 
 async function _saldoPersonas(username?: string): Promise<Record<string, number>> {
@@ -7757,7 +7805,7 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
       tipo: 'reserva', id: r.id,
       titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`,
                         faltaComprobante: r.estado === 'Pendiente' && Number(r.monto) > 0 && !r.comprobante_subido_en,
-            detalle: r.estado === 'Pendiente' ? (Number(r.monto) > 0 && !r.comprobante_subido_en ? 'Falta el comprobante: súbelo para que un Pivot confirme tu pago.' : 'Un Pivot confirmará tu pago.') : r.estado === 'Confirmada' ? 'Pago confirmado.' : (r.motivo_rechazo ? `Rechazada: ${r.motivo_rechazo}` : 'Reserva cancelada.'),
+            detalle: r.estado === 'Pendiente' ? (Number(r.monto) > 0 && !r.comprobante_subido_en ? 'Falta el comprobante: súbelo para que un Pivot confirme tu pago.' : 'Un Pivot confirmará tu pago.') : r.estado === 'Confirmada' ? 'Pago confirmado.' : (r.motivo_rechazo === 'Pasó a deuda' ? 'No se confirmó el pago: quedó como deuda y la pagarás con tu próxima reserva.' : r.motivo_rechazo ? `Rechazada: ${r.motivo_rechazo}` : 'Reserva cancelada.'),
       estado: r.estado === 'Pendiente' ? 'pendiente' : r.estado === 'Confirmada' ? 'aprobada' : 'rechazada', fecha: r.created_at,
     });
   }
@@ -9569,7 +9617,8 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
     const mes = reservaAntes?.mes_texto ? ` de ${reservaAntes.mes_texto}` : '';
     const { data: mov } = await supabase.from('saldos_movimientos').insert({
       username: reservaAntes!.nombre_usuario, persona_nombre: await _nombrePersona(reservaAntes!.nombre_usuario), fecha: _hoyEcuadorISO(),
-      monto: _num2(-aplicado), tipo: aplicado > 0 ? 'cargo' : 'abono', aplicar: 'aparte', por: adminEmail,
+            // La deuda pagada con la reserva baja primero lo que pasó a deuda ('con_cuota').
+      monto: _num2(-aplicado), tipo: aplicado > 0 ? 'cargo' : 'abono', aplicar: aplicado > 0 ? 'aparte' : 'con_cuota', por: adminEmail,
       concepto: aplicado > 0 ? `Saldo a favor usado en la cuota${mes}` : `Pagado junto con la cuota${mes}`,
     }).select('id').maybeSingle();
     if (mov?.id) await supabase.from('reservas').update({ saldo_movimiento_id: mov.id }).eq('id', id);
@@ -9943,7 +9992,8 @@ Deno.serve(async (req: Request) => {
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
             case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
-      case 'adminPedirComprobante':         return json(await adminPedirComprobante(params));
+            case 'adminPedirComprobante':         return json(await adminPedirComprobante(params));
+      case 'adminDeudaReserva':             return json(await adminDeudaReserva(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       case 'adminBorrarEvento':             return json(await adminBorrarEvento(params));
       case 'subirFotoPerfil':        return json(await subirFotoPerfil(params));

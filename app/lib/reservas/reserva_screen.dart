@@ -52,7 +52,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
   bool _usarCupon = false;
 
   /// Saldo con el equipo (solo cuotas): a favor (+) o en contra (−) y si la persona lo aplica.
-  double _saldo = 0;
+  double _saldo = 0, _deudaClases = 0;
   bool _aplicarSaldo = false;
   List<FechaClase>? _clases;
   List<MesReserva>? _meses;
@@ -72,9 +72,14 @@ class _ReservaScreenState extends State<ReservaScreen> {
   Future<void> _cargar() async {
     setState(() => _error = null);
     final prueba = widget.datosPrueba;
-    if (_esMes && prueba == null) {
-      _r.miSaldo().then((s) {
-        if (mounted) setState(() => _saldo = s);
+    if (prueba == null) {
+      _r.miSaldoDetalle().then((s) {
+        if (mounted) {
+          setState(() {
+            _saldo = s.saldo;
+            _deudaClases = s.deudaClases;
+          });
+        }
       });
     }
     try {
@@ -121,6 +126,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
     cupon: _usarCupon,
     meses: _mesesSel,
     saldo: _aplicarSaldo ? _saldo : 0,
+    deudaObligatoria: _deudaClases,
   );
 
   void _ir(int delta) {
@@ -428,7 +434,20 @@ class _ReservaScreenState extends State<ReservaScreen> {
         AnimatedSize(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          child: _esMes && _saldo != 0
+          child: _deudaClases > 0 && t.saldo < 0 && !_aplicarSaldo
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: p.suave,
+                    borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                    child: ListTile(
+                      leading: Icon(Icons.receipt_long_outlined, color: p.marcaTexto),
+                      title: const Text('Incluye una clase pendiente de pago'),
+                      subtitle: Text('Tienes ${ReservasRepo.dinero(_deudaClases)} de una reserva que no se pudo confirmar. Se suma a este pago.'),
+                    ),
+                  ),
+                )
+              : _esMes && _saldo != 0
               ? Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Material(
@@ -489,7 +508,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
       if (t.cobradas > 0)
         '${t.cobradas} ${_esMes ? (t.cobradas == 1 ? 'mes' : 'meses') : (t.cobradas == 1 ? 'clase' : 'clases')} × ${ReservasRepo.dinero(t.precio)}',
       if (t.recargos > 0) 'recargo por pagar tarde ${ReservasRepo.dinero(t.recargo)}',
-      if (t.saldo < 0) '${ReservasRepo.dinero(-t.saldo)} que debías',
+      if (t.saldo < 0) '${ReservasRepo.dinero(-t.saldo)} pendientes de antes',
 
       if (t.aFavor > 0) '${t.aFavor} a favor',
       if (t.cupon > 0) '1 con cupón',
