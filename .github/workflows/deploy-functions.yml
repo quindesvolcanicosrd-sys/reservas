@@ -36,7 +36,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.20.5  # fija: "latest" falla por límite de la API de GitHub (2026-11-14)
+          version: 2.110.0  # fija: "latest" falla por límite de la API de GitHub (2026-11-14)
 
       - name: Elegir funciones a desplegar
         id: elegir
