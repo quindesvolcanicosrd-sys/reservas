@@ -122,6 +122,14 @@ class BandejaRepo extends ChangeNotifier {
   }
 
   /// Al abrir la Bandeja: lo de ahora queda visto y la campana vuelve a ser bandeja.
+  /// Le pide el comprobante a la persona con una notificación (sin WhatsApp).
+  Future<void> pedirComprobante(Pedido p) async {
+    final r = await _api.post('adminPedirComprobante', {'adminToken': sesion.adminToken, 'id': '${p.m['id']}'});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo avisar.'}');
+    p.m['comprobanteAvisos'] = ((p.m['comprobanteAvisos'] as num?) ?? 0) + 1;
+    notifyListeners();
+  }
+
   /// Cancela un pedido propio que sigue pendiente (Victor, 2026-11-14).
   Future<void> cancelarMio(MiPedido x) async {
     final r = await _api.post('cancelarMiSolicitud', {'tipo': x.tipo, 'id': '${x.m['id']}'});

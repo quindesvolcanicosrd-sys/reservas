@@ -9,6 +9,7 @@ import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
+import 'comprobante.dart';
 import 'reservas_repo.dart';
 import '../core/cargando.dart';
 import '../core/vidrio.dart';
@@ -641,7 +642,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 320),
-        pageBuilder: (_, _, _) => ReservaExitoScreen(resultado: resultado, total: total, esClase: !_esMes),
+        pageBuilder: (_, _, _) => ReservaExitoScreen(resultado: resultado, total: total, esClase: !_esMes, repo: _r),
         transitionsBuilder: (_, a, _, child) => FadeTransition(
           opacity: a,
           child: ScaleTransition(
@@ -688,12 +689,85 @@ class _ReservaScreenState extends State<ReservaScreen> {
   );
 }
 
-/// "¡Reserva registrada!" (web: s6) con el botón para mandar el comprobante.
-class ReservaExitoScreen extends StatelessWidget {
-  const ReservaExitoScreen({super.key, required this.resultado, required this.total, required this.esClase});
+/// "¡Reserva registrada!" (web: s6). Lo principal es subir el comprobante
+/// dentro de la app (Victor, 2026-11-14): la reserva ya quedó guardada; si
+/// la persona sale a pagar y vuelve, se le pide la captura en ese momento.
+class ReservaExitoScreen extends StatefulWidget {
+  const ReservaExitoScreen({super.key, required this.resultado, required this.total, required this.esClase, this.repo});
   final ResultadoReserva resultado;
   final Total total;
   final bool esClase;
+  final ReservasRepo? repo;
+
+  @override
+  State<ReservaExitoScreen> createState() => _ReservaExitoScreenState();
+}
+
+class _ReservaExitoScreenState extends State<ReservaExitoScreen> with WidgetsBindingObserver {
+  bool _subido = false, _salio = false, _preguntando = false;
+
+  ResultadoReserva get resultado => widget.resultado;
+  Total get total => widget.total;
+  bool get esClase => widget.esClase;
+  bool get _puedeSubir => widget.repo != null && resultado.ids.isNotEmpty && !_subido;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.paused || s == AppLifecycleState.hidden) _salio = true;
+    // Volvió de pagar (app del banco o billetera): se pide la captura ahora.
+    if (s == AppLifecycleState.resumed && _salio && _puedeSubir && !_preguntando) {
+      _salio = false;
+      _preguntarAlVolver();
+    }
+  }
+
+  Future<void> _preguntarAlVolver() async {
+    _preguntando = true;
+    final si = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('¿Ya pagaste?', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              const Text('Sube la captura del pago y listo: un Pivot la revisa y confirma tu reserva.'),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(h).pop(true),
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Subir comprobante'),
+              ),
+              TextButton(onPressed: () => Navigator.of(h).pop(false), child: const Text('Todavía no')),
+            ],
+          ),
+        ),
+      ),
+    );
+    _preguntando = false;
+    if (si == true && mounted) await _subir();
+  }
+
+  Future<void> _subir() async {
+    final ok = await subirComprobante(context, widget.repo!, resultado.ids);
+    if (ok && mounted) setState(() => _subido = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -770,16 +844,50 @@ class ReservaExitoScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          if (!gratis)
-            FilledButton.icon(
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 240),
+            child: _subido
+                ? Row(
+                    key: const ValueKey('ok'),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded, color: p.marcaTexto),
+                      const SizedBox(width: 8),
+                      const Text('Comprobante enviado', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ],
+                  )
+                : _puedeSubir
+                ? Column(
+                    key: const ValueKey('subir'),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                        onPressed: _subir,
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        label: const Text('Subir comprobante'),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Si todavía no pagas, hazlo y vuelve: te lo pediremos al volver. También puedes subirlo después desde la Bandeja.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(key: ValueKey('nada')),
+          ),
+          if (!gratis) ...[
+            const SizedBox(height: 6),
+            TextButton.icon(
               onPressed: () => launchUrl(
                 Uri.parse('https://wa.me/${ConfigLiga.whatsappActual}?text=${Uri.encodeComponent(resultado.mensajeWhatsapp)}'),
                 mode: LaunchMode.externalApplication,
               ),
-              icon: Icon(IconosMarca.whatsapp),
-              label: const Text('Enviar comprobante por WhatsApp'),
+              icon: Icon(IconosMarca.whatsapp, size: 18),
+              label: const Text('O enviarlo por WhatsApp'),
             ),
+          ],
           const SizedBox(height: 10),
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Listo')),
           if (esClase) ...[

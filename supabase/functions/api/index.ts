@@ -2498,7 +2498,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { data: prestPend } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, created_at, tipo, motivo, permanente').eq('estado', 'pendiente').order('created_at');
   const [res, rect, exc, les, asig] = await Promise.all([
-        supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago, medio_nombre, saldo_aplicado').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
+        supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago, medio_nombre, saldo_aplicado, comprobante_path, comprobante_subido_en, comprobante_avisos').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
       .gte('created_at', new Date(Date.now() - (await _diasRectificacion()) * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
@@ -2539,8 +2539,16 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const persona = (u: string) => ({ nombre: u, nombreMostrar: pe[u]?.nombre_derby || u, foto: pe[u]?.foto_perfil || '', categoria: pe[u]?.categoria || '' });
   const evento = (id: string) => ev[id] ? { idEvento: id, fecha: ev[id].fecha, lugar: ev[id].donde ?? '', hora: String(ev[id].inicia ?? '').substring(0, 5), tipo: ev[id].tipo_evento ?? '' } : null;
 
+    // Comprobantes: enlace firmado que vence en 30 minutos (nunca público).
+  const firmas: Record<string, string> = {};
+  const conComp = (res.data ?? []).filter((r: any) => r.comprobante_path);
+  if (conComp.length) {
+    const { data: f } = await supabase.storage.from('comprobantes').createSignedUrls(conComp.map((r: any) => r.comprobante_path), 1800);
+    (f ?? []).forEach((x: any, i: number) => { if (x?.signedUrl) firmas[conComp[i].id] = x.signedUrl; });
+  }
   const items = {
     reservas: (res.data ?? []).map((r: any) => ({
+      comprobante: firmas[r.id] ?? '', sinComprobante: Number(r.monto) > 0 && !r.comprobante_subido_en, comprobanteAvisos: Number(r.comprobante_avisos) || 0,
       id: r.id, ...persona(r.nombre_usuario), tipo: r.tipo, mesTexto: r.mes_texto ?? '', talla: r.talla ?? '', protecciones: r.protecciones ?? '',
       monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', medioNombre: r.medio_nombre ?? '', fechaPago: r.fecha_pago ?? null, saldoAplicado: Number(r.saldo_aplicado) || 0,
     })),
@@ -4745,7 +4753,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   }
 
   const hoyISO = new Date().toISOString().substring(0, 10);
-  await supabase.from('reservas').insert({
+    const { data: nueva } = await supabase.from('reservas').insert({
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
                                 estado: 'Pendiente', monto: montoFinal, fecha_pago: _hoyEcuadorISO(), email: email ?? null, saldo_aplicado: saldoAplicado,
@@ -4753,9 +4761,10 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
     uso_cupon: usoCupon,
     // Dónde dice que pagó (2026-11-13), para que el Pivot sepa dónde revisar.
         medio_pago: /^[a-z0-9_-]{1,40}$/.test(String(params.medio ?? '')) ? String(params.medio) : null,
-    medio_nombre: String(params.medioNombre ?? '').trim().slice(0, 60) || null,
-  });
-  return { exito: true };
+        medio_nombre: String(params.medioNombre ?? '').trim().slice(0, 60) || null,
+  }).select('id, monto').maybeSingle();
+  // El id permite subir el comprobante justo después (2026-11-14).
+  return { exito: true, id: nueva?.id ?? null, monto: Number(nueva?.monto) || 0 };
 }
 
 // Fin del mes que cubre una reserva mensual (mismo cálculo que
@@ -5016,6 +5025,74 @@ async function _saldoDisponible(username: string): Promise<number> {
 }
 
 /** Saldo propio con el equipo (solo la persona; nada se guarda en el teléfono). */
+// ─── Comprobantes de pago (Victor, 2026-11-14) ───────────────────────────────
+// La reserva se guarda sin comprobante (cuando era obligatorio se perdían
+// reservas). La persona lo sube en la app; se le recuerda a las 2 horas y al
+// día siguiente; los Pivots pueden pedirlo con un toque. La imagen vive en un
+// almacenamiento privado y se borra a los 30 días.
+const COMPROBANTES_DESDE = '2026-11-14T18:00:00Z'; // no se recuerda a reservas de antes
+
+/** La persona sube el comprobante de una reserva suya pendiente. */
+async function subirComprobante(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  if (!yo) return { exito: false, error: 'Sesión inválida.' };
+  const ids = String(params.ids ?? params.id ?? '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 12);
+  if (!ids.length) return { exito: false, error: 'Falta la reserva.' };
+  const parsed = await _base64ToBuffer(String(params.base64Data ?? '').trim());
+  if (!parsed) return { exito: false, error: 'No pudimos leer la imagen. Prueba con otra captura.' };
+  if (parsed.buffer.byteLength > 3 * 1024 * 1024) return { exito: false, error: 'La imagen es muy grande. Prueba con una captura de pantalla.' };
+  const { data: mias } = await supabase.from('reservas').select('id, nombre_usuario, tipo, mes_texto').in('id', ids).eq('nombre_usuario', yo).eq('estado', 'Pendiente');
+  if (!mias?.length) return { exito: false, error: 'Esa reserva ya no está pendiente.' };
+  // Un mismo pago puede cubrir varias reservas: se guarda una vez y se liga a todas.
+  const path = `reservas/${mias[0].id}-${Date.now()}.${parsed.mimeType.includes('png') ? 'png' : 'jpg'}`;
+  const { error } = await supabase.storage.from('comprobantes').upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
+  if (error) { console.error('[subirComprobante]', error); return { exito: false, error: 'No se pudo subir. Intenta de nuevo.' }; }
+  await supabase.from('reservas').update({ comprobante_path: path, comprobante_subido_en: new Date().toISOString() }).in('id', mias.map((r: any) => r.id));
+  const quien = await _nombrePersona(yo);
+  const pivots = await _adminDestinatariosPush(undefined, 'finanzas', 'pagos');
+  await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Comprobante recibido' },
+    contents: { es: `${quien} subió el comprobante de ${mias[0].tipo === 'mensual' ? `su mensualidad ${mias[0].mes_texto ?? ''}`.trim() : 'su reserva'}. Ya puedes revisarlo en la Bandeja.` }, url: APP_URL }).catch(() => {});
+  return { exito: true, reservas: mias.length };
+}
+
+/** Un Pivot pide el comprobante con un toque (sin escribir por WhatsApp). */
+async function adminPedirComprobante(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const { data: r } = await supabase.from('reservas').select('id, nombre_usuario, tipo, mes_texto, comprobante_avisos').eq('id', String(params.id ?? '')).eq('estado', 'Pendiente').maybeSingle();
+  if (!r) return { exito: false, error: 'Esa reserva ya no está pendiente.' };
+  await sendPush({ tipo: 'comprobante_pendiente', include_external_user_ids: [r.nombre_usuario], headings: { es: 'Falta tu comprobante' },
+    contents: { es: `Sube el comprobante de ${r.tipo === 'mensual' ? `tu mensualidad ${r.mes_texto ?? ''}`.trim() : 'tu reserva'} para que podamos confirmarla. Toma un minuto: abre la Bandeja.` }, url: APP_URL });
+  await supabase.from('reservas').update({ comprobante_avisos: (Number(r.comprobante_avisos) || 0) + 1, comprobante_ultimo_aviso: new Date().toISOString() }).eq('id', r.id);
+  return { exito: true };
+}
+
+/** Cada hora: recuerda el comprobante a las 2 h y al día siguiente; borra imágenes de más de 30 días. */
+async function _recordarComprobantes(ahora: number): Promise<void> {
+  const { data } = await supabase.from('reservas').select('id, nombre_usuario, tipo, mes_texto, created_at, comprobante_avisos, comprobante_ultimo_aviso')
+    .eq('estado', 'Pendiente').gt('monto', 0).is('comprobante_subido_en', null).gte('created_at', COMPROBANTES_DESDE).lt('comprobante_avisos', 2);
+  // Una sola notificación por persona aunque tenga varias reservas.
+  const porPersona: Record<string, any[]> = {};
+  for (const r of data ?? []) {
+    const n = Number(r.comprobante_avisos) || 0;
+    const desde = n === 0 ? Date.parse(r.created_at) + 2 * 3600e3 : Date.parse(r.comprobante_ultimo_aviso ?? r.created_at) + 22 * 3600e3;
+    if (ahora >= desde) (porPersona[r.nombre_usuario] ??= []).push(r);
+  }
+  for (const [u, rs] of Object.entries(porPersona)) {
+    const una = rs.length === 1;
+    await sendPush({ tipo: 'comprobante_pendiente', include_external_user_ids: [u], headings: { es: 'Falta tu comprobante' },
+      contents: { es: una ? `Sube el comprobante de ${rs[0].tipo === 'mensual' ? `tu mensualidad ${rs[0].mes_texto ?? ''}`.trim() : 'tu reserva'} para que un Pivot pueda confirmarla.` : `Sube el comprobante de tus ${rs.length} reservas para que un Pivot pueda confirmarlas.` },
+      url: APP_URL }).catch(() => {});
+    for (const r of rs) await supabase.from('reservas').update({ comprobante_avisos: (Number(r.comprobante_avisos) || 0) + 1, comprobante_ultimo_aviso: new Date(ahora).toISOString() }).eq('id', r.id);
+  }
+  // Imágenes de más de 30 días: se borran (queda la fecha en que se subió).
+  const { data: viejas } = await supabase.from('reservas').select('id, comprobante_path').not('comprobante_path', 'is', null)
+    .lt('comprobante_subido_en', new Date(ahora - 30 * 24 * 3600e3).toISOString()).limit(200);
+  if (viejas?.length) {
+    await supabase.storage.from('comprobantes').remove([...new Set(viejas.map((r: any) => r.comprobante_path))]);
+    await supabase.from('reservas').update({ comprobante_path: null }).in('id', viejas.map((r: any) => r.id));
+  }
+}
+
 /**
  * La persona cancela una solicitud suya que sigue pendiente (Victor,
  * 2026-11-14). Nada se borra: queda como cancelada en su Bandeja y deja de
@@ -7652,7 +7729,7 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
   if (!yo) return { exito: false, error: 'Sesión inválida.' };
   const desde = new Date(Date.now() - 60 * 86400000).toISOString();
   const [res, rect, exc, prest, asig, { data: fila }] = await Promise.all([
-        supabase.from('reservas').select('id, id_evento, tipo, mes_texto, estado, monto, created_at, motivo_rechazo').eq('nombre_usuario', yo).gte('created_at', desde),
+                supabase.from('reservas').select('id, id_evento, tipo, mes_texto, estado, monto, created_at, motivo_rechazo, comprobante_subido_en').eq('nombre_usuario', yo).gte('created_at', desde),
     supabase.from('rectificaciones_asistencia').select('id, fecha_evento, estado_solicitado, decision, created_at').eq('nombre', yo).gte('created_at', desde),
     supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, vigente_hasta, indefinida, efecto').eq('nombre', yo).gte('created_at', desde),
     supabase.from('inventario_prestamos').select('id, detalle, estado, tipo, hasta, created_at, desde, devuelto_en').eq('username', yo).gte('created_at', desde),
@@ -7679,7 +7756,8 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
     items.push({
       tipo: 'reserva', id: r.id,
       titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`,
-            detalle: r.estado === 'Pendiente' ? 'Un Pivot confirmará tu pago.' : r.estado === 'Confirmada' ? 'Pago confirmado.' : (r.motivo_rechazo ? `Rechazada: ${r.motivo_rechazo}` : 'Reserva cancelada.'),
+                        faltaComprobante: r.estado === 'Pendiente' && Number(r.monto) > 0 && !r.comprobante_subido_en,
+            detalle: r.estado === 'Pendiente' ? (Number(r.monto) > 0 && !r.comprobante_subido_en ? 'Falta el comprobante: súbelo para que un Pivot confirme tu pago.' : 'Un Pivot confirmará tu pago.') : r.estado === 'Confirmada' ? 'Pago confirmado.' : (r.motivo_rechazo ? `Rechazada: ${r.motivo_rechazo}` : 'Reserva cancelada.'),
       estado: r.estado === 'Pendiente' ? 'pendiente' : r.estado === 'Confirmada' ? 'aprobada' : 'rechazada', fecha: r.created_at,
     });
   }
@@ -8024,6 +8102,7 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumples otro año en el equipo.', categoria: 'Equipo' },
   { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
   { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
+        { clave: 'comprobante_pendiente', nombre: 'Comprobante pendiente', descripcion: 'Si hiciste una reserva y falta subir el comprobante de pago.', categoria: 'Cuenta' },
     { clave: 'cuota_pendiente', nombre: 'Recordatorios de cuota', descripcion: 'El día 1, el 14 (último día para el punto extra), el 16 y después de tu clase de gracia, solo si aún no pagaste. No llegan si ya pagaste o tu pago está en revisión.', categoria: 'Cuenta' },
     { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
   { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tus pagos, reservas o excepciones de cuota.', categoria: 'Cuenta' },
@@ -8580,6 +8659,7 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
 // background; tocar la notificación abre el detalle del evento.
 async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
   const ahora = Date.now();
+  try { await _recordarComprobantes(ahora); } catch (e) { console.error('[comprobantes] recordatorios:', e); }
   const enVentana = await _eventosEnVentana(ahora + 90 * 60 * 1000, ahora + 24 * 3600 * 1000 + 5 * 60 * 1000, [0, 1, 2]);
   // Limpieza de registros viejos del anti-duplicado (best-effort).
   await supabase.from('push_enviados').delete().lt('enviado_en', new Date(ahora - 30 * 24 * 3600 * 1000).toISOString());
@@ -9644,7 +9724,8 @@ Deno.serve(async (req: Request) => {
                         case 'adminTesoreria':                  return json(await adminTesoreria(params));
             case 'getOpcionesLogin':                return json(await getOpcionesLogin());
                                     case 'getMiSaldo':                      return json(await getMiSaldo(params));
-            case 'cancelarMiSolicitud':             return json(await cancelarMiSolicitud(params));
+                        case 'cancelarMiSolicitud':             return json(await cancelarMiSolicitud(params));
+            case 'subirComprobante':                return json(await subirComprobante(params));
             case 'enviarCodigoCorreo':              return json(await enviarCodigoCorreo(params));
             case 'verificarCodigoCorreo':           return json(await verificarCodigoCorreo(params));
             case 'getTransparencia':                return json(await getTransparencia(params));
@@ -9861,7 +9942,8 @@ Deno.serve(async (req: Request) => {
       case 'guardarPreferenciasPush':       return json(await guardarPreferenciasPush(params));
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
-      case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
+            case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
+      case 'adminPedirComprobante':         return json(await adminPedirComprobante(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       case 'adminBorrarEvento':             return json(await adminBorrarEvento(params));
       case 'subirFotoPerfil':        return json(await subirFotoPerfil(params));

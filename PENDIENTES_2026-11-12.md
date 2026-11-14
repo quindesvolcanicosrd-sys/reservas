@@ -506,3 +506,4 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [~] Importar a Tesorería los pagos ya aprobados (hecho DeUna y Efectivo; falta decidir Pichincha $265, sin medio $35 y reservas sin medio $195) (Victor: "importa los datos desde lo que se tenga registro") al unificar formas de pago y cuentas.
 - [x] Datos de emergencia: la lista de seguros médicos es de Ecuador; que se edite en Mi Liga (agregar, editar, quitar) y, con salud pública, mostrar siempre el número de emergencias del país (casi siempre 911).
 - [x] Barras superiores de vidrio en toda la app (salvo emergencia, comunidad y asistente, a propósito).
+- [x] Comprobantes dentro de la app con recordatorios y borrado a los 30 días (2026-11-14). Pendiente de decidir: si una reserva sin comprobante se cancela sola antes de la clase (hoy queda pendiente hasta que un Pivot decida). La web antigua sigue solo con WhatsApp.

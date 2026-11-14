@@ -17,6 +17,8 @@ import '../equipo/inventario_asistentes.dart' show elegirPlazoPrestamo;
 import '../finanzas/tesoreria_repo.dart';
 import '../equipo/persona_screen.dart';
 import 'bandeja_repo.dart';
+import '../reservas/comprobante.dart';
+import '../reservas/reservas_repo.dart';
 import '../core/vidrio.dart';
 
 /// Bandeja de Pivots (etapa 3, Victor 2026-11-12): todo lo que espera una
@@ -110,6 +112,16 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       await _cargarVigentes();
     } catch (x) {
       m.showSnackBar(SnackBar(content: Text(x is ApiException ? x.message : 'No se pudo cancelar.')));
+    }
+  }
+
+  Future<void> _pedirComprobante(Pedido x) async {
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await repo.pedirComprobante(x);
+      m.showSnackBar(SnackBar(content: Text('Le avisamos a ${x.nombreMostrar} que suba el comprobante.')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo avisar. Revisa tu conexión.')));
     }
   }
 
@@ -411,6 +423,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                         ? const SizedBox(width: double.infinity)
                         : _TarjetaPedido(
                             pedido: x,
+                            alPedirComprobante: () => _pedirComprobante(x),
                             alResolver: _saliendo.isEmpty ? (a) => _resolver(x, a) : null,
                             alAbrirFicha: () => PersonaScreen.abrir(context, EquipoRepo.de(repo.sesion), x.nombre),
                           ),
@@ -423,7 +436,17 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
           if (repo.misPedidos.isNotEmpty) {
             hijos.add(_Encabezado(titulo: 'Tus pedidos', icono: Icons.send_rounded, cantidad: repo.misPedidos.length));
             for (final x in repo.misPedidos.take(20)) {
-              hijos.add(_TarjetaMiPedido(x: x, alCancelar: () => _cancelarMio(x)));
+              hijos.add(
+                _TarjetaMiPedido(
+                  x: x,
+                  alCancelar: () => _cancelarMio(x),
+                  alSubir: x.m['faltaComprobante'] == true
+                      ? () async {
+                          if (await subirComprobante(context, ReservasRepo(repo.sesion), ['${x.m['id']}'])) await repo.cargarMia();
+                        }
+                      : null,
+                ),
+              );
             }
           }
           if (repo.recomendaciones.isNotEmpty) {
@@ -618,8 +641,9 @@ class _CuentaCorte extends StatelessWidget {
 }
 
 class _TarjetaPedido extends StatelessWidget {
-  const _TarjetaPedido({required this.pedido, required this.alResolver, this.alAbrirFicha});
+  const _TarjetaPedido({required this.pedido, required this.alResolver, this.alAbrirFicha, this.alPedirComprobante});
   final Pedido pedido;
+  final VoidCallback? alPedirComprobante;
   final void Function(bool aprobar)? alResolver;
   final VoidCallback? alAbrirFicha;
 
@@ -667,6 +691,7 @@ class _TarjetaPedido extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (pedido.tipo == TipoPedido.reserva) _Comprobante(pedido: pedido, alPedir: alPedirComprobante),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -889,10 +914,100 @@ class _TarjetaExcepcion extends StatelessWidget {
 }
 
 /// Un pedido propio y cómo quedó.
+/// Comprobante de una reserva en la Bandeja de Pivots (Victor, 2026-11-14):
+/// la captura (enlace firmado, solo en memoria) o "Pedir comprobante".
+class _Comprobante extends StatelessWidget {
+  const _Comprobante({required this.pedido, this.alPedir});
+  final Pedido pedido;
+  final VoidCallback? alPedir;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final url = '${pedido.m['comprobante'] ?? ''}';
+    if (url.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10, left: 52),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(PivotRadios.contador),
+            onTap: () => Navigator.of(context).push(
+              PageRouteBuilder(
+                opaque: false,
+                barrierColor: p.texto.withValues(alpha: 0.85),
+                transitionDuration: const Duration(milliseconds: 200),
+                pageBuilder: (_, _, _) => GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: SafeArea(
+                    child: InteractiveViewer(
+                      child: Center(child: Image.network(url, fit: BoxFit.contain)),
+                    ),
+                  ),
+                ),
+                transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(PivotRadios.contador),
+              child: Stack(
+                children: [
+                  Image.network(
+                    url,
+                    height: 120,
+                    width: 90,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => SizedBox(height: 120, width: 90, child: Icon(Icons.broken_image_outlined, color: p.textoSecundario)),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ColoredBox(
+                      color: p.texto.withValues(alpha: 0.6),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Text(
+                          'Comprobante',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: p.fondo),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    if (pedido.m['sinComprobante'] != true) return const SizedBox.shrink();
+    final avisos = (pedido.m['comprobanteAvisos'] as num?)?.toInt() ?? 0;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 52),
+      child: Row(
+        children: [
+          Icon(Icons.receipt_long_outlined, size: 18, color: p.marcaTexto),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              avisos == 0 ? 'Sin comprobante todavía' : 'Sin comprobante · ya se le avisó $avisos ${avisos == 1 ? 'vez' : 'veces'}',
+              style: TextStyle(fontSize: 13, color: p.marcaTexto),
+            ),
+          ),
+          TextButton(onPressed: alPedir, child: const Text('Pedir comprobante')),
+        ],
+      ),
+    );
+  }
+}
+
 class _TarjetaMiPedido extends StatelessWidget {
-  const _TarjetaMiPedido({required this.x, required this.alCancelar});
+  const _TarjetaMiPedido({required this.x, required this.alCancelar, this.alSubir});
   final MiPedido x;
   final VoidCallback alCancelar;
+  final VoidCallback? alSubir;
 
   @override
   Widget build(BuildContext context) {
@@ -929,6 +1044,15 @@ class _TarjetaMiPedido extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(Fechas.corta(x.fecha!.toLocal()), style: TextStyle(fontSize: 12, color: p.textoSecundario)),
                       ],
+                      if (alSubir != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: FilledButton.tonalIcon(
+                            onPressed: alSubir,
+                            icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                            label: const Text('Subir comprobante'),
+                          ),
+                        ),
                       if (cancelable)
                         Align(
                           alignment: Alignment.centerLeft,

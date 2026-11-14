@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../core/api.dart';
 import '../core/fechas.dart';
 import '../eventos/anticipada.dart';
@@ -89,7 +91,10 @@ class Total {
 }
 
 class ResultadoReserva {
-  const ResultadoReserva({required this.guardados, required this.fallidos, required this.mensajeWhatsapp});
+  const ResultadoReserva({required this.guardados, required this.fallidos, required this.mensajeWhatsapp, this.ids = const []});
+
+  /// Reservas con monto a pagar: a ellas se liga el comprobante.
+  final List<String> ids;
   final List<String> guardados;
   final List<String> fallidos;
   final String mensajeWhatsapp;
@@ -373,6 +378,7 @@ class ReservasRepo {
     final protec = necesitaProtecciones ? (_d['necesitaProtecciones'] ?? '').toString() : 'No';
     final email = (_d['email'] ?? '').toString();
     final guardados = <String>[];
+    final ids = <String>[];
     final fallidos = <String>[];
     final etiquetas = <String, String>{};
 
@@ -396,6 +402,7 @@ class ReservasRepo {
           });
           if (r['exito'] == false) throw ApiException('${r['mensaje'] ?? r['error'] ?? 'No se pudo guardar'}');
           guardados.add(etiqueta);
+          if (r['id'] != null && ((r['monto'] as num?) ?? 0) > 0) ids.add('${r['id']}');
         } catch (_) {
           fallidos.add(etiqueta);
         }
@@ -423,6 +430,7 @@ class ReservasRepo {
           });
           if (r['exito'] == false) throw ApiException('${r['mensaje'] ?? r['error'] ?? 'No se pudo guardar'}');
           guardados.add(etiqueta);
+          if (r['id'] != null && ((r['monto'] as num?) ?? 0) > 0) ids.add('${r['id']}');
           // Como la web cuando se reserva desde Eventos: queda "Asistiré".
           _api.post('marcarAsistenciaUsuario', {'nombre': sesion.nombre, 'idEvento': c.id, 'estado': 'Asistiré'}).catchError((_) => <String, dynamic>{});
         } catch (_) {
@@ -445,7 +453,14 @@ class ReservasRepo {
       }
     }
 
-    return ResultadoReserva(guardados: guardados, fallidos: fallidos, mensajeWhatsapp: _mensaje(tipo, guardados, total.monto));
+    return ResultadoReserva(guardados: guardados, fallidos: fallidos, mensajeWhatsapp: _mensaje(tipo, guardados, total.monto), ids: ids);
+  }
+
+  /// Sube la captura del pago y la liga a esas reservas (Victor, 2026-11-14).
+  /// No se guarda copia en el teléfono.
+  Future<void> subirComprobante(List<String> ids, List<int> jpeg) async {
+    final r = await _api.post('subirComprobante', {'ids': ids.join(','), 'base64Data': 'data:image/jpeg;base64,${base64Encode(jpeg)}'});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo subir.'}');
   }
 
   static String _etiquetaClase(FechaClase c) {
