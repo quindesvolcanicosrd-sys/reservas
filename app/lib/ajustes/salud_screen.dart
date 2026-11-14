@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/config_liga.dart';
 import '../core/iconos_marca.dart';
 import '../core/paises.dart';
 import '../core/tema.dart';
@@ -18,8 +19,9 @@ class SaludEmergenciaScreen extends StatelessWidget {
   const SaludEmergenciaScreen({super.key, required this.sesion});
   final Sesion sesion;
 
-  static const _atencion = ['MSP (Ministerio de Salud Pública)', 'IESS', 'Seguro Privado'];
-  static const _seguros = ['Saludsa', 'Ecuasanitas', 'Humana', 'BMI del Ecuador', 'Confiamed', 'BUPA Ecuador', 'Pan American Life', 'CruzBlanca'];
+  // Las listas las edita cada liga en Mi Liga → Salud y seguros (Victor, 2026-11-14).
+  List<String> get _atencion => ConfigLiga.de(sesion).atencionMedica;
+  List<String> get _seguros => ConfigLiga.de(sesion).segurosPrivados;
   static const _enfermedades = [
     'Diabetes',
     'Hipertensión arterial',

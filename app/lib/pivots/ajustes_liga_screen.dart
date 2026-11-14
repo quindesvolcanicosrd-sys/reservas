@@ -173,6 +173,78 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
     }
   }
 
+  /// Listas de salud que cambian por país (Victor, 2026-11-14).
+  Future<void> _salud(BuildContext context, ConfigLiga c) async {
+    final atencion = [...c.atencionMedica], seguros = [...c.segurosPrivados];
+    final ctlA = TextEditingController(), ctlS = TextEditingController();
+    Widget lista(StateSetter set, String titulo, String ayuda, List<String> l, TextEditingController ctl, {Set<String> fijas = const {}}) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 16),
+        Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(ayuda, style: TextStyle(fontSize: 13, color: context.pivot.textoSecundario)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [for (final x in l) fijas.contains(x) ? Chip(label: Text(x)) : InputChip(label: Text(x), onDeleted: () => set(() => l.remove(x)))],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: ctl,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            hintText: 'Agregar',
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add_rounded),
+              onPressed: () {
+                final t = ctl.text.trim();
+                if (t.isNotEmpty && !l.contains(t)) set(() => l.add(t));
+                ctl.clear();
+              },
+            ),
+          ),
+          onSubmitted: (t) {
+            if (t.trim().isNotEmpty && !l.contains(t.trim())) set(() => l.add(t.trim()));
+            ctl.clear();
+          },
+        ),
+      ],
+    );
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(h).bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Salud y seguros', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(
+                  'Lo que cada persona elige en Mi perfil → Salud y emergencia. Cambia según el país. '
+                  'Para quien usa salud pública, la ficha de emergencia muestra siempre el número de emergencias del país.',
+                  style: TextStyle(color: h.pivot.textoSecundario),
+                ),
+                lista(set, 'Dónde se atienden', 'Sistemas de salud pública o seguridad social del país.', atencion, ctlA, fijas: const {'Seguro Privado'}),
+                lista(set, 'Seguros privados', 'Aparecen cuando alguien elige "Seguro Privado". Siempre se puede escribir otro.', seguros, ctlS),
+                const SizedBox(height: 20),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await _guardarRegla(context, c, {'atencionMedica': atencion, 'segurosPrivados': seguros});
+  }
+
   String _textoGracia(ConfigLiga c) {
     final g = c.graciaPorEquipo;
     if (g.isEmpty) return 'Ningún equipo tiene clases de gracia';
@@ -593,6 +665,17 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                 titulo: 'Datos de la liga',
                 pie: 'El país define el prefijo de teléfono y los números de emergencia. La zona horaria se guarda y se aplicará a los horarios cuando la app admita varias ligas; por ahora todo usa la hora de Ecuador.',
                 filas: [
+                  Resaltable(
+                    id: 'salud',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.health_and_safety_outlined,
+                      seccion: 'salud',
+                      titulo: 'Salud y seguros',
+                      valor: '${c.atencionMedica.length} opciones de atención · ${c.segurosPrivados.length} seguros privados',
+                      alTocar: () => _salud(context, c),
+                    ),
+                  ),
                   Resaltable(
                     id: 'pais',
                     resaltado: _resaltado,

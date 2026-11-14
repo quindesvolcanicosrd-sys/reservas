@@ -60,6 +60,12 @@ class ConfigLiga extends ChangeNotifier {
   };
   int? graciaClases(String equipo) => graciaPorEquipo[equipo];
 
+  /// Salud: opciones de "Dónde te atiendes" y seguros privados (Mi Liga, por país).
+  static const atencionPorDefecto = ['MSP (Ministerio de Salud Pública)', 'IESS', 'Seguro Privado'];
+  static const segurosPorDefecto = ['Saludsa', 'Ecuasanitas', 'Humana', 'BMI del Ecuador', 'Confiamed', 'BUPA Ecuador', 'Pan American Life', 'CruzBlanca'];
+  List<String> get atencionMedica => [for (final x in (reglas['atencionMedica'] as List?) ?? atencionPorDefecto) '$x'];
+  List<String> get segurosPrivados => [for (final x in (reglas['segurosPrivados'] as List?) ?? segurosPorDefecto) '$x'];
+
   /// Días sin venir para verse como inactivx (lo usan Equipo y Calendario).
   static int diasInactividad = 30;
   bool cargado = false;

@@ -927,7 +927,11 @@ const REGLAS_LIGA_BASE: Record<string, any> = {
   // Clases de gracia por equipo (Victor, 2026-11-14): cuántas clases puede
   // venir sin haber pagado el mes. Equipo ausente = no aplica (sigue su
   // propia regla); 0 = paga antes de marcar Asistiré.
-  graciaClases: { 'Quindes': 1 },
+    graciaClases: { 'Quindes': 1 },
+  // Salud (Victor, 2026-11-14): las opciones de "Dónde te atiendes" y los
+  // seguros privados dependen del país; cada liga los edita en Mi Liga.
+  atencionMedica: ['MSP (Ministerio de Salud Pública)', 'IESS', 'Seguro Privado'],
+  segurosPrivados: ['Saludsa', 'Ecuasanitas', 'Humana', 'BMI del Ecuador', 'Confiamed', 'BUPA Ecuador', 'Pan American Life', 'CruzBlanca'],
 };
 async function _reglasLiga(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
@@ -993,7 +997,14 @@ async function adminReglasLiga(params: Record<string, any>): Promise<Record<stri
       const n = Math.round(Number(reglasNuevas.cuotaRecargo) * 100) / 100;
       if (Number.isFinite(n)) r.cuotaRecargo = Math.min(10000, Math.max(0, n));
     }
-        if (reglasNuevas.graciaClases && typeof reglasNuevas.graciaClases === 'object') {
+            const lista = (v: unknown) => Array.isArray(v)
+      ? [...new Set(v.map((x) => String(x ?? '').trim().slice(0, 60)).filter(Boolean))].slice(0, 25)
+      : null;
+    const atencion = lista(reglasNuevas.atencionMedica);
+    if (atencion) r.atencionMedica = atencion.includes('Seguro Privado') ? atencion : [...atencion, 'Seguro Privado'];
+    const seguros = lista(reglasNuevas.segurosPrivados);
+    if (seguros) r.segurosPrivados = seguros;
+    if (reglasNuevas.graciaClases && typeof reglasNuevas.graciaClases === 'object') {
       const g: Record<string, number> = {};
       for (const [k, v] of Object.entries(reglasNuevas.graciaClases)) {
         const n = Math.round(Number(v));

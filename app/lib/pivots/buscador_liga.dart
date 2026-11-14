@@ -40,6 +40,7 @@ const entradasLiga = [
   EntradaAjuste('gracia', 'Clases de gracia', 'Mi Liga › Cobros', 'gracia gratis sin pagar primera clase cuota equipo'),
   EntradaAjuste('vencimiento', 'Vencimiento de la cuota', 'Mi Liga › Cobros', 'vence día gracia recargo multa tarde atraso pagar'),
   EntradaAjuste('ranking', 'Puntos de otras personas', 'Mi Liga › Privacidad', 'ranking tabla privacidad ver puntos ocultar'),
+  EntradaAjuste('salud', 'Salud y seguros', 'Mi Liga › Datos de la liga', 'seguro médico privado salud pública emergencia atención iess msp'),
   EntradaAjuste('pais', 'País', 'Mi Liga › Datos de la liga', 'país teléfono prefijo'),
   EntradaAjuste('zona', 'Zona horaria', 'Mi Liga › Datos de la liga', 'hora horario reloj'),
   // Dentro de Equipos y puntos.
