@@ -4,61 +4,24 @@ import 'package:flutter/material.dart';
 
 import 'tema.dart';
 
-/// Fondo de vidrio para barras: desenfoca lo que pasa por detrás, con el
-/// degradado y el reflejo de `PivotVidrio` y una línea fina en el borde.
+/// Fondo de vidrio para barras: desenfoca lo que pasa por detrás.
 class Vidrio extends StatelessWidget {
   const Vidrio({super.key, required this.child, this.abajo = false});
   final Widget child;
 
-  /// true = barra inferior (la línea va arriba y el degradado sube).
+  /// Barra inferior (hoy se ve igual que las de arriba).
   final bool abajo;
 
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
-    // Barras de arriba (Victor, 2026-11-13): solo el desenfoque, sin tinte,
-    // degradado ni borde.
-    if (!abajo) {
-      return ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: PivotVidrio.desenfoque, sigmaY: PivotVidrio.desenfoque),
-          child: ColoredBox(color: PivotVidrio.plano(p), child: child),
-        ),
-      );
-    }
-    final linea = BorderSide(color: PivotVidrio.borde(p), width: 0.6);
+    // Todas las barras iguales (Victor, 2026-11-13 arriba y 2026-11-14
+    // abajo): solo el desenfoque con el fondo translúcido, sin tinte,
+    // degradado, reflejo ni borde.
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: PivotVidrio.desenfoque, sigmaY: PivotVidrio.desenfoque),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: PivotVidrio.degradado(p, haciaArriba: abajo),
-            border: abajo ? Border(top: linea) : Border(bottom: linea),
-          ),
-          child: Stack(
-            children: [
-              // Reflejo: una franja de brillo en el borde de arriba.
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                height: 18,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [PivotVidrio.reflejo(p), PivotVidrio.reflejo(p).withValues(alpha: 0)],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              child,
-            ],
-          ),
-        ),
+        child: ColoredBox(color: PivotVidrio.plano(p), child: child),
       ),
     );
   }

@@ -1703,7 +1703,9 @@ class _TarjetaEvento extends StatelessWidget {
   }
 }
 
-/// Borde con un brillo suave que late: el evento está pasando ahora.
+/// Borde nítido que respira despacio: el evento está pasando ahora.
+/// Victor, 2026-11-14: el resplandor rojo difuminado parecía un "moretón";
+/// ahora no hay sombra roja, solo el borde (y el punto en vivo late).
 class _BrilloEnCurso extends StatefulWidget {
   const _BrilloEnCurso({required this.child});
   final Widget child;
@@ -1713,7 +1715,7 @@ class _BrilloEnCurso extends StatefulWidget {
 }
 
 class _BrilloEnCursoState extends State<_BrilloEnCurso> with SingleTickerProviderStateMixin {
-  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat(reverse: true);
+  late final AnimationController _latido = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600))..repeat(reverse: true);
 
   @override
   void dispose() {
@@ -1732,14 +1734,7 @@ class _BrilloEnCursoState extends State<_BrilloEnCurso> with SingleTickerProvide
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-            border: Border.all(color: p.marca.withValues(alpha: 0.45 + 0.55 * v), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: p.marca.withValues(alpha: 0.10 + 0.22 * v),
-                blurRadius: 10 + 8 * v,
-                spreadRadius: 0.5,
-              ),
-            ],
+            border: Border.all(color: p.marca.withValues(alpha: 0.55 + 0.35 * v), width: 1.5),
           ),
           child: hijo,
         );

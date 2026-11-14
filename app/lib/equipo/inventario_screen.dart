@@ -96,7 +96,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
       AccionMenu(Icons.assignment_ind_outlined, 'Alguien tiene algo del equipo', () => _prestamo(ModoPrestamo.registrar)),
       AccionMenu(Icons.playlist_add_rounded, 'Nueva lista', () => _abrir(NuevaListaAsistente(repo: repo), 'Lista creada')),
     ] else ...[
-      if (repo.reglaPrestamo == 'excepcional') AccionMenu(Icons.inventory_2_outlined, 'Equipamiento de emergencia', () => _prestamo(ModoPrestamo.uso)),
+      if (repo.reglaPrestamo != 'no' && tieneEquipoPropio(widget.sesion.datos))
+        AccionMenu(Icons.inventory_2_outlined, 'Equipamiento de emergencia', () => _prestamo(ModoPrestamo.uso)),
       AccionMenu(Icons.back_hand_outlined, 'Me llevé algo del equipo', () => _prestamo(ModoPrestamo.salida)),
     ],
   ]);
@@ -213,10 +214,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 ocupado: _guardando,
               ),
             // Tu equipamiento (antes en Mi perfil, Victor 2026-11-13).
-            // Solo en equipos que exigen equipamiento propio (regla de
-            // préstamo 'excepcional', como Quindes; Victor, 2026-11-14).
-            if (widget.sesion.datos.isNotEmpty && repo.reglaPrestamo == 'excepcional')
-              _TuEquipamiento(sesion: widget.sesion, regla: repo.reglaPrestamo, alPedir: () => _prestamo(ModoPrestamo.uso)),
+            // Una sola tarjeta según la persona (Victor, 2026-11-14): sin
+            // equipamiento propio, "Tu equipamiento" (talla y protecciones);
+            // con equipamiento propio, la roja de emergencia.
+            if (widget.sesion.datos.isNotEmpty) _TuEquipamiento(sesion: widget.sesion, regla: repo.reglaPrestamo, alPedir: () => _prestamo(ModoPrestamo.uso)),
             for (final e in seccionesInventario.entries)
               if (repo.listas.any((l) => l.seccion == e.key)) ...[
                 Padding(
@@ -809,49 +810,49 @@ class _TuEquipamiento extends StatelessWidget {
     // emergencia; quien usa el del equipo (Mirlxs) solo cambia su talla o
     // qué protecciones necesita (Victor, 2026-11-13).
     final propio = tieneEquipoPropio(d);
-    final emergencia = regla == 'excepcional';
+    final emergencia = propio && regla != 'no';
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Material(
-            color: p.tarjeta,
-            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-            child: InkWell(
+          if (!propio)
+            Material(
+              color: p.tarjeta,
               borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-              onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion, conPedido: false)),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline_rounded, color: p.marcaTexto),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Tu equipamiento',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.texto),
-                          ),
-                          Text(textoEquipamiento(d), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
-                          if (!propio)
+              child: InkWell(
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion, conPedido: false)),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline_rounded, color: p.marcaTexto),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              'Toca para cambiar tu talla de patines o qué protecciones necesitas.',
-                              style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                              'Tu equipamiento',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.texto),
                             ),
-                        ],
+                            Text(textoEquipamiento(d), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                            if (!propio)
+                              Text(
+                                'Toca para cambiar tu talla de patines o qué protecciones necesitas.',
+                                style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
-                  ],
+                      Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           if (emergencia) ...[
-            const SizedBox(height: 10),
             Material(
               color: p.marca,
               borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
