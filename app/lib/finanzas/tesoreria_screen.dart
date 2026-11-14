@@ -9,7 +9,9 @@ import '../core/cargando.dart';
 import '../core/fechas.dart';
 import '../core/menu_acciones.dart';
 import '../core/tema.dart';
+import '../core/config_liga.dart';
 import '../pivots/buscador_liga.dart';
+import '../pivots/formas_pago_screen.dart';
 import '../equipo/equipo_modelos.dart';
 import '../equipo/equipo_repo.dart';
 import '../eventos/widgets_comunes.dart';
@@ -209,6 +211,7 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
                     labelText: 'Saldo inicial',
                     prefixText: '\$ ',
                     helperText: 'Lo que la liga ya tenía en esta cuenta antes de usar Pivot.',
+                    helperMaxLines: 3,
                   ),
                 ),
                 ListTile(
@@ -415,6 +418,123 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
     }
   }
 
+  /// Registro rápido (Victor, 2026-11-14): alguien pagó algo propio con una
+  /// cuenta del equipo, o lo devuelve. Sale (o entra) de la cuenta y queda
+  /// como deuda (o abono) de cada persona; entre varias se divide en partes iguales.
+  Future<void> _plataDelEquipo({required bool devolver}) async {
+    final p = context.pivot;
+    final gente = <Integrante>[];
+    String? cuenta = _cuentas.isEmpty ? null : '${_cuentas.first['id']}';
+    final monto = TextEditingController(), concepto = TextEditingController(text: devolver ? 'Devolución' : '');
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) {
+          final total = double.tryParse(monto.text.replaceAll(',', '.')) ?? 0;
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(h).bottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    devolver ? 'Devolví plata al equipo' : 'Usé plata del equipo',
+                    style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    devolver
+                        ? 'Entra a la cuenta y baja lo que debe cada persona.'
+                        : 'Sale de la cuenta del equipo y queda como deuda de cada persona. Si eliges a varias, se divide en partes iguales.',
+                    style: TextStyle(color: p.textoSecundario),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final x in gente) InputChip(label: Text(x.nombreMostrar), onDeleted: () => set(() => gente.remove(x))),
+                      ActionChip(
+                        avatar: const Icon(Icons.person_add_alt_rounded, size: 18),
+                        label: Text(gente.isEmpty ? '¿Quién?' : 'Agregar'),
+                        onPressed: () async {
+                          final x = await elegirPersona(h, repo.sesion);
+                          if (x != null && !gente.any((g) => g.username == x.username)) set(() => gente.add(x));
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: monto,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                    onChanged: (_) => set(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Monto total',
+                      prefixText: '\$ ',
+                      helperText: gente.length > 1 && total > 0 ? '${plata(total / gente.length)} cada persona' : null,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: concepto,
+                    decoration: const InputDecoration(labelText: '¿Para qué fue?'),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(devolver ? '¿A qué cuenta entra?' : '¿De qué cuenta salió?', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final c in _cuentas)
+                        ChoiceChip(
+                          showCheckmark: false,
+                          label: Text('${c['nombre']}'),
+                          selected: cuenta == '${c['id']}',
+                          onSelected: (_) => set(() => cuenta = '${c['id']}'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: gente.isEmpty || total <= 0 || cuenta == null || concepto.text.trim().isEmpty ? null : () => Navigator.of(h).pop(true),
+                    child: const Text('Registrar'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final total = double.tryParse(monto.text.replaceAll(',', '.')) ?? 0;
+    // Partes iguales al centavo; el último se lleva el redondeo.
+    final parte = (total / gente.length * 100).floorToDouble() / 100;
+    try {
+      for (var i = 0; i < gente.length; i++) {
+        final m = i == gente.length - 1 ? double.parse((total - parte * (gente.length - 1)).toStringAsFixed(2)) : parte;
+        await repo.accion('registrarSaldo', {
+          'username': gente[i].username,
+          'tipo': devolver ? 'abono' : 'prestamo',
+          'monto': m,
+          'concepto': concepto.text.trim(),
+          'cuentaId': cuenta,
+          'aplicar': 'aparte',
+        });
+      }
+      if (mounted) _aviso(context, devolver ? 'Registrado: baja lo que deben.' : 'Registrado: queda como deuda con el equipo.');
+    } catch (e) {
+      if (mounted) _aviso(context, _error(e));
+    }
+    await _cargar();
+  }
+
   void _mas() {
     if (_cuentas.isEmpty) {
       _cuenta();
@@ -422,6 +542,8 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
     }
     MenuAcciones.abrir(context, [
       AccionMenu(Icons.account_balance_wallet_outlined, 'Nueva cuenta', () => _cuenta()),
+      AccionMenu(Icons.shopping_bag_outlined, 'Usé plata del equipo', () => _plataDelEquipo(devolver: false)),
+      AccionMenu(Icons.undo_rounded, 'Devolví plata al equipo', () => _plataDelEquipo(devolver: true)),
       AccionMenu(Icons.person_outline_rounded, 'Saldo de una persona', () => _abrir(SaldosScreen(repo: repo, cuentas: _cuentas))),
       AccionMenu(Icons.swap_horiz_rounded, 'Transferencia', () => _registrar('transferencia')),
       AccionMenu(Icons.remove_circle_outline_rounded, 'Gasto', () => _registrar('egreso')),
@@ -557,6 +679,29 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
         ),
       ),
       const SizedBox(height: 14),
+      // Formas de pago viven en Tesorería (Victor, 2026-11-14): cada medio es una cuenta.
+      Resaltable(
+        id: 'formasTesoreria',
+        resaltado: _resaltado,
+        child: _fila(
+          context,
+          Icons.payments_outlined,
+          'Formas de pago',
+          'Cada medio es una cuenta: lo que se paga por ahí entra solo',
+          () => _abrir(FormasPagoScreen(config: ConfigLiga.de(widget.sesion))),
+        ),
+      ),
+      Resaltable(
+        id: 'cuotas',
+        resaltado: _resaltado,
+        child: _fila(
+          context,
+          Icons.receipt_long_outlined,
+          'Cuotas del mes',
+          'Quién pagó, cuánto, cuándo y con qué medio',
+          () => _abrir(CuotasMesScreen(repo: repo)),
+        ),
+      ),
       Resaltable(
         id: 'saldos',
         resaltado: _resaltado,
@@ -1517,6 +1662,168 @@ class _SaldoPersonaScreenState extends State<SaldoPersonaScreen> {
 
 /// Fondos de viaje: monto, ventana de asistencia y tramos por %; vista previa
 /// de quién recibe cuánto.
+/// Desglose de cuotas de un mes (Victor, 2026-11-14): quién pagó qué mes,
+/// cuánto, cuándo y con qué medio, quién está en revisión y quién debe.
+class CuotasMesScreen extends StatefulWidget {
+  const CuotasMesScreen({super.key, required this.repo});
+  final TesoreriaRepo repo;
+
+  @override
+  State<CuotasMesScreen> createState() => _CuotasMesScreenState();
+}
+
+class _CuotasMesScreenState extends State<CuotasMesScreen> {
+  DateTime _mes = DateTime(DateTime.now().year, DateTime.now().month);
+  Map<String, dynamic>? _r;
+  String? _error;
+  String _q = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  String get _clave => '${_mes.year}-${_mes.month.toString().padLeft(2, '0')}';
+
+  Future<void> _cargar() async {
+    setState(() {
+      _r = null;
+      _error = null;
+    });
+    try {
+      final r = await widget.repo.accion('cuotasMes', {'mes': _clave});
+      if (mounted) setState(() => _r = r);
+    } catch (e) {
+      if (mounted) setState(() => _error = _error2(e));
+    }
+  }
+
+  String _error2(Object e) => e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.';
+
+  void _mover(int d) {
+    _mes = DateTime(_mes.year, _mes.month + d);
+    _cargar();
+  }
+
+  static const _grupos = [('pagado', 'Pagaron'), ('en_revision', 'En revisión'), ('debe', 'Deben'), ('exenta', 'Exentas o con excepción')];
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.pivot;
+    final r = _r;
+    final gente = [
+      for (final x in (r?['personas'] as List? ?? const []).cast<Map>())
+        if (_q.isEmpty || '${x['nombre']}'.toLowerCase().contains(_q.toLowerCase())) x,
+    ];
+    return Scaffold(
+      appBar: AppBar(title: const Text('Cuotas del mes')),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+            child: Row(
+              children: [
+                IconButton(tooltip: 'Mes anterior', onPressed: () => _mover(-1), icon: const Icon(Icons.chevron_left_rounded)),
+                Expanded(
+                  child: Text(
+                    '${Fechas.mes(_mes)[0].toUpperCase()}${Fechas.mes(_mes).substring(1)} ${_mes.year}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                IconButton(tooltip: 'Mes siguiente', onPressed: () => _mover(1), icon: const Icon(Icons.chevron_right_rounded)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: TextField(
+              onChanged: (v) => setState(() => _q = v.trim()),
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Buscar persona'),
+            ),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _error != null
+                  ? Center(key: const ValueKey('e'), child: Text(_error!))
+                  : r == null
+                  ? const PivotCargando(key: ValueKey('c'), centrarEnPantalla: true)
+                  : RefreshIndicator(
+                      key: ValueKey(_clave),
+                      onRefresh: _cargar,
+                      child: ListView(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 32 + MediaQuery.paddingOf(context).bottom),
+                        children: [
+                          Text('Entró ${plata(r['total'] as num? ?? 0)} por cuotas de este mes.', style: TextStyle(color: p.textoSecundario)),
+                          for (final (clave, titulo) in _grupos)
+                            if (gente.any((x) => x['estado'] == clave)) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                '$titulo (${gente.where((x) => x['estado'] == clave).length})',
+                                style: TextStyle(fontWeight: FontWeight.w800, color: clave == 'debe' ? p.marcaTexto : p.texto),
+                              ),
+                              const SizedBox(height: 6),
+                              for (final x in gente.where((x) => x['estado'] == clave)) _persona(context, x),
+                            ],
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _persona(BuildContext context, Map x) {
+    final p = context.pivot;
+    final pagos = (x['pagos'] as List? ?? const []).cast<Map>();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: p.tarjeta,
+        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AvatarPersona(nombre: '${x['nombre']}', foto: '${x['foto'] ?? ''}', tamano: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${x['nombre']}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    if ('${x['equipo'] ?? ''}'.isNotEmpty) Text('${x['equipo']}', style: TextStyle(fontSize: 12, color: p.textoSecundario)),
+                    for (final g in pagos)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          [
+                            plata(g['monto'] as num? ?? 0),
+                            if ('${g['medio'] ?? ''}'.isNotEmpty) '${g['medio']}',
+                            if ('${g['fecha'] ?? ''}'.isNotEmpty) 'el ${_corta('${g['fecha']}')}',
+                            if (g['enRevision'] == true) 'en revisión',
+                            if (g['origen'] == 'manual') 'anotado a mano',
+                          ].join(' · '),
+                          style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                        ),
+                      ),
+                    if (pagos.isEmpty && x['estado'] == 'debe') Text('Aún no paga', style: TextStyle(fontSize: 13, color: p.marcaTexto)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class FondosViajeScreen extends StatefulWidget {
   const FondosViajeScreen({super.key, required this.repo});
   final TesoreriaRepo repo;

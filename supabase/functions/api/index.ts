@@ -1196,7 +1196,20 @@ async function adminGuardarConfigLiga(params: Record<string, any>): Promise<Reco
     let f: any = null;
     try { f = typeof params.formasPago === 'object' ? params.formasPago : JSON.parse(String(params.formasPago)); } catch { f = null; }
     if (!f || typeof f !== 'object' || !Array.isArray(f.medios)) return { exito: false, error: 'Formas de pago inválidas.' };
-    filas.push({ key: 'formas_pago', value: JSON.stringify(_limpiarFormasPago(f)) });
+        const limpio = _limpiarFormasPago(f);
+    // Cada forma de pago es una cuenta de Tesorería (Victor, 2026-11-14): si
+    // un medio no tiene cuenta, se crea (o se usa una activa con su nombre).
+    const { data: cuentas } = await supabase.from('tesoreria_cuentas').select('id, nombre, activa, archivada');
+    const activas = (cuentas ?? []).filter((c: any) => c.activa && !c.archivada);
+    for (const m of limpio.medios ?? []) {
+      if (m.cuentaId && activas.some((c: any) => c.id === m.cuentaId)) continue;
+      const igual = activas.find((c: any) => String(c.nombre).trim().toLowerCase() === String(m.nombre).trim().toLowerCase());
+      if (igual) { m.cuentaId = igual.id; continue; }
+      const tipo = m.tipo === 'banco' ? 'banco' : m.tipo === 'efectivo' ? 'efectivo' : m.tipo === 'billetera' || m.tipo === 'enlace' ? 'deuna' : 'otro';
+      const { data: nueva } = await supabase.from('tesoreria_cuentas').insert({ nombre: m.nombre, tipo, saldo_inicial: 0, orden: activas.length + 1 }).select('id, nombre, activa, archivada').single();
+      if (nueva) { m.cuentaId = nueva.id; activas.push(nueva); }
+    }
+    filas.push({ key: 'formas_pago', value: JSON.stringify(limpio) });
   }
   if (params.logo != null) {
     const u = String(params.logo).trim();
@@ -5155,6 +5168,44 @@ async function adminTesoreria(params: Record<string, any>): Promise<Record<strin
       personas: usuarios.map((u) => ({ username: u, nombre: pe[u]?.nombre_derby || hist[u] || u, foto: pe[u]?.foto_perfil || '', saldo: saldos[u], sinCuenta: !pe[u] }))
         .sort((a, b) => a.saldo - b.saldo),
     };
+  }
+
+    // Desglose de cuotas de un mes (Victor, 2026-11-14): quién pagó qué mes,
+  // cuánto, cuándo y con qué medio; quién está en revisión y quién debe.
+  if (accion === 'cuotasMes') {
+    const mes = /^\d{4}-\d{2}$/.test(String(d.mes ?? '')) ? String(d.mes) : _hoyEcuadorISO().slice(0, 7);
+    const [y, m] = mes.split('-').map(Number);
+    const desde = `${mes}-01`, hasta = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+    const [{ data: gente }, { data: res }, { data: pag }, { data: exc }] = await Promise.all([
+      supabase.from('equipo').select('username, nombre_derby, foto_perfil, categoria, paga_cuota, exenta_cuota, estado_miembro').is('eliminado_en', null),
+      supabase.from('reservas').select('nombre_usuario, estado, monto, fecha_pago, medio_nombre, medio_pago').eq('tipo', 'mensual').in('estado', ['Confirmada', 'Pendiente']).gte('validez_hasta', desde).lt('validez_hasta', hasta),
+      supabase.from('pagos').select('nombre_usuario, monto, fecha, forma_pago, exoneradx').eq('mes', m).eq('anio', y),
+      supabase.from('cuota_excepcion').select('id_miembro, tipo, notas').eq('mes', mes),
+    ]);
+    const filas: Record<string, any> = {};
+    const base = (u: string) => {
+      const p = (gente ?? []).find((g: any) => g.username === u);
+      return filas[u] ??= { username: u, nombre: p?.nombre_derby || u, foto: p?.foto_perfil ?? '', equipo: p?.categoria ?? '', estado: 'debe', pagos: [] };
+    };
+    for (const p of gente ?? []) {
+      const paga = /^s[ií]$/i.test(String(p.paga_cuota ?? '').trim());
+      if (paga && p.estado_miembro === 'Activx') base(p.username).estado = p.exenta_cuota ? 'exenta' : 'debe';
+    }
+    for (const r of res ?? []) {
+      const f = base(r.nombre_usuario);
+      f.pagos.push({ fecha: r.fecha_pago, monto: Number(r.monto) || 0, medio: r.medio_nombre || r.medio_pago || '', origen: 'app', enRevision: r.estado === 'Pendiente' });
+      if (r.estado === 'Confirmada') f.estado = 'pagado'; else if (f.estado !== 'pagado') f.estado = 'en_revision';
+    }
+    for (const r of pag ?? []) {
+      if (!(Number(r.monto) > 0) && !r.exoneradx) continue;
+      const f = base(r.nombre_usuario);
+      f.pagos.push({ fecha: r.fecha, monto: Number(r.monto) || 0, medio: r.exoneradx ? 'Exoneradx' : (r.forma_pago || ''), origen: 'manual', enRevision: false });
+      f.estado = 'pagado';
+    }
+    for (const r of exc ?? []) { const f = base(r.id_miembro); if (f.estado !== 'pagado') f.estado = 'exenta'; }
+    const lista = Object.values(filas).sort((a: any, b: any) => String(a.nombre).localeCompare(String(b.nombre)));
+    const total = lista.reduce((s: number, f: any) => s + f.pagos.filter((x: any) => !x.enRevision).reduce((t: number, x: any) => t + x.monto, 0), 0);
+    return { exito: true, mes, total: _num2(total), personas: lista };
   }
 
   if (accion === 'saldoPersona') {

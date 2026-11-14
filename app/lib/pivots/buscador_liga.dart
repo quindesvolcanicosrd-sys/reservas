@@ -54,6 +54,8 @@ const entradasLiga = [
   EntradaAjuste('historial', 'Historial de cambios', 'Mi Liga › Equipos y puntos', 'quién cambió registro auditoría', dentro: 'equipos'),
   EntradaAjuste('nuevoEquipo', 'Crear un equipo', 'Mi Liga › Equipos y puntos', 'nuevo equipo agregar', dentro: 'equipos'),
   // Dentro de Tesorería.
+  EntradaAjuste('cuotas', 'Cuotas del mes', 'Mi Liga › Tesorería', 'quién pagó mensualidad desglose debe mes pagos', dentro: 'tesoreria'),
+  EntradaAjuste('formasTesoreria', 'Formas de pago (Tesorería)', 'Mi Liga › Tesorería', 'medios cuentas billetera banco', dentro: 'tesoreria'),
   EntradaAjuste('saldos', 'Saldos de personas', 'Mi Liga › Tesorería', 'deudas préstamos a favor debe', dentro: 'tesoreria'),
   EntradaAjuste('fondos', 'Fondos de viaje', 'Mi Liga › Tesorería', 'viaje torneo reparto asistencia', dentro: 'tesoreria'),
   EntradaAjuste('movimientos', 'Todos los movimientos', 'Mi Liga › Tesorería', 'ingresos gastos exportar excel csv filtrar', dentro: 'tesoreria'),
