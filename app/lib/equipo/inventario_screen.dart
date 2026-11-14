@@ -95,7 +95,8 @@ class _InventarioScreenState extends State<InventarioScreen> {
       AccionMenu(Icons.assignment_ind_outlined, 'Alguien tiene algo del equipo', () => _prestamo(ModoPrestamo.registrar)),
       AccionMenu(Icons.playlist_add_rounded, 'Nueva lista', () => _abrir(NuevaListaAsistente(repo: repo), 'Lista creada')),
     ] else ...[
-      if (repo.reglaPrestamo != 'no') AccionMenu(Icons.volunteer_activism_outlined, 'Necesito equipamiento', () => _prestamo(ModoPrestamo.uso)),
+      if (repo.reglaPrestamo != 'no' && tieneEquipoPropio(widget.sesion.datos))
+        AccionMenu(Icons.emergency_outlined, 'Equipamiento de emergencia', () => _prestamo(ModoPrestamo.uso)),
       AccionMenu(Icons.back_hand_outlined, 'Me llevé algo del equipo', () => _prestamo(ModoPrestamo.salida)),
     ],
   ]);
@@ -775,6 +776,12 @@ class _ListaInventarioScreenState extends State<ListaInventarioScreen> {
 /// "Tu equipamiento" arriba del Inventario (sale de Mi perfil, Victor
 /// 2026-11-13). Con equipamiento propio: pedir prestado por un tiempo. Sin
 /// él: cambiar talla o protecciones, o declarar el propio.
+/// Tiene patines y protecciones propias (no usa las del equipo).
+bool tieneEquipoPropio(Map<String, dynamic> d) {
+  final pro = '${d['necesitaProtecciones'] ?? ''}'.trim();
+  return '${d['necesitaPatines'] ?? ''}' != 'Sí' && (pro.isEmpty || pro == 'No');
+}
+
 class _TuEquipamiento extends StatelessWidget {
   const _TuEquipamiento({required this.sesion, required this.regla, required this.alPedir});
   final Sesion sesion;
@@ -785,22 +792,25 @@ class _TuEquipamiento extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.pivot;
     final d = sesion.datos;
-    final pro = '${d['necesitaProtecciones'] ?? ''}'.trim();
-    final propio = '${d['necesitaPatines'] ?? ''}' != 'Sí' && (pro.isEmpty || pro == 'No');
+    // Quien tiene equipamiento propio puede pedir el del equipo en una
+    // emergencia; quien usa el del equipo (Mirlxs) solo cambia su talla o
+    // qué protecciones necesita (Victor, 2026-11-13).
+    final propio = tieneEquipoPropio(d);
+    final emergencia = propio && regla != 'no';
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: p.tarjeta,
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-          onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            color: p.tarjeta,
+            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                child: Row(
                   children: [
                     Icon(Icons.person_outline_rounded, color: p.marcaTexto),
                     const SizedBox(width: 12),
@@ -813,27 +823,54 @@ class _TuEquipamiento extends StatelessWidget {
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.texto),
                           ),
                           Text(textoEquipamiento(d), style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+                          if (!propio)
+                            Text(
+                              'Toca para cambiar tu talla de patines o qué protecciones necesitas.',
+                              style: TextStyle(fontSize: 13, color: p.textoSecundario),
+                            ),
                         ],
                       ),
                     ),
                     Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
                   ],
                 ),
-                if (propio && regla != 'no')
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: alPedir,
-                      icon: const Icon(Icons.volunteer_activism_outlined, size: 18),
-                      label: const Text('Necesito equipamiento por un tiempo'),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 4),
-              ],
+              ),
             ),
           ),
-        ),
+          if (emergencia) ...[
+            const SizedBox(height: 10),
+            Material(
+              color: p.marca,
+              borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                onTap: alPedir,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.emergency_outlined, color: p.sobreMarca),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Solicitar equipamiento de emergencia',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.sobreMarca),
+                            ),
+                            Text('Si se te rompió o estás haciendo mantenimiento a tu equipamiento.', style: TextStyle(fontSize: 13, color: p.sobreMarca)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: p.sobreMarca),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

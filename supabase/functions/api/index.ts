@@ -1058,7 +1058,7 @@ async function _cronCorteEquipos(): Promise<void> {
   if (corte.modo !== 'revisar') return;
   const hoy = _hoyEcuadorISO();
   const aviso = async (titulo: string, texto: string) => sendPush({
-    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'equipo'),
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'equipo', 'cambios'),
     headings: { es: titulo }, contents: { es: texto }, url: APP_URL,
   }).catch(() => {});
   if (Number(hoy.slice(8, 10)) === corte.dia) {
@@ -2740,7 +2740,7 @@ async function pedirPrestamo(params: Record<string, any>): Promise<Record<string
   const { data: f } = await supabase.from('equipo').select('nombre_derby').eq('username', yo).maybeSingle();
   const quien = f?.nombre_derby || yo;
   await sendPush({
-    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'inventario'),
+    tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'inventario', 'pedidos'),
     headings: { es: 'Equipamiento del equipo' },
     contents: { es: tipo === 'uso' ? `${quien} pide usar ${r.fila!.detalle}. Decide en la Bandeja.` : `${quien} avisa que se llevó ${r.fila!.detalle}. Apruébalo en la Bandeja.` },
     url: APP_URL + '/',
@@ -2885,7 +2885,7 @@ async function registrarUsoInventario(params: Record<string, any>): Promise<Reco
   const { data: l } = await supabase.from('inventario_listas').select('nombre').eq('id', listaId).maybeSingle();
   if (f.minimo != null && queda <= Number(f.minimo)) {
     await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'inventario'), headings: { es: `Reponer: ${variante}` },
+      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(undefined, 'inventario', 'botiquin'), headings: { es: `Reponer: ${variante}` },
       contents: { es: `En ${l?.nombre ?? 'el inventario'} quedan ${queda} de ${variante} (mínimo ${f.minimo}).` }, url: APP_URL + '/',
     });
   }
@@ -2904,7 +2904,7 @@ async function responderPrestamo(params: Record<string, any>): Promise<Record<st
     await supabase.from('inventario_prestamos').update({ estado: 'devuelto', devuelto_en: ahora }).eq('id', p.id);
     const { data: f } = await supabase.from('equipo').select('nombre_derby, email').eq('username', yo).maybeSingle();
     await sendPush({
-      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(f?.email ?? undefined, 'inventario'), headings: { es: 'Equipamiento del equipo' },
+      tipo: 'avisos_admin', include_external_user_ids: await _adminDestinatariosPush(f?.email ?? undefined, 'inventario', 'pedidos'), headings: { es: 'Equipamiento del equipo' },
       contents: { es: `${f?.nombre_derby || yo} avisa que devolvió ${p.detalle ?? 'el equipamiento'}.` }, url: APP_URL + '/',
     });
   } else {
@@ -2995,7 +2995,8 @@ async function _avisarPrestamosLargos(): Promise<void> {
   const usuarios = [...new Set((activos ?? []).map((p: any) => p.username))];
   const { data: per } = usuarios.length ? await supabase.from('equipo').select('username, nombre_derby').in('username', usuarios) : { data: [] as any[] };
   const nom: Record<string, string> = {}; (per ?? []).forEach((p: any) => { nom[p.username] = p.nombre_derby || p.username; });
-  const pivots = await _adminDestinatariosPush(undefined, 'inventario');
+  const pivots = await _adminDestinatariosPush(undefined, 'inventario', 'plazos');
+  const pivotsBotiquin = await _adminDestinatariosPush(undefined, 'inventario', 'botiquin');
   const avisar = async (p: any, persona: string, aPivots: string) => {
     await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Equipamiento del equipo' }, contents: { es: persona }, url: APP_URL + '/' });
     await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Equipamiento del equipo' }, contents: { es: aPivots }, url: APP_URL + '/' });
@@ -3026,7 +3027,7 @@ async function _avisarPrestamosLargos(): Promise<void> {
   const { data: venc } = await supabase.from('inventario_stock').select('variante, vence, lista_id').in('vence', fechas);
   if (venc?.length) {
     const txt = venc.map((v: any) => `${v.variante} (${v.vence === hoy ? 'vence hoy' : 'vence el ' + v.vence})`).join(', ');
-    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Botiquín: vencimientos' }, contents: { es: txt }, url: APP_URL + '/' });
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivotsBotiquin, headings: { es: 'Botiquín: vencimientos' }, contents: { es: txt }, url: APP_URL + '/' });
   }
 }
 
@@ -3800,7 +3801,7 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
       const esHoy = ev.fecha === _hoyEcuadorISO();
       await sendPush({
         tipo: 'avisos_admin',
-        include_external_user_ids: await _adminDestinatariosPush(undefined, 'asistencia'),
+        include_external_user_ids: await _adminDestinatariosPush(undefined, 'asistencia', 'cambios'),
         headings: { es: 'Baja de asistencia' },
         contents: { es: `${nombre} no asistirá al ${ev.tipo_evento || 'evento'} de ${esHoy ? 'hoy' : _fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
         url: APP_URL + '/?tab=eventos',
@@ -4190,7 +4191,7 @@ async function solicitarRectificacionAsistencia(params: Record<string, any>): Pr
   const { data: fila } = await supabase.from('equipo').select('nombre_derby').eq('username', username).maybeSingle();
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'asistencia'),
+    include_external_user_ids: await _adminDestinatariosPush(pivot.email ?? undefined, 'asistencia', 'rectificaciones'),
     headings: { es: 'Revisión de asistencia' },
     contents: { es: `${fila?.nombre_derby || username} pide corregir su asistencia${ev?.fecha ? ' del ' + ev.fecha : ''}: ${estadoSolicitado}.` },
     url: APP_URL + '/',
@@ -4334,7 +4335,7 @@ async function solicitarExcepcion(params: Record<string, any>): Promise<Record<s
     await adminSetEstadoExcepcion({ adminToken: _TOKEN_INTERNO, id: data.id, estado: 'aprobada' });
     return { exito: true, id: data.id, aprobada: true };
   }
-  const todos = await _adminDestinatariosPush(pivot.email ?? undefined, 'finanzas');
+  const todos = await _adminDestinatariosPush(pivot.email ?? undefined, 'finanzas', 'excepciones');
   await sendPush({
     tipo: 'avisos_admin',
     include_external_user_ids: destino.length ? todos.filter((u) => destino.includes(u)) : todos,
@@ -4667,7 +4668,7 @@ async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: st
   if (r?.tipo !== 'mensual') return;
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas'),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas', 'reservas'),
     headings: { es: accion === 'cancelar' ? 'Reserva cancelada' : 'Reserva reagendada' },
     contents: { es: `${nombre} ${accion === 'cancelar' ? 'canceló' : 'reagendó'} su reserva mensual.` },
     url: APP_URL + '/?tab=miliga',
@@ -4685,7 +4686,7 @@ async function avisarPagoPendiente(params: Record<string, any>): Promise<Record<
   const detalle = String(params.detalle ?? '').trim();
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas'),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, 'finanzas', 'pagos'),
     headings: { es: 'Pago pendiente de revisión' },
     contents: { es: `${nombre} registró un pago de $${monto.toFixed(2)}${detalle ? ` (${detalle})` : ''}. Revísalo para aprobar la reserva.` },
     url: APP_URL + '/?tab=miliga',
@@ -7792,7 +7793,7 @@ async function guardarPreferenciasPush(params: Record<string, any>): Promise<Rec
   if (params.clave !== undefined) {
     const clave = String(params.clave);
         // Avisos de Pivot por área (pivot_<area>, 2026-11-13).
-    const esAreaPivot = clave.startsWith('pivot_') && AREAS_PIVOT.includes(clave.slice(6));
+    const esAreaPivot = /^pivot_[a-z]+(_[a-z]+)?$/.test(clave) && AREAS_PIVOT.includes(clave.slice(6).split('_')[0]);
     if (!CATALOGO_CLAVES.has(clave) && !esAreaPivot) return { exito: false, error: 'Tipo de notificación inválido.' };
     const { data: fila } = await supabase.from('equipo').select('push_preferencias').eq('username', username).maybeSingle();
     const prefs: Record<string, boolean> = (fila?.push_preferencias as Record<string, boolean>) || {};
@@ -7818,7 +7819,7 @@ async function guardarPreferenciasPush(params: Record<string, any>): Promise<Rec
 // include_external_user_ids: ... })`. `excluirEmail` -- quien disparó el
 // cambio que motiva el aviso, para no notificarle de su propia acción (si
 // además es admin).
-async function _adminDestinatariosPush(excluirEmail?: string, area?: string): Promise<string[]> {
+async function _adminDestinatariosPush(excluirEmail?: string, area?: string, sub?: string): Promise<string[]> {
   const { data: adminsRows } = await supabase.from('admins').select('email, areas');
   const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsRows ?? []).map((a: any) => String(a.email).toLowerCase())]);
   if (excluirEmail) emails.delete(excluirEmail.toLowerCase());
@@ -7845,6 +7846,8 @@ async function _adminDestinatariosPush(excluirEmail?: string, area?: string): Pr
     if (_estaArchivado(fila)) return;
         if (!_personaQuierePush(fila, 'avisos_admin')) return;
         if (area && !_personaQuierePush(fila, 'pivot_' + area)) return;
+    // Aviso puntual dentro del área (Notificaciones → Avisos de Pivot → Personalizar).
+    if (area && sub && !_personaQuierePush(fila, `pivot_${area}_${sub}`)) return;
     out.push(fila ? fila.username : 'admin_' + email);
   });
   // Nunca se pierde un aviso: si nadie con esa área lo tiene encendido, va a
@@ -8347,7 +8350,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
 
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
-  const adminDestinatarios = await _adminDestinatariosPush(undefined, 'asistencia');
+  const adminDestinatarios = await _adminDestinatariosPush(undefined, 'asistencia', 'resumen');
   if (!adminDestinatarios.length) return { exito: true, eventos: enVentana.length, enviados: 0 };
   // Mínimo de personas para sugerir cancelar (Mi Liga → reglas, por defecto 5).
   const minPersonas = Number((await _reglasLiga()).eventosMinPersonas) || 0;
@@ -8468,7 +8471,7 @@ async function pushSolicitudPendiente(params: Record<string, any>): Promise<Reco
     : APP_URL;
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(undefined, ({ reserva: 'finanzas', pago: 'finanzas', excepcion: 'finanzas', lesion: 'salud', tarea: 'tareas', rectificacion: 'asistencia' } as Record<string, string>)[String(tipoSolicitud)]),
+    include_external_user_ids: await _adminDestinatariosPush(undefined, ...((({ reserva: ['finanzas', 'reservas'], pago: ['finanzas', 'pagos'], excepcion: ['finanzas', 'excepciones'], lesion: ['salud', 'lesiones'], tarea: ['tareas', 'validar'], rectificacion: ['asistencia', 'rectificaciones'] } as Record<string, [string, string]>)[String(tipoSolicitud)]) ?? []) as [string?, string?]),
     headings: { es: 'Nueva solicitud pendiente' },
     contents: { es: String(descripcionBreve) },
     url: urlFinal,
@@ -8609,7 +8612,7 @@ async function _notificarCambioAsistenciaCore(username: string, idEventoRaw: unk
   const url = _urlEvento(idEvento);
   await sendPush({
     tipo: 'avisos_admin',
-    include_external_user_ids: await _adminDestinatariosPush(quien?.email, 'asistencia'),
+    include_external_user_ids: await _adminDestinatariosPush(quien?.email, 'asistencia', 'cambios'),
     headings: { es: estadoAnterior ? 'Cambio de asistencia' : 'Nueva asistencia' },
     contents: { es: texto },
     url,

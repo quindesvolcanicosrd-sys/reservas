@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../pivots/pivots_screen.dart' show areasPivot;
+import '../pivots/pivots_screen.dart' show areasPivot, avisosPivot;
 
 import '../core/api.dart';
 import '../core/tema.dart';
@@ -117,38 +117,46 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
     }
   }
 
+  /// Avisos de Pivot de tus áreas, con "Personalizar" como los de arriba.
   Widget _avisosPivot(BuildContext context) {
     final p = context.pivot;
     final mias = widget.sesion.areasPivot.isEmpty ? areasPivot.keys.toList() : widget.sesion.areasPivot;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Material(
-        color: p.tarjeta,
-        borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ListTile(
-              leading: Icon(Icons.admin_panel_settings_outlined, color: p.marcaTexto),
-              title: const Text('Avisos de Pivot', style: TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Solo de tus áreas. Si nadie de un área lo tiene encendido, el aviso llega a todos los Pivots.'),
-            ),
-            for (final a in areasPivot.entries)
-              if (mias.contains(a.key))
-                SwitchListTile(
-                  secondary: Icon(a.value.$3),
-                  title: Text(a.value.$1),
-                  value: _prefs['pivot_${a.key}'] != false,
-                  onChanged: (v) {
-                    final k = 'pivot_${a.key}';
-                    final antes = _prefs[k];
-                    _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
-                  },
-                ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+          child: Text(
+            'AVISOS DE PIVOT',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: p.textoSecundario),
+          ),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+          child: Text(
+            'Solo de tus áreas. Si nadie de un área tiene un aviso encendido, llega a todos los Pivots para que no se pierda.',
+            style: TextStyle(fontSize: 13, color: p.textoSecundario),
+          ),
+        ),
+        for (final a in areasPivot.entries)
+          if (mias.contains(a.key) && avisosPivot[a.key] != null)
+            _Categoria(
+              nombre: a.value.$1,
+              icono: a.value.$3,
+              tipos: [
+                for (final (k, n) in avisosPivot[a.key]!) {'clave': 'pivot_${a.key}_$k', 'nombre': n},
+              ],
+              prefs: _prefs,
+              alCambiarTodo: (v) => _categoria([
+                for (final (k, _) in avisosPivot[a.key]!) {'clave': 'pivot_${a.key}_$k'},
+              ], v),
+              alCambiarUno: (t, v) {
+                final k = '${t['clave']}';
+                final antes = _prefs[k];
+                _guardar({'clave': k, 'valor': '$v'}, () => _prefs[k] = v, () => antes == null ? _prefs.remove(k) : _prefs[k] = antes);
+              },
+            ),
+      ],
     );
   }
 

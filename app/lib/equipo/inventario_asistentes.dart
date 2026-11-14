@@ -707,7 +707,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
       titulo: switch (modo) {
         ModoPrestamo.registrar => '¿Alguien tiene equipamiento?',
         ModoPrestamo.salida => 'Me llevé equipamiento',
-        ModoPrestamo.uso => 'Pedir equipamiento',
+        ModoPrestamo.uso => 'Equipamiento de emergencia',
       },
       indice: l.indexOf(_paso),
       total: l.length,
@@ -729,8 +729,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
         _PasoPrestamo.persona =>
           'Si alguien del equipo se llevó equipamiento para darle mantenimiento, limpiarlo o tenerlo por algún motivo, regístralo aquí. '
               'Si es temporal, a los 7 días se pregunta a los Pivots y a la persona si aún lo tiene.',
-        _PasoPrestamo.que when modo == ModoPrestamo.uso =>
-          'Si se te rompió o estás lavando tu equipamiento, un Pivot decide por cuánto tiempo puedes usar el del equipo sin cambiar de equipo.',
+        _PasoPrestamo.que when modo == ModoPrestamo.uso => 'Si se te rompió o estás haciendo mantenimiento a tu equipamiento, un Pivot decide por cuánto tiempo puedes usar el del equipo sin cambiar de equipo.',
         _PasoPrestamo.que when modo == ModoPrestamo.salida =>
           'Para cuando te llevas algo del equipo fuera del entrenamiento (por ejemplo, a limpiarlo). Un Pivot lo aprueba.',
         _PasoPrestamo.tiempo => 'Lo temporal recibe un recordatorio cada 7 días hasta que se devuelve.',
@@ -998,7 +997,7 @@ class _PrestamoAsistenteState extends State<PrestamoAsistente> {
     children: [
       for (final (m, icono) in const [
         ('Se me rompió', Icons.build_circle_outlined),
-        ('Lo estoy lavando o reparando', Icons.local_laundry_service_outlined),
+        ('Lo estoy limpiando o reparando', Icons.local_laundry_service_outlined),
         ('Me lo robaron o lo perdí', Icons.report_gmailerrorred_outlined),
         ('Otro motivo', Icons.more_horiz_rounded),
       ])

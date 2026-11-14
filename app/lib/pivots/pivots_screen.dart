@@ -23,6 +23,25 @@ const areasPivot = {
   'liga': ('Liga y Pivots', 'Ajustes de la liga, comunidad, avisos a todo el equipo y quién es Pivot.', Icons.shield_outlined),
 };
 
+/// Avisos de Pivot de cada área (Notificaciones → Avisos de Pivot). La clave
+/// guardada es `pivot_<area>_<aviso>`; el servidor los filtra igual.
+const avisosPivot = {
+  'finanzas': [('reservas', 'Pagos y reservas por revisar'), ('excepciones', 'Pedidos de excepción de cuota'), ('pagos', 'Pagos que avisan las personas')],
+  'asistencia': [
+    ('rectificaciones', 'Pedidos de rectificación de asistencia'),
+    ('cambios', 'Cambios de asistencia a última hora'),
+    ('resumen', 'Resumen una hora antes de cada evento'),
+  ],
+  'equipo': [('cambios', 'Cambios de equipo por revisar')],
+  'salud': [('lesiones', 'Lesiones reportadas')],
+  'inventario': [
+    ('pedidos', 'Pedidos de equipamiento'),
+    ('plazos', 'Préstamos que vencen o siguen sin devolverse'),
+    ('botiquin', 'Botiquín por vencer o por reponer'),
+  ],
+  'tareas': [('validar', 'Tareas por validar y tareas propuestas')],
+};
+
 String textoAreas(List<String> a) {
   if (a.length >= areasPivot.length) return 'Todas las áreas';
   final n = [
