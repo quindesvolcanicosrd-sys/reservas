@@ -238,9 +238,23 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
   }
 
   List<int> get _diasConEventos => ({for (final e in _futuros) e.fecha.weekday, ..._dias}.toList()..sort());
+
+  /// Entrenamientos que tocan los días ya elegidos (Victor, 2026-11-14: los
+  /// días definen los lugares; si los lunes solo hay CCI, no se ofrece otro).
+  List<Evento> get _delosDias => [
+    for (final e in _futuros)
+      if (!_porDias || _dias.isEmpty || _dias.contains(e.fecha.weekday)) e,
+  ];
+
+  /// Entrenamientos que tocan días y lugares elegidos (para el horario).
+  List<Evento> get _relevantes => [
+    for (final e in _delosDias)
+      if (!_porLugares || _lugares.isEmpty || _lugares.any((l) => l.toLowerCase() == e.lugar.trim().toLowerCase())) e,
+  ];
+
   List<String> get _lugaresConEventos {
     final vistos = <String, String>{};
-    for (final l in [..._futuros.map((e) => e.lugar), ..._lugares]) {
+    for (final l in [..._delosDias.map((e) => e.lugar), ..._lugares]) {
       if (l.trim().isNotEmpty) vistos.putIfAbsent(l.trim().toLowerCase(), () => l.trim());
     }
     return vistos.values.toList()..sort();
@@ -275,6 +289,13 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
 
   void _ir(int delta) {
     final pasos = _pasos;
+    // Al pasar de días a lugares: se quitan los lugares que no tienen
+    // entrenamientos esos días y, si queda uno solo, se elige solo.
+    if (delta > 0 && _paso == _Paso.dias && _porLugares) {
+      final hay = _lugaresConEventosSinElegidos;
+      _lugares.removeWhere((l) => !hay.any((x) => x.toLowerCase() == l.toLowerCase()));
+      if (hay.length == 1 && _lugares.isEmpty) _lugares.add(hay.first);
+    }
     final i = pasos.indexOf(_paso) + delta;
     if (i < 0) {
       Navigator.of(context).pop();
@@ -629,22 +650,119 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
     );
   }
 
+  List<String> get _lugaresConEventosSinElegidos {
+    final vistos = <String, String>{};
+    for (final e in _delosDias) {
+      if (e.lugar.trim().isNotEmpty) vistos.putIfAbsent(e.lugar.trim().toLowerCase(), () => e.lugar.trim());
+    }
+    return vistos.values.toList()..sort();
+  }
+
+  static String _ampm(String hhmm) => horaAmPm(hhmm);
+
+  /// Selector de hora con AM/PM y botones (Victor, 2026-11-14: la rueda era difícil).
   Future<void> _elegirHora(bool desde) async {
+    final p = context.pivot;
     final actual = desde ? _horaDesde : _horaHasta;
     final partes = (actual ?? (desde ? '10:00' : '19:00')).split(':');
-    final h = await showTimePicker(
+    var h24 = int.parse(partes[0]), min = int.parse(partes[1]);
+    min = (min ~/ 15) * 15;
+    final elegida = await showModalBottomSheet<String>(
       context: context,
-      initialTime: TimeOfDay(hour: int.parse(partes[0]), minute: int.parse(partes[1])),
+      showDragHandle: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) {
+          final pm = h24 >= 12, h12 = h24 % 12 == 0 ? 12 : h24 % 12;
+          void hora(int x) => set(() => h24 = (x % 12) + (pm ? 12 : 0));
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(desde ? 'Desde' : 'Hasta', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(
+                    _ampm('${h24.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}'),
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: p.marcaTexto),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<bool>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('a. m.')),
+                      ButtonSegment(value: true, label: Text('p. m.')),
+                    ],
+                    selected: {pm},
+                    onSelectionChanged: (s) => set(() => h24 = (h24 % 12) + (s.first ? 12 : 0)),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Hora', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (var x = 1; x <= 12; x++)
+                        ChoiceChip(
+                          showCheckmark: false,
+                          label: SizedBox(width: 22, child: Text('$x', textAlign: TextAlign.center)),
+                          selected: h12 == x,
+                          onSelected: (_) => hora(x),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Minutos', style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final x in const [0, 15, 30, 45])
+                        ChoiceChip(
+                          showCheckmark: false,
+                          label: Text(':${x.toString().padLeft(2, '0')}'),
+                          selected: min == x,
+                          onSelected: (_) => set(() => min = x),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: () => Navigator.of(h).pop('${h24.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')}'),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
-    if (h == null || !mounted) return;
-    final txt = '${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}';
-    setState(() => desde ? _horaDesde = txt : _horaHasta = txt);
+    if (elegida == null || !mounted) return;
+    setState(() => desde ? _horaDesde = elegida : _horaHasta = elegida);
   }
 
   Widget _pasoHorario(BuildContext context) {
     final p = context.pivot;
-    // Horas a las que empiezan los próximos entrenamientos, como guía.
-    final horas = ({for (final e in _futuros) e.horaInicio}.toList()..sort());
+    // Entrenamientos de los días y lugares elegidos, como guía (Victor,
+    // 2026-11-14: decir cuál afecta o que hoy no afecta ninguno).
+    final relevantes = _relevantes;
+    final guia = <String, String>{};
+    for (final e in relevantes) {
+      final dia = ReglaAnticipada.nombresDias[e.fecha.weekday - 1];
+      guia.putIfAbsent(
+        '${e.fecha.weekday}|${e.horaInicio}|${e.lugar.trim().toLowerCase()}',
+        () => '${e.lugar.trim()} los ${dia}s a las ${_ampm(e.horaInicio)}',
+      );
+    }
+    final afectados = <String>{
+      if (_horarioValido)
+        for (final e in relevantes)
+          if (e.horaInicio.compareTo(_horaDesde!) >= 0 && e.horaInicio.compareTo(_horaHasta!) <= 0)
+            '${e.lugar.trim()} los ${ReglaAnticipada.nombresDias[e.fecha.weekday - 1]}s a las ${_ampm(e.horaInicio)}',
+    };
     Widget boton(String titulo, String? valor, bool desde) => Expanded(
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
@@ -653,7 +771,7 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
           children: [
             Text(titulo, style: TextStyle(fontSize: 12.5, color: p.textoSecundario)),
             Text(
-              valor ?? 'Elegir',
+              valor == null ? 'Elegir' : _ampm(valor),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: p.texto),
             ),
           ],
@@ -668,10 +786,25 @@ class _AnticipadaAsistenteState extends State<AnticipadaAsistente> {
           const SizedBox(height: 10),
           Text('La hora de inicio tiene que ser antes que la de fin.', style: TextStyle(color: p.marcaTexto)),
         ],
-        if (horas.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text('Los próximos entrenamientos empiezan a las ${horas.join(', ')}.', style: TextStyle(fontSize: 13.5, color: p.textoSecundario)),
-        ],
+        const SizedBox(height: 16),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: SizedBox(
+            width: double.infinity,
+            child: !_horarioValido
+                ? Text(
+                    guia.isEmpty ? 'No hay entrenamientos próximos con lo que elegiste.' : 'Entrenamientos próximos: ${guia.values.join('; ')}.',
+                    style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+                  )
+                : afectados.isNotEmpty
+                ? Text('Afecta a: ${afectados.join('; ')}.', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600))
+                : Text(
+                    'Hoy no afecta ningún entrenamiento, pero se guarda igual por si se crea un evento en ese horario.',
+                    style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
+                  ),
+          ),
+        ),
         const SizedBox(height: 12),
         _vistaPrevia(context),
       ],

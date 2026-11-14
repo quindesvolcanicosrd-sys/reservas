@@ -105,7 +105,7 @@ class ReglaAnticipada {
           for (final d in [...diasSemana]..sort()) nombresDias[d - 1],
         ])}',
       if (lugares.isNotEmpty) '${diasSemana.isEmpty ? 'Solo en' : 'en'} ${lista(lugares)}',
-      if (conHorario) '${diasSemana.isEmpty && lugares.isEmpty ? 'Solo si empiezan' : 'si empiezan'} entre $horaDesde y $horaHasta',
+      if (conHorario) '${diasSemana.isEmpty && lugares.isEmpty ? 'Solo si empiezan' : 'si empiezan'} entre ${horaAmPm(horaDesde!)} y ${horaAmPm(horaHasta!)}',
     ];
     return partes.join(' · ');
   }
@@ -498,4 +498,12 @@ class AnticipadaRepo {
     }
     return resultado.isNotEmpty;
   }
+}
+
+/// 'HH:MM' → '7:00 p. m.' (Victor, 2026-11-14: horas con AM/PM).
+String horaAmPm(String hhmm) {
+  final p = hhmm.split(':');
+  final h = int.tryParse(p[0]) ?? 0, m = p.length > 1 ? p[1].padLeft(2, '0').substring(0, 2) : '00';
+  final h12 = h % 12 == 0 ? 12 : h % 12;
+  return '$h12:$m ${h < 12 ? 'a. m.' : 'p. m.'}';
 }
