@@ -1013,6 +1013,38 @@ async function adminReglasLiga(params: Record<string, any>): Promise<Record<stri
   return getReglasLiga(params);
 }
 
+/** Historial completo de ajustes con quién lo hizo (nombre y foto) y filtros por fecha. */
+async function adminHistorialAjustes(params: Record<string, any>): Promise<Record<string, any>> {
+  if (!(await _validarAdminToken(String(params.adminToken ?? '')))) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const ok = (v: unknown) => /^\d{4}-\d{2}-\d{2}$/.test(String(v ?? '')) ? String(v) : null;
+  let q = supabase.from('historial_ajustes_liga').select('clave, antes, despues, por, created_at').order('created_at', { ascending: false }).limit(500);
+  if (ok(params.desde)) q = q.gte('created_at', params.desde + 'T00:00:00-05:00');
+  if (ok(params.hasta)) q = q.lte('created_at', params.hasta + 'T23:59:59-05:00');
+  const [{ data }, pivots, { data: primero }] = await Promise.all([
+    q, _administradorxs(),
+    supabase.from('historial_ajustes_liga').select('created_at').order('created_at', { ascending: true }).limit(1).maybeSingle(),
+  ]);
+    const pe: Record<string, any> = {};
+  pivots.forEach((p) => { pe[p.email] = p; });
+  // Quien ya no es Pivot sigue apareciendo con su nombre.
+  const faltan = [...new Set((data ?? []).map((h: any) => String(h.por ?? '').toLowerCase()).filter((e: string) => e && !pe[e] && e !== _EMAIL_SISTEMA))];
+  if (faltan.length) {
+    const { data: ex } = await supabase.from('equipo').select('nombre_derby, username, foto_perfil, email').in('email', faltan);
+    (ex ?? []).forEach((r: any) => { pe[String(r.email).toLowerCase()] = { nombre: r.nombre_derby || r.username, foto: r.foto_perfil || '' }; });
+  }
+  return {
+    exito: true,
+    desdeAnio: primero ? Number(String(primero.created_at).slice(0, 4)) : Number(_hoyEcuadorISO().slice(0, 4)),
+    historial: (data ?? []).map((h: any) => {
+      const em = String(h.por ?? '').toLowerCase();
+      return {
+        clave: h.clave, antes: h.antes, despues: h.despues, fecha: h.created_at,
+        por: pe[em]?.nombre ?? (em === _EMAIL_SISTEMA ? 'Automático' : 'Un Pivot'), foto: pe[em]?.foto ?? '', automatico: em === _EMAIL_SISTEMA,
+      };
+    }),
+  };
+}
+
 /** Aplica un cambio de equipo guardado (aprobado por un Pivot o automático). */
 async function _aplicarCambioEquipo(fila: any, estado: 'aprobado' | 'auto', por: string): Promise<void> {
   const act = { ...(fila.actualizacion ?? {}), categoria: fila.a };
@@ -9306,7 +9338,8 @@ Deno.serve(async (req: Request) => {
             case 'getReglasLiga':                   return json(await getReglasLiga(params));
             case 'adminReglasLiga':                 return json(await adminReglasLiga(params));
                         case 'adminCambiosEquipo':              return json(await adminCambiosEquipo(params));
-                        case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
+                                    case 'adminSubirLogo':                  return json(await adminSubirLogo(params));
+            case 'adminHistorialAjustes':           return json(await adminHistorialAjustes(params));
                         case 'adminTesoreria':                  return json(await adminTesoreria(params));
             case 'getOpcionesLogin':                return json(await getOpcionesLogin());
             case 'enviarCodigoCorreo':              return json(await enviarCodigoCorreo(params));

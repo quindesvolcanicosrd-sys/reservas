@@ -1614,7 +1614,9 @@ class _TarjetaEvento extends StatelessWidget {
               ),
               // Evento pasado con asistencia tomada (Victor, 2026-11-12): lo que pasó de verdad.
               // Va en su propia línea para no aplastar el título (2026-11-13).
-              if (!apagado && miReal != null) ...[
+              // Sin botón de Pivot, la pill va aquí; con "Editar asistencia",
+              // justo debajo de ese botón (Victor, 2026-11-13).
+              if (!apagado && miReal != null && !tomarAsistencia) ...[
                 const SizedBox(height: 10),
                 PillAsistencia(repo: repo, ev: ev, texto: miReal.$1, icono: miReal.$2, completa: true),
               ],
@@ -1679,6 +1681,10 @@ class _TarjetaEvento extends StatelessWidget {
                           label: Text(ev.asistentes.isEmpty ? 'Tomar asistencia' : 'Editar asistencia'),
                         ),
                 ),
+              if (!apagado && miReal != null && tomarAsistencia) ...[
+                const SizedBox(height: 10),
+                PillAsistencia(repo: repo, ev: ev, texto: miReal.$1, icono: miReal.$2, completa: true),
+              ],
             ],
           ),
         ),

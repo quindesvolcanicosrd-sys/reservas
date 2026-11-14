@@ -420,7 +420,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   String get _textoQueCuenta {
     final t = _reglasLiga['tiposCuentan'];
     final base = t is List && t.isNotEmpty ? t.map((x) => x == 'Externa' ? 'con otros equipos' : '$x'.toLowerCase()).join(', ') : 'Todo suma';
-    return '${base[0].toUpperCase()}${base.substring(1)}${_reglasLiga['tardeCuentaClase'] == false ? ' · tarde no cuenta' : ''}';
+    return '${base[0].toUpperCase()}${base.substring(1)}${_reglasLiga['tardeCuentaClase'] == false ? ' · llegar tarde no suma' : ''}';
   }
 
   Future<void> _editarQueCuenta() async {
@@ -448,7 +448,12 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Llegar tarde cuenta como clase'),
+          title: const Text('Las llegadas tarde suman para el equipo'),
+          subtitle: Text(
+            tarde
+                ? 'Si alguien llega tarde, esa clase igual cuenta para lo que pide su equipo (por ejemplo, las 3 clases al mes).'
+                : 'Si alguien llega tarde, esa clase no cuenta para lo que pide su equipo. Los puntos por llegar tarde no cambian.',
+          ),
           value: tarde,
           onChanged: (v) => set(() => tarde = v),
         ),
@@ -490,7 +495,6 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.pivot;
     final l = _tiers;
     return Scaffold(
       appBar: AppBar(
@@ -532,14 +536,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                       icono: Icons.history_rounded,
                       titulo: 'Historial de cambios',
                       texto: 'Últimos 6 meses',
-                      alTocar: () =>
-                          Navigator.of(context)
-                              .push(MaterialPageRoute<void>(builder: (_) => HistorialAjustesScreen(historial: (_reglas['historial'] as List?) ?? const []))),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Quien tiene el equipo fijado a mano, está de viaje o lesionadx no cambia de equipo.',
-                      style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+                      alTocar: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HistorialAjustesScreen(sesion: s))),
                     ),
                   ],
                 ),
@@ -662,59 +659,328 @@ class _Nota extends StatelessWidget {
   }
 }
 
-/// Últimos 6 meses de cambios en los ajustes (se guardan siempre).
-class HistorialAjustesScreen extends StatelessWidget {
-  const HistorialAjustesScreen({super.key, required this.historial});
-  final List historial;
+/// Historial de cambios en los ajustes de la liga (Victor, 2026-11-13):
+/// tarjetas con quién lo hizo, qué cambió en palabras, buscador y filtros.
+class HistorialAjustesScreen extends StatefulWidget {
+  const HistorialAjustesScreen({super.key, required this.sesion});
+  final Sesion sesion;
+
+  @override
+  State<HistorialAjustesScreen> createState() => _HistorialAjustesScreenState();
+}
+
+class _HistorialAjustesScreenState extends State<HistorialAjustesScreen> {
+  List<Map<String, dynamic>>? _items;
+  int _desdeAnio = DateTime.now().year;
+  String _periodo = '6m'; // '6m' | 'mes' | 'anio:<n>' | 'todo' | 'rango'
+  DateTimeRange? _rango;
+  String _grupo = '';
+  String _q = '';
+  String? _error;
+
+  static const _grupos = {
+    'equipos': ('Equipos', Icons.groups_outlined),
+    'puntos': ('Puntos y reglas', Icons.rule_rounded),
+    'tesoreria': ('Tesorería', Icons.account_balance_wallet_outlined),
+    'liga': ('Liga', Icons.stadium_outlined),
+  };
+
+  static String _grupoDe(String clave) => switch (clave) {
+    'equipo' || 'corte' => 'equipos',
+    'puntos' || 'tiposCuentan' || 'tardeCuentaClase' || 'toleranciaMin' || 'rectificacionDias' || 'eventosMinPersonas' || 'inactividadDias' => 'puntos',
+    'cuenta' || 'transparencia' => 'tesoreria',
+    _ => 'liga',
+  };
 
   static const _nombres = {
-    'corte': 'Cuándo se aplican los cambios',
+    'corte': 'Cuándo se aplican los cambios de equipo',
     'puntos': 'Puntos por asistencia',
     'tiposCuentan': 'Qué cuenta como clase',
-    'tardeCuentaClase': 'Llegar tarde cuenta como clase',
+    'tardeCuentaClase': 'Llegadas tarde para el equipo',
     'toleranciaMin': 'Tolerancia de llegada',
     'rectificacionDias': 'Días para revisar rectificaciones',
     'eventosMinPersonas': 'Mínimo de personas por evento',
     'inactividadDias': 'Inactividad',
-    'equipo': 'Equipo',
+    'equipo': 'Equipos',
     'logo': 'Logo',
+    'cuenta': 'Cuenta de Tesorería',
+    'transparencia': 'Transparencia de Tesorería',
   };
 
-  String _detalle(Map h) {
-    final antes = h['antes'], despues = h['despues'];
-    if (h['clave'] == 'equipo') {
-      if (despues == null) return 'Se borró ${antes is Map ? antes['nombre'] : 'un equipo'}';
-      if (antes == null) return 'Se creó ${despues is Map ? despues['nombre'] : 'un equipo'}';
-      return 'Se cambió ${despues is Map ? despues['nombre'] : 'un equipo'}';
-    }
-    if (h['clave'] == 'logo') return 'Se cambió un logo';
-    String v(Object? x) => x is Map ? x.entries.map((e) => '${e.key}: ${e.value}').join(', ') : (x == null ? '—' : '$x');
-    return '${v(antes)} → ${v(despues)}';
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
   }
+
+  String _iso(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  (String?, String?) get _fechas {
+    final h = Fechas.hoy();
+    if (_periodo == '6m') return (_iso(DateTime(h.year, h.month - 6, h.day)), null);
+    if (_periodo == 'mes') return (_iso(DateTime(h.year, h.month, 1)), null);
+    if (_periodo.startsWith('anio:')) {
+      final a = int.parse(_periodo.substring(5));
+      return ('$a-01-01', '$a-12-31');
+    }
+    if (_periodo == 'rango' && _rango != null) return (_iso(_rango!.start), _iso(_rango!.end));
+    return (null, null);
+  }
+
+  Future<void> _cargar() async {
+    setState(() => _items = null);
+    try {
+      final (d, h) = _fechas;
+      final r = await widget.sesion.api.get('adminHistorialAjustes', {'adminToken': widget.sesion.adminToken, 'desde': ?d, 'hasta': ?h});
+      if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo cargar.'}');
+      if (!mounted) return;
+      setState(() {
+        _items = [
+          for (final x in (r['historial'] as List? ?? const []))
+            if (x is Map<String, dynamic>) x,
+        ];
+        _desdeAnio = (r['desdeAnio'] as num?)?.toInt() ?? DateTime.now().year;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => (_items = const [], _error = e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.'));
+    }
+  }
+
+  static String _v(Object? x, [String unidad = '']) {
+    if (x == null) return '—';
+    if (x is bool) return x ? 'sí' : 'no';
+    if (x is num) return '${numero(x).replaceAll('.', ',')}${unidad.isEmpty ? '' : ' $unidad'}';
+    if (x is List) return x.isEmpty ? 'todo suma' : x.join(', ');
+    return '$x';
+  }
+
+  static const _camposEquipo = {
+    'nombre': 'nombre',
+    'min_clases': 'clases',
+    'min_puntos': 'puntos',
+    'ventana_meses': 'período',
+    'periodo_unidad': 'unidad del período',
+    'logica': 'clases y/o puntos',
+    'meses_consecutivos_ascenso': 'meses para subir',
+    'meses_gracia_demotion': 'margen para bajar',
+    'gracia_unidad': 'unidad del margen',
+    'dividir_puntos_mitad': 'puntos a la mitad',
+    'califica_fondos_viaje': 'fondos de viaje',
+    'puntos_fuente': 'qué puntos cuentan',
+    'orden': 'orden',
+    'requisitos': 'requisitos del enlace',
+    'logo': 'logo',
+  };
+
+  /// Qué cambió, en palabras.
+  String _detalle(Map<String, dynamic> h) {
+    final clave = '${h['clave']}';
+    final antes = h['antes'], despues = h['despues'];
+    switch (clave) {
+      case 'equipo':
+        final nombre = despues is Map ? despues['nombre'] : (antes is Map ? antes['nombre'] : 'un equipo');
+        if (despues == null) return 'Borró el equipo $nombre.';
+        if (antes == null) return 'Creó el equipo $nombre.';
+        final cambios = <String>[];
+        if (antes is Map && despues is Map) {
+          for (final e in _camposEquipo.entries) {
+            final a = antes[e.key], d = despues[e.key];
+            if ('$a' != '$d') cambios.add(e.key == 'nombre' ? 'se llama $d (antes $a)' : '${e.value}: ${_v(a is Map ? null : a)} → ${_v(d is Map ? null : d)}');
+          }
+        }
+        return cambios.isEmpty ? 'Editó $nombre.' : 'En $nombre: ${cambios.join('; ')}.';
+      case 'puntos':
+        final d = despues is Map ? despues : const {};
+        final a = antes is Map ? antes : const {};
+        final desde = DateTime.tryParse('${d['desde'] ?? ''}');
+        return 'A tiempo ${_v(a['aTiempo'])} → ${_v(d['aTiempo'])}; tarde ${a['tardeCuenta'] == false ? 'no suma' : _v(a['tarde'])} → ${d['tardeCuenta'] == false ? 'no suma' : _v(d['tarde'])}'
+            '${desde == null ? '' : ', desde el ${Fechas.corta(desde)}'}.';
+      case 'corte':
+        String t(Object? x) =>
+            x is Map ? (x['modo'] == 'auto' ? 'automático' : 'revisar antes, día ${x['dia']}, la lista llega ${x['avisoDias']} días antes') : '—';
+        return '${t(antes)} → ${t(despues)}.';
+      case 'toleranciaMin':
+        return '${_v(antes, 'minutos')} → ${_v(despues, 'minutos')}.';
+      case 'rectificacionDias' || 'inactividadDias':
+        return '${_v(antes, 'días')} → ${_v(despues, 'días')}.';
+      case 'eventosMinPersonas':
+        return '${_v(antes, 'personas')} → ${_v(despues, 'personas')}.';
+      case 'tardeCuentaClase':
+        return despues == false ? 'Llegar tarde ya no cuenta para el equipo.' : 'Llegar tarde cuenta para el equipo.';
+      case 'tiposCuentan':
+        return '${_v(antes)} → ${_v(despues)}.';
+      case 'logo':
+        final d = despues is Map ? despues['destino'] : '';
+        return d == 'liga'
+            ? 'Cambió el logo de la liga.'
+            : ('$d'.startsWith('medio-') ? 'Cambió el logo de un medio de pago.' : 'Cambió el logo de un equipo.');
+      case 'cuenta':
+        final n = despues is Map ? despues['nombre'] : (antes is Map ? antes['nombre'] : 'una cuenta');
+        if (despues == null) return 'Borró la cuenta $n.';
+        if (antes == null) return 'Creó la cuenta $n.';
+        if (despues is Map && despues['archivada'] == true) return 'Archivó la cuenta $n.';
+        return 'Editó la cuenta $n.';
+      case 'transparencia':
+        return despues == true ? 'Activó la transparencia: el equipo ve los totales.' : 'Desactivó la transparencia.';
+    }
+    return '${_v(antes)} → ${_v(despues)}.';
+  }
+
+  Future<void> _elegirPeriodo() async {
+    final anios = [for (var a = DateTime.now().year; a >= _desdeAnio; a--) a];
+    final v = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (s) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(title: const Text('Este mes'), onTap: () => Navigator.of(s).pop('mes')),
+            ListTile(title: const Text('Últimos 6 meses'), onTap: () => Navigator.of(s).pop('6m')),
+            for (final a in anios) ListTile(title: Text('Año $a'), onTap: () => Navigator.of(s).pop('anio:$a')),
+            ListTile(title: const Text('Todo'), onTap: () => Navigator.of(s).pop('todo')),
+            ListTile(title: const Text('Elegir fechas'), trailing: const Icon(Icons.date_range_rounded), onTap: () => Navigator.of(s).pop('rango')),
+          ],
+        ),
+      ),
+    );
+    if (v == null || !mounted) return;
+    if (v == 'rango') {
+      final r = await showDateRangePicker(context: context, firstDate: DateTime(_desdeAnio), lastDate: Fechas.hoy(), initialDateRange: _rango);
+      if (r == null) return;
+      _rango = r;
+    }
+    _periodo = v;
+    _cargar();
+  }
+
+  String get _textoPeriodo => switch (_periodo) {
+    'mes' => 'Este mes',
+    '6m' => 'Últimos 6 meses',
+    'todo' => 'Todo',
+    'rango' => _rango == null ? 'Fechas' : '${Fechas.corta(_rango!.start)} – ${Fechas.corta(_rango!.end)}',
+    _ => 'Año ${_periodo.substring(5)}',
+  };
 
   @override
   Widget build(BuildContext context) {
     final p = context.pivot;
+    final todos = _items;
+    final q = _q.trim().toLowerCase();
+    final l = todos == null
+        ? null
+        : [
+            for (final h in todos)
+              if ((_grupo.isEmpty || _grupoDe('${h['clave']}') == _grupo) &&
+                  (q.isEmpty || '${_nombres['${h['clave']}'] ?? ''} ${_detalle(h)} ${h['por']}'.toLowerCase().contains(q)))
+                h,
+          ];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Historial de cambios', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: historial.isEmpty
-          ? Center(
-              child: Text('Sin cambios en los últimos 6 meses.', style: TextStyle(color: p.textoSecundario)),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            child: TextField(
+              onChanged: (v) => setState(() => _q = v),
+              decoration: const InputDecoration(hintText: 'Buscar (persona, equipo, regla…)', prefixIcon: Icon(Icons.search_rounded), isDense: true),
+            ),
+          ),
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               children: [
-                for (final h in historial.whereType<Map>())
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_nombres['${h['clave']}'] ?? '${h['clave']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text('${_detalle(h)}\n${h['por']} · ${_fechaLarga('${h['fecha']}'.split('T').first)}'),
-                    isThreeLine: true,
+                ActionChip(avatar: const Icon(Icons.date_range_rounded, size: 18), label: Text(_textoPeriodo), onPressed: _elegirPeriodo),
+                const SizedBox(width: 8),
+                for (final e in _grupos.entries) ...[
+                  FilterChip(
+                    showCheckmark: false,
+                    avatar: Icon(e.value.$2, size: 18),
+                    label: Text(e.value.$1),
+                    selected: _grupo == e.key,
+                    onSelected: (v) => setState(() => _grupo = v ? e.key : ''),
                   ),
+                  const SizedBox(width: 8),
+                ],
               ],
             ),
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: l == null
+                  ? const PivotCargando()
+                  : l.isEmpty
+                  ? Center(
+                      child: Text(_error ?? 'Sin cambios con estos filtros.', style: TextStyle(color: p.textoSecundario)),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 40),
+                      itemCount: l.length,
+                      itemBuilder: (_, i) {
+                        final h = l[i];
+                        final f = DateTime.tryParse('${h['fecha']}')?.toLocal();
+                        final grupo = _grupos[_grupoDe('${h['clave']}')]!;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Material(
+                            color: p.tarjeta,
+                            borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  h['automatico'] == true
+                                      ? CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor: p.suave,
+                                          child: Icon(Icons.bolt_rounded, color: p.sobreSuave),
+                                        )
+                                      : AvatarPersona(nombre: '${h['por']}', foto: '${h['foto'] ?? ''}', tamano: 40),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(grupo.$2, size: 16, color: p.marcaTexto),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                _nombres['${h['clave']}'] ?? '${h['clave']}',
+                                                style: TextStyle(fontWeight: FontWeight.w700, color: p.texto),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(_detalle(h), style: TextStyle(color: p.texto, height: 1.3)),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '${h['por']}${f == null ? '' : ' · ${Fechas.corta(f)} a las ${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}'}',
+                                          style: TextStyle(fontSize: 12.5, color: p.textoSecundario),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
