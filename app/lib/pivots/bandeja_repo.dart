@@ -122,6 +122,13 @@ class BandejaRepo extends ChangeNotifier {
   }
 
   /// Al abrir la Bandeja: lo de ahora queda visto y la campana vuelve a ser bandeja.
+  /// Cancela un pedido propio que sigue pendiente (Victor, 2026-11-14).
+  Future<void> cancelarMio(MiPedido x) async {
+    final r = await _api.post('cancelarMiSolicitud', {'tipo': x.tipo, 'id': '${x.m['id']}'});
+    if (r['exito'] == false) throw ApiException('${r['error'] ?? 'No se pudo cancelar.'}');
+    await cargarMia();
+  }
+
   Future<void> marcarVista() async {
     _ultimaVista = DateTime.now();
     _recomVistas = {for (final r in recomendaciones) r.clave};

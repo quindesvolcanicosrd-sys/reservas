@@ -113,6 +113,29 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     }
   }
 
+  /// Cancelar un pedido propio pendiente. Para cambiarlo: cancelar y pedir de nuevo.
+  Future<void> _cancelarMio(MiPedido x) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (d) => AlertDialog(
+        title: const Text('¿Cancelar esta solicitud?'),
+        content: Text('"${x.titulo}" deja de llegarles a los Pivots. Si querías cambiar algo, cancélala y vuelve a pedirla.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Volver')),
+          FilledButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Cancelar solicitud')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await repo.cancelarMio(x);
+      m.showSnackBar(const SnackBar(content: Text('Solicitud cancelada.')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo cancelar. Revisa tu conexión.')));
+    }
+  }
+
   static const _grupos = [
     (TipoPedido.reserva, 'Pagos y reservas', Icons.receipt_long_rounded),
     (TipoPedido.rectificacion, 'Rectificaciones de asistencia', Icons.fact_check_outlined),
@@ -400,7 +423,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
           if (repo.misPedidos.isNotEmpty) {
             hijos.add(_Encabezado(titulo: 'Tus pedidos', icono: Icons.send_rounded, cantidad: repo.misPedidos.length));
             for (final x in repo.misPedidos.take(20)) {
-              hijos.add(_TarjetaMiPedido(x: x));
+              hijos.add(_TarjetaMiPedido(x: x, alCancelar: () => _cancelarMio(x)));
             }
           }
           if (repo.recomendaciones.isNotEmpty) {
@@ -867,8 +890,9 @@ class _TarjetaExcepcion extends StatelessWidget {
 
 /// Un pedido propio y cómo quedó.
 class _TarjetaMiPedido extends StatelessWidget {
-  const _TarjetaMiPedido({required this.x});
+  const _TarjetaMiPedido({required this.x, required this.alCancelar});
   final MiPedido x;
+  final VoidCallback alCancelar;
 
   @override
   Widget build(BuildContext context) {
@@ -877,8 +901,10 @@ class _TarjetaMiPedido extends StatelessWidget {
       'aprobada' => (Icons.check_circle_rounded, 'Aprobado'),
       'rechazada' => (Icons.cancel_outlined, 'No aprobado'),
       'vencida' => (Icons.history_rounded, 'Venció'),
+      'cancelada' => (Icons.block_rounded, 'Cancelado'),
       _ => (Icons.hourglass_top_rounded, 'Pendiente'),
     };
+    final cancelable = x.estado == 'pendiente' && const {'reserva', 'rectificacion', 'excepcion', 'prestamo', 'lesion'}.contains(x.tipo);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: _Entrar(
@@ -903,6 +929,16 @@ class _TarjetaMiPedido extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(Fechas.corta(x.fecha!.toLocal()), style: TextStyle(fontSize: 12, color: p.textoSecundario)),
                       ],
+                      if (cancelable)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                            onPressed: alCancelar,
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            label: const Text('Cancelar solicitud'),
+                          ),
+                        ),
                     ],
                   ),
                 ),

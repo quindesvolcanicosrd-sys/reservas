@@ -4993,6 +4993,35 @@ async function _saldoDisponible(username: string): Promise<number> {
 }
 
 /** Saldo propio con el equipo (solo la persona; nada se guarda en el teléfono). */
+/**
+ * La persona cancela una solicitud suya que sigue pendiente (Victor,
+ * 2026-11-14). Nada se borra: queda como cancelada en su Bandeja y deja de
+ * aparecerles a los Pivots. Para cambiar algo: cancelar y pedir de nuevo.
+ */
+async function cancelarMiSolicitud(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  if (!yo) return { exito: false, error: 'Sesión inválida.' };
+  const tipo = String(params.tipo ?? ''), id = String(params.id ?? '');
+  const CANCELADA = 'Cancelada por la persona';
+  let r: any = null;
+  if (tipo === 'reserva') {
+    r = await supabase.from('reservas').update({ estado: 'Cancelada', motivo_rechazo: CANCELADA }).eq('id', id).eq('nombre_usuario', yo).eq('estado', 'Pendiente').select('id');
+  } else if (tipo === 'rectificacion') {
+    r = await supabase.from('rectificaciones_asistencia').update({ decision: 'Cancelada' }).eq('id', id).eq('nombre', yo).eq('decision', 'Pendiente').select('id');
+  } else if (tipo === 'excepcion') {
+    r = await supabase.from('solicitudes_excepcion').update({ estado: 'rechazada', nota_admin: CANCELADA }).eq('id', id).eq('nombre', yo).eq('estado', 'pendiente').select('id');
+  } else if (tipo === 'prestamo') {
+    r = await supabase.from('inventario_prestamos').update({ estado: 'cancelado' }).eq('id', id).eq('username', yo).eq('estado', 'pendiente').select('id');
+  } else if (tipo === 'lesion') {
+    r = await supabase.from('equipo').update({ solicitud_lesion_pendiente: false }).eq('username', yo).eq('solicitud_lesion_pendiente', true).select('username');
+  } else {
+    return { exito: false, error: 'Esta solicitud no se puede cancelar.' };
+  }
+  if (r?.error) { console.error('[cancelarMiSolicitud]', r.error); return { exito: false, error: 'No se pudo cancelar.' }; }
+  if (!r?.data?.length) return { exito: false, error: 'Ya no está pendiente: un Pivot la revisó.' };
+  return { exito: true };
+}
+
 async function getMiSaldo(params: Record<string, any>): Promise<Record<string, any>> {
   const yo = await _validarToken(String(params.token ?? ''));
   if (!yo) return { exito: false, error: 'Sesión inválida.' };
@@ -7617,8 +7646,13 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
   const ta: Record<string, string> = {}; (tareas ?? []).forEach((t: any) => { ta[t.id] = t.titulo; });
   const dia = (f: string) => { const d = new Date(f + 'T12:00:00Z'); return `${d.getUTCDate()} de ${['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][d.getUTCMonth()]}`; };
   const items: any[] = [];
+    const CANCELADA_POR_TI = 'Cancelada por la persona';
   for (const r of res.data ?? []) {
     const e = ev[r.id_evento];
+    if (r.motivo_rechazo === CANCELADA_POR_TI) {
+      items.push({ tipo: 'reserva', id: r.id, titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`, detalle: 'La cancelaste.', estado: 'cancelada', fecha: r.created_at });
+      continue;
+    }
     items.push({
       tipo: 'reserva', id: r.id,
       titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`,
@@ -7630,11 +7664,15 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
     const d = r.decision;
     items.push({
       tipo: 'rectificacion', id: r.id, titulo: `Corregir tu asistencia del ${r.fecha_evento ? dia(String(r.fecha_evento).slice(0, 10)) : ''}`.trim(),
-      detalle: d === 'Aprobada' ? 'Se corrigió.' : d === 'Rechazada' ? 'Quedó como estaba.' : d === 'Descartada' ? 'Nadie la revisó a tiempo; puedes pedirla de nuevo.' : 'Un Pivot la revisará.',
-      estado: d === 'Aprobada' ? 'aprobada' : d === 'Rechazada' ? 'rechazada' : d === 'Descartada' ? 'vencida' : 'pendiente', fecha: r.created_at,
+            detalle: d === 'Aprobada' ? 'Se corrigió.' : d === 'Rechazada' ? 'Quedó como estaba.' : d === 'Descartada' ? 'Nadie la revisó a tiempo; puedes pedirla de nuevo.' : d === 'Cancelada' ? 'La cancelaste.' : 'Un Pivot la revisará.',
+      estado: d === 'Aprobada' ? 'aprobada' : d === 'Rechazada' ? 'rechazada' : d === 'Descartada' ? 'vencida' : d === 'Cancelada' ? 'cancelada' : 'pendiente', fecha: r.created_at,
     });
   }
-  for (const r of exc.data ?? []) {
+    for (const r of exc.data ?? []) {
+    if (r.estado === 'rechazada' && r.nota_admin === CANCELADA_POR_TI) {
+      items.push({ tipo: 'excepcion', id: r.id, titulo: r.tipo === 'ausencias' ? 'Excepción de cuota por ausencias' : 'Excepción de cuota por dificultad económica', detalle: 'La cancelaste.', estado: 'cancelada', fecha: r.created_at });
+      continue;
+    }
     items.push({
       tipo: 'excepcion', id: r.id, titulo: r.tipo === 'ausencias' ? 'Excepción de cuota por ausencias' : 'Excepción de cuota por dificultad económica',
       detalle: r.estado === 'aprobada' ? (r.indefinida ? 'Aprobada, sin fecha de fin.' : r.vigente_hasta ? `Aprobada hasta ${r.vigente_hasta}.` : 'Aprobada.') : r.estado === 'rechazada' ? (r.nota_admin ? `No se aprobó: ${r.nota_admin}` : 'No se aprobó.') : 'Un Pivot la revisará.',
@@ -7644,8 +7682,8 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
   for (const p of prest.data ?? []) {
     items.push({
       tipo: 'prestamo', id: p.id, titulo: `${p.tipo === 'uso' ? 'Usar' : 'Te llevaste'} ${p.detalle ?? 'equipamiento del equipo'}`,
-      detalle: p.estado === 'pendiente' ? 'Un Pivot lo revisará.' : p.estado === 'activo' ? (p.hasta ? `Aprobado hasta el ${dia(p.hasta)}.` : 'Aprobado.') : p.estado === 'devuelto' ? 'Devuelto.' : 'No se aprobó.',
-      estado: p.estado === 'pendiente' ? 'pendiente' : p.estado === 'rechazado' ? 'rechazada' : 'aprobada', fecha: p.devuelto_en ?? p.desde ?? p.created_at,
+            detalle: p.estado === 'pendiente' ? 'Un Pivot lo revisará.' : p.estado === 'activo' ? (p.hasta ? `Aprobado hasta el ${dia(p.hasta)}.` : 'Aprobado.') : p.estado === 'devuelto' ? 'Devuelto.' : p.estado === 'cancelado' ? 'Lo cancelaste.' : 'No se aprobó.',
+      estado: p.estado === 'pendiente' ? 'pendiente' : p.estado === 'rechazado' ? 'rechazada' : p.estado === 'cancelado' ? 'cancelada' : 'aprobada', fecha: p.devuelto_en ?? p.desde ?? p.created_at,
     });
   }
   for (const a of asig.data ?? []) {
@@ -9573,7 +9611,8 @@ Deno.serve(async (req: Request) => {
             case 'adminHistorialAjustes':           return json(await adminHistorialAjustes(params));
                         case 'adminTesoreria':                  return json(await adminTesoreria(params));
             case 'getOpcionesLogin':                return json(await getOpcionesLogin());
-                        case 'getMiSaldo':                      return json(await getMiSaldo(params));
+                                    case 'getMiSaldo':                      return json(await getMiSaldo(params));
+            case 'cancelarMiSolicitud':             return json(await cancelarMiSolicitud(params));
             case 'enviarCodigoCorreo':              return json(await enviarCodigoCorreo(params));
             case 'verificarCodigoCorreo':           return json(await verificarCodigoCorreo(params));
             case 'getTransparencia':                return json(await getTransparencia(params));

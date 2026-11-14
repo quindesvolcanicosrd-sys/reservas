@@ -480,7 +480,7 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] Pantalla de carga: quitar el splash con revelado de máscara; solo el logo y fade out a la app.
 - [x] Asistencia anticipada → horario: selector de hora con AM/PM (la rueda actual es difícil).
 - [x] Asistencia anticipada → "Solo algunos": días primero; los lugares se deducen de los entrenamientos de esos días (sin Cumandá si los lunes solo hay CCI). Horarios: mostrar los de esos días y decir qué entrenamiento afecta; si no afecta ninguno, avisar que se guarda igual por si se crea un evento en ese horario. Decidir qué pasa si luego se crea un evento en un lugar que no estaba.
-- [ ] Bandeja: cancelar, borrar y editar solicitudes pendientes (Pivots y personas).
+- [x] Bandeja: cancelar pedidos propios pendientes (Pivots y personas, desde Mis pedidos). Editar = cancelar y pedir de nuevo; preguntar a Victor si quiere edición directa de algún tipo.
 - [ ] Inventario → Tu equipamiento: solo para equipos que exigen equipamiento propio (Quindes); sin "Necesito equipamiento por un tiempo"; la tarjeta roja de emergencia con ícono de inventario.
 - [x] Equipos y puntos → Cuándo se aplican: en Automático el texto dice "Los cambios se aplican apenas alguien cumple o deja de cumplir los requisitos"; ejemplo con los requisitos del equipo en ambas opciones.
 - [x] Puntos por asistencia: texto "Los puntos ya ganados nunca cambian".
