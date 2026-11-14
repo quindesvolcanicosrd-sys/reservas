@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../ajustes/recorte_foto.dart';
 import '../core/api.dart';
+import 'buscador_liga.dart';
 import '../core/asistente.dart';
 import '../core/cargando.dart';
 import '../core/fechas.dart';
@@ -209,14 +210,26 @@ String _fechaLarga(String iso) {
 /// También: cuándo se aplican los cambios, cuánto vale cada marca y qué
 /// cuenta como clase.
 class CategoriasScreen extends StatefulWidget {
-  const CategoriasScreen({super.key, required this.sesion});
+  const CategoriasScreen({super.key, required this.sesion, this.resaltar});
   final Sesion sesion;
+
+  /// Fila a resaltar al abrir (desde el buscador de Mi Liga).
+  final String? resaltar;
 
   @override
   State<CategoriasScreen> createState() => _CategoriasScreenState();
 }
 
 class _CategoriasScreenState extends State<CategoriasScreen> {
+  final _resaltado = ValueNotifier<String?>(null);
+  bool _resaltadoHecho = false;
+
+  @override
+  void dispose() {
+    _resaltado.dispose();
+    super.dispose();
+  }
+
   List<Map<String, dynamic>>? _tiers;
   List<_Persona> _gente = const [];
   Map<String, dynamic> _reglas = const {};
@@ -249,6 +262,11 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           _reglas = r[2];
           _error = null;
         });
+        final x = widget.resaltar;
+        if (x != null && !_resaltadoHecho) {
+          _resaltadoHecho = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) => x == 'nuevoEquipo' ? _nuevo() : _resaltado.value = x);
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _error = e is ApiException ? e.message : 'No se pudo cargar. Revisa tu conexión.');
@@ -514,29 +532,45 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                     for (final (i, t) in l.indexed) _tarjeta(context, i, t),
                     const SizedBox(height: 8),
                     _Seccion('REGLAS'),
-                    _Fila(
-                      icono: Icons.event_repeat_rounded,
-                      titulo: 'Cuándo se aplican los cambios',
-                      texto: _corte['modo'] == 'auto'
-                          ? 'Automático'
-                          : 'Revisar antes · se aplican el ${Fechas.corta(_fechasCorte((_corte['dia'] as num?)?.toInt() ?? 1, 0).$1)}',
-                      alTocar: _editarCorte,
+                    Resaltable(
+                      id: 'corte',
+                      resaltado: _resaltado,
+                      child: _Fila(
+                        icono: Icons.event_repeat_rounded,
+                        titulo: 'Cuándo se aplican los cambios',
+                        texto: _corte['modo'] == 'auto'
+                            ? 'Automático'
+                            : 'Revisar antes · se aplican el ${Fechas.corta(_fechasCorte((_corte['dia'] as num?)?.toInt() ?? 1, 0).$1)}',
+                        alTocar: _editarCorte,
+                      ),
                     ),
-                    _Fila(
-                      icono: Icons.star_outline_rounded,
-                      titulo: 'Puntos por asistencia',
-                      texto: [
-                        _textoPuntos(_puntosActual),
-                        if (_puntosProxima != null) 'Desde el ${_fechaLarga('${_puntosProxima!['desde']}')}: ${_textoPuntos(_puntosProxima!)}',
-                      ].join('\n'),
-                      alTocar: _editarPuntos,
+                    Resaltable(
+                      id: 'puntos',
+                      resaltado: _resaltado,
+                      child: _Fila(
+                        icono: Icons.star_outline_rounded,
+                        titulo: 'Puntos por asistencia',
+                        texto: [
+                          _textoPuntos(_puntosActual),
+                          if (_puntosProxima != null) 'Desde el ${_fechaLarga('${_puntosProxima!['desde']}')}: ${_textoPuntos(_puntosProxima!)}',
+                        ].join('\n'),
+                        alTocar: _editarPuntos,
+                      ),
                     ),
-                    _Fila(icono: Icons.event_available_outlined, titulo: 'Qué cuenta como clase', texto: _textoQueCuenta, alTocar: _editarQueCuenta),
-                    _Fila(
-                      icono: Icons.history_rounded,
-                      titulo: 'Historial de cambios',
-                      texto: 'Últimos 6 meses',
-                      alTocar: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HistorialAjustesScreen(sesion: s))),
+                    Resaltable(
+                      id: 'queCuenta',
+                      resaltado: _resaltado,
+                      child: _Fila(icono: Icons.event_available_outlined, titulo: 'Qué cuenta como clase', texto: _textoQueCuenta, alTocar: _editarQueCuenta),
+                    ),
+                    Resaltable(
+                      id: 'historial',
+                      resaltado: _resaltado,
+                      child: _Fila(
+                        icono: Icons.history_rounded,
+                        titulo: 'Historial de cambios',
+                        texto: 'Últimos 6 meses',
+                        alTocar: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => HistorialAjustesScreen(sesion: s))),
+                      ),
                     ),
                   ],
                 ),

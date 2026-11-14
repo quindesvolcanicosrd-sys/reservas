@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../finanzas/tesoreria_screen.dart';
 import '../core/datos_pendientes.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import '../core/vidrio.dart';
 import '../equipo/estadisticas.dart';
-import '../pivots/ajustes_liga_screen.dart';
 import '../equipo/equipo_repo.dart';
 import '../equipo/persona_screen.dart';
 import '../eventos/eventos_repo.dart';
@@ -124,28 +122,7 @@ class _AjustesScreenState extends State<AjustesScreen> {
                     ),
                   ],
                 ),
-              // Ajustes de la liga, solo Pivots (etapa 3, Victor 2026-11-12).
-              if (sesion.esAdmin && sesion.adminToken != null)
-                GrupoAjustes(
-                  filas: [
-                    FilaAjuste(
-                      icono: Icons.admin_panel_settings_outlined,
-                      seccion: 'roles',
-                      titulo: 'Ajustes de la liga',
-                      valor: 'Equipos, cobros, canal y más',
-                      alTocar: () => SubAjustes.abrir(context, AjustesLigaScreen(sesion: sesion)),
-                    ),
-                    // Tesorería (etapa 5, Victor 2026-11-13): Pivots con Finanzas.
-                    if (sesion.tieneArea('finanzas'))
-                      FilaAjuste(
-                        icono: Icons.account_balance_wallet_outlined,
-                        seccion: 'cuota',
-                        titulo: 'Tesorería',
-                        valor: 'Cuentas, movimientos, saldos y fondos de viaje',
-                        alTocar: () => SubAjustes.abrir(context, TesoreriaScreen(sesion: sesion)),
-                      ),
-                  ],
-                ),
+              // Ajustes de la liga y Tesorería viven en la pestaña Mi Liga (2026-11-13).
               GrupoAjustes(
                 filas: [
                   if (conFicha)

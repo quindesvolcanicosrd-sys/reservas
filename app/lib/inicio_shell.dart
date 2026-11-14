@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'core/config_liga.dart';
-import 'core/api.dart';
 import 'core/fechas.dart';
 import 'core/tema.dart';
 import 'core/vidrio.dart';
@@ -15,6 +13,7 @@ import 'equipo/equipo_repo.dart';
 import 'equipo/equipo_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/timeline_screen.dart';
+import 'pivots/ajustes_liga_screen.dart';
 import 'sesion/sesion.dart';
 import 'core/navegacion.dart';
 import 'eventos/widgets_comunes.dart';
@@ -104,11 +103,12 @@ class _InicioShellState extends State<InicioShell> with WidgetsBindingObserver {
         const NavigationDestination(icon: Icon(Icons.group_outlined), selectedIcon: Icon(Icons.group), label: 'Equipo'),
         EquipoScreen(repo: EquipoRepo.de(widget.sesion)),
       ),
-      // Mi Liga sigue en la web hasta repartir sus funciones (HOJA_DE_RUTA etapa 3).
-      if (widget.sesion.esAdmin)
+      // Mi Liga (Victor, 2026-11-13): pestaña de Pivots con los ajustes de
+      // la liga, Tesorería y Pivots y permisos (salieron de Mi perfil).
+      if (widget.sesion.esAdmin && widget.sesion.adminToken != null)
         (
-          const NavigationDestination(icon: Icon(Icons.shield_outlined), selectedIcon: Icon(Icons.shield), label: 'Mi Liga'),
-          const _EnLaWeb(titulo: 'Mi Liga', ruta: '/'),
+          const NavigationDestination(icon: Icon(Icons.stadium_outlined), selectedIcon: Icon(Icons.stadium), label: 'Mi Liga'),
+          AjustesLigaScreen(sesion: widget.sesion, pestana: true),
         ),
       // Mi perfil (Victor, 2026-11-12): reemplaza a Ajustes, con tu avatar.
       (
@@ -206,46 +206,6 @@ class _IconoHoy extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _EnLaWeb extends StatelessWidget {
-  const _EnLaWeb({required this.titulo, required this.ruta});
-  final String titulo;
-  final String ruta;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(titulo, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.construction_rounded, size: 48, color: context.pivot.textoSecundario),
-              const SizedBox(height: 16),
-              Text(
-                '$titulo llega pronto a la app',
-                style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text('Mientras tanto, puedes usarlo desde la web.', textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: () => launchUrl(Uri.parse('${ApiConfig.webAppUrl}$ruta'), mode: LaunchMode.externalApplication),
-                child: const Text('Abrir en la web'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

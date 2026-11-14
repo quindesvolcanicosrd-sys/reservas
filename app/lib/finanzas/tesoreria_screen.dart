@@ -9,6 +9,7 @@ import '../core/cargando.dart';
 import '../core/fechas.dart';
 import '../core/menu_acciones.dart';
 import '../core/tema.dart';
+import '../pivots/buscador_liga.dart';
 import '../equipo/equipo_modelos.dart';
 import '../equipo/equipo_repo.dart';
 import '../eventos/widgets_comunes.dart';
@@ -87,14 +88,26 @@ Future<Integrante?> elegirPersona(BuildContext context, Sesion s, {String titulo
 
 /// Mi perfil → Tesorería (Pivots con Finanzas).
 class TesoreriaScreen extends StatefulWidget {
-  const TesoreriaScreen({super.key, required this.sesion});
+  const TesoreriaScreen({super.key, required this.sesion, this.resaltar});
   final Sesion sesion;
+
+  /// Fila a resaltar al abrir (desde el buscador de Mi Liga).
+  final String? resaltar;
 
   @override
   State<TesoreriaScreen> createState() => _TesoreriaScreenState();
 }
 
 class _TesoreriaScreenState extends State<TesoreriaScreen> {
+  final _resaltado = ValueNotifier<String?>(null);
+  bool _resaltadoHecho = false;
+
+  @override
+  void dispose() {
+    _resaltado.dispose();
+    super.dispose();
+  }
+
   late final repo = TesoreriaRepo(widget.sesion);
   Map<String, dynamic>? _r;
   String? _error_;
@@ -116,6 +129,11 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
           _r = r;
           _error_ = null;
         });
+        final x = widget.resaltar;
+        if (x != null && !_resaltadoHecho) {
+          _resaltadoHecho = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) => _resaltado.value = x);
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _error_ = _error(e));
@@ -539,17 +557,35 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
         ),
       ),
       const SizedBox(height: 14),
-      _fila(
-        context,
-        Icons.people_alt_outlined,
-        'Saldos de personas',
-        (saldos['personasDeben'] as num? ?? 0) == 0
-            ? 'Nadie debe al equipo'
-            : '${saldos['personasDeben']} ${saldos['personasDeben'] == 1 ? 'persona debe' : 'personas deben'} ${plata((saldos['totalDeben'] as num?) ?? 0)}',
-        () => _abrir(SaldosScreen(repo: repo, cuentas: _cuentas)),
+      Resaltable(
+        id: 'saldos',
+        resaltado: _resaltado,
+        child: _fila(
+          context,
+          Icons.people_alt_outlined,
+          'Saldos de personas',
+          (saldos['personasDeben'] as num? ?? 0) == 0
+              ? 'Nadie debe al equipo'
+              : '${saldos['personasDeben']} ${saldos['personasDeben'] == 1 ? 'persona debe' : 'personas deben'} ${plata((saldos['totalDeben'] as num?) ?? 0)}',
+          () => _abrir(SaldosScreen(repo: repo, cuentas: _cuentas)),
+        ),
       ),
-      _fila(context, Icons.flight_takeoff_rounded, 'Fondos de viaje', 'Reparto por asistencia', () => _abrir(FondosViajeScreen(repo: repo))),
-      _fila(context, Icons.manage_search_rounded, 'Todos los movimientos', 'Filtrar y exportar', () => _abrir(MovimientosScreen(repo: repo, cuentas: _todas))),
+      Resaltable(
+        id: 'fondos',
+        resaltado: _resaltado,
+        child: _fila(context, Icons.flight_takeoff_rounded, 'Fondos de viaje', 'Reparto por asistencia', () => _abrir(FondosViajeScreen(repo: repo))),
+      ),
+      Resaltable(
+        id: 'movimientos',
+        resaltado: _resaltado,
+        child: _fila(
+          context,
+          Icons.manage_search_rounded,
+          'Todos los movimientos',
+          'Filtrar y exportar',
+          () => _abrir(MovimientosScreen(repo: repo, cuentas: _todas)),
+        ),
+      ),
       if (_todas.any((c) => c['archivada'] == true))
         _fila(context, Icons.inventory_outlined, 'Cuentas archivadas', '${_todas.where((c) => c['archivada'] == true).length} con su historial', _archivadas),
       Padding(

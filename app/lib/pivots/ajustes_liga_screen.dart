@@ -9,6 +9,9 @@ import '../core/paises.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import '../core/selector_plazo.dart';
+import '../core/vidrio.dart';
+import '../finanzas/tesoreria_screen.dart';
+import 'buscador_liga.dart';
 import 'categorias_screen.dart';
 import 'formas_pago_screen.dart';
 import 'pivots_screen.dart';
@@ -16,9 +19,15 @@ import 'pivots_screen.dart';
 /// Mi perfil → Ajustes de la liga (solo Pivots, Victor 2026-11-13): un solo
 /// lugar para lo que configura la liga. Los roles se editan desde la hoja de
 /// "Roles en el equipo" (botón "Agregar o editar roles").
-class AjustesLigaScreen extends StatelessWidget {
-  const AjustesLigaScreen({super.key, required this.sesion});
+class AjustesLigaScreen extends StatefulWidget {
+  const AjustesLigaScreen({super.key, required this.sesion, this.pestana = false});
   final Sesion sesion;
+
+  /// Mi Liga como pestaña de la barra de abajo (Victor, 2026-11-13).
+  final bool pestana;
+
+  @override
+  State<AjustesLigaScreen> createState() => _AjustesLigaScreenState();
 
   static const zonas = {
     'America/Guayaquil': 'Ecuador (UTC−5)',
@@ -37,6 +46,20 @@ class AjustesLigaScreen extends StatelessWidget {
     'America/Los_Angeles': 'Estados Unidos, pacífico',
     'Europe/Madrid': 'España',
   };
+}
+
+class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
+  Sesion get sesion => widget.sesion;
+  static const zonas = AjustesLigaScreen.zonas;
+
+  /// Fila que el buscador pidió resaltar.
+  final _resaltado = ValueNotifier<String?>(null);
+
+  @override
+  void dispose() {
+    _resaltado.dispose();
+    super.dispose();
+  }
 
   static String _plata(num? v) => v == null ? 'Sin definir' : '\$${v % 1 == 0 ? v.toInt() : v.toStringAsFixed(2)}';
 
@@ -140,181 +163,289 @@ class AjustesLigaScreen extends StatelessWidget {
     }
   }
 
+  /// Buscador: lleva al ajuste (abriendo la subsección si hace falta) y lo
+  /// hace parpadear.
+  Future<void> _buscar() async {
+    final e = await Navigator.of(context).push<EntradaAjuste>(MaterialPageRoute(builder: (_) => BuscadorLigaScreen(tesoreria: sesion.tieneArea('finanzas'))));
+    if (e == null || !mounted) return;
+    switch (e.dentro) {
+      case 'equipos':
+        SubAjustes.abrir(context, CategoriasScreen(sesion: sesion, resaltar: e.id));
+      case 'tesoreria':
+        SubAjustes.abrir(context, TesoreriaScreen(sesion: sesion, resaltar: e.id));
+      default:
+        _resaltado.value = null;
+        _resaltado.value = e.id;
+    }
+  }
+
+  @override
   @override
   Widget build(BuildContext context) {
     final c = ConfigLiga.de(sesion);
+    final pestana = widget.pestana;
+    final arriba = pestana ? MediaQuery.paddingOf(context).top + kToolbarHeight : 0.0;
     return Scaffold(
+      // En la pestaña, barra de vidrio como Equipo y Mi perfil.
+      extendBodyBehindAppBar: pestana,
       appBar: AppBar(
-        title: const Text('Ajustes de la liga', style: TextStyle(fontWeight: FontWeight.w700)),
+        backgroundColor: pestana ? Colors.transparent : null,
+        surfaceTintColor: pestana ? Colors.transparent : null,
+        scrolledUnderElevation: pestana ? 0 : null,
+        flexibleSpace: pestana ? const Vidrio(child: SizedBox.expand()) : null,
+        title: Row(
+          children: [
+            if (pestana && c.logo.isNotEmpty) ...[LogoEquipo(nombre: 'Liga', url: c.logo, tamano: 32), const SizedBox(width: 10)],
+            Text(pestana ? 'Mi Liga' : 'Ajustes de la liga', style: const TextStyle(fontWeight: FontWeight.w700)),
+          ],
+        ),
+        actions: [IconButton(tooltip: 'Buscar un ajuste', onPressed: _buscar, icon: const Icon(Icons.search_rounded))],
       ),
       body: ListenableBuilder(
         listenable: c,
-        builder: (context, _) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-          children: [
-            GrupoAjustes(
-              titulo: 'Equipo',
-              filas: [
-                FilaAjuste(
-                  icono: Icons.workspace_premium_outlined,
-                  seccion: 'cuota',
-                  titulo: 'Equipos y puntos',
-                  valor: 'Qué pide cada una para mantenerse o subir',
-                  alTocar: () => SubAjustes.abrir(context, CategoriasScreen(sesion: sesion)),
+        builder: (context, _) => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, 8 + arriba, 16, 40 + MediaQuery.paddingOf(context).bottom),
+          // Todo construido: el buscador puede llevar a cualquier fila.
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Tesorería vive en Mi Liga (Victor, 2026-11-13).
+              if (sesion.tieneArea('finanzas'))
+                GrupoAjustes(
+                  filas: [
+                    Resaltable(
+                      id: 'tesoreria',
+                      resaltado: _resaltado,
+                      child: FilaAjuste(
+                        icono: Icons.account_balance_wallet_outlined,
+                        seccion: 'cuota',
+                        titulo: 'Tesorería',
+                        valor: 'Cuentas, movimientos, saldos y fondos de viaje',
+                        alTocar: () => SubAjustes.abrir(context, TesoreriaScreen(sesion: sesion)),
+                      ),
+                    ),
+                  ],
                 ),
-                FilaAjuste(
-                  icono: Icons.admin_panel_settings_outlined,
-                  seccion: 'roles',
-                  titulo: 'Pivots y permisos',
-                  valor: 'Quién es Pivot y qué áreas gestiona',
-                  alTocar: () => SubAjustes.abrir(context, PivotsScreen(sesion: sesion)),
-                ),
-                FilaAjuste(
-                  icono: Icons.verified_user_outlined,
-                  seccion: 'roles',
-                  titulo: 'Pedidos de Pivots',
-                  valor: c.solicitudesPivots == 'auto' ? 'Se aprueban solos' : 'Los aprueba otro Pivot',
-                  alTocar: () => _elegir(
-                    context,
-                    c,
-                    'Pedidos de Pivots',
-                    const {'otro': 'Los aprueba otro Pivot (más seguro)', 'auto': 'Se aprueban solos'},
-                    c.solicitudesPivots,
-                    'solicitudesPivots',
-                    ayuda:
-                        'Cuando un Pivot pide algo para sí (excepción de cuota, rectificación, equipamiento, lesión o una tarea), quién lo aprueba. '
-                        'Si la liga tiene un solo Pivot, se aprueba solo. Los pagos siempre los confirma otro Pivot.',
+              GrupoAjustes(
+                titulo: 'Equipo',
+                filas: [
+                  Resaltable(
+                    id: 'equipos',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.workspace_premium_outlined,
+                      seccion: 'cuota',
+                      titulo: 'Equipos y puntos',
+                      valor: 'Qué pide cada una para mantenerse o subir',
+                      alTocar: () => SubAjustes.abrir(context, CategoriasScreen(sesion: sesion)),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            GrupoAjustes(
-              titulo: 'Comunicación',
-              filas: [
-                FilaAjuste(
-                  icono: c.icono,
-                  seccion: 'telefono',
-                  titulo: 'Canal de comunicación',
-                  valor: c.nombreCanal,
-                  alTocar: () => _elegir(
-                    context,
-                    c,
-                    'Canal de comunicación',
-                    ConfigLiga.canales,
-                    c.canal,
-                    'canal',
-                    ayuda: 'La app con la que se escribe a las personas del equipo desde su ficha.',
+                  Resaltable(
+                    id: 'pivots',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.admin_panel_settings_outlined,
+                      seccion: 'roles',
+                      titulo: 'Pivots y permisos',
+                      valor: 'Quién es Pivot y qué áreas gestiona',
+                      alTocar: () => SubAjustes.abrir(context, PivotsScreen(sesion: sesion)),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            GrupoAjustes(
-              titulo: 'Cobros',
-              pie: 'Los planes y cupones llegan en la siguiente etapa.',
-              filas: [
-                FilaAjuste(
-                  icono: Icons.credit_card_rounded,
-                  seccion: 'cuota',
-                  titulo: 'Formas de pago',
-                  valor: c.mediosActivos.isEmpty ? 'Sin medios de pago' : c.mediosActivos.map((m) => m.nombre).join(' · '),
-                  alTocar: () => SubAjustes.abrir(context, FormasPagoScreen(config: c)),
-                ),
-                FilaAjuste(
-                  icono: Icons.calendar_month_outlined,
-                  seccion: 'cuota',
-                  titulo: 'Mensualidad',
-                  valor: _plata(c.precioMensual),
-                  alTocar: () => _precio(context, c, 'Mensualidad', c.precioMensual, 'precioMensual'),
-                ),
-                FilaAjuste(
-                  icono: Icons.confirmation_number_outlined,
-                  seccion: 'cuota',
-                  titulo: 'Clase suelta',
-                  valor: _plata(c.precioPorClase),
-                  alTocar: () => _precio(context, c, 'Clase suelta', c.precioPorClase, 'precioPorClase'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            GrupoAjustes(
-              titulo: 'Reglas',
-              pie: 'Los cambios quedan en el historial de Equipos y puntos.',
-              filas: [
-                FilaAjuste(
-                  icono: Icons.timer_outlined,
-                  seccion: 'entrenamientos',
-                  titulo: 'Tolerancia de llegada',
-                  valor: '${c.toleranciaMin} minutos: después se sugiere marcar Tarde',
-                  alTocar: () => _numero(context, c, 'Tolerancia de llegada', 'toleranciaMin', c.toleranciaMin, 0, 120, 'minutos'),
-                ),
-                FilaAjuste(
-                  icono: Icons.fact_check_outlined,
-                  seccion: 'entrenamientos',
-                  titulo: 'Rectificaciones',
-                  valor: 'Los Pivots tienen ${c.rectificacionDias} días para revisarlas',
-                  alTocar: () => _numero(context, c, 'Días para revisar una rectificación', 'rectificacionDias', c.rectificacionDias, 1, 60, 'días'),
-                ),
-                FilaAjuste(
-                  icono: Icons.groups_2_outlined,
-                  seccion: 'entrenamientos',
-                  titulo: 'Pocas personas en un evento',
-                  valor: c.eventosMinPersonas == 0 ? 'No se sugiere cancelar' : 'Con menos de ${c.eventosMinPersonas}, se sugiere cancelar',
-                  alTocar: () => _numero(context, c, 'Sugerir cancelar con menos de', 'eventosMinPersonas', c.eventosMinPersonas, 0, 200, 'personas'),
-                ),
-                FilaAjuste(
-                  icono: Icons.hourglass_empty_rounded,
-                  seccion: 'entrenamientos',
-                  titulo: 'Inactividad',
-                  valor: '${ConfigLiga.diasInactividad} días sin venir',
-                  alTocar: () => _numero(context, c, 'Inactivx después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            GrupoAjustes(
-              titulo: 'Datos de la liga',
-              pie: 'El país define el prefijo de teléfono y los números de emergencia. La zona horaria se guarda y se aplicará a los horarios cuando la app admita varias ligas; por ahora todo usa la hora de Ecuador.',
-              filas: [
-                FilaAjuste(
-                  icono: Icons.shield_outlined,
-                  seccion: 'identidad',
-                  titulo: 'Logo de la liga',
-                  valor: c.logo.isEmpty ? 'Sin logo' : 'Toca para cambiarlo',
-                  alTocar: () async {
-                    final m = ScaffoldMessenger.of(context);
-                    try {
-                      final u = await elegirYSubirLogo(context, sesion, 'liga');
-                      if (u != null) {
-                        await c.cargar();
-                        m.showSnackBar(const SnackBar(content: Text('Logo actualizado')));
-                      }
-                    } catch (e) {
-                      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo subir el logo.')));
-                    }
-                  },
-                ),
-                FilaAjuste(
-                  icono: Icons.flag_outlined,
-                  seccion: 'identidad',
-                  titulo: 'País',
-                  valor: Paises.porCodigo(c.pais).nombre,
-                  alTocar: () async {
-                    final p = await elegirPais(context, paisEquipo: c.pais, actual: Paises.porCodigo(c.pais), titulo: 'País de la liga');
-                    if (p != null && p.codigo != c.pais && context.mounted) await _guardar(context, c, {'pais': p.codigo});
-                  },
-                ),
-                FilaAjuste(
-                  icono: Icons.schedule_rounded,
-                  seccion: 'identidad',
-                  titulo: 'Zona horaria',
-                  valor: zonas[c.zonaHoraria] ?? c.zonaHoraria,
-                  alTocar: () => _elegir(context, c, 'Zona horaria', zonas, c.zonaHoraria, 'zonaHoraria'),
-                ),
-              ],
-            ),
-          ],
+                  Resaltable(
+                    id: 'pedidos',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.verified_user_outlined,
+                      seccion: 'roles',
+                      titulo: 'Pedidos de Pivots',
+                      valor: c.solicitudesPivots == 'auto' ? 'Se aprueban solos' : 'Los aprueba otro Pivot',
+                      alTocar: () => _elegir(
+                        context,
+                        c,
+                        'Pedidos de Pivots',
+                        const {'otro': 'Los aprueba otro Pivot (más seguro)', 'auto': 'Se aprueban solos'},
+                        c.solicitudesPivots,
+                        'solicitudesPivots',
+                        ayuda:
+                            'Cuando un Pivot pide algo para sí (excepción de cuota, rectificación, equipamiento, lesión o una tarea), quién lo aprueba. '
+                            'Si la liga tiene un solo Pivot, se aprueba solo. Los pagos siempre los confirma otro Pivot.',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GrupoAjustes(
+                titulo: 'Comunicación',
+                filas: [
+                  Resaltable(
+                    id: 'canal',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: c.icono,
+                      seccion: 'telefono',
+                      titulo: 'Canal de comunicación',
+                      valor: c.nombreCanal,
+                      alTocar: () => _elegir(
+                        context,
+                        c,
+                        'Canal de comunicación',
+                        ConfigLiga.canales,
+                        c.canal,
+                        'canal',
+                        ayuda: 'La app con la que se escribe a las personas del equipo desde su ficha.',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GrupoAjustes(
+                titulo: 'Cobros',
+                pie: 'Los planes y cupones llegan en la siguiente etapa.',
+                filas: [
+                  Resaltable(
+                    id: 'formas',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.credit_card_rounded,
+                      seccion: 'cuota',
+                      titulo: 'Formas de pago',
+                      valor: c.mediosActivos.isEmpty ? 'Sin medios de pago' : c.mediosActivos.map((m) => m.nombre).join(' · '),
+                      alTocar: () => SubAjustes.abrir(context, FormasPagoScreen(config: c)),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'mensualidad',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.calendar_month_outlined,
+                      seccion: 'cuota',
+                      titulo: 'Mensualidad',
+                      valor: _plata(c.precioMensual),
+                      alTocar: () => _precio(context, c, 'Mensualidad', c.precioMensual, 'precioMensual'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'clase',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.confirmation_number_outlined,
+                      seccion: 'cuota',
+                      titulo: 'Clase suelta',
+                      valor: _plata(c.precioPorClase),
+                      alTocar: () => _precio(context, c, 'Clase suelta', c.precioPorClase, 'precioPorClase'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GrupoAjustes(
+                titulo: 'Reglas',
+                pie: 'Los cambios quedan en el historial de Equipos y puntos.',
+                filas: [
+                  Resaltable(
+                    id: 'tolerancia',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.timer_outlined,
+                      seccion: 'entrenamientos',
+                      titulo: 'Tolerancia de llegada',
+                      valor: '${c.toleranciaMin} minutos: después se sugiere marcar Tarde',
+                      alTocar: () => _numero(context, c, 'Tolerancia de llegada', 'toleranciaMin', c.toleranciaMin, 0, 120, 'minutos'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'rectificaciones',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.fact_check_outlined,
+                      seccion: 'entrenamientos',
+                      titulo: 'Rectificaciones',
+                      valor: 'Los Pivots tienen ${c.rectificacionDias} días para revisarlas',
+                      alTocar: () => _numero(context, c, 'Días para revisar una rectificación', 'rectificacionDias', c.rectificacionDias, 1, 60, 'días'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'minimo',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.groups_2_outlined,
+                      seccion: 'entrenamientos',
+                      titulo: 'Pocas personas en un evento',
+                      valor: c.eventosMinPersonas == 0 ? 'No se sugiere cancelar' : 'Con menos de ${c.eventosMinPersonas}, se sugiere cancelar',
+                      alTocar: () => _numero(context, c, 'Sugerir cancelar con menos de', 'eventosMinPersonas', c.eventosMinPersonas, 0, 200, 'personas'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'inactividad',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.hourglass_empty_rounded,
+                      seccion: 'entrenamientos',
+                      titulo: 'Inactividad',
+                      valor: '${ConfigLiga.diasInactividad} días sin venir',
+                      alTocar: () => _numero(context, c, 'Inactivx después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GrupoAjustes(
+                titulo: 'Datos de la liga',
+                pie: 'El país define el prefijo de teléfono y los números de emergencia. La zona horaria se guarda y se aplicará a los horarios cuando la app admita varias ligas; por ahora todo usa la hora de Ecuador.',
+                filas: [
+                  Resaltable(
+                    id: 'logo',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.shield_outlined,
+                      seccion: 'identidad',
+                      titulo: 'Logo de la liga',
+                      valor: c.logo.isEmpty ? 'Sin logo' : 'Toca para cambiarlo',
+                      alTocar: () async {
+                        final m = ScaffoldMessenger.of(context);
+                        try {
+                          final u = await elegirYSubirLogo(context, sesion, 'liga');
+                          if (u != null) {
+                            await c.cargar();
+                            m.showSnackBar(const SnackBar(content: Text('Logo actualizado')));
+                          }
+                        } catch (e) {
+                          m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo subir el logo.')));
+                        }
+                      },
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'pais',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.flag_outlined,
+                      seccion: 'identidad',
+                      titulo: 'País',
+                      valor: Paises.porCodigo(c.pais).nombre,
+                      alTocar: () async {
+                        final p = await elegirPais(context, paisEquipo: c.pais, actual: Paises.porCodigo(c.pais), titulo: 'País de la liga');
+                        if (p != null && p.codigo != c.pais && context.mounted) await _guardar(context, c, {'pais': p.codigo});
+                      },
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'zona',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.schedule_rounded,
+                      seccion: 'identidad',
+                      titulo: 'Zona horaria',
+                      valor: zonas[c.zonaHoraria] ?? c.zonaHoraria,
+                      alTocar: () => _elegir(context, c, 'Zona horaria', zonas, c.zonaHoraria, 'zonaHoraria'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
