@@ -102,7 +102,8 @@ class _ReservaScreenState extends State<ReservaScreen> {
 
   int get _cantidad => _esMes ? _mesesSel.length : _clasesSel.length;
 
-  Total get _total => _r.total(tipo: widget.tipo, cantidad: _cantidad, p: _precios ?? const Precios(0, 0), creditos: _creditos, cupon: _usarCupon);
+  Total get _total =>
+      _r.total(tipo: widget.tipo, cantidad: _cantidad, p: _precios ?? const Precios(0, 0), creditos: _creditos, cupon: _usarCupon, meses: _mesesSel);
 
   void _ir(int delta) {
     final i = _paso.index + delta;
@@ -444,6 +445,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
     final partes = [
       if (t.cobradas > 0)
         '${t.cobradas} ${_esMes ? (t.cobradas == 1 ? 'mes' : 'meses') : (t.cobradas == 1 ? 'clase' : 'clases')} × ${ReservasRepo.dinero(t.precio)}',
+      if (t.recargos > 0) 'recargo por pagar tarde ${ReservasRepo.dinero(t.recargo)}',
       if (t.aFavor > 0) '${t.aFavor} a favor',
       if (t.cupon > 0) '1 con cupón',
     ];

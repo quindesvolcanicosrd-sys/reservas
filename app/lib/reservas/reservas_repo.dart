@@ -41,14 +41,40 @@ class MesReserva {
 }
 
 class Precios {
-  const Precios(this.porClase, this.mensual);
+  const Precios(this.porClase, this.mensual, {this.venceDia = 0, this.graciaDias = 0, this.recargo = 0});
   final double porClase;
   final double mensual;
+
+  /// Vencimiento de la cuota (Mi Liga → Cobros): 0 = no vence.
+  final int venceDia;
+  final int graciaDias;
+  final double recargo;
+
+  /// Recargo si la cuota de `mes` se paga hoy (mismo cálculo que `_recargoCuota` del servidor).
+  double recargoPara(DateTime mes, DateTime hoy) {
+    if (venceDia <= 0 || recargo <= 0) return 0;
+    final ultimo = DateTime(mes.year, mes.month + 1, 0).day;
+    final limite = DateTime(mes.year, mes.month, (venceDia + graciaDias).clamp(1, ultimo));
+    return DateTime(hoy.year, hoy.month, hoy.day).isAfter(limite) ? recargo : 0;
+  }
 }
 
 /// Cómo queda el total con los descuentos (`actualizarTotalS4()`).
 class Total {
-  const Total({required this.cantidad, required this.aFavor, required this.cupon, required this.cobradas, required this.monto, required this.precio});
+  const Total({
+    required this.cantidad,
+    required this.aFavor,
+    required this.cupon,
+    required this.cobradas,
+    required this.monto,
+    required this.precio,
+    this.recargos = 0,
+    this.recargo = 0,
+  });
+
+  /// Cuotas con recargo por pagar después del vencimiento y cuánto suman.
+  final int recargos;
+  final double recargo;
   final int cantidad;
   final int aFavor; // clases a favor por entrenamientos cancelados
   final int cupon; // 0 o 1
@@ -169,7 +195,14 @@ class ReservasRepo {
   Future<Precios> precios() async {
     final r = await _api.get('getPreciosClases');
     double n(Object? v) => double.tryParse('${v ?? ''}') ?? 0;
-    return Precios(n(r['precioPorClase']), n(r['precioMensual']));
+    final c = r['cuota'] is Map ? r['cuota'] as Map : const {};
+    return Precios(
+      n(r['precioPorClase']),
+      n(r['precioMensual']),
+      venceDia: (c['venceDia'] as num?)?.toInt() ?? 0,
+      graciaDias: (c['graciaDias'] as num?)?.toInt() ?? 0,
+      recargo: n(c['recargo']),
+    );
   }
 
   Future<bool> cuponDisponible() async {
@@ -247,9 +280,29 @@ class ReservasRepo {
     return sel;
   }
 
-  Total total({required TipoReserva tipo, required int cantidad, required Precios p, required int creditos, required bool cupon}) {
+  Total total({
+    required TipoReserva tipo,
+    required int cantidad,
+    required Precios p,
+    required int creditos,
+    required bool cupon,
+    Iterable<DateTime> meses = const [],
+    DateTime? hoy,
+  }) {
     if (tipo == TipoReserva.mes) {
-      return Total(cantidad: cantidad, aFavor: 0, cupon: 0, cobradas: cantidad, monto: cantidad * p.mensual, precio: p.mensual);
+      final h = hoy ?? DateTime.now();
+      final rec = [for (final m in meses) p.recargoPara(m, h)].where((r) => r > 0).toList();
+      final suma = rec.fold<double>(0, (a, b) => a + b);
+      return Total(
+        cantidad: cantidad,
+        aFavor: 0,
+        cupon: 0,
+        cobradas: cantidad,
+        monto: cantidad * p.mensual + suma,
+        precio: p.mensual,
+        recargos: rec.length,
+        recargo: suma,
+      );
     }
     final aFavor = creditos < cantidad ? creditos : cantidad;
     final conCupon = cupon && cantidad > aFavor ? 1 : 0;

@@ -915,7 +915,19 @@ const REGLAS_LIGA_BASE: Record<string, any> = {
   toleranciaMin: 15,         // minutos: al tomar lista después de esto se sugiere "Tarde" (nunca se fuerza)
   rectificacionDias: 7,      // días para pedir una rectificación de asistencia
   eventosMinPersonas: 5,     // con menos confirmadas, el aviso de 1 hora antes sugiere cancelar (0 = nunca)
-  inactividadDias: 30,       // días sin venir para verse como inactivx
+    inactividadDias: 30,       // días sin venir para verse como inactivx
+  // Estados que congelan con máximo (meses; 0 = sin límite). Cumplido el
+  // máximo, la persona deja de estar congelada (recalcular-categorias) y se
+  // avisa una vez a ella y a los Pivots (_avisarCongeladoVencido).
+  congelarMaxMeses: { 'Lesionadx': 0, 'De viaje': 0, 'Técnico': 0 },
+  // Cuota (Victor 2026-11-13): día en que vence (0 = no vence), días de
+  // gracia y recargo fijo si se paga después. Solo cuenta la fecha en que la
+  // persona envía la solicitud; nunca cambia pagos ya hechos.
+  cuotaVenceDia: 0,
+  cuotaGraciaDias: 0,
+  cuotaRecargo: 0,
+  // Privacidad: si las demás personas (no Pivots) ven los puntos de otras.
+  rankingVisible: true,
 };
 async function _reglasLiga(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
@@ -976,6 +988,22 @@ async function adminReglasLiga(params: Record<string, any>): Promise<Record<stri
       if (Number.isFinite(n)) r[k] = Math.min(max, Math.max(min, n));
     };
     entero('toleranciaMin', 0, 120); entero('rectificacionDias', 1, 60); entero('eventosMinPersonas', 0, 200); entero('inactividadDias', 7, 365);
+        entero('cuotaVenceDia', 0, 28); entero('cuotaGraciaDias', 0, 27);
+    if (reglasNuevas.cuotaRecargo !== undefined) {
+      const n = Math.round(Number(reglasNuevas.cuotaRecargo) * 100) / 100;
+      if (Number.isFinite(n)) r.cuotaRecargo = Math.min(10000, Math.max(0, n));
+    }
+    if (reglasNuevas.rankingVisible !== undefined) r.rankingVisible = reglasNuevas.rankingVisible !== false && reglasNuevas.rankingVisible !== 'false';
+    if (reglasNuevas.congelarMaxMeses && typeof reglasNuevas.congelarMaxMeses === 'object') {
+      const c: Record<string, number> = { ...(antes.congelarMaxMeses ?? {}) };
+      for (const est of ['Lesionadx', 'De viaje', 'Técnico']) {
+        const v = reglasNuevas.congelarMaxMeses[est];
+        if (v === undefined) continue;
+        const n = Math.round(Number(v));
+        if (Number.isFinite(n)) c[est] = Math.min(36, Math.max(0, n));
+      }
+      r.congelarMaxMeses = c;
+    }
     if (reglasNuevas.tardeCuentaClase !== undefined) r.tardeCuentaClase = reglasNuevas.tardeCuentaClase !== false && reglasNuevas.tardeCuentaClase !== 'false';
     if (reglasNuevas.tiposCuentan !== undefined) {
       r.tiposCuentan = Array.isArray(reglasNuevas.tiposCuentan) && reglasNuevas.tiposCuentan.length ? reglasNuevas.tiposCuentan.map(String).slice(0, 20) : null;
@@ -1677,11 +1705,25 @@ async function adminBorrarEvento(params: Record<string, any>): Promise<Record<st
   return { exito: true };
 }
 
+/** Recargo de la cuota del mes 'aaaa-mm' si se paga el día `hoy` (aaaa-mm-dd). */
+function _recargoCuota(mes: string, hoy: string, reglas: Record<string, any>): number {
+  const dia = Number(reglas.cuotaVenceDia) || 0, monto = Number(reglas.cuotaRecargo) || 0;
+  if (dia <= 0 || monto <= 0) return 0;
+  const [y, m] = mes.split('-').map(Number);
+  const ultimo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const limite = `${mes}-${String(Math.min(ultimo, dia + (Number(reglas.cuotaGraciaDias) || 0))).padStart(2, '0')}`;
+  return hoy > limite ? monto : 0;
+}
+
 async function getPreciosClases(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_app').select('key, value').in('key', ['precio_por_clase', 'precio_mensual']);
   const map: Record<string, any> = {};
   (data ?? []).forEach((r: any) => { map[r.key] = r.value; });
-  return { precioPorClase: map['precio_por_clase'] ?? null, precioMensual: map['precio_mensual'] ?? null };
+    const r = await _reglasLiga();
+  return {
+    precioPorClase: map['precio_por_clase'] ?? null, precioMensual: map['precio_mensual'] ?? null,
+    cuota: { venceDia: Number(r.cuotaVenceDia) || 0, graciaDias: Number(r.cuotaGraciaDias) || 0, recargo: Number(r.cuotaRecargo) || 0 },
+  };
 }
 
 async function adminSetPreciosClases(params: Record<string, any>): Promise<Record<string, any>> {
@@ -3046,6 +3088,32 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
 // - 'indefinido' o sin plazo (temporal viejo): aviso a ambos cada N días.
 // - permanente: nunca.
 // Y el botiquín: vencidos o por vencer (30, 7 y 0 días) a los Pivots.
+/** Estados que congelan: cumplido el máximo de Mi Liga → Reglas, avisa una vez a la persona y a los Pivots. */
+async function _avisarCongeladoVencido(): Promise<void> {
+  const max: Record<string, number> = (await _reglasLiga()).congelarMaxMeses ?? {};
+  const estados = Object.keys(max).filter((k) => Number(max[k]) > 0);
+  if (!estados.length) return;
+  const hoy = _hoyEcuadorISO();
+  const { data } = await supabase.from('equipo').select('username, nombre_derby, estado_miembro, estado_desde')
+    .in('estado_miembro', estados).is('estado_max_avisado_en', null).is('eliminado_en', null).not('estado_desde', 'is', null);
+  const nombreEstado: Record<string, string> = { 'Lesionadx': 'lesión', 'De viaje': 'viaje', 'Técnico': 'técnico' };
+  let pivots: string[] | null = null;
+  for (const p of data ?? []) {
+    const n = Number(max[p.estado_miembro]) || 0;
+    const d = new Date(Date.parse(p.estado_desde));
+    const fin = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate())).toISOString().slice(0, 10);
+    if (fin > hoy) continue;
+    pivots ??= await _adminDestinatariosPush(undefined, 'equipo', 'cambios');
+    const quien = p.nombre_derby || p.username, est = nombreEstado[p.estado_miembro] ?? p.estado_miembro;
+    const meses = `${n} ${n === 1 ? 'mes' : 'meses'}`;
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Tu asistencia vuelve a contar' },
+      contents: { es: `Pasaron ${meses} con el estado de ${est}. Desde hoy tu asistencia vuelve a contar para tu equipo.` }, url: APP_URL + '/' });
+    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Estado sin congelar' },
+      contents: { es: `${quien} cumplió ${meses} con el estado de ${est}. Desde hoy su asistencia vuelve a contar.` }, url: APP_URL + '/' });
+    await supabase.from('equipo').update({ estado_max_avisado_en: new Date().toISOString() }).eq('username', p.username);
+  }
+}
+
 async function _avisarPrestamosLargos(): Promise<void> {
   const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
   const ahora = new Date().toISOString();
@@ -4644,7 +4712,14 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
 
   // Precio server-side
   const precios = await getPreciosClases();
-  let montoFinal = esMensual ? Number(precios.precioMensual ?? 0) : Number(precios.precioPorClase ?? 0);
+    let montoFinal = esMensual ? Number(precios.precioMensual ?? 0) : Number(precios.precioPorClase ?? 0);
+  // Recargo fijo por pagar la cuota después del vencimiento + gracia (Mi Liga → Cobros).
+  let recargo = 0;
+  if (esMensual) {
+    const vig = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10), anioMes);
+    recargo = vig ? _recargoCuota(vig.slice(0, 7), _hoyEcuadorISO(), await _reglasLiga()) : 0;
+    montoFinal += recargo;
+  }
 
     // Consumir crédito o cupón -- solo cuando el cliente pidió esa clase gratis
   // (manda monto 0, web y app, 2026-11-07); antes se aplicaba siempre, aunque
@@ -7211,6 +7286,15 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     };
   });
 
+    // Privacidad (Mi Liga → Reglas): sin ranking visible, quien no es Pivot
+  // solo recibe sus propios puntos.
+  if (!vistaAdmin && (await _reglasLiga()).rankingVisible === false) {
+    const yo = await _validarToken(String(params.token ?? ''));
+    for (const p of personasOut as any[]) {
+      if (p.username === yo) continue;
+      for (const k of ['puntosTotal', 'puntosAsistencia', 'puntosTareas', 'puntosRacha', 'puntosEfectivos', 'puntosAnteriores']) if (k in p) p[k] = 0;
+    }
+  }
   return { personas: personasOut };
 }
 
@@ -7303,7 +7387,9 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
   const hoy = new Date();
   const anio = Number(params.anio) || hoy.getUTCFullYear();
   const desde = `${anio}-01-01`, hasta = `${anio + 1}-01-01`;
-  const U = username.toUpperCase();
+    const U = username.toUpperCase();
+  // Privacidad (Mi Liga): sin ranking visible, los puntos de otras personas no se envían.
+  const ocultarPuntos = !quien && username !== yo && (await _reglasLiga()).rankingVisible === false;
 
   const [logs, { data: puntos }, { data: anios }, { data: fila }, { data: tiersData }] = await Promise.all([
     _paginado((a, b) => supabase.from('log_asistencias')
@@ -7374,7 +7460,7 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
     anio,
     anios: [...new Set([...(anios ?? []).map((r: any) => Number(r.anio)), hoy.getUTCFullYear()])].sort((a, b) => b - a),
     eventos,
-    puntos: (puntos ?? []).map((r: any) => ({
+        puntos: (ocultarPuntos ? [] : puntos ?? []).map((r: any) => ({
       mes: Number(r.mes),
       asistencia: Number(r.puntos_asistencia) || 0,
       tareas: Number(r.puntos_tareas) || 0,
@@ -7401,8 +7487,8 @@ async function getEstadisticasPersona(params: Record<string, any>): Promise<Reco
           desde: periodos[i].curso.desde, mesesAscenso: Number(t.meses_consecutivos_ascenso) || 3,
           gracia: Number(t.meses_gracia_demotion) || 0, graciaUnidad: t.gracia_unidad ?? 'mes',
           // En curso (lo que se muestra) y cerrado (lo que decide hoy).
-          clases: c1, puntos: Math.round(p1 * 10) / 10, cumple: ok(c1, p1),
-          clasesCerrado: c0, puntosCerrado: Math.round(p0 * 10) / 10, cumpleCerrado: ok(c0, p0),
+          clases: c1, puntos: ocultarPuntos ? null : Math.round(p1 * 10) / 10, cumple: ok(c1, p1),
+          clasesCerrado: c0, puntosCerrado: ocultarPuntos ? null : Math.round(p0 * 10) / 10, cumpleCerrado: ok(c0, p0),
         };
       }),
     },
@@ -7548,8 +7634,12 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
 async function getDesglosePuntos(params: Record<string, any>): Promise<Record<string, any>> {
   const solicitante = await _validarToken(params.token);
   if (!solicitante) return { exito: false, error: 'Sesión inválida.' };
-  const nombreUsuario = String(params.nombreUsuario || '').trim();
+    const nombreUsuario = String(params.nombreUsuario || '').trim();
   if (!nombreUsuario) return { exito: false, error: 'Falta nombreUsuario.' };
+  if (nombreUsuario !== solicitante && (await _reglasLiga()).rankingVisible === false
+    && !(params.adminToken && await _validarAdminToken(String(params.adminToken)))) {
+    return { exito: false, error: 'La liga no muestra los puntos de otras personas.' };
+  }
   const concepto = String(params.concepto || '');
   const periodo = _periodoDesdeParams(params, new Date());
 
@@ -9001,7 +9091,8 @@ async function cronDiario(): Promise<Record<string, any>> {
     await recalcularPuntosAsistencia(m === 1 ? 12 : m - 1, m === 1 ? a - 1 : a);
     await recalcularPuntosAsistencia(m, a);
   } catch (e) { console.error('[puntos] cron:', e); }
-    try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
+        try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
+  try { await _avisarCongeladoVencido(); } catch (e) { console.error('[estados] máximo:', e); }
   try { await _cronCorteEquipos(); } catch (e) { console.error('[equipos] corte:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'

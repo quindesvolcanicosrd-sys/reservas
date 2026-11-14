@@ -181,25 +181,51 @@ Deno.serve(async (req: Request) => {
       .eq('tipo', 'uso').eq('estado', 'activo').or(`hasta.is.null,hasta.gte.${new Date().toISOString().slice(0, 10)}`);
     const conPermisoEquipo = new Set((usosData ?? []).map((u: any) => u.username));
     const { data: equipoData, error: equipoError } = await supabase.from('equipo')
-      .select('username, estado_miembro, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes')
+            .select('username, estado_miembro, estado_desde, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes')
       .is('eliminado_en', null);
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
     const miembros: {
-      username: string; estadoMiembro: string | null; tierModo: string | null; categoria: string | null;
+            username: string; estadoMiembro: string | null; estadoDesde: string | null; tierModo: string | null; categoria: string | null;
+
       necesitaEquipoClub: boolean;
       tierRiesgoDesde: string | null; tierRiesgoHasta: string | null; tierRiesgoObjetivo: string | null;
       mesesConsecutivosCumplidos: number; mesesUltimoMes: string | null;
     }[] = (equipoData ?? [])
       .filter((r: any) => r.username && (!soloUsuario || r.username === soloUsuario))
       .map((r: any) => ({
-        username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto',
+                username: r.username, estadoMiembro: r.estado_miembro ?? null, estadoDesde: r.estado_desde ?? null, tierModo: r.tier_modo ?? 'auto',
         categoria: r.categoria ?? null,
                 necesitaEquipoClub: !conPermisoEquipo.has(r.username) && necesitaEquipoClub(r.necesita_patines, r.necesita_protecciones),
         tierRiesgoDesde: r.tier_riesgo_desde ?? null, tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
         tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
         mesesConsecutivosCumplidos: Number(r.meses_consecutivos_cumplidos) || 0,
-        mesesUltimoMes: r.meses_consecutivos_ultimo_mes ?? null,
+                mesesUltimoMes: r.meses_consecutivos_ultimo_mes ?? null,
       }));
+
+    // Estados que congelan con máximo (Mi Liga → Reglas, Victor 2026-11-13):
+    // `congelarMaxMeses` = { 'Lesionadx': n, 'De viaje': n, 'Técnico': n }, 0 o
+    // ausente = sin límite. Cumplido el máximo, la persona sigue con su estado
+    // pero deja de estar congelada: se evalúa normal y los días que estuvo
+    // congelada se le devuelven a la ventana (igual que un viaje ya
+    // terminado), así solo cuenta la asistencia desde ese día.
+    const { data: reglasCongelar } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
+    let congelarMax: Record<string, number> = {};
+    try { congelarMax = JSON.parse(String(reglasCongelar?.value ?? '{}'))?.congelarMaxMeses ?? {}; } catch { congelarMax = {}; }
+    const hoyIsoCongelar = fechaISO(new Date());
+    const exclusiones: Record<string, [string, string]> = {};
+    const congeladoVencido = new Set<string>();
+    for (const m of miembros) {
+      const max = Number(congelarMax[String(m.estadoMiembro ?? '')]) || 0;
+      if (max <= 0 || !m.estadoDesde) continue;
+      const d = new Date(Date.parse(m.estadoDesde));
+      const fin = fechaISO(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + max, d.getUTCDate())));
+      if (fin > hoyIsoCongelar) continue;
+      congeladoVencido.add(m.username);
+      exclusiones[m.username] = [m.estadoDesde, fechaISO(new Date(Date.parse(fin) - DIA_MS))];
+    }
+    if (hayExclusion && soloUsuario) exclusiones[soloUsuario] = [excluirDesde!, excluirHasta!];
+    const diasExclusionMax = Math.max(diasExclusion, ...Object.values(exclusiones).map(([a, b]) => Math.round((Date.parse(b) - Date.parse(a)) / DIA_MS) + 1));
+
 
         // El período más largo de todos los Equipos, en meses aproximados, para traer historial suficiente.
     const maxVentana = Math.max(1, ...tiers.map((t: any) => {
@@ -223,7 +249,7 @@ Deno.serve(async (req: Request) => {
     // Con exclusión de viaje, se trae historial extra (la ventana estirada,
     // ver `diasExtraVentana()` más abajo, puede ir hasta `diasExclusion`
     // días más atrás que la ventana normal más larga).
-    const inicioFetch = new Date(primerDiaMesesAtras(maxVentana).getTime() - diasExclusion * DIA_MS);
+        const inicioFetch = new Date(primerDiaMesesAtras(maxVentana).getTime() - diasExclusionMax * DIA_MS);
     const { data: asistData, error: asistError } = await supabase
       .from('asistencias')
             .select('fecha, a_horario, tarde, tipo_evento')
@@ -262,11 +288,12 @@ Deno.serve(async (req: Request) => {
     // de la ventana normal [inicio de la ventana, ayer] -- 0 para cualquier
     // otra persona o sin exclusión. Es lo que se le devuelve a la ventana.
     function diasExtraVentana(username: string, ventanaMeses: number): number {
-      if (!hayExclusion || username !== soloUsuario) return 0;
+            const ex = exclusiones[username];
+      if (!ex) return 0;
       const inicioVentana = primerDiaMesesAtras(ventanaMeses).getTime();
       const ayer = Date.parse(fechaISO(new Date())) - DIA_MS;
-      const desdeSolape = Math.max(Date.parse(excluirDesde!), inicioVentana);
-      const hastaSolape = Math.min(Date.parse(excluirHasta!), ayer);
+      const desdeSolape = Math.max(Date.parse(ex[0]), inicioVentana);
+      const hastaSolape = Math.min(Date.parse(ex[1]), ayer);
       return hastaSolape >= desdeSolape ? Math.round((hastaSolape - desdeSolape) / DIA_MS) + 1 : 0;
     }
 
@@ -415,12 +442,13 @@ Deno.serve(async (req: Request) => {
       // del recálculo -- ver MANIFEST.md "estado_miembro"). Tampoco
       // registra historial_tier este mes -- no hubo una evaluación real que
       // registrar.
-      if (estadoMiembro === 'Lesionadx') continue;
+            const vencido = congeladoVencido.has(username);
+      if (estadoMiembro === 'Lesionadx' && !vencido) continue;
       // De viaje (feat nueva, ver MANIFEST.md): mismo criterio que Lesionadx
       // -- tier congelado mientras dura el viaje. Excepción: el modo
       // `soloUsuario` (viaje ya terminado registrado a posteriori) SÍ la
       // evalúa, con la ventana compensada.
-      if (estadoMiembro === 'De viaje' && username !== soloUsuario) continue;
+            if (estadoMiembro === 'De viaje' && username !== soloUsuario && !vencido) continue;
       // tier_modo fijado a mano (Cambio 55, control Quindes/Auto/Mirlxs del
       // perfil de Equipo, ver adminSetTierModo()/supabase/functions/api/index.ts)
       // -- mismo criterio que Lesionadx: la categoría queda como esté,
@@ -451,7 +479,7 @@ Deno.serve(async (req: Request) => {
         categoriaAsignada = 'Mirlxs';
         nuevosMesesConsecutivos = 0; nuevoUltimoMes = null;
         nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
-      } else if (estadoMiembro === 'Técnico') {
+            } else if (estadoMiembro === 'Técnico' && !vencido) {
         // Técnico: siempre Quindes, sin calcular clases/puntos ni tocar
         // riesgo/ascenso -- mismo criterio que antes de esta Fase 2 (caso
         // especial, no participa del sistema de mérito en absoluto).

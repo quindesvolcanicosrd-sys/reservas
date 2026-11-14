@@ -548,7 +548,7 @@ class _ProgresoCategoria extends StatelessWidget {
             const SizedBox(height: 10),
             if ((meta['minClases'] as num) > 0)
               _Avance(titulo: (meta['unidad'] ?? 'mes') == 'mes' ? 'Clases este mes' : 'Clases', valor: meta['clases'] as num, meta: meta['minClases'] as num),
-            if ((meta['minPuntos'] as num) > 0)
+            if ((meta['minPuntos'] as num) > 0 && meta['puntos'] != null)
               _Avance(titulo: meta['puntosFuente'] != 'todos' ? 'Puntos por tareas' : 'Puntos', valor: meta['puntos'] as num, meta: meta['minPuntos'] as num),
             const SizedBox(height: 4),
           ],

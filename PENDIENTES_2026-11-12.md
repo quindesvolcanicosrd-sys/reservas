@@ -462,10 +462,16 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] K.19 Ajustes editables: qué cuenta como clase, tarde, tolerancia (sugiere Tarde), puntos versionados (regla de oro), rectificaciones, mínimo de personas, inactividad, logos, enlace de invitación por equipo con requisitos, historial de 6 meses.
 - [x] Tesorería (etapa 5) y Cobros → Formas de pago.
 - [x] Inicio y cuenta con correo: preparado y apagado (falta activarlo; pedir a Victor).
-- [ ] Estados que congelan (lesión, viaje, técnico) editables con máximo: hoy siguen fijos en recalcular-categorias.
-- [ ] Privacidad (qué ven otras personas, ranking) editable.
-- [ ] Cuota: día de vencimiento, recargo y gracia.
+- [x] Estados que congelan editables con máximo (2026-11-13 noche). Al cumplirse, la asistencia vuelve a contar y se avisa (Victor).
+- [x] Privacidad: puntos de otras personas (Victor eligió solo el ranking; asistencia, estado y cumpleaños quedan como están).
+- [x] Cuota: día de vencimiento, gracia y recargo fijo (Victor: monto fijo).
 - [ ] Rachas y "puntos por defecto de una tarea" editables.
 - [ ] Cobros: planes (semestre de clases), cupones por persona o equipo (etapa 6), cursos, inscripción rápida.
-- [ ] Al cobrar la cuota, avisar el saldo a favor/en contra y aplicarlo según lo elegido.
+- [ ] Al cobrar la cuota, mostrar el saldo a favor/en contra de Tesorería y preguntar a la persona si lo usa o lo paga junto (Victor: preguntarle al pagar).
 - [ ] Bandeja doc: casillas "En prueba".
+
+## M. Ronda de las 8:30 p. m. (2026-11-13)
+- [x] Los 17 puntos del párrafo de la Bandeja: motivos de rechazo, barras de vidrio, "No hay tareas disponibles", FAB del Calendario, Tu equipamiento por tipo de persona, avisos de Pivot por subárea, sin "DeUna", marca de cuenta, borrar o archivar cuentas de Tesorería, llegadas tarde, historial amigable, texto de equipo fijado, pill de asistencia, pestaña Mi Liga, buscador, formas de pago editables.
+- [ ] La web antigua (index.html) puede seguir diciendo "DeUna".
+- Documento de Mi Liga en Drive: no aparece en Drive (solo "Autorización mayores de 16 años" y "Gestión de cuentas"); lo acordado está en la Bandeja y en este archivo.
+- Pendiente de lo acordado en chats anteriores (revisar si sigue en pie): push de pago parcial (Victor lo aprobó en octubre; hoy no hay pagos parciales).

@@ -163,6 +163,133 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
     }
   }
 
+  Future<void> _guardarRegla(BuildContext context, ConfigLiga c, Map<String, Object?> cambios) async {
+    final m = ScaffoldMessenger.of(context);
+    try {
+      await c.guardarReglas(cambios);
+      m.showSnackBar(const SnackBar(content: Text('Guardado')));
+    } catch (e) {
+      m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo guardar. Revisa tu conexión.')));
+    }
+  }
+
+  static const _estadosCongelan = {'Lesionadx': 'Lesión', 'De viaje': 'Viaje', 'Técnico': 'Técnico'};
+
+  String _textoCongelar(ConfigLiga c) {
+    final con = [
+      for (final e in _estadosCongelan.entries)
+        if (c.congelarMax(e.key) > 0) '${e.value}: ${c.congelarMax(e.key)} ${c.congelarMax(e.key) == 1 ? 'mes' : 'meses'}',
+    ];
+    return con.isEmpty ? 'Sin límite: no cuentan para subir o bajar de equipo' : con.join(' · ');
+  }
+
+  Future<void> _congelar(BuildContext context, ConfigLiga c) async {
+    final v = {for (final e in _estadosCongelan.keys) e: c.congelarMax(e)};
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Estados que congelan', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(
+                  'Mientras una persona tiene uno de estos estados, su asistencia no cuenta para subir o bajar de equipo. '
+                  'Con un máximo, al cumplirse ese tiempo la asistencia vuelve a contar desde ese día y se avisa a la persona y a los Pivots. '
+                  '0 = sin límite.',
+                  style: TextStyle(color: h.pivot.textoSecundario),
+                ),
+                for (final e in _estadosCongelan.entries) ...[
+                  const SizedBox(height: 16),
+                  Text(e.value, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  SelectorNumero(valor: v[e.key]!, min: 0, max: 36, etiqueta: 'meses', alCambiar: (n) => set(() => v[e.key] = n.toInt())),
+                ],
+                const SizedBox(height: 20),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok == true && context.mounted) await _guardarRegla(context, c, {'congelarMaxMeses': v});
+  }
+
+  String _textoVencimiento(ConfigLiga c) {
+    if (c.cuotaVenceDia == 0) return 'No vence';
+    final g = c.cuotaGraciaDias > 0 ? ' + ${c.cuotaGraciaDias} ${c.cuotaGraciaDias == 1 ? 'día' : 'días'} de gracia' : '';
+    final r = c.cuotaRecargo > 0 ? ' · recargo ${_plata(c.cuotaRecargo)}' : ' · sin recargo';
+    return 'Vence el día ${c.cuotaVenceDia}$g$r';
+  }
+
+  Future<void> _vencimiento(BuildContext context, ConfigLiga c) async {
+    var dia = c.cuotaVenceDia, gracia = c.cuotaGraciaDias;
+    final ctl = TextEditingController(text: c.cuotaRecargo == 0 ? '' : '${c.cuotaRecargo}');
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(h).bottom),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Vencimiento de la cuota', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(
+                  'Si alguien envía su pago después del día de vencimiento y los días de gracia, se le suma el recargo. '
+                  'Cuenta el día en que envía la solicitud, no el día en que un Pivot la aprueba. Los pagos ya hechos no cambian.',
+                  style: TextStyle(color: h.pivot.textoSecundario),
+                ),
+                const SizedBox(height: 16),
+                const Text('Día de vencimiento', style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                SelectorNumero(valor: dia, min: 0, max: 28, etiqueta: dia == 0 ? 'no vence' : 'de cada mes', alCambiar: (n) => set(() => dia = n.toInt())),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: dia == 0
+                      ? const SizedBox(width: double.infinity)
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 16),
+                            const Text('Días de gracia', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            SelectorNumero(valor: gracia, min: 0, max: 27, etiqueta: 'días', alCambiar: (n) => set(() => gracia = n.toInt())),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: ctl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                              decoration: const InputDecoration(labelText: 'Recargo (monto fijo)', prefixText: '\$ ', helperText: 'Vacío o 0 = sin recargo'),
+                            ),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final recargo = num.tryParse(ctl.text.replaceAll(',', '.')) ?? 0;
+    await _guardarRegla(context, c, {'cuotaVenceDia': dia, 'cuotaGraciaDias': gracia, 'cuotaRecargo': dia == 0 ? 0 : recargo});
+  }
+
   /// Buscador: lleva al ajuste (abriendo la subsección si hace falta) y lo
   /// hace parpadear.
   Future<void> _buscar() async {
@@ -327,6 +454,17 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                     ),
                   ),
                   Resaltable(
+                    id: 'vencimiento',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.event_busy_outlined,
+                      seccion: 'cuota',
+                      titulo: 'Vencimiento de la cuota',
+                      valor: _textoVencimiento(c),
+                      alTocar: () => _vencimiento(context, c),
+                    ),
+                  ),
+                  Resaltable(
                     id: 'clase',
                     resaltado: _resaltado,
                     child: FilaAjuste(
@@ -386,6 +524,36 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                       titulo: 'Inactividad',
                       valor: '${ConfigLiga.diasInactividad} días sin venir',
                       alTocar: () => _numero(context, c, 'Inactivx después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'congelar',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.ac_unit_rounded,
+                      seccion: 'entrenamientos',
+                      titulo: 'Estados que congelan',
+                      valor: _textoCongelar(c),
+                      alTocar: () => _congelar(context, c),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              GrupoAjustes(
+                titulo: 'Privacidad',
+                pie: 'Los Pivots siempre ven todo. Cada persona siempre ve sus propios puntos.',
+                filas: [
+                  Resaltable(
+                    id: 'ranking',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.leaderboard_outlined,
+                      seccion: 'privacidad',
+                      titulo: 'Puntos de otras personas',
+                      valor: c.rankingVisible ? 'Todo el equipo ve los puntos de todas las personas' : 'Cada persona solo ve sus puntos',
+                      derecha: Switch(value: c.rankingVisible, onChanged: (v) => _guardarRegla(context, c, {'rankingVisible': v})),
+                      alTocar: () => _guardarRegla(context, c, {'rankingVisible': !c.rankingVisible}),
                     ),
                   ),
                 ],
