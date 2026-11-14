@@ -15,6 +15,7 @@ import '../core/tema.dart';
 import '../equipo/equipo_modelos.dart';
 import '../eventos/widgets_comunes.dart';
 import '../sesion/sesion.dart';
+import '../core/vidrio.dart';
 
 /// Persona con clases y puntos por mes calendario (`adminDatosCategorias`):
 /// índice 0 = mes en curso, 1 = último mes cerrado… hasta 12.
@@ -529,7 +530,12 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
   Widget build(BuildContext context) {
     final l = _tiers;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Equipos y puntos', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AnimatedSwitcher(
@@ -540,7 +546,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
                 key: const ValueKey('l'),
                 onRefresh: _cargar,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
                   children: [
                     _Seccion('EQUIPOS'),
                     for (final (i, t) in l.indexed) _tarjeta(context, i, t),
@@ -1334,14 +1340,19 @@ class _EquipoScreenState extends State<_EquipoScreen> {
     final otros = widget.tiers.where((x) => x['es_default'] != true).toList();
     final pos = otros.indexWhere((x) => x['id'] == t['id']);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(_nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
         bottom: _ocupado ? const PreferredSize(preferredSize: Size.fromHeight(2), child: LinearProgressIndicator(minHeight: 2)) : null,
       ),
       body: AbsorbPointer(
         absorbing: _ocupado,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+          padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
           children: [
             Center(
               child: InkWell(

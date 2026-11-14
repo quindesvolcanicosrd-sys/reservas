@@ -9,6 +9,7 @@ import 'crear_tarea_screen.dart';
 import 'tareas_modelos.dart';
 import 'tareas_repo.dart';
 import 'tareas_screen.dart';
+import '../core/vidrio.dart';
 
 /// Detalle de una tarea: datos, quiénes la tienen y lo que se puede hacer
 /// (tomar, soltar, enviar a revisión, rescatar). Admins además editan,
@@ -132,12 +133,17 @@ class _TareaScreenState extends State<TareaScreen> {
       builder: (context, _) {
         final (:t, :mia) = _actual;
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            flexibleSpace: const Vidrio(child: SizedBox.expand()),
             title: const Text('Tarea', style: TextStyle(fontWeight: FontWeight.w700)),
             actions: [if (repo.esAdmin) _menuAdmin(t)],
           ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+            padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
             children: [
               _Cabecera(tarea: t, mia: mia),
               if (mia != null && mia.notaRechazo.isNotEmpty && !mia.enRevision)

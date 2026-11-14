@@ -10,6 +10,7 @@ import '../equipo/inventario_asistentes.dart';
 import '../equipo/inventario_modelos.dart';
 import 'campos.dart';
 import 'componentes.dart';
+import '../core/vidrio.dart';
 
 // ─── Mis datos ───────────────────────────────────────────────────────────
 
@@ -243,11 +244,16 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
     );
     final dur = const Duration(milliseconds: 260);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Mi equipamiento', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 120),
         children: [
           titulo('PATINES'),
           SegmentedButton<bool>(

@@ -11,6 +11,7 @@ import 'recurrentes_screen.dart';
 import 'tarea_screen.dart';
 import 'tareas_modelos.dart';
 import 'tareas_repo.dart';
+import '../core/vidrio.dart';
 
 /// Pestaña Tareas (nativa, 2026-11-08). Mismo lenguaje que Ajustes: grupos
 /// en tarjeta, íconos con el degradado del área.
@@ -46,7 +47,12 @@ class _TareasScreenState extends State<TareasScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text('Tareas', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -80,7 +86,7 @@ class _TareasScreenState extends State<TareasScreen> {
     final sugeridas = repo.sugeridas;
     return ListView(
       key: ValueKey(repo.mias.length * 1000 + repo.tablero.length),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
       children: [
         // Sin la tarjeta roja de puntos (Victor, 2026-11-13): se ve en Estadísticas.
 

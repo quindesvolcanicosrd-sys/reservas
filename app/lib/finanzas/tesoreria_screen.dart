@@ -17,6 +17,7 @@ import '../equipo/equipo_repo.dart';
 import '../eventos/widgets_comunes.dart';
 import '../sesion/sesion.dart';
 import 'tesoreria_repo.dart';
+import '../core/vidrio.dart';
 
 IconData _iconoCuenta(String t) => switch (t) {
   'efectivo' => Icons.payments_outlined,
@@ -556,7 +557,12 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
     final p = context.pivot;
     final r = _r;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Tesorería', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AnimatedSwitcher(
@@ -566,7 +572,10 @@ class _TesoreriaScreenState extends State<TesoreriaScreen> {
             : RefreshIndicator(
                 key: const ValueKey('l'),
                 onRefresh: _cargar,
-                child: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), children: _cuentas.isEmpty ? _vacio(context) : _contenido(context, r, p)),
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
+                  children: _cuentas.isEmpty ? _vacio(context) : _contenido(context, r, p),
+                ),
               ),
       ),
       floatingActionButton: r == null ? null : FloatingActionButton(tooltip: 'Registrar', onPressed: _mas, child: const Icon(Icons.add_rounded)),
@@ -1238,7 +1247,12 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
     final movs = _movs;
     final nombreCuenta = widget.cuentas.where((c) => c['id'] == _cuenta).map((c) => '${c['nombre']}').firstOrNull;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Movimientos', style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [IconButton(tooltip: 'Exportar a CSV (Excel)', onPressed: _exportar, icon: const Icon(Icons.ios_share_rounded))],
       ),
@@ -1248,7 +1262,7 @@ class _MovimientosScreenState extends State<MovimientosScreen> {
             height: 48,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: EdgeInsets.fromLTRB(16, 6 + altoBarra(context), 16, 6),
               children: [
                 ActionChip(avatar: const Icon(Icons.date_range_rounded, size: 18), label: Text(_textoRango()), onPressed: _elegirRango),
                 const SizedBox(width: 8),
@@ -1402,13 +1416,18 @@ class _SaldosScreenState extends State<SaldosScreen> {
     final p = context.pivot;
     final l = _personas;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Saldos de personas', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: l == null
           ? const PivotCargando(centrarEnPantalla: true)
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
               children: [
                 Text(
                   'Préstamos, merch o pagos de más: aparte de la cuota. Al cobrar la cuota se avisa y se elige cómo aplicarlo.',
@@ -1597,13 +1616,18 @@ class _SaldoPersonaScreenState extends State<SaldoPersonaScreen> {
     final saldo = (r?['saldo'] as num?) ?? 0;
     final movs = [for (final m in (r?['movimientos'] as List? ?? const [])) m as Map<String, dynamic>];
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(widget.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: r == null
           ? const PivotCargando(centrarEnPantalla: true)
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
               children: [
                 Center(
                   child: Text(
@@ -1867,13 +1891,18 @@ class _FondosViajeScreenState extends State<FondosViajeScreen> {
     final p = context.pivot;
     final l = _fondos;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Fondos de viaje', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: l == null
           ? const PivotCargando(centrarEnPantalla: true)
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
               children: [
                 Text(
                   'Califican quienes están en equipos con "Fondos de viaje" (Equipos y puntos). Se reparte por % de asistencia en la ventana que elijas.',
@@ -1974,11 +2003,16 @@ class _FondoScreenState extends State<_FondoScreen> {
     final personas = [for (final x in (v?['personas'] as List? ?? const [])) x as Map<String, dynamic>];
     final sumaPct = _tramos.fold<num>(0, (s, t) => s + (t['pct'] ?? 0));
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(widget.fondo == null ? 'Nuevo viaje' : 'Viaje', style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 100),
         children: [
           TextField(
             controller: _nombre,

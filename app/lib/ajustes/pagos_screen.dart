@@ -9,6 +9,7 @@ import '../reservas/reserva_screen.dart';
 import '../reservas/reservas_repo.dart';
 import 'componentes.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// "Mis pagos y reservas" (Victor, 2026-11-08): reemplaza a "Mis reservas".
 /// Solo aparece en Ajustes si la persona tiene algo que mostrar (reservas,
@@ -37,7 +38,12 @@ class _PagosScreenState extends State<PagosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Mis pagos y reservas', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
@@ -67,7 +73,7 @@ class _PagosScreenState extends State<PagosScreen> {
     }
     return ListView(
       key: const ValueKey('lista'),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
       children: [
         _Estado(cuota: c, enRevision: enRevision, cantidadRevision: pendientes.length, alPagar: () => _pagarCuota(context)),
         if (activas.isNotEmpty) ...[

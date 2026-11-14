@@ -8,6 +8,7 @@ import 'eventos_repo.dart';
 import 'modelos.dart';
 import 'selector_fechas.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// Asistencia anticipada: lista de reglas. Crear o editar abre el asistente
 /// por pasos (mismo marco que el resto de la app, pedido 2026-11-06).
@@ -155,7 +156,7 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       final orden = visibles..sort((x, y) => _vigencia(x).index.compareTo(_vigencia(y).index));
       cuerpo = ListView(
         key: const ValueKey('lista'),
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+        padding: EdgeInsets.fromLTRB(16, 4 + altoBarra(context), 16, 96),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
@@ -170,7 +171,14 @@ class _AnticipadaScreenState extends State<AnticipadaScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Asistencia anticipada')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
+        title: const Text('Asistencia anticipada'),
+      ),
       body: AnimatedSwitcher(duration: const Duration(milliseconds: 260), child: cuerpo),
       floatingActionButton: (visibles?.isNotEmpty ?? false)
           ? FloatingActionButton.extended(onPressed: () => _abrirAsistente(null), icon: const Icon(Icons.add_rounded), label: const Text('Nueva'))

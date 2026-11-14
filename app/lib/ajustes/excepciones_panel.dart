@@ -7,6 +7,7 @@ import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import 'componentes.dart';
 import 'excepcion_screen.dart';
+import '../core/vidrio.dart';
 
 /// Panel "Excepción de cuota" (Victor, 2026-11-08): antes de pedir una, se ve
 /// lo que ya hay. Arriba, cómo queda la cuota de este mes; después lo vigente
@@ -340,11 +341,16 @@ class _HistorialScreen extends StatelessWidget {
     final pasadas = excepciones.where((e) => e.mes.compareTo(actual) < 0).toList();
     final resueltas = solicitudes.where((s) => !s.pendiente).toList();
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Historial', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
         children: [
           if (resueltas.isNotEmpty)
             GrupoAjustes(

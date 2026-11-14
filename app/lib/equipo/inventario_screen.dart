@@ -15,6 +15,7 @@ import '../sesion/sesion.dart';
 import 'equipo_repo.dart';
 import 'inventario_asistentes.dart';
 import 'inventario_modelos.dart';
+import '../core/vidrio.dart';
 
 /// Inventario del equipo (Victor, 2026-11-13): listas personalizables
 /// (con tallas, sets de piezas, unidades o insumos), quién tiene qué
@@ -193,7 +194,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
         key: const ValueKey('lista'),
         onRefresh: _cargar,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
           children: [
             // Recordatorio a la persona: "¿Ya lo devolviste?" (se renueva cada 7 días).
             for (final pr in preguntarme)
@@ -308,7 +309,12 @@ class _InventarioScreenState extends State<InventarioScreen> {
       );
     }
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Inventario', style: TextStyle(fontWeight: FontWeight.w700)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
@@ -669,7 +675,12 @@ class _ListaInventarioScreenState extends State<ListaInventarioScreen> {
 
     final variantes = l.esTallas ? (_stock.keys.toList()..sort((a, b) => (double.tryParse(a) ?? 0).compareTo(double.tryParse(b) ?? 0))) : <String>[];
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(l.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [
           if (pivot)
@@ -684,7 +695,7 @@ class _ListaInventarioScreenState extends State<ListaInventarioScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
         children: [
           if (l.sistema != null)
             Padding(
@@ -1069,7 +1080,12 @@ class _ReglasPrestamoScreenState extends State<ReglasPrestamoScreen> {
         if (!hecho) Navigator.of(context).pop(_cambio);
       },
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          flexibleSpace: const Vidrio(child: SizedBox.expand()),
           title: const Text('Reglas de préstamo', style: TextStyle(fontWeight: FontWeight.w700)),
         ),
         body: AnimatedSwitcher(
@@ -1078,7 +1094,7 @@ class _ReglasPrestamoScreenState extends State<ReglasPrestamoScreen> {
               ? (_error != null ? Center(child: Text(_error!)) : const PivotCargando(centrarEnPantalla: true))
               : ListView(
                   key: const ValueKey('l'),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),

@@ -17,6 +17,7 @@ import '../equipo/inventario_asistentes.dart' show elegirPlazoPrestamo;
 import '../finanzas/tesoreria_repo.dart';
 import '../equipo/persona_screen.dart';
 import 'bandeja_repo.dart';
+import '../core/vidrio.dart';
 
 /// Bandeja de Pivots (etapa 3, Victor 2026-11-12): todo lo que espera una
 /// decisión, agrupado. Aprobar o rechazar quita la tarjeta con una
@@ -339,7 +340,12 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Bandeja', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: ListenableBuilder(
@@ -427,7 +433,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
               child: vacia
                   ? ListView(
                       key: const ValueKey('vacia'),
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+                      padding: EdgeInsets.fromLTRB(16, 0 + altoBarra(context), 16, 40),
                       children: [
                         const SizedBox(height: 120),
                         Icon(Icons.inbox_rounded, size: 56, color: p.textoSecundario),
@@ -449,7 +455,7 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
                         ...hijos,
                       ],
                     )
-                  : ListView(key: const ValueKey('lista'), padding: const EdgeInsets.fromLTRB(16, 4, 16, 40), children: hijos),
+                  : ListView(key: const ValueKey('lista'), padding: EdgeInsets.fromLTRB(16, 4 + altoBarra(context), 16, 40), children: hijos),
             ),
           );
         },

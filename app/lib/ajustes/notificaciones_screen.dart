@@ -6,6 +6,7 @@ import '../core/api.dart';
 import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// Ajustes → Notificaciones: interruptor general y uno por tipo, generados
 /// desde el catálogo del servidor (`getCatalogoNotificaciones`). Guardado
@@ -179,7 +180,12 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
       (categorias['${t['categoria'] ?? 'Otras'}'] ??= []).add(t);
     }
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Notificaciones', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AnimatedSwitcher(
@@ -203,7 +209,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen> {
             ? const Center(key: ValueKey('cargando'), child: PivotCargando())
             : ListView(
                 key: const ValueKey('lista'),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
                 children: [
                   // Interruptor general, grande, con el degradado de la marca
                   // (el amarillo no se leía en modo oscuro).

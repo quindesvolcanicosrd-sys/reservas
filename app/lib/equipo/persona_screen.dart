@@ -11,6 +11,7 @@ import 'equipo_modelos.dart';
 import 'estadisticas.dart';
 import 'equipo_repo.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// Ficha de una persona del equipo (web: `_eqRenderPerfil()`): encabezado,
 /// acciones (WhatsApp, llamar, favorito y, para admins, Emergencia), stats
@@ -61,7 +62,12 @@ class _Ficha extends StatelessWidget {
     final fav = repo.favoritos.contains(p.username);
     final estado = datosRelevantes(p, Fechas.hoy()).where((d) => d.fijo).firstOrNull;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         actions: [
           if (!yo)
             IconButton(
@@ -79,7 +85,7 @@ class _Ficha extends StatelessWidget {
       body: RefreshIndicator(
         onRefresh: () => repo.cargar(forzar: true),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
+          padding: EdgeInsets.fromLTRB(16, 0 + altoBarra(context), 16, 40),
           children: [
             Center(
               child: Stack(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api.dart';
 import '../core/tema.dart';
+import '../core/vidrio.dart';
 
 /// Piezas comunes de Ajustes: grupos en tarjeta, filas con valor y hojas
 /// de edición (texto, opciones). Mismo lenguaje visual que Equipo.
@@ -175,10 +176,15 @@ class SubAjustes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: hijos),
+      body: ListView(padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40), children: hijos),
     );
   }
 }

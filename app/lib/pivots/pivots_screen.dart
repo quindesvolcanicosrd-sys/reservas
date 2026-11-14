@@ -10,6 +10,7 @@ import '../equipo/equipo_modelos.dart';
 import '../equipo/equipo_repo.dart';
 import '../eventos/widgets_comunes.dart';
 import '../sesion/sesion.dart';
+import '../core/vidrio.dart';
 
 /// Áreas que puede tener un Pivot (Victor, 2026-11-13). El servidor bloquea
 /// cada acción según su área (`AREA_DE_ACCION`) y filtra la Bandeja y los avisos.
@@ -249,7 +250,12 @@ class _PivotsScreenState extends State<PivotsScreen> {
     final p = context.pivot;
     final l = _pivots;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Pivots y permisos', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AnimatedSwitcher(
@@ -260,7 +266,7 @@ class _PivotsScreenState extends State<PivotsScreen> {
                 key: const ValueKey('l'),
                 onRefresh: _cargar,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),

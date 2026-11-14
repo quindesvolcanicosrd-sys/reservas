@@ -11,6 +11,7 @@ import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
 import 'reservas_repo.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 enum _Paso { elegir, pago }
 
@@ -700,9 +701,16 @@ class ReservaExitoScreen extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final gratis = total.monto == 0;
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
+        automaticallyImplyLeading: false,
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+        padding: EdgeInsets.fromLTRB(24, 8 + altoBarra(context), 24, 32),
         children: [
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.6, end: 1),

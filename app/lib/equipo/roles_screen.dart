@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/tema.dart';
 import 'equipo_repo.dart';
+import '../core/vidrio.dart';
 
 /// Roles del equipo (Victor, 2026-11-12): catálogo de la liga con los del
 /// deporte precargados. Solo Pivots. Renombrar cambia el nombre en todas las
@@ -103,7 +104,12 @@ class _RolesScreenState extends State<RolesScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Roles del equipo', style: TextStyle(fontWeight: FontWeight.w700)),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
@@ -120,7 +126,7 @@ class _RolesScreenState extends State<RolesScreen> {
         builder: (context, _) {
           final roles = repo.roles;
           return ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+            padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 96),
             header: Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
               child: Text(

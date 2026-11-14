@@ -21,6 +21,7 @@ import 'rectificacion.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// Grupos de asistencia del detalle (mismo orden que la web).
 enum _Grupo { asisten, noAsisten, noJugador, sinRespuesta }
@@ -221,7 +222,12 @@ class _DetalleScreenState extends State<DetalleScreen> {
           });
         }
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            flexibleSpace: const Vidrio(child: SizedBox.expand()),
             toolbarHeight: 68,
             titleSpacing: 0,
             title: _titulo(context, ev),
@@ -237,7 +243,7 @@ class _DetalleScreenState extends State<DetalleScreen> {
               ? FloatingActionButton(tooltip: 'Opciones de administración', onPressed: () => _menuAdmin(ev), child: const Icon(Icons.edit_calendar_outlined))
               : null,
           body: ListView(
-            padding: const EdgeInsets.only(top: 8, bottom: 96),
+            padding: EdgeInsets.fromLTRB(0, 8 + altoBarra(context), 0, 96),
             children: [
               _resumen(context, ev),
               if (_esAdmin && ev.sePuedeTomarAsistencia)

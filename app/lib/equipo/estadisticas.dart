@@ -8,6 +8,7 @@ import '../core/tema.dart';
 import 'desglose_screen.dart';
 import 'equipo_modelos.dart';
 import 'equipo_repo.dart';
+import '../core/vidrio.dart';
 
 /// Un evento con asistencia tomada y cómo le fue a la persona.
 class _Ev {
@@ -232,7 +233,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     } else {
       cuerpo = ListView(
         key: const ValueKey('l'),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 40),
         children: [
           if (d.anios.length > 1) ...[
             SingleChildScrollView(
@@ -262,7 +263,12 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       );
     }
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -6,6 +6,7 @@ import '../eventos/anticipada.dart';
 import '../eventos/eventos_repo.dart';
 import 'reservas_repo.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// "Cancelar o reagendar" una reserva (web: `abrirGestionar()` y su hoja
 /// `#sheet-gestionar`): primero las dos opciones; cancelar pide
@@ -393,7 +394,14 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis reservas')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
+        title: const Text('Mis reservas'),
+      ),
       body: ListenableBuilder(
         listenable: widget.repo,
         builder: (context, _) {
@@ -410,7 +418,7 @@ class _MisReservasScreenState extends State<MisReservasScreen> {
                   )
                 : ListView(
                     key: const ValueKey('lista'),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 24),
                     children: [for (final r in lista) _tarjeta(context, r)],
                   );
           }

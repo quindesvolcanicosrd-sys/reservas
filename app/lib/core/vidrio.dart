@@ -63,3 +63,9 @@ class Vidrio extends StatelessWidget {
     );
   }
 }
+
+/// Alto de la barra superior de vidrio (estado + toolbar) para dejar ese
+/// espacio arriba del contenido cuando el cuerpo pasa por detrás
+/// (`extendBodyBehindAppBar`). Se calcula con un `context` de fuera del
+/// Scaffold (Victor, 2026-11-14: barras de vidrio en toda la app).
+double altoBarra(BuildContext context) => MediaQuery.paddingOf(context).top + kToolbarHeight;

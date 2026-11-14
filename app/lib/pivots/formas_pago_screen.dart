@@ -8,6 +8,7 @@ import '../core/config_liga.dart';
 import '../core/tema.dart';
 import '../finanzas/tesoreria_repo.dart';
 import 'categorias_screen.dart' show elegirYSubirLogo;
+import '../core/vidrio.dart';
 
 /// Logo de un medio de pago (o su ícono sobre su color de énfasis).
 class LogoMedio extends StatelessWidget {
@@ -93,13 +94,18 @@ class _FormasPagoScreenState extends State<FormasPagoScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Formas de pago', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: AbsorbPointer(
         absorbing: _ocupado,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 100),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
@@ -275,12 +281,17 @@ class _MedioScreenState extends State<_MedioScreen> {
     final p = context.pivot;
     final medio = MedioPago(_resultado);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(widget.medio == null ? 'Nuevo medio de pago' : 'Editar medio', style: const TextStyle(fontWeight: FontWeight.w700)),
         actions: [if (widget.medio != null) IconButton(tooltip: 'Quitar', onPressed: _borrar, icon: const Icon(Icons.delete_outline_rounded))],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 100),
         children: [
           Center(
             child: Column(
