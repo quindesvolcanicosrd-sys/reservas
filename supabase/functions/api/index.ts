@@ -916,10 +916,6 @@ const REGLAS_LIGA_BASE: Record<string, any> = {
   rectificacionDias: 7,      // días para pedir una rectificación de asistencia
   eventosMinPersonas: 5,     // con menos confirmadas, el aviso de 1 hora antes sugiere cancelar (0 = nunca)
     inactividadDias: 30,       // días sin venir para verse como inactivx
-  // Estados que congelan con máximo (meses; 0 = sin límite). Cumplido el
-  // máximo, la persona deja de estar congelada (recalcular-categorias) y se
-  // avisa una vez a ella y a los Pivots (_avisarCongeladoVencido).
-  congelarMaxMeses: { 'Lesionadx': 0, 'De viaje': 0, 'Técnico': 0 },
   // Cuota (Victor 2026-11-13): día en que vence (0 = no vence), días de
   // gracia y recargo fijo si se paga después. Solo cuenta la fecha en que la
   // persona envía la solicitud; nunca cambia pagos ya hechos.
@@ -994,16 +990,6 @@ async function adminReglasLiga(params: Record<string, any>): Promise<Record<stri
       if (Number.isFinite(n)) r.cuotaRecargo = Math.min(10000, Math.max(0, n));
     }
     if (reglasNuevas.rankingVisible !== undefined) r.rankingVisible = reglasNuevas.rankingVisible !== false && reglasNuevas.rankingVisible !== 'false';
-    if (reglasNuevas.congelarMaxMeses && typeof reglasNuevas.congelarMaxMeses === 'object') {
-      const c: Record<string, number> = { ...(antes.congelarMaxMeses ?? {}) };
-      for (const est of ['Lesionadx', 'De viaje', 'Técnico']) {
-        const v = reglasNuevas.congelarMaxMeses[est];
-        if (v === undefined) continue;
-        const n = Math.round(Number(v));
-        if (Number.isFinite(n)) c[est] = Math.min(36, Math.max(0, n));
-      }
-      r.congelarMaxMeses = c;
-    }
     if (reglasNuevas.tardeCuentaClase !== undefined) r.tardeCuentaClase = reglasNuevas.tardeCuentaClase !== false && reglasNuevas.tardeCuentaClase !== 'false';
     if (reglasNuevas.tiposCuentan !== undefined) {
       r.tiposCuentan = Array.isArray(reglasNuevas.tiposCuentan) && reglasNuevas.tiposCuentan.length ? reglasNuevas.tiposCuentan.map(String).slice(0, 20) : null;
@@ -3088,32 +3074,6 @@ async function adminInventarioLista(params: Record<string, any>): Promise<Record
 // - 'indefinido' o sin plazo (temporal viejo): aviso a ambos cada N días.
 // - permanente: nunca.
 // Y el botiquín: vencidos o por vencer (30, 7 y 0 días) a los Pivots.
-/** Estados que congelan: cumplido el máximo de Mi Liga → Reglas, avisa una vez a la persona y a los Pivots. */
-async function _avisarCongeladoVencido(): Promise<void> {
-  const max: Record<string, number> = (await _reglasLiga()).congelarMaxMeses ?? {};
-  const estados = Object.keys(max).filter((k) => Number(max[k]) > 0);
-  if (!estados.length) return;
-  const hoy = _hoyEcuadorISO();
-  const { data } = await supabase.from('equipo').select('username, nombre_derby, estado_miembro, estado_desde')
-    .in('estado_miembro', estados).is('estado_max_avisado_en', null).is('eliminado_en', null).not('estado_desde', 'is', null);
-  const nombreEstado: Record<string, string> = { 'Lesionadx': 'lesión', 'De viaje': 'viaje', 'Técnico': 'técnico' };
-  let pivots: string[] | null = null;
-  for (const p of data ?? []) {
-    const n = Number(max[p.estado_miembro]) || 0;
-    const d = new Date(Date.parse(p.estado_desde));
-    const fin = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate())).toISOString().slice(0, 10);
-    if (fin > hoy) continue;
-    pivots ??= await _adminDestinatariosPush(undefined, 'equipo', 'cambios');
-    const quien = p.nombre_derby || p.username, est = nombreEstado[p.estado_miembro] ?? p.estado_miembro;
-    const meses = `${n} ${n === 1 ? 'mes' : 'meses'}`;
-    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: [p.username], headings: { es: 'Tu asistencia vuelve a contar' },
-      contents: { es: `Pasaron ${meses} con el estado de ${est}. Desde hoy tu asistencia vuelve a contar para tu equipo.` }, url: APP_URL + '/' });
-    await sendPush({ tipo: 'avisos_admin', include_external_user_ids: pivots, headings: { es: 'Estado sin congelar' },
-      contents: { es: `${quien} cumplió ${meses} con el estado de ${est}. Desde hoy su asistencia vuelve a contar.` }, url: APP_URL + '/' });
-    await supabase.from('equipo').update({ estado_max_avisado_en: new Date().toISOString() }).eq('username', p.username);
-  }
-}
-
 async function _avisarPrestamosLargos(): Promise<void> {
   const hoy = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
   const ahora = new Date().toISOString();
@@ -5525,7 +5485,8 @@ async function adminToggleCupon(params: Record<string, any>): Promise<Record<str
   return { exito: true };
 }
 
-const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
+// 'Técnico' se quitó como estado (Victor, 2026-11-14; nadie lo tenía).
+const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Lesionadx'];
 
 // ─── Transiciones de estado_miembro (helpers compartidos) ────────────────────
 // Modelo de autodeclaración (ver MANIFEST.md): la persona declara su propio
@@ -7300,10 +7261,11 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     // recalcula solo en la siguiente carga -- no hace falta ninguna
     // migración de datos, `puntosTotal` real nunca cambia, solo cambia qué
     // multiplicador se le aplica en este display.
-    const dividirMitad = dividirMitadPorTier[p.rol] === true;
     return {
       ...p,
-      puntosEfectivos: dividirMitad ? Math.round(p.puntosTotal * 0.5 * 10) / 10 : p.puntosTotal,
+      // "Puntos a la mitad" se quitó (Victor, 2026-11-14): no entraba en los
+      // requisitos para subir; ahora siempre es el total.
+      puntosEfectivos: p.puntosTotal,
       // Fondos de viaje (Parte 7) -- mapa armado arriba con 1 sola consulta
       // para todo el roster (`_calificaFondosViajePorUsuarios()`).
       calificaFondosViaje: calificaFondosViajePorUsuario[p.username] === true,
@@ -9116,7 +9078,6 @@ async function cronDiario(): Promise<Record<string, any>> {
     await recalcularPuntosAsistencia(m, a);
   } catch (e) { console.error('[puntos] cron:', e); }
         try { await _avisarPrestamosLargos(); } catch (e) { console.error('[inventario] avisos:', e); }
-  try { await _avisarCongeladoVencido(); } catch (e) { console.error('[estados] máximo:', e); }
   try { await _cronCorteEquipos(); } catch (e) { console.error('[equipos] corte:', e); }
   const hoyIso = _hoyEcuadorISO();
   const diaMes = hoyIso.substring(5);              // 'MM-DD'

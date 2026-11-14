@@ -323,8 +323,22 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
 
   String _textoCorte(String modo, int dia, int aviso) {
     final (c, llega) = _fechasCorte(dia, aviso);
-    if (modo == 'auto') return 'Los cambios se aplican apenas alguien cumple o deja de cumplir lo de su equipo, con el margen de cada uno.';
-    return 'La lista llegará a la Bandeja el ${Fechas.corta(llega)}. Tendrás hasta el ${Fechas.corta(c)} para revisarla; lo que no revises se aplicará automáticamente ese día.';
+    final ej = _ejemploCorte(modo, c);
+    if (modo == 'auto') {
+      return 'Los cambios se aplicarán apenas alguien cumpla o deje de cumplir los requisitos, de forma automática.${ej.isEmpty ? '' : '\n\n$ej'}';
+    }
+    return 'La lista llegará a la Bandeja el ${Fechas.corta(llega)}. Tendrás hasta el ${Fechas.corta(c)} para revisarla; lo que no revises se aplicará automáticamente ese día.${ej.isEmpty ? '' : '\n\n$ej'}';
+  }
+
+  /// Ejemplo con los requisitos reales de los dos primeros equipos (Victor, 2026-11-14).
+  String _ejemploCorte(String modo, DateTime corte) {
+    final l = _tiers;
+    if (l == null || l.length < 2) return '';
+    final arriba = '${l[0]['nombre']}', abajo = '${l[1]['nombre']}';
+    final r = _Regla.de(l[0]);
+    if (r.clases == 0 && r.puntos == 0) return '';
+    final cuando = modo == 'auto' ? 'pasa a $arriba ese mismo día' : 'aparece en la lista y, si no la revisas, pasa a $arriba el ${Fechas.corta(corte)}';
+    return 'Ejemplo: si alguien de $abajo logra ${r.texto} durante ${r.subir} ${r.subir == 1 ? 'mes' : 'meses seguidos'}, $cuando.';
   }
 
   Future<void> _editarCorte() async {
@@ -420,7 +434,7 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
             if (f != null) set(() => desde = f);
           },
         ),
-        const _Nota(texto: 'Los puntos ya ganados nunca cambian: el valor nuevo se aplica solo a clases desde esa fecha.'),
+        const _Nota(texto: 'Los puntos ya ganados nunca cambian.'),
       ],
     );
     if (ok == true) {
@@ -469,8 +483,8 @@ class _CategoriasScreenState extends State<CategoriasScreen> {
           title: const Text('Las llegadas tarde suman para el equipo'),
           subtitle: Text(
             tarde
-                ? 'Si alguien llega tarde, esa clase igual cuenta para lo que pide su equipo (por ejemplo, las 3 clases al mes).'
-                : 'Si alguien llega tarde, esa clase no cuenta para lo que pide su equipo. Los puntos por llegar tarde no cambian.',
+                ? 'Si alguien llega tarde a un evento puntual, ese evento se tomará en cuenta de todas formas para el puntaje total y los requisitos mínimos.'
+                : 'Si alguien llega tarde a un evento puntual, ese evento no se toma en cuenta para los requisitos mínimos. Los puntos por llegar tarde no cambian.',
           ),
           value: tarde,
           onChanged: (v) => set(() => tarde = v),
@@ -1383,13 +1397,6 @@ class _EquipoScreenState extends State<_EquipoScreen> {
                   ),
                 ),
             ],
-            _Fila(
-              icono: Icons.call_split_rounded,
-              titulo: 'Puntos a la mitad',
-              texto: 'Sus puntos cuentan la mitad para el ranking y los fondos.',
-              alTocar: () => _guardar({'dividir_puntos_mitad': t['dividir_puntos_mitad'] == true ? '' : 'true'}),
-              final_: Switch(value: t['dividir_puntos_mitad'] == true, onChanged: (v) => _guardar({'dividir_puntos_mitad': v ? 'true' : ''})),
-            ),
             _Fila(
               icono: Icons.flight_takeoff_rounded,
               titulo: 'Fondos de viaje',

@@ -49,8 +49,6 @@ class ConfigLiga extends ChangeNotifier {
   int get rectificacionDias => (reglas['rectificacionDias'] as num?)?.toInt() ?? 7;
   int get eventosMinPersonas => (reglas['eventosMinPersonas'] as num?)?.toInt() ?? 5;
 
-  /// Estados que congelan: meses máximos por estado (0 = sin límite).
-  int congelarMax(String estado) => ((reglas['congelarMaxMeses'] as Map?)?[estado] as num?)?.toInt() ?? 0;
   int get cuotaVenceDia => (reglas['cuotaVenceDia'] as num?)?.toInt() ?? 0;
   int get cuotaGraciaDias => (reglas['cuotaGraciaDias'] as num?)?.toInt() ?? 0;
   num get cuotaRecargo => (reglas['cuotaRecargo'] as num?) ?? 0;

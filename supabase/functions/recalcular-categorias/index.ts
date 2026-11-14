@@ -202,27 +202,10 @@ Deno.serve(async (req: Request) => {
                 mesesUltimoMes: r.meses_consecutivos_ultimo_mes ?? null,
       }));
 
-    // Estados que congelan con máximo (Mi Liga → Reglas, Victor 2026-11-13):
-    // `congelarMaxMeses` = { 'Lesionadx': n, 'De viaje': n, 'Técnico': n }, 0 o
-    // ausente = sin límite. Cumplido el máximo, la persona sigue con su estado
-    // pero deja de estar congelada: se evalúa normal y los días que estuvo
-    // congelada se le devuelven a la ventana (igual que un viaje ya
-    // terminado), así solo cuenta la asistencia desde ese día.
-    const { data: reglasCongelar } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
-    let congelarMax: Record<string, number> = {};
-    try { congelarMax = JSON.parse(String(reglasCongelar?.value ?? '{}'))?.congelarMaxMeses ?? {}; } catch { congelarMax = {}; }
-    const hoyIsoCongelar = fechaISO(new Date());
+    // Exclusiones por persona (viaje ya terminado al recalcular a una sola
+    // persona). El máximo de los estados que congelan se quitó (Victor,
+    // 2026-11-14): una asistencia real ya devuelve a Activx.
     const exclusiones: Record<string, [string, string]> = {};
-    const congeladoVencido = new Set<string>();
-    for (const m of miembros) {
-      const max = Number(congelarMax[String(m.estadoMiembro ?? '')]) || 0;
-      if (max <= 0 || !m.estadoDesde) continue;
-      const d = new Date(Date.parse(m.estadoDesde));
-      const fin = fechaISO(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + max, d.getUTCDate())));
-      if (fin > hoyIsoCongelar) continue;
-      congeladoVencido.add(m.username);
-      exclusiones[m.username] = [m.estadoDesde, fechaISO(new Date(Date.parse(fin) - DIA_MS))];
-    }
     if (hayExclusion && soloUsuario) exclusiones[soloUsuario] = [excluirDesde!, excluirHasta!];
     const diasExclusionMax = Math.max(diasExclusion, ...Object.values(exclusiones).map(([a, b]) => Math.round((Date.parse(b) - Date.parse(a)) / DIA_MS) + 1));
 
@@ -442,13 +425,12 @@ Deno.serve(async (req: Request) => {
       // del recálculo -- ver MANIFEST.md "estado_miembro"). Tampoco
       // registra historial_tier este mes -- no hubo una evaluación real que
       // registrar.
-            const vencido = congeladoVencido.has(username);
-      if (estadoMiembro === 'Lesionadx' && !vencido) continue;
+            if (estadoMiembro === 'Lesionadx') continue;
       // De viaje (feat nueva, ver MANIFEST.md): mismo criterio que Lesionadx
       // -- tier congelado mientras dura el viaje. Excepción: el modo
       // `soloUsuario` (viaje ya terminado registrado a posteriori) SÍ la
       // evalúa, con la ventana compensada.
-            if (estadoMiembro === 'De viaje' && username !== soloUsuario && !vencido) continue;
+            if (estadoMiembro === 'De viaje' && username !== soloUsuario) continue;
       // tier_modo fijado a mano (Cambio 55, control Quindes/Auto/Mirlxs del
       // perfil de Equipo, ver adminSetTierModo()/supabase/functions/api/index.ts)
       // -- mismo criterio que Lesionadx: la categoría queda como esté,
@@ -479,11 +461,6 @@ Deno.serve(async (req: Request) => {
         categoriaAsignada = 'Mirlxs';
         nuevosMesesConsecutivos = 0; nuevoUltimoMes = null;
         nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
-            } else if (estadoMiembro === 'Técnico' && !vencido) {
-        // Técnico: siempre Quindes, sin calcular clases/puntos ni tocar
-        // riesgo/ascenso -- mismo criterio que antes de esta Fase 2 (caso
-        // especial, no participa del sistema de mérito en absoluto).
-        categoriaAsignada = 'Quindes';
       } else {
         const categoriaActual = m.categoria || tierDefault.nombre;
         const tierActualCfg = tiers.find((t: any) => t.nombre === categoriaActual) ?? tierDefault;

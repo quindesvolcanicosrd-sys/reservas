@@ -173,55 +173,6 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
     }
   }
 
-  static const _estadosCongelan = {'Lesionadx': 'Lesión', 'De viaje': 'Viaje', 'Técnico': 'Técnico'};
-
-  String _textoCongelar(ConfigLiga c) {
-    final con = [
-      for (final e in _estadosCongelan.entries)
-        if (c.congelarMax(e.key) > 0) '${e.value}: ${c.congelarMax(e.key)} ${c.congelarMax(e.key) == 1 ? 'mes' : 'meses'}',
-    ];
-    return con.isEmpty ? 'Sin límite: no cuentan para subir o bajar de equipo' : con.join(' · ');
-  }
-
-  Future<void> _congelar(BuildContext context, ConfigLiga c) async {
-    final v = {for (final e in _estadosCongelan.keys) e: c.congelarMax(e)};
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (h) => StatefulBuilder(
-        builder: (h, set) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Estados que congelan', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                Text(
-                  'Mientras una persona tiene uno de estos estados, su asistencia no cuenta para subir o bajar de equipo. '
-                  'Con un máximo, al cumplirse ese tiempo la asistencia vuelve a contar desde ese día y se avisa a la persona y a los Pivots. '
-                  '0 = sin límite.',
-                  style: TextStyle(color: h.pivot.textoSecundario),
-                ),
-                for (final e in _estadosCongelan.entries) ...[
-                  const SizedBox(height: 16),
-                  Text(e.value, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  SelectorNumero(valor: v[e.key]!, min: 0, max: 36, etiqueta: 'meses', alCambiar: (n) => set(() => v[e.key] = n.toInt())),
-                ],
-                const SizedBox(height: 20),
-                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    if (ok == true && context.mounted) await _guardarRegla(context, c, {'congelarMaxMeses': v});
-  }
-
   String _textoVencimiento(ConfigLiga c) {
     if (c.cuotaVenceDia == 0) return 'No vence';
     final g = c.cuotaGraciaDias > 0 ? ' + ${c.cuotaGraciaDias} ${c.cuotaGraciaDias == 1 ? 'día' : 'días'} de gracia' : '';
@@ -248,7 +199,8 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Si alguien envía su pago después del día de vencimiento y los días de gracia, se le suma el recargo. '
-                  'Cuenta el día en que envía la solicitud, no el día en que un Pivot la aprueba. Los pagos ya hechos no cambian.',
+                  'Cuenta el día en que envía la solicitud, no el día en que un Pivot la aprueba. Los pagos ya hechos no cambian.\n\n'
+                  'Ejemplo: día 10, 3 días de gracia y \$2 de recargo. Quien envía el pago de noviembre hasta el 13 de noviembre paga el precio normal; desde el 14 paga \$2 más. Con el día en 0, la cuota no vence.',
                   style: TextStyle(color: h.pivot.textoSecundario),
                 ),
                 const SizedBox(height: 16),
@@ -470,9 +422,9 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                     child: FilaAjuste(
                       icono: Icons.confirmation_number_outlined,
                       seccion: 'cuota',
-                      titulo: 'Clase suelta',
+                      titulo: 'Valor por clase',
                       valor: _plata(c.precioPorClase),
-                      alTocar: () => _precio(context, c, 'Clase suelta', c.precioPorClase, 'precioPorClase'),
+                      alTocar: () => _precio(context, c, 'Valor por clase', c.precioPorClase, 'precioPorClase'),
                     ),
                   ),
                 ],
@@ -488,9 +440,9 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                     child: FilaAjuste(
                       icono: Icons.timer_outlined,
                       seccion: 'entrenamientos',
-                      titulo: 'Tolerancia de llegada',
+                      titulo: 'Tolerancia para llegadas tarde',
                       valor: '${c.toleranciaMin} minutos: después se sugiere marcar Tarde',
-                      alTocar: () => _numero(context, c, 'Tolerancia de llegada', 'toleranciaMin', c.toleranciaMin, 0, 120, 'minutos'),
+                      alTocar: () => _numero(context, c, 'Tolerancia para llegadas tarde', 'toleranciaMin', c.toleranciaMin, 0, 120, 'minutos'),
                     ),
                   ),
                   Resaltable(
@@ -500,7 +452,7 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                       icono: Icons.fact_check_outlined,
                       seccion: 'entrenamientos',
                       titulo: 'Rectificaciones',
-                      valor: 'Los Pivots tienen ${c.rectificacionDias} días para revisarlas',
+                      valor: 'Pedidos para corregir una asistencia mal tomada. Los Pivots tienen ${c.rectificacionDias} días para revisarlos',
                       alTocar: () => _numero(context, c, 'Días para revisar una rectificación', 'rectificacionDias', c.rectificacionDias, 1, 60, 'días'),
                     ),
                   ),
@@ -522,19 +474,8 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                       icono: Icons.hourglass_empty_rounded,
                       seccion: 'entrenamientos',
                       titulo: 'Inactividad',
-                      valor: '${ConfigLiga.diasInactividad} días sin venir',
-                      alTocar: () => _numero(context, c, 'Inactivx después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
-                    ),
-                  ),
-                  Resaltable(
-                    id: 'congelar',
-                    resaltado: _resaltado,
-                    child: FilaAjuste(
-                      icono: Icons.ac_unit_rounded,
-                      seccion: 'entrenamientos',
-                      titulo: 'Estados que congelan',
-                      valor: _textoCongelar(c),
-                      alTocar: () => _congelar(context, c),
+                      valor: 'Una persona pasa a inactiva después de ${ConfigLiga.diasInactividad} días sin venir a ningún evento',
+                      alTocar: () => _numero(context, c, 'Pasa a inactiva después de', 'inactividadDias', ConfigLiga.diasInactividad, 7, 365, 'días sin venir'),
                     ),
                   ),
                 ],
@@ -563,28 +504,6 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                 titulo: 'Datos de la liga',
                 pie: 'El país define el prefijo de teléfono y los números de emergencia. La zona horaria se guarda y se aplicará a los horarios cuando la app admita varias ligas; por ahora todo usa la hora de Ecuador.',
                 filas: [
-                  Resaltable(
-                    id: 'logo',
-                    resaltado: _resaltado,
-                    child: FilaAjuste(
-                      icono: Icons.shield_outlined,
-                      seccion: 'identidad',
-                      titulo: 'Logo de la liga',
-                      valor: c.logo.isEmpty ? 'Sin logo' : 'Toca para cambiarlo',
-                      alTocar: () async {
-                        final m = ScaffoldMessenger.of(context);
-                        try {
-                          final u = await elegirYSubirLogo(context, sesion, 'liga');
-                          if (u != null) {
-                            await c.cargar();
-                            m.showSnackBar(const SnackBar(content: Text('Logo actualizado')));
-                          }
-                        } catch (e) {
-                          m.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'No se pudo subir el logo.')));
-                        }
-                      },
-                    ),
-                  ),
                   Resaltable(
                     id: 'pais',
                     resaltado: _resaltado,

@@ -392,7 +392,6 @@ class _AdministracionState extends State<_Administracion> {
   static const _estados = {
     'Activx': (Icons.directions_run_rounded, 'Entrena con normalidad.'),
     'Ausente': (Icons.event_busy_rounded, 'Fuera por un tiempo, avisado.'),
-    'Técnico': (Icons.sports_rounded, 'Acompaña desde el staff técnico.'),
     'Lesionadx': (Icons.healing_rounded, 'En recuperación de una lesión.'),
   };
 
