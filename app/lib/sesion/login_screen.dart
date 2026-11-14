@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/api.dart';
 import '../core/tema.dart';
 import 'sesion.dart';
 
@@ -52,6 +53,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await accion();
     } on LoginFallido catch (e) {
       if (mounted && e.mensaje.isNotEmpty) setState(() => _error = e.mensaje);
+    } on ApiException catch (e) {
+      // El servidor respondió con un error (por ejemplo "Código incorrecto o
+      // vencido."): se muestra tal cual, no como falta de conexión.
+      if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) setState(() => _error = 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.');
     } finally {
@@ -162,15 +167,16 @@ class _LoginScreenState extends State<LoginScreen> {
             onSubmitted: (_) => _siguienteCorreo(),
           ),
         if (_modoCorreo == 'codigo') ...[
-          Text('Te enviamos un código de 6 dígitos a ${_correo.text.trim()}.', textAlign: TextAlign.center),
+          Text('Te enviamos un código a ${_correo.text.trim()}.', textAlign: TextAlign.center),
           const SizedBox(height: 12),
           TextField(
             controller: _codigo,
             autofocus: true,
             keyboardType: TextInputType.number,
-            maxLength: 6,
+            // El largo del código lo define Supabase (hoy 8 dígitos).
+            maxLength: 10,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 24, letterSpacing: 4, fontWeight: FontWeight.w700),
             decoration: const InputDecoration(border: OutlineInputBorder(), counterText: ''),
             onSubmitted: (_) => _siguienteCorreo(),
           ),
