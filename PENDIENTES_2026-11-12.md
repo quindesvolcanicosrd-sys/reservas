@@ -475,3 +475,8 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] La web antigua (index.html) puede seguir diciendo "DeUna".
 - Documento de Mi Liga en Drive: no aparece en Drive (solo "Autorización mayores de 16 años" y "Gestión de cuentas"); lo acordado está en la Bandeja y en este archivo.
 - Pendiente de lo acordado en chats anteriores (revisar si sigue en pie): push de pago parcial (Victor lo aprobó en octubre; hoy no hay pagos parciales).
+
+## N. Siguiente tanda (Victor, 2026-11-13 desde las 22:23; se van sumando en la Bandeja)
+- [ ] Pantalla de carga: quitar el splash con revelado de máscara; solo el logo y fade out a la app.
+- [ ] Asistencia anticipada → horario: selector de hora con AM/PM (la rueda actual es difícil).
+- [ ] Asistencia anticipada → "Solo algunos": días primero; los lugares se deducen de los entrenamientos de esos días (sin Cumandá si los lunes solo hay CCI). Horarios: mostrar los de esos días y decir qué entrenamiento afecta; si no afecta ninguno, avisar que se guarda igual por si se crea un evento en ese horario. Decidir qué pasa si luego se crea un evento en un lugar que no estaba.
