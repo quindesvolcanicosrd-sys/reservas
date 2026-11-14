@@ -96,8 +96,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
       AccionMenu(Icons.assignment_ind_outlined, 'Alguien tiene algo del equipo', () => _prestamo(ModoPrestamo.registrar)),
       AccionMenu(Icons.playlist_add_rounded, 'Nueva lista', () => _abrir(NuevaListaAsistente(repo: repo), 'Lista creada')),
     ] else ...[
-      if (repo.reglaPrestamo != 'no' && tieneEquipoPropio(widget.sesion.datos))
-        AccionMenu(Icons.emergency_outlined, 'Equipamiento de emergencia', () => _prestamo(ModoPrestamo.uso)),
+      if (repo.reglaPrestamo == 'excepcional') AccionMenu(Icons.inventory_2_outlined, 'Equipamiento de emergencia', () => _prestamo(ModoPrestamo.uso)),
       AccionMenu(Icons.back_hand_outlined, 'Me llevé algo del equipo', () => _prestamo(ModoPrestamo.salida)),
     ],
   ]);
@@ -214,7 +213,10 @@ class _InventarioScreenState extends State<InventarioScreen> {
                 ocupado: _guardando,
               ),
             // Tu equipamiento (antes en Mi perfil, Victor 2026-11-13).
-            if (widget.sesion.datos.isNotEmpty) _TuEquipamiento(sesion: widget.sesion, regla: repo.reglaPrestamo, alPedir: () => _prestamo(ModoPrestamo.uso)),
+            // Solo en equipos que exigen equipamiento propio (regla de
+            // préstamo 'excepcional', como Quindes; Victor, 2026-11-14).
+            if (widget.sesion.datos.isNotEmpty && repo.reglaPrestamo == 'excepcional')
+              _TuEquipamiento(sesion: widget.sesion, regla: repo.reglaPrestamo, alPedir: () => _prestamo(ModoPrestamo.uso)),
             for (final e in seccionesInventario.entries)
               if (repo.listas.any((l) => l.seccion == e.key)) ...[
                 Padding(
@@ -807,7 +809,7 @@ class _TuEquipamiento extends StatelessWidget {
     // emergencia; quien usa el del equipo (Mirlxs) solo cambia su talla o
     // qué protecciones necesita (Victor, 2026-11-13).
     final propio = tieneEquipoPropio(d);
-    final emergencia = propio && regla != 'no';
+    final emergencia = regla == 'excepcional';
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -818,7 +820,7 @@ class _TuEquipamiento extends StatelessWidget {
             borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
             child: InkWell(
               borderRadius: BorderRadius.circular(PivotRadios.tarjeta),
-              onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion)),
+              onTap: () => SubAjustes.abrir(context, EquipamientoScreen(sesion: sesion, conPedido: false)),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
                 child: Row(
@@ -860,7 +862,7 @@ class _TuEquipamiento extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
                   child: Row(
                     children: [
-                      Icon(Icons.emergency_outlined, color: p.sobreMarca),
+                      Icon(Icons.inventory_2_outlined, color: p.sobreMarca),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

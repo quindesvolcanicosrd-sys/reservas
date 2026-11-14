@@ -828,6 +828,30 @@ class _HistorialAjustesScreenState extends State<HistorialAjustesScreen> {
   };
 
   /// Qué cambió, en palabras.
+  /// Una frase por cambio, en lenguaje simple (Victor, 2026-11-14: "las
+  /// cards no se entienden mucho").
+  static String _frasEquipo(String k, Object? a, Object? d) {
+    String n(Object? x) => _v(x);
+    String meses(Object? x) => x is num ? '${n(x)} ${x == 1 ? 'mes' : 'meses'}' : n(x);
+    const fuente = {'tareas': 'solo los puntos por tareas', 'todos': 'todos los puntos', 'asistencia': 'solo los puntos por asistencia'};
+    return switch (k) {
+      'min_clases' => 'ahora pide ${n(d)} clases (antes ${n(a)})',
+      'min_puntos' => 'ahora pide ${n(d)} puntos (antes ${n(a)})',
+      'ventana_meses' => 'revisa cada ${meses(d)} (antes cada ${meses(a)})',
+      'periodo_unidad' || 'gracia_unidad' => 'cambió la unidad de tiempo a ${n(d)}',
+      'logica' => d == 'Y' ? 'ahora pide clases y puntos a la vez' : 'ahora basta con cumplir clases o puntos',
+      'meses_consecutivos_ascenso' => 'para subir hay que cumplir ${meses(d)} seguidos (antes ${meses(a)})',
+      'meses_gracia_demotion' => 'margen antes de bajar: ${meses(d)} (antes ${meses(a)})',
+      'califica_fondos_viaje' => d == true ? 'ahora participa de los fondos de viaje' : 'ya no participa de los fondos de viaje',
+      'puntos_fuente' => 'ahora cuentan ${fuente['$d'] ?? n(d)}',
+      'orden' => 'cambió de lugar en la lista de equipos',
+      'requisitos' => 'cambió los requisitos del enlace de invitación',
+      'logo' => 'cambió su logo',
+      'dividir_puntos_mitad' => '',
+      _ => '',
+    };
+  }
+
   String _detalle(Map<String, dynamic> h) {
     final clave = '${h['clave']}';
     final antes = h['antes'], despues = h['despues'];
@@ -838,32 +862,44 @@ class _HistorialAjustesScreenState extends State<HistorialAjustesScreen> {
         if (antes == null) return 'Creó el equipo $nombre.';
         final cambios = <String>[];
         if (antes is Map && despues is Map) {
-          for (final e in _camposEquipo.entries) {
-            final a = antes[e.key], d = despues[e.key];
-            if ('$a' != '$d') cambios.add(e.key == 'nombre' ? 'se llama $d (antes $a)' : '${e.value}: ${_v(a is Map ? null : a)} → ${_v(d is Map ? null : d)}');
+          if ('${antes['nombre']}' != '${despues['nombre']}') cambios.add('ahora se llama ${despues['nombre']} (antes ${antes['nombre']})');
+          for (final k in _camposEquipo.keys) {
+            if (k == 'nombre') continue;
+            final a = antes[k], d = despues[k];
+            if ('$a' == '$d') continue;
+            final f = _frasEquipo(k, a, d);
+            if (f.isNotEmpty) cambios.add(f);
           }
         }
-        return cambios.isEmpty ? 'Editó $nombre.' : 'En $nombre: ${cambios.join('; ')}.';
+        if (cambios.isEmpty) return 'Guardó $nombre sin cambios en sus reglas.';
+        final t = cambios.join('; ');
+        return 'En $nombre ${t[0].toLowerCase()}${t.substring(1)}.';
       case 'puntos':
         final d = despues is Map ? despues : const {};
         final a = antes is Map ? antes : const {};
         final desde = DateTime.tryParse('${d['desde'] ?? ''}');
-        return 'A tiempo ${_v(a['aTiempo'])} → ${_v(d['aTiempo'])}; tarde ${a['tardeCuenta'] == false ? 'no suma' : _v(a['tarde'])} → ${d['tardeCuenta'] == false ? 'no suma' : _v(d['tarde'])}'
-            '${desde == null ? '' : ', desde el ${Fechas.corta(desde)}'}.';
+        String tarde(Map m) => m['tardeCuenta'] == false ? 'no suma' : 'vale ${_v(m['tarde'])}';
+        return 'Ahora llegar a tiempo vale ${_v(d['aTiempo'])} y llegar tarde ${tarde(d)} (antes ${_v(a['aTiempo'])} y ${tarde(a)})'
+            '${desde == null ? '' : ', para las clases desde el ${Fechas.corta(desde)}'}. Los puntos ya ganados no cambian.';
       case 'corte':
-        String t(Object? x) =>
-            x is Map ? (x['modo'] == 'auto' ? 'automático' : 'revisar antes, día ${x['dia']}, la lista llega ${x['avisoDias']} días antes') : '—';
-        return '${t(antes)} → ${t(despues)}.';
+        String t(Object? x) => x is Map
+            ? (x['modo'] == 'auto'
+                  ? 'se aplican solos apenas alguien cumple o deja de cumplir'
+                  : 'se revisan antes: la lista llega ${x['avisoDias']} días antes y se aplica el día ${x['dia']}')
+            : 'sin definir';
+        return 'Los cambios de equipo ahora ${t(despues)} (antes ${t(antes)}).';
       case 'toleranciaMin':
-        return '${_v(antes, 'minutos')} → ${_v(despues, 'minutos')}.';
-      case 'rectificacionDias' || 'inactividadDias':
-        return '${_v(antes, 'días')} → ${_v(despues, 'días')}.';
+        return 'La tolerancia para llegadas tarde ahora es de ${_v(despues, 'minutos')} (antes ${_v(antes, 'minutos')}).';
+      case 'rectificacionDias':
+        return 'Los Pivots ahora tienen ${_v(despues, 'días')} para revisar rectificaciones (antes ${_v(antes, 'días')}).';
+      case 'inactividadDias':
+        return 'Una persona ahora pasa a inactiva tras ${_v(despues, 'días')} sin venir (antes ${_v(antes, 'días')}).';
       case 'eventosMinPersonas':
-        return '${_v(antes, 'personas')} → ${_v(despues, 'personas')}.';
+        return 'Un evento ahora necesita al menos ${_v(despues, 'personas')} (antes ${_v(antes, 'personas')}).';
       case 'tardeCuentaClase':
-        return despues == false ? 'Llegar tarde ya no cuenta para el equipo.' : 'Llegar tarde cuenta para el equipo.';
+        return despues == false ? 'Llegar tarde ya no cuenta para los requisitos del equipo.' : 'Llegar tarde ahora cuenta para los requisitos del equipo.';
       case 'tiposCuentan':
-        return '${_v(antes)} → ${_v(despues)}.';
+        return 'Ahora cuentan como clase: ${_v(despues)} (antes: ${_v(antes)}).';
       case 'logo':
         final d = despues is Map ? despues['destino'] : '';
         return d == 'liga'
@@ -871,14 +907,20 @@ class _HistorialAjustesScreenState extends State<HistorialAjustesScreen> {
             : ('$d'.startsWith('medio-') ? 'Cambió el logo de un medio de pago.' : 'Cambió el logo de un equipo.');
       case 'cuenta':
         final n = despues is Map ? despues['nombre'] : (antes is Map ? antes['nombre'] : 'una cuenta');
-        if (despues == null) return 'Borró la cuenta $n.';
-        if (antes == null) return 'Creó la cuenta $n.';
-        if (despues is Map && despues['archivada'] == true) return 'Archivó la cuenta $n.';
-        return 'Editó la cuenta $n.';
+        if (despues == null) return 'Borró la cuenta $n de Tesorería.';
+        if (antes == null) {
+          final s0 = despues is Map ? despues['saldo_inicial'] : null;
+          return 'Creó la cuenta $n en Tesorería${s0 is num && s0 != 0 ? ' con \$${_v(s0)} de saldo inicial' : ''}.';
+        }
+        if (despues is Map && despues['archivada'] == true) return 'Archivó la cuenta $n de Tesorería.';
+        if (antes is Map && despues is Map && '${antes['saldo_inicial']}' != '${despues['saldo_inicial']}') {
+          return 'Cambió el saldo inicial de $n: \$${_v(despues['saldo_inicial'])} (antes \$${_v(antes['saldo_inicial'])}).';
+        }
+        return 'Editó la cuenta $n de Tesorería.';
       case 'transparencia':
         return despues == true ? 'Activó la transparencia: el equipo ve los totales.' : 'Desactivó la transparencia.';
     }
-    return '${_v(antes)} → ${_v(despues)}.';
+    return 'Cambió "$clave": ${_v(despues is Map || despues is List ? null : despues)} (antes ${_v(antes is Map || antes is List ? null : antes)}).';
   }
 
   Future<void> _elegirPeriodo() async {

@@ -117,8 +117,11 @@ class MiPerfilEditable extends StatelessWidget {
 /// Patines y protecciones del club. Si alguien de Quindes elige equipamiento
 /// del club, primero ve el aviso (Victor, 2026-11-07).
 class EquipamientoScreen extends StatefulWidget {
-  const EquipamientoScreen({super.key, required this.sesion});
+  const EquipamientoScreen({super.key, required this.sesion, this.conPedido = true});
   final Sesion sesion;
+
+  /// Mostrar "¿Necesitas equipamiento por un tiempo?" (no al entrar desde Inventario).
+  final bool conPedido;
 
   @override
   State<EquipamientoScreen> createState() => _EquipamientoScreenState();
@@ -331,7 +334,9 @@ class _EquipamientoScreenState extends State<EquipamientoScreen> {
               style: TextStyle(fontSize: 13.5, color: p.textoSecundario),
             ),
           ),
-          if (valorDe(s, 'categoria') == 'Quindes' && !_usaClub) ...[
+          // Se quitó al entrar desde Inventario (Victor, 2026-11-14): ahí está
+          // la tarjeta "Solicitar equipamiento de emergencia".
+          if (widget.conPedido && valorDe(s, 'categoria') == 'Quindes' && !_usaClub) ...[
             const SizedBox(height: 12),
             Material(
               color: p.tarjeta,
