@@ -60,7 +60,7 @@ Reglas de siempre:
    - En datos sensibles se indica qué Pivot puede verlos, para que en una emergencia se le pregunte.
    - Elegir qué Pivots reciben cada aviso operativo (qué llevar, equipamiento, pagos).
    - Roles por deporte (roller derby: jammer, blocker, bench, coach…; fútbol: delantero, arquero…) con "+" para roles propios.
-5. [x] **Tesorería** (Finanzas) — hecho 2026-11-13 salvo: aplicar el saldo de una persona al cobrar la cuota (se registra cómo, falta el aviso al pagar), pruebas automáticas de totales y aviso legal (borrador en `AVISO_LEGAL_TESORERIA_BORRADOR.md`, sin publicar):
+5. [x] **Tesorería** (Finanzas) — hecho 2026-11-13 (el saldo se elige al pagar la cuota) salvo: pruebas automáticas de totales y aviso legal (borrador en `AVISO_LEGAL_TESORERIA_BORRADOR.md`, sin publicar):
    - **Cuentas**: efectivo (caja, con quién la tiene), De Una y banco. Saldo inicial = fondos que la liga ya tenía antes de usar Pivot.
    - **Cada ingreso dice a qué cuenta entró.** Al aprobar un pago, el Pivot confirma el medio real (la persona pudo declarar banco y pagar con De Una) y se puede corregir después.
    - **Corregir es anular y volver a registrar.** Nada se borra.

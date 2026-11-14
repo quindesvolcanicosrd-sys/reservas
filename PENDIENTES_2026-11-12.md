@@ -467,7 +467,7 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] Cuota: día de vencimiento, gracia y recargo fijo (Victor: monto fijo).
 - [ ] Rachas y "puntos por defecto de una tarea" editables.
 - [ ] Cobros: planes (semestre de clases), cupones por persona o equipo (etapa 6), cursos, inscripción rápida.
-- [ ] Al cobrar la cuota, mostrar el saldo a favor/en contra de Tesorería y preguntar a la persona si lo usa o lo paga junto (Victor: preguntarle al pagar).
+- [x] Al pagar la cuota, la persona ve su saldo a favor o en contra y elige si lo usa o lo paga junto (Victor: preguntarle al pagar).
 - [ ] Bandeja doc: casillas "En prueba".
 
 ## M. Ronda de las 8:30 p. m. (2026-11-13)

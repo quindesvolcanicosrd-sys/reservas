@@ -2476,7 +2476,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { data: prestPend } = await supabase.from('inventario_prestamos').select('id, username, articulo, detalle, created_at, tipo, motivo, permanente').eq('estado', 'pendiente').order('created_at');
   const [res, rect, exc, les, asig] = await Promise.all([
-        supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago, medio_nombre').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
+        supabase.from('reservas').select('id, nombre_usuario, id_evento, tipo, mes_texto, talla, protecciones, monto, fecha_pago, uso_cupon, created_at, medio_pago, medio_nombre, saldo_aplicado').eq('estado', 'Pendiente').order('created_at', { ascending: true }),
         supabase.from('rectificaciones_asistencia').select('id, nombre, id_evento, fecha_evento, estado_solicitado, created_at').eq('decision', 'Pendiente')
       .gte('created_at', new Date(Date.now() - (await _diasRectificacion()) * 86400000).toISOString()).order('created_at', { ascending: true }),
     supabase.from('solicitudes_excepcion').select('id, nombre, tipo, datos, mes_aplicacion, created_at, admins_destino').eq('estado', 'pendiente').order('created_at', { ascending: true }),
@@ -2520,7 +2520,7 @@ async function adminBandeja(params: Record<string, any>): Promise<Record<string,
   const items = {
     reservas: (res.data ?? []).map((r: any) => ({
       id: r.id, ...persona(r.nombre_usuario), tipo: r.tipo, mesTexto: r.mes_texto ?? '', talla: r.talla ?? '', protecciones: r.protecciones ?? '',
-      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', medioNombre: r.medio_nombre ?? '', fechaPago: r.fecha_pago ?? null,
+      monto: Number(r.monto) || 0, usoCupon: !!r.uso_cupon, creada: r.created_at, evento: evento(r.id_evento), medio: r.medio_pago ?? '', medioNombre: r.medio_nombre ?? '', fechaPago: r.fecha_pago ?? null, saldoAplicado: Number(r.saldo_aplicado) || 0,
     })),
     rectificaciones: (rect.data ?? []).map((r: any) => ({ id: r.id, ...persona(r.nombre), estadoSolicitado: r.estado_solicitado, fechaEvento: r.fecha_evento, creada: r.created_at, evento: evento(r.id_evento) })),
     excepciones: excVisibles.map((r: any) => ({ id: r.id, ...persona(r.nombre), tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, creada: r.created_at })),
@@ -4714,11 +4714,21 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   const precios = await getPreciosClases();
     let montoFinal = esMensual ? Number(precios.precioMensual ?? 0) : Number(precios.precioPorClase ?? 0);
   // Recargo fijo por pagar la cuota después del vencimiento + gracia (Mi Liga → Cobros).
-  let recargo = 0;
+    let recargo = 0;
+  let saldoAplicado: number | null = null;
   if (esMensual) {
     const vig = _vigenciaMensualISO(fecha, new Date().toISOString().substring(0, 10), anioMes);
     recargo = vig ? _recargoCuota(vig.slice(0, 7), _hoyEcuadorISO(), await _reglasLiga()) : 0;
-    montoFinal += recargo;
+        montoFinal += recargo;
+    // Saldo con el equipo (Victor: se le pregunta al pagar). 'usar' descuenta
+    // el saldo a favor; 'pagar' suma la deuda. Se registra al confirmar.
+    const pide = String(params.saldo ?? '');
+        // Solo con la sesión de la misma persona: el saldo no se puede usar a nombre de otra.
+    if ((pide === 'usar' || pide === 'pagar') && (await _validarToken(String(params.token ?? ''))) === nombre) {
+      const disp = await _saldoDisponible(nombre);
+      if (pide === 'usar' && disp > 0) { saldoAplicado = _num2(Math.min(disp, montoFinal)); montoFinal = _num2(montoFinal - saldoAplicado); }
+      if (pide === 'pagar' && disp < 0) { saldoAplicado = _num2(disp); montoFinal = _num2(montoFinal - disp); }
+    }
   }
 
     // Consumir crédito o cupón -- solo cuando el cliente pidió esa clase gratis
@@ -4742,7 +4752,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   await supabase.from('reservas').insert({
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
-        estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null,
+                estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null, saldo_aplicado: saldoAplicado,
                 validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
     uso_cupon: usoCupon,
     // Dónde dice que pagó (2026-11-13), para que el Pivot sepa dónde revisar.
@@ -5000,6 +5010,20 @@ function _filaMovimiento(m: any, cuentas: Record<string, string>): Record<string
     persona: m.persona ?? null, personaNombre: m.persona_nombre ?? null, origen: m.origen, anulado: m.anulado, motivoAnulacion: m.motivo_anulacion ?? null,
     reemplazaId: m.reemplaza_id ?? null, creado: m.created_at,
   };
+}
+
+/** Saldo con el equipo menos lo ya apartado en reservas pendientes (para no usarlo dos veces). */
+async function _saldoDisponible(username: string): Promise<number> {
+  const saldo = (await _saldoPersonas(username))[username] ?? 0;
+  const { data } = await supabase.from('reservas').select('saldo_aplicado').eq('nombre_usuario', username).eq('estado', 'Pendiente').not('saldo_aplicado', 'is', null);
+  return _num2(saldo - (data ?? []).reduce((a: number, r: any) => a + (Number(r.saldo_aplicado) || 0), 0));
+}
+
+/** Saldo propio con el equipo (solo la persona; nada se guarda en el teléfono). */
+async function getMiSaldo(params: Record<string, any>): Promise<Record<string, any>> {
+  const yo = await _validarToken(String(params.token ?? ''));
+  if (!yo) return { exito: false, error: 'Sesión inválida.' };
+  return { exito: true, saldo: await _saldoDisponible(yo) };
 }
 
 async function _saldoPersonas(username?: string): Promise<Record<string, number>> {
@@ -9256,7 +9280,7 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const id = params.id ?? params.fila;
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
-        const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, medio_nombre, mes_texto, uso_cupon').eq('id', id).maybeSingle();
+                const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, medio_nombre, mes_texto, uso_cupon, saldo_aplicado, saldo_movimiento_id').eq('id', id).maybeSingle();
     // Rechazo con motivo (Victor, 2026-11-13): se guarda y se le avisa de inmediato.
   const motivo = String(params.motivo ?? '').trim().slice(0, 120);
   const mensaje = String(params.mensaje ?? '').trim().slice(0, 400);
@@ -9284,10 +9308,26 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
                 origen: 'reserva', origen_id: String(id), registrado_por: adminEmail, medio_nombre: reservaAntes.medio_nombre ?? null,
       });
     }
-  } else if (estado === 'Cancelada') {
+    } else if (estado === 'Cancelada') {
     await supabase.from('tesoreria_movimientos').update({ anulado: true, anulado_por: adminEmail, anulado_en: new Date().toISOString(), motivo_anulacion: 'Reserva cancelada' })
       .eq('origen', 'reserva').eq('origen_id', String(id)).eq('anulado', false);
   }
+  // Saldo usado o pagado junto con la cuota: se registra al confirmar y se
+  // anula si la reserva se cancela después.
+  const aplicado = Number(reservaAntes?.saldo_aplicado) || 0;
+  if (estado === 'Confirmada' && aplicado !== 0 && !reservaAntes?.saldo_movimiento_id) {
+    const mes = reservaAntes?.mes_texto ? ` de ${reservaAntes.mes_texto}` : '';
+    const { data: mov } = await supabase.from('saldos_movimientos').insert({
+      username: reservaAntes!.nombre_usuario, persona_nombre: await _nombrePersona(reservaAntes!.nombre_usuario), fecha: _hoyEcuadorISO(),
+      monto: _num2(-aplicado), tipo: aplicado > 0 ? 'cargo' : 'abono', aplicar: 'aparte', por: adminEmail,
+      concepto: aplicado > 0 ? `Saldo a favor usado en la cuota${mes}` : `Pagado junto con la cuota${mes}`,
+    }).select('id').maybeSingle();
+    if (mov?.id) await supabase.from('reservas').update({ saldo_movimiento_id: mov.id }).eq('id', id);
+  } else if (estado === 'Cancelada' && reservaAntes?.saldo_movimiento_id) {
+    await supabase.from('saldos_movimientos').update({ anulado: true, anulado_por: adminEmail }).eq('id', reservaAntes.saldo_movimiento_id);
+    await supabase.from('reservas').update({ saldo_movimiento_id: null }).eq('id', id);
+  }
+
 
   // Auto-marcar "Asistiré" al aprobar una reserva de Mirlxs (feat nueva,
   // pedido explícito -- ver MANIFEST.md). Solo reservas "por clase"
@@ -9433,6 +9473,7 @@ Deno.serve(async (req: Request) => {
             case 'adminHistorialAjustes':           return json(await adminHistorialAjustes(params));
                         case 'adminTesoreria':                  return json(await adminTesoreria(params));
             case 'getOpcionesLogin':                return json(await getOpcionesLogin());
+                        case 'getMiSaldo':                      return json(await getMiSaldo(params));
             case 'enviarCodigoCorreo':              return json(await enviarCodigoCorreo(params));
             case 'verificarCodigoCorreo':           return json(await verificarCodigoCorreo(params));
             case 'getTransparencia':                return json(await getTransparencia(params));

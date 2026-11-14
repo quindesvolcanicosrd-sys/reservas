@@ -70,7 +70,12 @@ class Total {
     required this.precio,
     this.recargos = 0,
     this.recargo = 0,
+    this.saldo = 0,
   });
+
+  /// Saldo con el equipo aplicado: positivo = a favor usado (descuenta),
+  /// negativo = deuda que se paga junto con la cuota (suma).
+  final double saldo;
 
   /// Cuotas con recargo por pagar después del vencimiento y cuánto suman.
   final int recargos;
@@ -192,6 +197,16 @@ class ReservasRepo {
     return t[0].toUpperCase() + t.substring(1);
   }
 
+  /// Saldo propio con el equipo (Tesorería), ya descontado lo apartado en reservas pendientes.
+  Future<double> miSaldo() async {
+    try {
+      final r = await _api.get('getMiSaldo');
+      return (r['saldo'] as num?)?.toDouble() ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<Precios> precios() async {
     final r = await _api.get('getPreciosClases');
     double n(Object? v) => double.tryParse('${v ?? ''}') ?? 0;
@@ -288,20 +303,24 @@ class ReservasRepo {
     required bool cupon,
     Iterable<DateTime> meses = const [],
     DateTime? hoy,
+    double saldo = 0,
   }) {
     if (tipo == TipoReserva.mes) {
       final h = hoy ?? DateTime.now();
       final rec = [for (final m in meses) p.recargoPara(m, h)].where((r) => r > 0).toList();
       final suma = rec.fold<double>(0, (a, b) => a + b);
+      final base = cantidad * p.mensual + suma;
+      final aplicado = cantidad == 0 ? 0.0 : (saldo > 0 ? (saldo < base ? saldo : base) : saldo);
       return Total(
         cantidad: cantidad,
         aFavor: 0,
         cupon: 0,
         cobradas: cantidad,
-        monto: cantidad * p.mensual + suma,
+        monto: double.parse((base - aplicado).toStringAsFixed(2)),
         precio: p.mensual,
         recargos: rec.length,
         recargo: suma,
+        saldo: aplicado,
       );
     }
     final aFavor = creditos < cantidad ? creditos : cantidad;
@@ -373,6 +392,7 @@ class ReservasRepo {
             'email': email,
             'medio': ?medio,
             'medioNombre': ?medioNombre,
+            if (total.saldo != 0) 'saldo': total.saldo > 0 ? 'usar' : 'pagar',
           });
           if (r['exito'] == false) throw ApiException('${r['mensaje'] ?? r['error'] ?? 'No se pudo guardar'}');
           guardados.add(etiqueta);

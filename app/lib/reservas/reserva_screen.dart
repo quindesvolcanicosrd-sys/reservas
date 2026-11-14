@@ -48,6 +48,10 @@ class _ReservaScreenState extends State<ReservaScreen> {
   Cuota? _cuota;
   bool _hayCupon = false;
   bool _usarCupon = false;
+
+  /// Saldo con el equipo (solo cuotas): a favor (+) o en contra (−) y si la persona lo aplica.
+  double _saldo = 0;
+  bool _aplicarSaldo = false;
   List<FechaClase>? _clases;
   List<MesReserva>? _meses;
   final _clasesSel = <String>{};
@@ -66,6 +70,11 @@ class _ReservaScreenState extends State<ReservaScreen> {
   Future<void> _cargar() async {
     setState(() => _error = null);
     final prueba = widget.datosPrueba;
+    if (_esMes && prueba == null) {
+      _r.miSaldo().then((s) {
+        if (mounted) setState(() => _saldo = s);
+      });
+    }
     try {
       final res = prueba != null
           ? <Object>[prueba.$1, prueba.$2, prueba.$3, if (!_esMes) prueba.$4]
@@ -102,8 +111,15 @@ class _ReservaScreenState extends State<ReservaScreen> {
 
   int get _cantidad => _esMes ? _mesesSel.length : _clasesSel.length;
 
-  Total get _total =>
-      _r.total(tipo: widget.tipo, cantidad: _cantidad, p: _precios ?? const Precios(0, 0), creditos: _creditos, cupon: _usarCupon, meses: _mesesSel);
+  Total get _total => _r.total(
+    tipo: widget.tipo,
+    cantidad: _cantidad,
+    p: _precios ?? const Precios(0, 0),
+    creditos: _creditos,
+    cupon: _usarCupon,
+    meses: _mesesSel,
+    saldo: _aplicarSaldo ? _saldo : 0,
+  );
 
   void _ir(int delta) {
     final i = _paso.index + delta;
@@ -407,6 +423,31 @@ class _ReservaScreenState extends State<ReservaScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         _cajaTotal(context, t),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: _esMes && _saldo != 0
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Material(
+                    color: p.tarjeta,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+                    child: SwitchListTile(
+                      value: _aplicarSaldo,
+                      onChanged: (v) => setState(() => _aplicarSaldo = v),
+                      secondary: Icon(_saldo > 0 ? Icons.savings_outlined : Icons.account_balance_wallet_outlined, color: p.marcaTexto),
+                      title: Text(_saldo > 0 ? 'Usar mi saldo a favor' : 'Pagar lo que debo junto con la cuota'),
+                      subtitle: Text(
+                        _saldo > 0
+                            ? 'Tienes ${ReservasRepo.dinero(_saldo)} a favor con el equipo. Se descuenta de esta cuota.'
+                            : 'Tienes ${ReservasRepo.dinero(-_saldo)} pendientes con el equipo. Se suman a esta cuota.',
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(PivotRadios.tarjeta)),
+                    ),
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
         if (cuponPosible) ...[
           const SizedBox(height: 12),
           Material(
@@ -446,6 +487,8 @@ class _ReservaScreenState extends State<ReservaScreen> {
       if (t.cobradas > 0)
         '${t.cobradas} ${_esMes ? (t.cobradas == 1 ? 'mes' : 'meses') : (t.cobradas == 1 ? 'clase' : 'clases')} × ${ReservasRepo.dinero(t.precio)}',
       if (t.recargos > 0) 'recargo por pagar tarde ${ReservasRepo.dinero(t.recargo)}',
+      if (t.saldo < 0) '${ReservasRepo.dinero(-t.saldo)} que debías',
+
       if (t.aFavor > 0) '${t.aFavor} a favor',
       if (t.cupon > 0) '1 con cupón',
     ];
@@ -468,6 +511,7 @@ class _ReservaScreenState extends State<ReservaScreen> {
             ),
           ),
           Text(partes.join(' + '), style: TextStyle(fontSize: 13, color: p.sobreSuave)),
+          if (t.saldo > 0) Text('Menos ${ReservasRepo.dinero(t.saldo)} de tu saldo a favor', style: TextStyle(fontSize: 13, color: p.sobreSuave)),
           const SizedBox(height: 10),
           for (final i in items)
             Padding(

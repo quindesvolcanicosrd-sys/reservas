@@ -537,7 +537,13 @@ class _CuentaCorte extends StatelessWidget {
             ].join(' ');
       final n = nombreMedio(m);
       final medio = n.isNotEmpty ? 'Pagó con $n' : (m['usoCupon'] == true || (m['monto'] as num? ?? 0) == 0 ? '' : 'No dijo dónde pagó');
-      final detalles = [if (medio.isNotEmpty) medio, if (equipo.isNotEmpty) 'Equipamiento del equipo: $equipo'];
+      final saldo = (m['saldoAplicado'] as num? ?? 0).toDouble();
+      final detalles = [
+        if (medio.isNotEmpty) medio,
+        if (saldo > 0) 'Usó ${plata(saldo)} de su saldo a favor (ya descontado)',
+        if (saldo < 0) 'Incluye ${plata(-saldo)} que debía al equipo',
+        if (equipo.isNotEmpty) 'Equipamiento del equipo: $equipo',
+      ];
       return ('$que · ${m['usoCupon'] == true ? 'con cupón' : plata(m['monto'])}', detalles.isEmpty ? null : detalles.join('\n'));
     case TipoPedido.rectificacion:
       return ('Pide corregir su asistencia del $cuando', 'Debería decir: ${m['estadoSolicitado'] ?? ''}');
