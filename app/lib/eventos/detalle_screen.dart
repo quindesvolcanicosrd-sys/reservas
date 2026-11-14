@@ -371,6 +371,41 @@ class _DetalleScreenState extends State<DetalleScreen> {
     );
   }
 
+  /// Clase de gracia usada y el mes sin pagar: ofrece ir a pagar.
+  Future<void> _pagarCuota(CuotaPendiente e) async {
+    final ir = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (h) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Tu cuota de ${Fechas.mes(e.mes)}', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text(e.mensaje),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(h).pop(true),
+                icon: const Icon(Icons.payments_outlined),
+                label: Text('Pagar ${Fechas.mes(e.mes)}'),
+              ),
+              TextButton(onPressed: () => Navigator.of(h).pop(false), child: const Text('Ahora no')),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (ir != true || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ReservaScreen(repo: repo, tipo: TipoReserva.mes, mesInicial: DateTime(e.mes.year, e.mes.month)),
+      ),
+    );
+  }
+
   Widget _tuAsistencia(BuildContext context, Evento ev) {
     final p = context.pivot;
     final motivo = repo.motivoSinRespuesta(ev);
@@ -406,6 +441,8 @@ class _DetalleScreenState extends State<DetalleScreen> {
                       try {
                         final sinSenal = await repo.marcar(ev, sel.first);
                         if (sinSenal) _avisar('Sin señal: tu respuesta quedó guardada y se sube sola cuando vuelva la conexión.');
+                      } on CuotaPendiente catch (e) {
+                        if (mounted) await _pagarCuota(e);
                       } catch (e) {
                         _avisar(e.toString());
                       }
@@ -413,7 +450,10 @@ class _DetalleScreenState extends State<DetalleScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Text(motivo ?? 'Puedes cambiarla hasta 10 minutos antes de que empiece.', style: TextStyle(fontSize: 13, color: p.textoSecundario)),
+          Text(
+            motivo ?? repo.motivoSinAsistire(ev) ?? 'Puedes cambiarla hasta 10 minutos antes de que empiece.',
+            style: TextStyle(fontSize: 13, color: p.textoSecundario),
+          ),
         ],
       ),
     );

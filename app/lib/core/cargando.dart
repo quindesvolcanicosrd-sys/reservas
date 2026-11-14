@@ -78,42 +78,47 @@ class _PivotCargandoState extends State<PivotCargando> with SingleTickerProvider
   Widget build(BuildContext context) {
     final p = context.pivot;
     final k = widget.tamano / _caja;
-    // Aparece con un fundido ya en su lugar (sin saltos).
+    // Aparece con un fundido ya en su lugar (sin saltos). Siempre centrado
+    // en el espacio que recibe (Victor, 2026-11-13: en Pivots y permisos y
+    // otras pantallas quedaba pegado a la izquierda cuando el padre no lo
+    // centraba).
     return Semantics(
       label: 'Cargando',
-      child: Transform.translate(
-        offset: Offset(0, _dy ?? 0),
-        child: AnimatedOpacity(
-          opacity: _dy == null || _comp == null ? 0 : 1,
-          duration: const Duration(milliseconds: 220),
-          child: SizedBox.square(
-            key: _clave,
-            dimension: widget.tamano,
-            child: _comp == null
-                ? null
-                : RepaintBoundary(
-                    child: ClipRect(
-                      child: OverflowBox(
-                        maxWidth: _lienzo.width * k,
-                        maxHeight: _lienzo.height * k,
-                        child: Lottie(
-                          composition: _comp,
-                          controller: _c,
-                          // El archivo es de 25 cuadros por segundo: sin esto se
-                          // dibuja a 25 y se ve trabado. Así interpola a 60/120.
-                          frameRate: FrameRate.max,
-                          width: _lienzo.width * k,
-                          height: _lienzo.height * k,
-                          fit: BoxFit.fill,
-                          delegates: LottieDelegates(
-                            values: [
-                              ValueDelegate.gradientColor(const ['**', 'Gradient Stroke 1'], value: [p.marca, p.marca.withValues(alpha: 0)]),
-                            ],
+      child: Center(
+        child: Transform.translate(
+          offset: Offset(0, _dy ?? 0),
+          child: AnimatedOpacity(
+            opacity: _dy == null || _comp == null ? 0 : 1,
+            duration: const Duration(milliseconds: 220),
+            child: SizedBox.square(
+              key: _clave,
+              dimension: widget.tamano,
+              child: _comp == null
+                  ? null
+                  : RepaintBoundary(
+                      child: ClipRect(
+                        child: OverflowBox(
+                          maxWidth: _lienzo.width * k,
+                          maxHeight: _lienzo.height * k,
+                          child: Lottie(
+                            composition: _comp,
+                            controller: _c,
+                            // El archivo es de 25 cuadros por segundo: sin esto se
+                            // dibuja a 25 y se ve trabado. Así interpola a 60/120.
+                            frameRate: FrameRate.max,
+                            width: _lienzo.width * k,
+                            height: _lienzo.height * k,
+                            fit: BoxFit.fill,
+                            delegates: LottieDelegates(
+                              values: [
+                                ValueDelegate.gradientColor(const ['**', 'Gradient Stroke 1'], value: [p.marca, p.marca.withValues(alpha: 0)]),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
+            ),
           ),
         ),
       ),

@@ -367,9 +367,33 @@ class EventosRepo extends ChangeNotifier {
 
   /// Guarda la asistencia de forma optimista; si falla, revierte y lanza.
   /// Sin señal queda en la cola y se sube después: devuelve true.
+  /// Clase de gracia de Quindes (misma regla que `_quindesGraciaAgotada()`
+  /// de la web, bug del 2026-11-13: la app no la aplicaba). Sin el mes
+  /// pagado, se puede marcar Asistiré hasta 2 veces o hasta 1 asistencia
+  /// confirmada en el mes; después hay que pagar. null = puede marcar.
+  String? motivoSinAsistire(Evento ev) {
+    if (_modo != 'quindes' || _esAdminActivo || ev.tipo != 'Entrenamiento') return null;
+    final c = _cuota;
+    if (c == null) return null;
+    final d = sesion.datos;
+    if (d['exenta_cuota'] == true || d['exenta_cuota'] == 'true') return null;
+    if (d['estado_miembro'] == 'Técnico' || d['estado_miembro'] == 'Lesionadx') return null;
+    if (c.alDia || c.mesPagado(ev.fecha.month, ev.fecha.year)) return null;
+    final yo = (sesion.nombre ?? '').trim().toUpperCase();
+    final delMes = eventos.where((e) => e.id != ev.id && e.tipo == 'Entrenamiento' && e.fecha.year == ev.fecha.year && e.fecha.month == ev.fecha.month);
+    final confirmadas = delMes.where((e) => e.asistentes.any((a) => a.persona.username.trim().toUpperCase() == yo)).length;
+    final asistire = delMes.where((e) => e.miEstado == EstadoRsvp.asistire).length;
+    if (confirmadas < 1 && asistire < 2) return null;
+    return 'Ya usaste tu clase de gracia de ${Fechas.mes(ev.fecha)}. Paga tu cuota para marcar Asistiré.';
+  }
+
   Future<bool> marcar(Evento ev, EstadoRsvp estado) async {
     final anterior = ev.miEstado;
     if (anterior == estado) return false;
+    if (estado == EstadoRsvp.asistire) {
+      final m = motivoSinAsistire(ev);
+      if (m != null) throw CuotaPendiente(m, ev.fecha);
+    }
     ev.miEstado = estado;
     _reemplazarMiRsvp(ev, estado);
     notifyListeners();
@@ -755,4 +779,14 @@ class EventosRepo extends ChangeNotifier {
       );
     }
   }
+}
+
+/// Quindes sin la cuota del mes y con la clase de gracia usada: la pantalla
+/// ofrece pagar (web: `_evAbrirSheetCuotaPendiente`).
+class CuotaPendiente implements Exception {
+  CuotaPendiente(this.mensaje, this.mes);
+  final String mensaje;
+  final DateTime mes;
+  @override
+  String toString() => mensaje;
 }

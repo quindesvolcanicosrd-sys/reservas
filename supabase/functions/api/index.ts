@@ -4752,7 +4752,7 @@ async function guardarReserva(params: Record<string, any>): Promise<Record<strin
   await supabase.from('reservas').insert({
     nombre_usuario: nombre, id_evento: esMensual ? null : fecha, tipo: esMensual ? 'mensual' : 'clase',
     mes_texto: esMensual ? fecha : null, talla: talla ?? null, protecciones: protecciones ?? null,
-                estado: 'Pendiente', monto: montoFinal, fecha_pago: hoyISO, email: email ?? null, saldo_aplicado: saldoAplicado,
+                                estado: 'Pendiente', monto: montoFinal, fecha_pago: _hoyEcuadorISO(), email: email ?? null, saldo_aplicado: saldoAplicado,
                 validez_hasta: esMensual ? _vigenciaMensualISO(fecha, hoyISO, anioMes) : null,
     uso_cupon: usoCupon,
     // Dónde dice que pagó (2026-11-13), para que el Pivot sepa dónde revisar.
@@ -7950,9 +7950,9 @@ const CATALOGO_NOTIFICACIONES: CatalogoNotifEntry[] = [
   { clave: 'aniversario', nombre: 'Tu aniversario en el equipo', descripcion: 'El día en que cumples otro año en el equipo.', categoria: 'Equipo' },
   { clave: 'cambio_estado_miembro', nombre: 'Cambios de estado del equipo', descripcion: 'Cuando alguien queda de viaje, lesionadx o ausente por un tiempo.', categoria: 'Equipo' },
   { clave: 'integrante_nuevo', nombre: 'Nuevo integrante', descripcion: 'Cuando alguien se une al equipo.', categoria: 'Equipo' },
-  { clave: 'cuota_pendiente', nombre: 'Cuota pendiente', descripcion: 'Recordatorio el día 1 de cada mes si todavía debes la cuota.', categoria: 'Cuenta' },
+    { clave: 'cuota_pendiente', nombre: 'Recordatorios de cuota', descripcion: 'El día 1, el 14 (último día para el punto extra), el 16 y después de tu clase de gracia, solo si aún no pagaste. No llegan si ya pagaste o tu pago está en revisión.', categoria: 'Cuenta' },
     { clave: 'cambio_categoria', nombre: 'Cambio de categoría', descripcion: 'Cuando cambia tu categoría (Mirlxs/Quindes).', categoria: 'Cuenta' },
-  { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tu excepción de cuota.', categoria: 'Cuenta' },
+  { clave: 'solicitud_resuelta', nombre: 'Respuesta a tus solicitudes', descripcion: 'Cuando aprueban o rechazan tus pagos, reservas o excepciones de cuota.', categoria: 'Cuenta' },
       { clave: 'tarea_nueva', nombre: 'Tareas nuevas', descripcion: 'Cuando se publica una tarea que puedes tomar.', categoria: 'Tareas' },
   { clave: 'tarea_vence', nombre: 'Tareas por vencer', descripcion: 'Un día antes de que venza una tarea que tomaste.', categoria: 'Tareas' },
   { clave: 'tarea_revisada', nombre: 'Revisión de tus tareas', descripcion: 'Cuando admins aprueban o devuelven una tarea que enviaste.', categoria: 'Tareas' },
@@ -9214,32 +9214,94 @@ async function cronDiario(): Promise<Record<string, any>> {
     });
   }
 
-  // 4) Cuota pendiente -- solo el día 1 de cada mes, reusando la MISMA lógica
-  // de "quién debe" que ya usa adminGetEstadoPagosMes() (_estadoPagoPersonaMes(),
-  // más arriba en este archivo) -- únicamente cuentas 'Quindes' pagan cuota.
-  if (diaDelMes === 1) {
-    const mes = Number(hoyIso.substring(5, 7));
-    const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes').is('eliminado_en', null);
-    const personas = (quindes ?? []).map((q: any) => q.username);
-    const [{ data: pagosDelMes }, { data: solicitudesAprobadas }] = await Promise.all([
-      supabase.from('pagos').select('nombre_usuario, exoneradx, monto').eq('mes', mes).eq('anio', anio),
-      supabase.from('solicitudes_pago').select('nombre_usuario, tipo').eq('estado', 'aprobada').eq('mes', mes).eq('anio', anio),
-    ]);
-    const hoyDate = new Date(hoyIso + 'T00:00:00');
-    for (const nombre of personas) {
-      const estadoPago = _estadoPagoPersonaMes(nombre, mes, anio, pagosDelMes ?? [], solicitudesAprobadas ?? [], hoyDate);
-      if (estadoPago !== 'Debe') continue;
-      await sendPush({
-        tipo: 'cuota_pendiente',
-        include_external_user_ids: [nombre],
-        headings: { es: 'Recordatorio de cuota mensual' },
-        contents: { es: `${nombre}, tienes cuota pendiente. Haz una reserva y envía el comprobante.` },
-        url: APP_URL + '/?tab=ajustes',
-      });
-    }
-  }
+  // 4) Recordatorios de cuota (Victor, octubre y 2026-11-13: "tienen que
+  // andar ya"). Día 1, día 14 (último día para el punto extra), día 16 y el
+  // día después de la primera asistencia confirmada del mes (clase de
+  // gracia usada). Solo a quien paga cuota (`paga_cuota` 'Sí'), Activx, sin
+  // `exenta_cuota`, y solo si el mes está en 'debe' según `_estadoCuotaMes`
+  // (nunca a quien ya pagó o tiene el pago en revisión).
+  try { await _recordatoriosCuota(hoyIso); } catch (e) { console.error('[cuota] recordatorios:', e); }
 
   return { exito: true };
+}
+
+// ─── Cuota: fuente única de "¿pagó el mes?" (2026-11-13) ─────────────────────
+// 'al_dia': reserva mensual Confirmada que cubre el mes, excepción de cuota
+// del mes o registro en `pagos` (monto > 0 o exoneradx). 'en_revision':
+// reserva mensual Pendiente de ese mes. Si no, 'debe'. `mes` = 'aaaa-mm'.
+async function _estadosCuotaMes(usernames: string[], mes: string): Promise<Record<string, 'al_dia' | 'en_revision' | 'debe'>> {
+  const out: Record<string, 'al_dia' | 'en_revision' | 'debe'> = {};
+  if (!usernames.length) return out;
+  const [y, m] = mes.split('-').map(Number);
+  const desde = `${mes}-01`, hasta = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+    const hastaHolgura = new Date(Date.parse(hasta) + 40 * 86400000).toISOString().slice(0, 10);
+  const [{ data: resTodas }, { data: exc }, { data: pag }] = await Promise.all([
+    supabase.from('reservas').select('nombre_usuario, estado, mes_texto, validez_hasta').eq('tipo', 'mensual').in('estado', ['Confirmada', 'Pendiente'])
+      .in('nombre_usuario', usernames).gte('validez_hasta', desde).lt('validez_hasta', hastaHolgura),
+    supabase.from('cuota_excepcion').select('id_miembro').eq('mes', mes).in('id_miembro', usernames),
+    supabase.from('pagos').select('nombre_usuario, monto, exoneradx').eq('mes', m).eq('anio', y).in('nombre_usuario', usernames),
+  ]);
+    const res = (resTodas ?? []).filter((r: any) => _mesDeReserva(r) === mes);
+  usernames.forEach((u) => { out[u] = 'debe'; });
+  (res ?? []).forEach((r: any) => { if (r.estado === 'Pendiente' && out[r.nombre_usuario] === 'debe') out[r.nombre_usuario] = 'en_revision'; });
+  (res ?? []).forEach((r: any) => { if (r.estado === 'Confirmada') out[r.nombre_usuario] = 'al_dia'; });
+  (exc ?? []).forEach((r: any) => { out[r.id_miembro] = 'al_dia'; });
+  (pag ?? []).forEach((r: any) => { if (r.exoneradx || Number(r.monto) > 0) out[r.nombre_usuario] = 'al_dia'; });
+  return out;
+}
+
+/** Día hasta el que pagar la cuota da 1 punto extra (Victor: incluye el 15). */
+const DIA_PUNTO_EXTRA = 15;
+
+/** Mes 'aaaa-mm' que paga una reserva mensual: el de `mes_texto`; el año sale de
+ *  `validez_hasta` (reservas viejas vencían días después del fin de mes). */
+function _mesDeReserva(r: { mes_texto?: string | null; validez_hasta?: string | null }): string {
+  const v = String(r.validez_hasta ?? '').slice(0, 10);
+  const i = _MESES_ES.indexOf(String(r.mes_texto ?? '').trim().toLowerCase());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return '';
+  if (i < 0) return v.slice(0, 7);
+  let y = Number(v.slice(0, 4));
+  if (i + 1 > Number(v.slice(5, 7))) y -= 1;
+  return `${y}-${String(i + 1).padStart(2, '0')}`;
+}
+
+async function _recordatoriosCuota(hoyIso: string): Promise<void> {
+  const dia = Number(hoyIso.slice(8, 10));
+  const mes = hoyIso.slice(0, 7);
+  const nombreMes = _MESES_ES[Number(hoyIso.slice(5, 7)) - 1];
+  const { data: gente } = await supabase.from('equipo').select('username, categoria, paga_cuota, exenta_cuota, estado_miembro')
+    .is('eliminado_en', null).eq('estado_miembro', 'Activx');
+  const pagan = (gente ?? []).filter((p: any) => /^s[ií]$/i.test(String(p.paga_cuota ?? '').trim()) && p.exenta_cuota !== true).map((p: any) => p.username);
+  if (!pagan.length) return;
+  const estados = await _estadosCuotaMes(pagan, mes);
+  const deben = pagan.filter((u) => estados[u] === 'debe');
+  const enviar = (usuarios: string[], titulo: string, texto: string) => usuarios.length ? sendPush({
+    tipo: 'cuota_pendiente', include_external_user_ids: usuarios, headings: { es: titulo }, contents: { es: texto }, url: APP_URL + '/?tab=ajustes',
+  }) : Promise.resolve();
+
+  if (dia === 1) await enviar(deben, `Cuota de ${nombreMes}`, `Ya puedes pagar tu cuota de ${nombreMes}. Si pagas hasta el ${DIA_PUNTO_EXTRA}, recibes un punto extra.`);
+  if (dia === DIA_PUNTO_EXTRA - 1) await enviar(deben, 'Último día para tu punto extra', `Mañana es el último día para pagar tu cuota de ${nombreMes} y recibir tu punto extra.`);
+  if (dia === DIA_PUNTO_EXTRA + 1) await enviar(deben, `Aún no pagas ${nombreMes}`, `Aún no has pagado tu cuota de ${nombreMes}. Recuerda hacer tu pago.`);
+
+  // Clase de gracia usada (Quindes): ayer fue su primera asistencia
+  // confirmada del mes en un Entrenamiento y sigue debiendo. Una vez por mes.
+  const ayer = new Date(Date.parse(hoyIso) - 86400000).toISOString().slice(0, 10);
+  const mesAyer = ayer.slice(0, 7);
+  const quindes = new Set((gente ?? []).filter((p: any) => p.categoria === 'Quindes').map((p: any) => p.username));
+  const candidatos = pagan.filter((u) => quindes.has(u));
+  if (!candidatos.length) return;
+  const { data: evs } = await supabase.from('asistencias').select('fecha, a_horario, tarde')
+    .eq('tipo_evento', 'Entrenamiento').not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")')
+    .gte('fecha', `${mesAyer}-01`).lte('fecha', ayer);
+  const nombres = (v: unknown) => String(v ?? '').split(',').map((n) => n.trim().toUpperCase()).filter(Boolean);
+  const primera: Record<string, string> = {};
+  for (const e of evs ?? []) {
+    for (const n of [...nombres(e.a_horario), ...nombres(e.tarde)]) if (!primera[n] || e.fecha < primera[n]) primera[n] = e.fecha;
+  }
+  const estadosAyer = mesAyer === mes ? estados : await _estadosCuotaMes(candidatos, mesAyer);
+  const nombreMesAyer = _MESES_ES[Number(mesAyer.slice(5, 7)) - 1];
+  const gracia = candidatos.filter((u) => primera[u.toUpperCase()] === ayer && estadosAyer[u] === 'debe');
+  await enviar(gracia, 'Ya usaste tu clase de gracia', `Ya usaste tu clase de gracia de ${nombreMesAyer}. Recuerda pagar tu cuota para seguir entrenando.`);
 }
 
 // ─── Acciones: reservas admin ─────────────────────────────────────────────────
@@ -9280,7 +9342,7 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const id = params.id ?? params.fila;
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
-                const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, medio_nombre, mes_texto, uso_cupon, saldo_aplicado, saldo_movimiento_id').eq('id', id).maybeSingle();
+                const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, medio_nombre, mes_texto, uso_cupon, saldo_aplicado, saldo_movimiento_id, fecha_pago, validez_hasta, punto_extra_en, estado').eq('id', id).maybeSingle();
     // Rechazo con motivo (Victor, 2026-11-13): se guarda y se le avisa de inmediato.
   const motivo = String(params.motivo ?? '').trim().slice(0, 120);
   const mensaje = String(params.mensaje ?? '').trim().slice(0, 400);
@@ -9311,6 +9373,32 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
     } else if (estado === 'Cancelada') {
     await supabase.from('tesoreria_movimientos').update({ anulado: true, anulado_por: adminEmail, anulado_en: new Date().toISOString(), motivo_anulacion: 'Reserva cancelada' })
       .eq('origen', 'reserva').eq('origen_id', String(id)).eq('anulado', false);
+  }
+    // Punto extra por pronto pago (Victor, octubre): al aprobar una cuota
+  // mensual cuya solicitud se ENVIÓ hasta el día 15 del mes que paga
+  // (`fecha_pago`, nunca la fecha de aprobación). Una sola vez por reserva
+  // (`punto_extra_en`); si después se cancela, se descuenta. Solo aplica a
+  // aprobaciones desde ahora: nada cambia hacia atrás.
+  let ganoPunto = false;
+    const mesCuota = reservaAntes ? _mesDeReserva(reservaAntes) : '';
+  if (estado === 'Confirmada' && reservaAntes?.tipo === 'mensual' && reservaAntes.estado === 'Pendiente' && !reservaAntes.punto_extra_en && /^\d{4}-\d{2}$/.test(mesCuota)) {
+    const limite = `${mesCuota}-${String(DIA_PUNTO_EXTRA).padStart(2, '0')}`;
+    if (String(reservaAntes.fecha_pago ?? '').slice(0, 10) && String(reservaAntes.fecha_pago).slice(0, 10) <= limite) {
+      await _acreditarPuntosExtra(reservaAntes.nombre_usuario, Number(mesCuota.slice(0, 4)), Number(mesCuota.slice(5, 7)), 1);
+      await supabase.from('reservas').update({ punto_extra_en: new Date().toISOString() }).eq('id', id);
+      ganoPunto = true;
+    }
+  } else if (estado === 'Cancelada' && reservaAntes?.punto_extra_en && /^\d{4}-\d{2}$/.test(mesCuota)) {
+    await _acreditarPuntosExtra(reservaAntes.nombre_usuario, Number(mesCuota.slice(0, 4)), Number(mesCuota.slice(5, 7)), -1);
+    await supabase.from('reservas').update({ punto_extra_en: null }).eq('id', id);
+  }
+  // Aviso de pago aprobado (rechazo: arriba, con motivo).
+  if (estado === 'Confirmada' && reservaAntes?.estado === 'Pendiente' && reservaAntes.nombre_usuario) {
+    const mesTxt = mesCuota ? _MESES_ES[Number(mesCuota.slice(5, 7)) - 1] : String(reservaAntes.mes_texto ?? '').toLowerCase();
+    const texto = reservaAntes.tipo === 'mensual'
+      ? `Recibimos tu pago de ${mesTxt}, ¡gracias!${ganoPunto ? ' Ganaste un punto extra por pagar a tiempo.' : ''}`
+      : 'Tu reserva fue confirmada. ¡Nos vemos en la pista!';
+    await sendPush({ tipo: 'solicitud_resuelta', include_external_user_ids: [reservaAntes.nombre_usuario], headings: { es: reservaAntes.tipo === 'mensual' ? 'Pago confirmado' : 'Reserva confirmada' }, contents: { es: texto }, url: APP_URL }).catch(() => {});
   }
   // Saldo usado o pagado junto con la cuota: se registra al confirmar y se
   // anula si la reserva se cancela después.

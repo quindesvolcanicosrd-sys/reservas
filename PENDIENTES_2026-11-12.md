@@ -488,7 +488,7 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] Historial de cambios: tarjetas más claras.
 - [ ] Reglas de Equipos y puntos globales o por equipo.
 - [ ] Puntos a la mitad: hoy solo cambia el número y el orden en la lista de Equipo de la web antigua (`puntosEfectivos`); no cambia requisitos, fondos ni la app. Explicarlo bien o replantearlo (preguntar a Victor).
-- [ ] Pivots y permisos: loader pegado a la izquierda.
+- [x] Loader siempre centrado (Pivots y permisos y el resto).
 - [ ] Vencimiento de la cuota: explicación en pantalla.
 - [ ] "Clase suelta" → "Valor por clase". Tipos de equipo (cobro por mes o por clase, equipamiento propio obligatorio, reserva de equipamiento, quién marca Asistiré, cancelar/reagendar): definir con Victor, se elige al crear el equipo y se edita.
 - [ ] "Tolerancia de llegada" → "Tolerancia para llegadas tarde".
@@ -497,8 +497,10 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] Estados: renombrar, ícono nuevo, sumar Enfermedad, Situación personal o fuerza mayor y Otro (también en No asistiré de la anticipada); viaje no se congela; quitar Técnico si es estado; al asistir pasa a Activx y se quitan estados y anticipadas con estado. Victor propone quitar el máximo de congelado (contradice lo hecho el 13: confirmar).
 - [ ] Quitar "Logo de la liga".
 - [ ] Tesorería: texto cortado bajo el saldo inicial; el cambio de saldo inicial queda en historial_ajustes_liga (antes/después) pero recalcula el saldo hacia atrás.
-- [ ] **Bug:** la app no aplica la clase de gracia de Quindes (web: `_quindesGraciaAgotada()` en js/eventos.js, hasta 2 Asistiré o 1 asistencia confirmada en el mes sin pagar y después hoja de cuota pendiente). En `eventos_repo.dart` `motivoSinRespuesta` solo tiene la regla de Mirlxs: Quindes marca Asistiré sin pagar.
+- [x] **Bug (hecho 2026-11-13):** la app no aplicaba la clase de gracia de Quindes (web: `_quindesGraciaAgotada()` en js/eventos.js, hasta 2 Asistiré o 1 asistencia confirmada en el mes sin pagar y después hoja de cuota pendiente). En `eventos_repo.dart` `motivoSinRespuesta` solo tiene la regla de Mirlxs: Quindes marca Asistiré sin pagar.
 - [ ] Clases de gracia editables en Mi Liga: cuántas y a qué equipos; con 0 se paga antes de marcar Asistiré y lleva a pagar.
 - [ ] Tesorería → Cuotas: desglose por mes (quién pagó qué mes, monto, fecha, medio) y quién no ha pagado.
 - [ ] Formas de pago dentro de Tesorería: cada medio = una cuenta (`cuentaId`), al crear un medio se crea la cuenta. Hoy hay 1 cuenta ("Banco internacional"), los medios tienen `cuentaId` null y 0 movimientos: los pagos aprobados no entraron. Preguntar si se importan los pagos aprobados anteriores.
-- [ ] **Vital:** recordatorios de cuota. Hoy solo el día 1 (cronDiario, Quindes, mira `pagos`/`solicitudes_pago`, tablas viejas). Falta lo acordado en octubre (chat "Notificaciones de la web app"): fuente única de "¿pagó el mes?" (reservas mensuales + cuota_excepcion + pagos), día 1 con punto extra, día 14, día 16, deuda tras la clase de gracia, punto extra por pronto pago con `fecha_pago` (incluye el 15), sin avisos a quien está en revisión, exentx o inactivx; Mirlxs que pagan mensual también.
+- [x] **Vital (hecho 2026-11-13, falta ver el día 1 de diciembre):** recordatorios de cuota. Hoy solo el día 1 (cronDiario, Quindes, mira `pagos`/`solicitudes_pago`, tablas viejas). Falta lo acordado en octubre (chat "Notificaciones de la web app"): fuente única de "¿pagó el mes?" (reservas mensuales + cuota_excepcion + pagos), día 1 con punto extra, día 14, día 16, deuda tras la clase de gracia, punto extra por pronto pago con `fecha_pago` (incluye el 15), sin avisos a quien está en revisión, exentx o inactivx; Mirlxs que pagan mensual también.
+- [ ] Tesorería: registro rápido de "usé plata del equipo" desde el FAB (personas, monto, cuenta, concepto; se divide entre varias) que crea el egreso y la deuda de cada persona. Victor: con Sant usan la billetera del equipo cuando no tienen efectivo.
+- [ ] Importar a Tesorería los pagos ya aprobados (Victor: "importa los datos desde lo que se tenga registro") al unificar formas de pago y cuentas.
