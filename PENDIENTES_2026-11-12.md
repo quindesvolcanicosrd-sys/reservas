@@ -497,3 +497,6 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] Estados: renombrar, ícono nuevo, sumar Enfermedad, Situación personal o fuerza mayor y Otro (también en No asistiré de la anticipada); viaje no se congela; quitar Técnico si es estado; al asistir pasa a Activx y se quitan estados y anticipadas con estado. Victor propone quitar el máximo de congelado (contradice lo hecho el 13: confirmar).
 - [ ] Quitar "Logo de la liga".
 - [ ] Tesorería: texto cortado bajo el saldo inicial; el cambio de saldo inicial queda en historial_ajustes_liga (antes/después) pero recalcula el saldo hacia atrás.
+- [ ] **Bug:** la app no aplica la clase de gracia de Quindes (web: `_quindesGraciaAgotada()` en js/eventos.js, hasta 2 Asistiré o 1 asistencia confirmada en el mes sin pagar y después hoja de cuota pendiente). En `eventos_repo.dart` `motivoSinRespuesta` solo tiene la regla de Mirlxs: Quindes marca Asistiré sin pagar.
+- [ ] Clases de gracia editables en Mi Liga: cuántas y a qué equipos; con 0 se paga antes de marcar Asistiré y lleva a pagar.
+- [ ] Tesorería → Cuotas: desglose por mes (quién pagó qué mes, monto, fecha, medio) y quién no ha pagado.
