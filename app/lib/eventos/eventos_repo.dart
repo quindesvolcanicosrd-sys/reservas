@@ -372,10 +372,13 @@ class EventosRepo extends ChangeNotifier {
   /// pagado, se puede marcar Asistiré hasta 2 veces o hasta 1 asistencia
   /// confirmada en el mes; después hay que pagar. null = puede marcar.
   String? motivoSinAsistire(Evento ev) {
-    if (_modo != 'quindes' || _esAdminActivo || ev.tipo != 'Entrenamiento') return null;
+    if (_esAdminActivo || ev.tipo != 'Entrenamiento') return null;
+    final d = sesion.datos;
+    // Clases de gracia por equipo (Mi Liga → Cobros; por defecto Quindes 1).
+    final n = ConfigLiga.de(sesion).graciaClases('${d['categoria'] ?? ''}');
+    if (n == null) return null;
     final c = _cuota;
     if (c == null) return null;
-    final d = sesion.datos;
     if (d['exenta_cuota'] == true || d['exenta_cuota'] == 'true') return null;
     if (d['estado_miembro'] == 'Técnico' || d['estado_miembro'] == 'Lesionadx') return null;
     if (c.alDia || c.mesPagado(ev.fecha.month, ev.fecha.year)) return null;
@@ -383,8 +386,9 @@ class EventosRepo extends ChangeNotifier {
     final delMes = eventos.where((e) => e.id != ev.id && e.tipo == 'Entrenamiento' && e.fecha.year == ev.fecha.year && e.fecha.month == ev.fecha.month);
     final confirmadas = delMes.where((e) => e.asistentes.any((a) => a.persona.username.trim().toUpperCase() == yo)).length;
     final asistire = delMes.where((e) => e.miEstado == EstadoRsvp.asistire).length;
-    if (confirmadas < 1 && asistire < 2) return null;
-    return 'Ya usaste tu clase de gracia de ${Fechas.mes(ev.fecha)}. Paga tu cuota para marcar Asistiré.';
+    if (n > 0 && confirmadas < n && asistire < 2 * n) return null;
+    if (n == 0) return 'Para marcar Asistiré, paga primero tu cuota de ${Fechas.mes(ev.fecha)}.';
+    return 'Ya usaste ${n == 1 ? 'tu clase' : 'tus $n clases'} de gracia de ${Fechas.mes(ev.fecha)}. Paga tu cuota para marcar Asistiré.';
   }
 
   Future<bool> marcar(Evento ev, EstadoRsvp estado) async {

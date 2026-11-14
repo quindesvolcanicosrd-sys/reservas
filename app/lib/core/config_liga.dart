@@ -54,6 +54,12 @@ class ConfigLiga extends ChangeNotifier {
   num get cuotaRecargo => (reglas['cuotaRecargo'] as num?) ?? 0;
   bool get rankingVisible => reglas['rankingVisible'] != false;
 
+  /// Clases de gracia por equipo: null = no aplica a ese equipo; 0 = paga antes.
+  Map<String, int> get graciaPorEquipo => {
+    for (final e in ((reglas['graciaClases'] as Map?) ?? const {'Quindes': 1}).entries) '${e.key}': (e.value as num?)?.toInt() ?? 0,
+  };
+  int? graciaClases(String equipo) => graciaPorEquipo[equipo];
+
   /// Días sin venir para verse como inactivx (lo usan Equipo y Calendario).
   static int diasInactividad = 30;
   bool cargado = false;

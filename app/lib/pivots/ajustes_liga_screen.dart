@@ -173,6 +173,84 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
     }
   }
 
+  String _textoGracia(ConfigLiga c) {
+    final g = c.graciaPorEquipo;
+    if (g.isEmpty) return 'Ningún equipo tiene clases de gracia';
+    return [for (final e in g.entries) '${e.key}: ${e.value == 0 ? 'paga antes' : '${e.value} ${e.value == 1 ? 'clase' : 'clases'}'}'].join(' · ');
+  }
+
+  /// Clases de gracia por equipo (Victor, 2026-11-14).
+  Future<void> _gracia(BuildContext context, ConfigLiga c) async {
+    final m = ScaffoldMessenger.of(context);
+    List<String> equipos;
+    try {
+      final r = await sesion.api.get('getTiers', {'adminToken': sesion.adminToken});
+      equipos = [for (final t in (r['tiers'] as List? ?? const [])) '${(t as Map)['nombre']}'];
+    } catch (_) {
+      m.showSnackBar(const SnackBar(content: Text('No se pudieron cargar los equipos. Revisa tu conexión.')));
+      return;
+    }
+    if (!context.mounted) return;
+    final v = <String, int?>{for (final e in equipos) e: c.graciaClases(e)};
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Clases de gracia', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(
+                  'Cuántas clases del mes puede venir alguien sin haber pagado la cuota. Después, al marcar Asistiré, la app le pide pagar. '
+                  'Con 0, paga antes de marcar Asistiré. Si un equipo no la usa, sigue su propia regla (por ejemplo, reservar y pagar cada clase).',
+                  style: TextStyle(color: h.pivot.textoSecundario),
+                ),
+                for (final e in equipos) ...[
+                  const SizedBox(height: 14),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(e, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(v[e] == null ? 'No usa clases de gracia' : 'Usa clases de gracia'),
+                    value: v[e] != null,
+                    onChanged: (x) => set(() => v[e] = x ? 1 : null),
+                  ),
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    child: v[e] == null
+                        ? const SizedBox(width: double.infinity)
+                        : SelectorNumero(
+                            valor: v[e]!,
+                            min: 0,
+                            max: 10,
+                            etiqueta: v[e] == 0 ? 'paga antes' : 'clases al mes',
+                            alCambiar: (n) => set(() => v[e] = n.toInt()),
+                          ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton(onPressed: () => Navigator.of(h).pop(true), child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    await _guardarRegla(context, c, {
+      'graciaClases': {
+        for (final e in v.entries)
+          if (e.value != null) e.key: e.value,
+      },
+    });
+  }
+
   String _textoVencimiento(ConfigLiga c) {
     if (c.cuotaVenceDia == 0) return 'No vence';
     final g = c.cuotaGraciaDias > 0 ? ' + ${c.cuotaGraciaDias} ${c.cuotaGraciaDias == 1 ? 'día' : 'días'} de gracia' : '';
@@ -425,6 +503,17 @@ class _AjustesLigaScreenState extends State<AjustesLigaScreen> {
                       titulo: 'Valor por clase',
                       valor: _plata(c.precioPorClase),
                       alTocar: () => _precio(context, c, 'Valor por clase', c.precioPorClase, 'precioPorClase'),
+                    ),
+                  ),
+                  Resaltable(
+                    id: 'gracia',
+                    resaltado: _resaltado,
+                    child: FilaAjuste(
+                      icono: Icons.redeem_outlined,
+                      seccion: 'cuota',
+                      titulo: 'Clases de gracia',
+                      valor: _textoGracia(c),
+                      alTocar: () => _gracia(context, c),
                     ),
                   ),
                 ],

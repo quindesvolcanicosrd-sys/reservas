@@ -481,11 +481,11 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] Asistencia anticipada → horario: selector de hora con AM/PM (la rueda actual es difícil).
 - [x] Asistencia anticipada → "Solo algunos": días primero; los lugares se deducen de los entrenamientos de esos días (sin Cumandá si los lunes solo hay CCI). Horarios: mostrar los de esos días y decir qué entrenamiento afecta; si no afecta ninguno, avisar que se guarda igual por si se crea un evento en ese horario. Decidir qué pasa si luego se crea un evento en un lugar que no estaba.
 - [x] Bandeja: cancelar pedidos propios pendientes (Pivots y personas, desde Mis pedidos). Editar = cancelar y pedir de nuevo; preguntar a Victor si quiere edición directa de algún tipo.
-- [ ] Inventario → Tu equipamiento: solo para equipos que exigen equipamiento propio (Quindes); sin "Necesito equipamiento por un tiempo"; la tarjeta roja de emergencia con ícono de inventario.
+- [x] Inventario → Tu equipamiento: solo para equipos que exigen equipamiento propio (Quindes); sin "Necesito equipamiento por un tiempo"; la tarjeta roja de emergencia con ícono de inventario.
 - [x] Equipos y puntos → Cuándo se aplican: en Automático el texto dice "Los cambios se aplican apenas alguien cumple o deja de cumplir los requisitos"; ejemplo con los requisitos del equipo en ambas opciones.
 - [x] Puntos por asistencia: texto "Los puntos ya ganados nunca cambian".
 - [x] Qué cuenta como clase: "Si alguien llega tarde a un evento puntual, ese evento se toma en cuenta de todas formas para el puntaje total y los requisitos mínimos".
-- [ ] Historial de cambios: tarjetas más claras.
+- [x] Historial de cambios: tarjetas más claras.
 - [ ] Reglas de Equipos y puntos globales o por equipo.
 - [x] Puntos a la mitad: hoy solo cambia el número y el orden en la lista de Equipo de la web antigua (`puntosEfectivos`); no cambia requisitos, fondos ni la app. Explicarlo bien o replantearlo (preguntar a Victor).
 - [x] Loader siempre centrado (Pivots y permisos y el resto).
@@ -498,7 +498,7 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] Quitar "Logo de la liga".
 - [x] Tesorería: texto cortado bajo el saldo inicial; el cambio de saldo inicial queda en historial_ajustes_liga (antes/después) pero recalcula el saldo hacia atrás.
 - [x] **Bug (hecho 2026-11-13):** la app no aplicaba la clase de gracia de Quindes (web: `_quindesGraciaAgotada()` en js/eventos.js, hasta 2 Asistiré o 1 asistencia confirmada en el mes sin pagar y después hoja de cuota pendiente). En `eventos_repo.dart` `motivoSinRespuesta` solo tiene la regla de Mirlxs: Quindes marca Asistiré sin pagar.
-- [ ] Clases de gracia editables en Mi Liga: cuántas y a qué equipos; con 0 se paga antes de marcar Asistiré y lleva a pagar.
+- [x] Clases de gracia editables en Mi Liga: cuántas y a qué equipos; con 0 se paga antes de marcar Asistiré y lleva a pagar.
 - [x] Tesorería → Cuotas: desglose por mes (quién pagó qué mes, monto, fecha, medio) y quién no ha pagado.
 - [x] Formas de pago dentro de Tesorería: cada medio = una cuenta (`cuentaId`), al crear un medio se crea la cuenta. Hoy hay 1 cuenta ("Banco internacional"), los medios tienen `cuentaId` null y 0 movimientos: los pagos aprobados no entraron. Preguntar si se importan los pagos aprobados anteriores.
 - [x] **Vital (hecho 2026-11-13, falta ver el día 1 de diciembre):** recordatorios de cuota. Hoy solo el día 1 (cronDiario, Quindes, mira `pagos`/`solicitudes_pago`, tablas viejas). Falta lo acordado en octubre (chat "Notificaciones de la web app"): fuente única de "¿pagó el mes?" (reservas mensuales + cuota_excepcion + pagos), día 1 con punto extra, día 14, día 16, deuda tras la clase de gracia, punto extra por pronto pago con `fecha_pago` (incluye el 15), sin avisos a quien está en revisión, exentx o inactivx; Mirlxs que pagan mensual también.

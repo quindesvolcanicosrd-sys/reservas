@@ -922,8 +922,12 @@ const REGLAS_LIGA_BASE: Record<string, any> = {
   cuotaVenceDia: 0,
   cuotaGraciaDias: 0,
   cuotaRecargo: 0,
-  // Privacidad: si las demás personas (no Pivots) ven los puntos de otras.
+    // Privacidad: si las demás personas (no Pivots) ven los puntos de otras.
   rankingVisible: true,
+  // Clases de gracia por equipo (Victor, 2026-11-14): cuántas clases puede
+  // venir sin haber pagado el mes. Equipo ausente = no aplica (sigue su
+  // propia regla); 0 = paga antes de marcar Asistiré.
+  graciaClases: { 'Quindes': 1 },
 };
 async function _reglasLiga(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_app').select('value').eq('key', 'reglas_liga').maybeSingle();
@@ -988,6 +992,14 @@ async function adminReglasLiga(params: Record<string, any>): Promise<Record<stri
     if (reglasNuevas.cuotaRecargo !== undefined) {
       const n = Math.round(Number(reglasNuevas.cuotaRecargo) * 100) / 100;
       if (Number.isFinite(n)) r.cuotaRecargo = Math.min(10000, Math.max(0, n));
+    }
+        if (reglasNuevas.graciaClases && typeof reglasNuevas.graciaClases === 'object') {
+      const g: Record<string, number> = {};
+      for (const [k, v] of Object.entries(reglasNuevas.graciaClases)) {
+        const n = Math.round(Number(v));
+        if (String(k).trim() && Number.isFinite(n)) g[String(k).trim().slice(0, 60)] = Math.min(10, Math.max(0, n));
+      }
+      r.graciaClases = g;
     }
     if (reglasNuevas.rankingVisible !== undefined) r.rankingVisible = reglasNuevas.rankingVisible !== false && reglasNuevas.rankingVisible !== 'false';
     if (reglasNuevas.tardeCuentaClase !== undefined) r.tardeCuentaClase = reglasNuevas.tardeCuentaClase !== false && reglasNuevas.tardeCuentaClase !== 'false';
@@ -9333,20 +9345,29 @@ async function _recordatoriosCuota(hoyIso: string): Promise<void> {
   if (dia === DIA_PUNTO_EXTRA - 1) await enviar(deben, 'Último día para tu punto extra', `Mañana es el último día para pagar tu cuota de ${nombreMes} y recibir tu punto extra.`);
   if (dia === DIA_PUNTO_EXTRA + 1) await enviar(deben, `Aún no pagas ${nombreMes}`, `Aún no has pagado tu cuota de ${nombreMes}. Recuerda hacer tu pago.`);
 
-  // Clase de gracia usada (Quindes): ayer fue su primera asistencia
-  // confirmada del mes en un Entrenamiento y sigue debiendo. Una vez por mes.
+    // Clases de gracia usadas (Mi Liga → Cobros, por equipo): ayer fue su
+  // asistencia confirmada número N del mes en un Entrenamiento y sigue
+  // debiendo. Una vez por mes.
   const ayer = new Date(Date.parse(hoyIso) - 86400000).toISOString().slice(0, 10);
   const mesAyer = ayer.slice(0, 7);
-  const quindes = new Set((gente ?? []).filter((p: any) => p.categoria === 'Quindes').map((p: any) => p.username));
-  const candidatos = pagan.filter((u) => quindes.has(u));
+  const graciaPor: Record<string, number> = (await _reglasLiga()).graciaClases ?? {};
+  const equipoDe: Record<string, string> = Object.fromEntries((gente ?? []).map((p: any) => [p.username, p.categoria]));
+  const candidatos = pagan.filter((u) => Number(graciaPor[equipoDe[u]]) > 0);
   if (!candidatos.length) return;
   const { data: evs } = await supabase.from('asistencias').select('fecha, a_horario, tarde')
     .eq('tipo_evento', 'Entrenamiento').not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")')
     .gte('fecha', `${mesAyer}-01`).lte('fecha', ayer);
   const nombres = (v: unknown) => String(v ?? '').split(',').map((n) => n.trim().toUpperCase()).filter(Boolean);
-  const primera: Record<string, string> = {};
+    const fechas: Record<string, string[]> = {};
   for (const e of evs ?? []) {
-    for (const n of [...nombres(e.a_horario), ...nombres(e.tarde)]) if (!primera[n] || e.fecha < primera[n]) primera[n] = e.fecha;
+    for (const n of [...nombres(e.a_horario), ...nombres(e.tarde)]) (fechas[n] ??= []).push(e.fecha);
+  }
+  // Fecha en que usó su última clase de gracia (la N del mes).
+  const primera: Record<string, string> = {};
+  for (const u of candidatos) {
+    const l = (fechas[u.toUpperCase()] ?? []).sort();
+    const n = Number(graciaPor[equipoDe[u]]);
+    if (l.length >= n) primera[u.toUpperCase()] = l[n - 1];
   }
   const estadosAyer = mesAyer === mes ? estados : await _estadosCuotaMes(candidatos, mesAyer);
   const nombreMesAyer = _MESES_ES[Number(mesAyer.slice(5, 7)) - 1];

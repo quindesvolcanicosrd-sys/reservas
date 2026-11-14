@@ -37,6 +37,7 @@ const entradasLiga = [
   EntradaAjuste('rectificaciones', 'Rectificaciones', 'Mi Liga › Reglas', 'corregir asistencia mal tomada días revisar pedido'),
   EntradaAjuste('minimo', 'Pocas personas en un evento', 'Mi Liga › Reglas', 'cancelar mínimo personas evento'),
   EntradaAjuste('inactividad', 'Inactividad', 'Mi Liga › Reglas', 'inactivos días sin venir'),
+  EntradaAjuste('gracia', 'Clases de gracia', 'Mi Liga › Cobros', 'gracia gratis sin pagar primera clase cuota equipo'),
   EntradaAjuste('vencimiento', 'Vencimiento de la cuota', 'Mi Liga › Cobros', 'vence día gracia recargo multa tarde atraso pagar'),
   EntradaAjuste('ranking', 'Puntos de otras personas', 'Mi Liga › Privacidad', 'ranking tabla privacidad ver puntos ocultar'),
   EntradaAjuste('pais', 'País', 'Mi Liga › Datos de la liga', 'país teléfono prefijo'),
