@@ -7384,7 +7384,7 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
   if (!yo) return { exito: false, error: 'Sesión inválida.' };
   const desde = new Date(Date.now() - 60 * 86400000).toISOString();
   const [res, rect, exc, prest, asig, { data: fila }] = await Promise.all([
-    supabase.from('reservas').select('id, id_evento, tipo, mes_texto, estado, monto, created_at').eq('nombre_usuario', yo).gte('created_at', desde),
+        supabase.from('reservas').select('id, id_evento, tipo, mes_texto, estado, monto, created_at, motivo_rechazo').eq('nombre_usuario', yo).gte('created_at', desde),
     supabase.from('rectificaciones_asistencia').select('id, fecha_evento, estado_solicitado, decision, created_at').eq('nombre', yo).gte('created_at', desde),
     supabase.from('solicitudes_excepcion').select('id, tipo, estado, mes_aplicacion, nota_admin, created_at, vigente_hasta, indefinida, efecto').eq('nombre', yo).gte('created_at', desde),
     supabase.from('inventario_prestamos').select('id, detalle, estado, tipo, hasta, created_at, desde, devuelto_en').eq('username', yo).gte('created_at', desde),
@@ -7406,7 +7406,7 @@ async function getMiBandeja(params: Record<string, any>): Promise<Record<string,
     items.push({
       tipo: 'reserva', id: r.id,
       titulo: r.tipo === 'mensual' ? `Mensualidad ${r.mes_texto ?? ''}`.trim() : `${e?.tipo_evento || 'Clase'}${e?.fecha ? ' del ' + dia(e.fecha) : ''}`,
-      detalle: r.estado === 'Pendiente' ? 'Un Pivot confirmará tu pago.' : r.estado === 'Confirmada' ? 'Pago confirmado.' : 'Reserva cancelada.',
+            detalle: r.estado === 'Pendiente' ? 'Un Pivot confirmará tu pago.' : r.estado === 'Confirmada' ? 'Pago confirmado.' : (r.motivo_rechazo ? `Rechazada: ${r.motivo_rechazo}` : 'Reserva cancelada.'),
       estado: r.estado === 'Pendiente' ? 'pendiente' : r.estado === 'Confirmada' ? 'aprobada' : 'rechazada', fecha: r.created_at,
     });
   }
@@ -9071,8 +9071,22 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
     const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo, monto, medio_pago, mes_texto, uso_cupon').eq('id', id).maybeSingle();
-  const { error } = await supabase.from('reservas').update({ estado }).eq('id', id);
+    // Rechazo con motivo (Victor, 2026-11-13): se guarda y se le avisa de inmediato.
+  const motivo = String(params.motivo ?? '').trim().slice(0, 120);
+  const mensaje = String(params.mensaje ?? '').trim().slice(0, 400);
+  const cambios: Record<string, any> = { estado };
+  if (estado === 'Cancelada' && motivo) cambios.motivo_rechazo = motivo;
+  const { error } = await supabase.from('reservas').update(cambios).eq('id', id);
   if (error) return { exito: false, error: error.message };
+  if (estado === 'Cancelada' && motivo && reservaAntes?.nombre_usuario) {
+    const que = reservaAntes.tipo === 'mensual' ? `tu mensualidad${reservaAntes.mes_texto ? ' de ' + reservaAntes.mes_texto : ''}` : 'tu reserva';
+    await sendPush({
+      tipo: 'solicitud_resuelta', include_external_user_ids: [reservaAntes.nombre_usuario],
+      headings: { es: `Se rechazó ${que}` },
+      contents: { es: mensaje || `Motivo: ${motivo}. Puedes reservar de nuevo cuando lo tengas listo.` },
+      url: APP_URL,
+    }).catch(() => {});
+  }
   // Tesorería: al confirmar, el ingreso entra a la cuenta que confirma el Pivot
   // (o la del medio que declaró la persona). Al cancelar, se anula.
   if (estado === 'Confirmada' && reservaAntes && Number(reservaAntes.monto) > 0 && !reservaAntes.uso_cupon) {

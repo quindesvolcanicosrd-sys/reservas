@@ -132,6 +132,13 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
     // Al aprobar una excepción, el Pivot decide cuánto dura (y, si es por
     // dificultad económica, si paga media cuota o nada).
     var extra = const <String, Object?>{};
+    // Rechazar un pago o reserva: motivo de una lista (o uno propio) y aviso
+    // inmediato a la persona (Victor, 2026-11-13).
+    if (!aprobar && p.tipo == TipoPedido.reserva) {
+      final r = await _motivoRechazo(p);
+      if (r == null || !mounted) return;
+      extra = r;
+    }
     if (aprobar && p.tipo == TipoPedido.excepcion) {
       final r = await elegirDuracionExcepcion(context, p);
       if (r == null || !mounted) return;
@@ -220,6 +227,83 @@ class _BandejaPivotsScreenState extends State<BandejaPivotsScreen> {
       ),
     );
     return ok == true ? elegida : false;
+  }
+
+  static const _motivos = {
+    'Falta el comprobante': 'No recibimos el comprobante de tu pago. Envíalo y vuelve a reservar.',
+    'No encontramos el pago': 'No encontramos tu pago en nuestras cuentas. Revisa el comprobante y vuelve a reservar.',
+    'La clase está llena o cancelada': 'La clase está llena o se canceló. Elige otra fecha para reservar.',
+    'El monto no coincide': 'El monto que pagaste no coincide con el de la reserva. Escríbenos para resolverlo.',
+  };
+
+  /// Motivo del rechazo y mensaje que recibe la persona. null si se cancela.
+  Future<Map<String, Object?>?> _motivoRechazo(Pedido p) async {
+    String? motivo;
+    final razon = TextEditingController(), mensaje = TextEditingController();
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (h) => StatefulBuilder(
+        builder: (h, set) {
+          final pal = h.pivot;
+          final otro = motivo == 'otro';
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + MediaQuery.viewInsetsOf(h).bottom),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('¿Por qué se rechaza?', style: Theme.of(h).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${p.m['nombreMostrar'] ?? 'La persona'} recibe el aviso al momento y la reserva se cancela.',
+                    style: TextStyle(color: pal.textoSecundario),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final e in [..._motivos.keys, 'otro'])
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        motivo == e ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                        color: motivo == e ? pal.marcaTexto : pal.textoSecundario,
+                      ),
+                      title: Text(e == 'otro' ? 'Otro motivo' : e),
+                      subtitle: e == 'otro' || motivo != e ? null : Text(_motivos[e]!),
+                      onTap: () => set(() => motivo = e),
+                    ),
+                  if (otro) ...[
+                    TextField(
+                      controller: razon,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(labelText: 'Motivo'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: mensaje,
+                      minLines: 2,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(labelText: 'Mensaje para la persona'),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton(onPressed: motivo == null ? null : () => Navigator.of(h).pop(true), child: const Text('Rechazar y avisar')),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (ok != true || motivo == null) return null;
+    if (motivo == 'otro') {
+      final r = razon.text.trim();
+      if (r.isEmpty) return null;
+      return {'motivo': r, 'mensaje': mensaje.text.trim().isEmpty ? 'Motivo: $r' : mensaje.text.trim()};
+    }
+    return {'motivo': motivo, 'mensaje': _motivos[motivo]};
   }
 
   Future<String?> _pedirNota(Pedido p) {
