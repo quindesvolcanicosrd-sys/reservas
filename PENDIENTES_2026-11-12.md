@@ -480,3 +480,20 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [ ] Pantalla de carga: quitar el splash con revelado de máscara; solo el logo y fade out a la app.
 - [ ] Asistencia anticipada → horario: selector de hora con AM/PM (la rueda actual es difícil).
 - [ ] Asistencia anticipada → "Solo algunos": días primero; los lugares se deducen de los entrenamientos de esos días (sin Cumandá si los lunes solo hay CCI). Horarios: mostrar los de esos días y decir qué entrenamiento afecta; si no afecta ninguno, avisar que se guarda igual por si se crea un evento en ese horario. Decidir qué pasa si luego se crea un evento en un lugar que no estaba.
+- [ ] Bandeja: cancelar, borrar y editar solicitudes pendientes (Pivots y personas).
+- [ ] Inventario → Tu equipamiento: solo para equipos que exigen equipamiento propio (Quindes); sin "Necesito equipamiento por un tiempo"; la tarjeta roja de emergencia con ícono de inventario.
+- [ ] Equipos y puntos → Cuándo se aplican: en Automático el texto dice "Los cambios se aplican apenas alguien cumple o deja de cumplir los requisitos"; ejemplo con los requisitos del equipo en ambas opciones.
+- [ ] Puntos por asistencia: texto "Los puntos ya ganados nunca cambian".
+- [ ] Qué cuenta como clase: "Si alguien llega tarde a un evento puntual, ese evento se toma en cuenta de todas formas para el puntaje total y los requisitos mínimos".
+- [ ] Historial de cambios: tarjetas más claras.
+- [ ] Reglas de Equipos y puntos globales o por equipo.
+- [ ] Puntos a la mitad: hoy solo cambia el número y el orden en la lista de Equipo de la web antigua (`puntosEfectivos`); no cambia requisitos, fondos ni la app. Explicarlo bien o replantearlo (preguntar a Victor).
+- [ ] Pivots y permisos: loader pegado a la izquierda.
+- [ ] Vencimiento de la cuota: explicación en pantalla.
+- [ ] "Clase suelta" → "Valor por clase". Tipos de equipo (cobro por mes o por clase, equipamiento propio obligatorio, reserva de equipamiento, quién marca Asistiré, cancelar/reagendar): definir con Victor, se elige al crear el equipo y se edita.
+- [ ] "Tolerancia de llegada" → "Tolerancia para llegadas tarde".
+- [ ] Rectificaciones: explicar qué son.
+- [ ] Inactividad: texto más claro.
+- [ ] Estados: renombrar, ícono nuevo, sumar Enfermedad, Situación personal o fuerza mayor y Otro (también en No asistiré de la anticipada); viaje no se congela; quitar Técnico si es estado; al asistir pasa a Activx y se quitan estados y anticipadas con estado. Victor propone quitar el máximo de congelado (contradice lo hecho el 13: confirmar).
+- [ ] Quitar "Logo de la liga".
+- [ ] Tesorería: texto cortado bajo el saldo inicial; el cambio de saldo inicial queda en historial_ajustes_liga (antes/después) pero recalcula el saldo hacia atrás.
