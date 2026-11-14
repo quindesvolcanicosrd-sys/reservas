@@ -7,6 +7,7 @@ import 'eventos_repo.dart';
 import 'modelos.dart';
 import 'widgets_comunes.dart';
 import '../core/cargando.dart';
+import '../core/vidrio.dart';
 
 /// "Tomar asistencia" (solo admins, desde que el evento empieza). Mismo
 /// comportamiento que la subpantalla de la web (`_evAbrirMarcarAsistencia()`):
@@ -79,7 +80,12 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
         }
         final marcados = {for (final a in ev.asistentes) a.persona.username.trim().toUpperCase(): a.estado};
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
+            flexibleSpace: const Vidrio(child: SizedBox.expand()),
             titleSpacing: 0,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +108,7 @@ class _TomarAsistenciaScreenState extends State<TomarAsistenciaScreen> {
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                padding: EdgeInsets.fromLTRB(16, 4 + altoBarra(context), 16, 8),
                 child: TextField(
                   decoration: const InputDecoration(hintText: 'Buscar persona', prefixIcon: Icon(Icons.search_rounded), isDense: true),
                   onChanged: (v) => setState(() => _busqueda = v),

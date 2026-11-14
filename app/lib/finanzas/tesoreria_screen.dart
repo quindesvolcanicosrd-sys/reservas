@@ -1741,11 +1741,18 @@ class _CuotasMesScreenState extends State<CuotasMesScreen> {
         if (_q.isEmpty || '${x['nombre']}'.toLowerCase().contains(_q.toLowerCase())) x,
     ];
     return Scaffold(
-      appBar: AppBar(title: const Text('Cuotas del mes')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
+        title: const Text('Cuotas del mes'),
+      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+            padding: EdgeInsets.fromLTRB(8, 4 + altoBarra(context), 8, 0),
             child: Row(
               children: [
                 IconButton(tooltip: 'Mes anterior', onPressed: () => _mover(-1), icon: const Icon(Icons.chevron_left_rounded)),

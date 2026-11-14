@@ -5,6 +5,7 @@ import '../core/cargando.dart';
 import '../core/fechas.dart';
 import '../core/tema.dart';
 import 'equipo_repo.dart';
+import '../core/vidrio.dart';
 
 /// Desglose de puntos de un mes (Victor, 2026-11-12: antes era una hoja
 /// plana). Pantalla completa con: tarjeta en degradado con el total, cifras
@@ -56,7 +57,12 @@ class _DesgloseScreenState extends State<DesgloseScreen> {
   Widget build(BuildContext context) {
     final p = context.pivot;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: Text(widget.titulo, style: const TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -121,7 +127,7 @@ class _DesgloseScreenState extends State<DesgloseScreen> {
 
     return ListView(
       key: const ValueKey('lista'),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+      padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(this.context), 16, 40),
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),

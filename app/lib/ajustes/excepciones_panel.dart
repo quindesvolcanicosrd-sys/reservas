@@ -113,7 +113,12 @@ class _ExcepcionesPanelScreenState extends State<ExcepcionesPanelScreen> {
     // aprobada que sigue vigente (el Pivot decide cuánto dura).
     final yaPidio = (_sols ?? const <_Solicitud>[]).any((s) => s.pendiente || s.vigente);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Excepción de cuota', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       floatingActionButton: !listo || yaPidio
@@ -160,7 +165,7 @@ class _ExcepcionesPanelScreenState extends State<ExcepcionesPanelScreen> {
       key: const ValueKey('lista'),
       onRefresh: _cargar,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(this.context), 16, 96),
         children: [
           _Cabecera(excepcion: deEsteMes, pendiente: pendientes.any((s) => s.mes == actual)),
           if (vacio) const _Explicacion(),

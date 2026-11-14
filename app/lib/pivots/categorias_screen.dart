@@ -973,13 +973,18 @@ class _HistorialAjustesScreenState extends State<HistorialAjustesScreen> {
                 h,
           ];
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Historial de cambios', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+            padding: EdgeInsets.fromLTRB(16, 4 + altoBarra(context), 16, 4),
             child: TextField(
               onChanged: (v) => setState(() => _q = v),
               decoration: const InputDecoration(hintText: 'Buscar (persona, equipo, regla…)', prefixIcon: Icon(Icons.search_rounded), isDense: true),

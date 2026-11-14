@@ -505,4 +505,4 @@ Abajo, **Avanzado**: cada opción una por una, con una explicación clara de qu�
 - [x] Tesorería: registro rápido de "usé plata del equipo" desde el FAB (personas, monto, cuenta, concepto; se divide entre varias) que crea el egreso y la deuda de cada persona. Victor: con Sant usan la billetera del equipo cuando no tienen efectivo.
 - [~] Importar a Tesorería los pagos ya aprobados (hecho DeUna y Efectivo; falta decidir Pichincha $265, sin medio $35 y reservas sin medio $195) (Victor: "importa los datos desde lo que se tenga registro") al unificar formas de pago y cuentas.
 - [x] Datos de emergencia: la lista de seguros médicos es de Ecuador; que se edite en Mi Liga (agregar, editar, quitar) y, con salud pública, mostrar siempre el número de emergencias del país (casi siempre 911).
-- [~] Barras superiores de vidrio: hechas en las pantallas principales (ver MANIFEST); faltan tomar asistencia, comunidad, emergencia, identidad, desglose de puntos, excepciones, asistente, gestionar reserva.
+- [x] Barras superiores de vidrio en toda la app (salvo emergencia, comunidad y asistente, a propósito).

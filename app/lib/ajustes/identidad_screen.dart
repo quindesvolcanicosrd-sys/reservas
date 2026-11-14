@@ -11,6 +11,7 @@ import '../core/tema.dart';
 import '../sesion/sesion.dart';
 import 'campos.dart';
 import 'componentes.dart';
+import '../core/vidrio.dart';
 
 /// Identidad y dirección (Victor, 2026-11-07): tu documento como una
 /// credencial y tu dirección con mapa (OpenStreetMap). Ubicar el pin llena
@@ -346,11 +347,16 @@ class _MapaDireccionState extends State<_MapaDireccion> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
         title: const Text('Tu dirección', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: EdgeInsets.fromLTRB(16, 8 + altoBarra(context), 16, 0),
         child: SelectorUbicacion(
           inicial: widget.inicial,
           pais: widget.pais,

@@ -308,12 +308,19 @@ class _ReagendarScreenState extends State<ReagendarScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: Text(_res.mensual ? 'Cambiar de mes' : 'Cambiar de fecha')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        flexibleSpace: const Vidrio(child: SizedBox.expand()),
+        title: Text(_res.mensual ? 'Cambiar de mes' : 'Cambiar de fecha'),
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+            padding: EdgeInsets.fromLTRB(20, 4 + altoBarra(context), 20, 8),
             child: Text('Ahora: ${_res.titulo}', style: TextStyle(color: p.textoSecundario)),
           ),
           Expanded(
