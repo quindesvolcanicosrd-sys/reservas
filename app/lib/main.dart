@@ -17,6 +17,7 @@ import 'eventos/detalle_screen.dart';
 import 'eventos/eventos_repo.dart';
 import 'eventos/social/invitado_screen.dart';
 import 'inicio_shell.dart';
+import 'reglamento/reglamento_screen.dart' show ReglamentoScreen;
 import 'push/push.dart';
 import 'sesion/login_screen.dart';
 import 'sesion/sesion.dart';
@@ -249,6 +250,8 @@ class _RaizState extends State<_Raiz> {
       case 'inventario':
         // Avisos del inventario abren el inventario (QA 2026-11-27).
         _navegador.currentState?.push(MaterialPageRoute(builder: (_) => InventarioScreen(sesion: widget.sesion)));
+      case 'reglamento':
+        _navegador.currentState?.push(MaterialPageRoute(builder: (_) => ReglamentoScreen(sesion: widget.sesion)));
       case 'equipo':
         Navegacion.ir.value = Pestana.equipo;
       // Entrenamiento en la barra (Victor, 2026-11-26): cursos, progreso y lo de entrenadorxs.

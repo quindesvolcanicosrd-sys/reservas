@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ajustes/componentes.dart' show SubAjustes;
 import '../ajustes/herramientas_liga.dart' show FuncionesLiga;
+import '../core/deporte.dart';
 import '../core/encabezado_seccion.dart' show TarjetaCrear;
 import '../core/fechas.dart';
 import '../core/navegacion.dart';
@@ -13,6 +15,7 @@ import '../cursos/cursos_screen.dart';
 import '../eventos/detalle_screen.dart' show DetalleScreen;
 import '../eventos/eventos_repo.dart';
 import '../eventos/modelos.dart' show Evento;
+import '../reglamento/reglamento_screen.dart' show TarjetaReglamento;
 import '../sesion/sesion.dart';
 import 'coach_screen.dart';
 import 'equipo_tecnico.dart';
@@ -55,9 +58,20 @@ class _EntrenamientoScreenState extends State<EntrenamientoScreen> {
   /// Tour de Progreso la primera vez que se ve la pestaña (Victor, 2026-11-28).
   void _tour() {
     if (Navegacion.pestanaActual.value != 'Progreso') return;
-    Future.delayed(const Duration(milliseconds: 900), () {
+    Future.delayed(const Duration(milliseconds: 900), () async {
       if (!mounted || Navegacion.pestanaActual.value != 'Progreso' || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
       final tecnico = _usaCoach;
+      final yaVisto = (await SharedPreferences.getInstance()).getBool('tour_progreso_v1') == true;
+      if (!mounted || !context.mounted) return;
+      final reglamento = Deporte.esDerby
+          ? [
+              PasoTour(
+                clave: ClavesTour.progresoReglamento,
+                titulo: 'Reglamento',
+                texto: 'Las reglas del roller derby, las faltas con su señal y el libro de casos. Busca una duda o ponte a prueba con escenarios reales.',
+              ),
+            ]
+          : const <PasoTour>[];
       Tour.mostrarSiCorresponde(
         context,
         preferencia: 'tour_progreso_v1',
@@ -90,8 +104,16 @@ class _EntrenamientoScreenState extends State<EntrenamientoScreen> {
               titulo: 'Habilidades y pruebas',
               texto: 'La lista de habilidades de la liga y las pruebas para medir el progreso. «Agregar» suma una nueva.',
             ),
+          ...reglamento,
         ],
-      );
+      ).then((_) async {
+        // Quien ya había visto el recorrido de Progreso ve solo el paso nuevo;
+        // quien lo ve por primera vez ya lo tuvo dentro.
+        if (reglamento.isEmpty) return;
+        final pr = await SharedPreferences.getInstance();
+        if (!yaVisto) return pr.setBool('tour_reglamento_v1', true).then((_) {});
+        if (mounted) Tour.mostrarSiCorresponde(context, preferencia: 'tour_reglamento_v1', pasos: reglamento);
+      });
     });
   }
 
@@ -324,6 +346,12 @@ class _EntrenamientoScreenState extends State<EntrenamientoScreen> {
                     key: ClavesTour.progresoTecnico,
                     child: EquipoTecnicoSeccion(sesion: s),
                   ),
+                  // Reglamento, solo en ligas de roller derby (Victor, 2026-11-28).
+                  if (Deporte.esDerby)
+                    KeyedSubtree(
+                      key: ClavesTour.progresoReglamento,
+                      child: TarjetaReglamento(sesion: s),
+                    ),
                 ],
               ),
               despuesDelProximo: KeyedSubtree(key: ClavesTour.progresoCursos, child: _carrusel(context)),
@@ -365,6 +393,11 @@ class _EntrenamientoScreenState extends State<EntrenamientoScreen> {
                 KeyedSubtree(
                   key: ClavesTour.progresoTecnico,
                   child: EquipoTecnicoSeccion(sesion: s),
+                ),
+              if (Deporte.esDerby)
+                KeyedSubtree(
+                  key: ClavesTour.progresoReglamento,
+                  child: TarjetaReglamento(sesion: s),
                 ),
               // Próximos 7 días (si no hay, el que viene) y luego Cursos (QA 2026-11-27).
               if (proximos.isNotEmpty)

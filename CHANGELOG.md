@@ -2,6 +2,12 @@
 
 Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.md anterior (que mezclaba estado actual + historial en un solo archivo de ~7000 líneas). Dentro de cada sección, más reciente primero. Las fechas exactas están confirmadas cuando el MANIFEST las traía en formato ISO; el resto del historial (desarrollado a lo largo de 2025 y 2026 sin registrar fecha por entrada) queda con el mes/año aproximado que se pudo inferir del contexto (migraciones con fecha en su nombre, menciones explícitas de mes, o posición relativa en el archivo original).
 
+## 2026-11-28 (reglamento)
+- Progreso: nueva tarjeta «Reglamento» (solo en ligas de roller derby) con las reglas, el libro de casos, faltas y señales, procedimientos de arbitraje, formación para NSO, gestión de riesgos y glosario, todo desde el documento de Victor.
+- Buscador que entiende preguntas («¿puedo bloquear con el codo?»), términos en inglés y códigos de falta; accesos rápidos; términos del glosario subrayados con su definición; ejemplos del libro de casos dentro de cada regla; guardar secciones y seguir leyendo; «Ponte a prueba» con escenarios reales.
+- Funciona sin internet y se actualiza solo cuando cambia el documento; si WFTDA cambia sus PDF, el equipo de Pivot recibe un aviso.
+- Fiestas: las pastillas de las tarjetas con degradado ya no se salen del borde.
+
 ## 2026-11-28 (fiestas con más onda)
 - «Qué llevar»: la pastilla «Tu parte: N %» ya no se corta.
 - Actividades del evento: arriba, la tarjeta «Mis pistas y lista de deseos» con degradado de regalo y tus deseos y gustos en pastillas (si participas del amigo secreto). Amigo secreto y Regalo robado pasan a tarjetas con degradado, moño de fondo y el tope del regalo en una pastilla.

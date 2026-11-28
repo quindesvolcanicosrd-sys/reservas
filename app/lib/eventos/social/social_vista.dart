@@ -214,9 +214,13 @@ extension on _CardPieza {
       children: [
         Icon(i, size: 14, color: PivotPaleta.sobreSeccion),
         const SizedBox(width: 4),
-        Text(
-          texto,
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: PivotPaleta.sobreSeccion),
+        Flexible(
+          child: Text(
+            texto,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: PivotPaleta.sobreSeccion),
+          ),
         ),
       ],
     ),
@@ -367,18 +371,23 @@ class QueLlevaResumen extends StatelessWidget {
                   children: [
                     const IconoTarjetaSocial(icono: Icons.restaurant_rounded),
                     const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Qué llevar',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
+                    // La pastilla va entera junto al título; si falta lugar se acorta el título (QA 2026-11-28).
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Qué llevar',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: p.texto),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (cuenta) Etiqueta(texto: 'Tu parte: ${(parte * 100).round()} %', apagada: parte >= 1),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    // Sin Flexible: el Spacer la cortaba (QA 2026-11-28).
-                    if (cuenta) Etiqueta(texto: 'Tu parte: ${(parte * 100).round()} %', apagada: parte >= 1),
-                    const Spacer(),
                     Icon(Icons.chevron_right_rounded, color: p.textoSecundario),
                   ],
                 ),

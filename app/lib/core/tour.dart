@@ -31,6 +31,7 @@ class ClavesTour {
   static final progresoProximos = GlobalKey(debugLabel: 'tour-progreso-proximos');
   static final progresoCursos = GlobalKey(debugLabel: 'tour-progreso-cursos');
   static final progresoHabilidades = GlobalKey(debugLabel: 'tour-progreso-habilidades');
+  static final progresoReglamento = GlobalKey(debugLabel: 'tour-progreso-reglamento');
   static final ligaBuscador = GlobalKey(debugLabel: 'tour-liga-buscador');
   static final ligaAtajos = GlobalKey(debugLabel: 'tour-liga-atajos');
   static final ligaInventario = GlobalKey(debugLabel: 'tour-liga-inventario');

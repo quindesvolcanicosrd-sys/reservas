@@ -89,6 +89,7 @@ dev_dependencies:
 flutter:
   assets:
     - assets/logo.png
+    - assets/reglamento.json
     - assets/lottie/
     - assets/splash/logo_ancho.png
 

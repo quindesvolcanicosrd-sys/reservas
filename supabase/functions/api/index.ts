@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { AsyncLocalStorage } from 'node:async_hooks';
 // Evento social (Naviquinde, 2026-11-19): acciones social* en su propio módulo.
+import { procesarReglamento } from './reglamento.ts';
 import { ACCIONES_SOCIAL, accionSocial, alcanceSocial, cronSocialPendientes, cronSocialRecordatorios, type DepsSocial, filtrarEventosSociales, socialPorAprobar } from './social.ts';
 function _depsSocial(): DepsSocial {
     return { db: supabase, validarToken: _validarToken, validarAdminToken: _validarAdminToken, ligaEnCurso: _ligaEnCurso, push: sendPush, pivots: _administradorxs, appUrl: APP_URL, areasDe: _areasDe };
@@ -5094,6 +5095,113 @@ async function esDuenxPivot(params: Record<string, any>): Promise<Record<string,
   if (!email) return { exito: true, duenx: false };
   const { data } = await supabaseServicio.from('pivot_duenos').select('email').ilike('email', email).maybeSingle();
   return { exito: true, duenx: !!data };
+}
+
+// ─── Reglamento de roller derby (Victor, 2026-11-28) ────────────────────────
+// Sale del Google Doc de Victor (público con enlace): cada día se vuelve a
+// leer y, si cambió, la app baja la versión nueva. Además se mira si WFTDA
+// publicó reglas nuevas para avisarle a quien mantiene el documento.
+const REGLAMENTO_DOC = '101ePQod3KS4IwBLdjqn4gMlDqLpuONBxl_UvEjflxhg';
+const WFTDA_PDFS = ['https://static.wftda.com/rules/wftda-rules-spanish-neutro.pdf', 'https://static.wftda.com/rules/wftda-rules-english.pdf'];
+
+async function _contenido(clave: string): Promise<any | null> {
+  const { data } = await supabaseServicio.from('contenido_pivot').select('valor, version, actualizado_en').eq('clave', clave).maybeSingle();
+  return data ?? null;
+}
+async function _guardarContenido(clave: string, valor: any, version: string | null = null): Promise<void> {
+  await supabaseServicio.from('contenido_pivot').upsert({ clave, valor, version, actualizado_en: new Date().toISOString() });
+}
+
+/** Lee el documento y guarda la versión nueva si cambió. */
+async function _actualizarReglamento(): Promise<{ cambio: boolean; version?: string; error?: string; cuenta?: Record<string, number> }> {
+  const r = await fetch(`https://docs.google.com/document/d/${REGLAMENTO_DOC}/export?format=md`, { redirect: 'follow' });
+  if (!r.ok) return { cambio: false, error: `El documento no se pudo leer (${r.status}).` };
+  const md = await r.text();
+  const regl = procesarReglamento(md);
+  const cuenta = { secciones: regl.secciones.length, casos: regl.casos.length, glosario: regl.glosario.length, faltas: regl.faltas.length };
+  // Un documento casi vacío es un error de lectura, no una versión nueva.
+  if (regl.secciones.length < 50) return { cambio: false, error: 'El documento llegó incompleto; se mantiene la versión anterior.', cuenta };
+  const ya = await _contenido('reglamento');
+  if (ya?.version === regl.version) return { cambio: false, version: regl.version, cuenta };
+  await _guardarContenido('reglamento', regl, regl.version);
+  return { cambio: true, version: regl.version, cuenta };
+}
+
+/** Huella de los PDF oficiales de WFTDA (fecha y tamaño que da el servidor). */
+async function _huellaWftda(): Promise<string> {
+  const partes: string[] = [];
+  for (const u of WFTDA_PDFS) {
+    try {
+      const r = await fetch(u, { method: 'HEAD' });
+      partes.push(r.ok ? `${r.headers.get('last-modified') ?? ''}|${r.headers.get('etag') ?? ''}|${r.headers.get('content-length') ?? ''}` : '');
+    } catch { partes.push(''); }
+  }
+  return partes.join('#');
+}
+
+// Una vez al día (la primera liga del cron hace la parte global); a cada liga
+// solo le toca avisar a quien es del equipo de Pivot.
+async function _cronReglamento(): Promise<void> {
+  const hoy = _hoyEcuadorISO();
+  const rev = await _contenido('reglamento_revision');
+  if (rev?.valor?.dia !== hoy) {
+    await _guardarContenido('reglamento_revision', { dia: hoy });
+    try { await _actualizarReglamento(); } catch (e) { console.error('[reglamento] actualizar:', e); }
+    try {
+      const huella = await _huellaWftda();
+      const antes = await _contenido('wftda_huella');
+      if (huella.replace(/[#|]/g, '')) {
+        if (antes?.valor?.huella && antes.valor.huella !== huella) await _guardarContenido('wftda_cambio', { huella, fecha: hoy, avisadas: [] });
+        if (antes?.valor?.huella !== huella) await _guardarContenido('wftda_huella', { huella });
+      }
+    } catch (e) { console.error('[reglamento] wftda:', e); }
+  }
+  const cambio = await _contenido('wftda_cambio');
+  if (!cambio?.valor || cambio.valor.visto) return;
+  const liga = _ligaEnCurso();
+  const avisadas: string[] = cambio.valor.avisadas ?? [];
+  if (avisadas.includes(liga)) return;
+  await _guardarContenido('wftda_cambio', { ...cambio.valor, avisadas: [...avisadas, liga] });
+  const { data: duenos } = await supabaseServicio.from('pivot_duenos').select('email');
+  const correos = (duenos ?? []).map((d: any) => String(d.email).toLowerCase());
+  if (!correos.length) return;
+  const { data: gente } = await supabase.from('equipo').select('username, email').is('eliminado_en', null);
+  const usuarios = (gente ?? []).filter((g: any) => correos.includes(String(g.email ?? '').toLowerCase())).map((g: any) => g.username);
+  if (!usuarios.length) return;
+  await sendPush({
+    tipo: 'avisos_admin', personal: true, include_external_user_ids: usuarios, pantalla: 'reglamento',
+    headings: { es: '📏 WFTDA actualizó las reglas' }, contents: { es: 'Revisa los cambios y actualiza el documento del reglamento. Pivot lo toma solo al día siguiente.' },
+  });
+}
+
+async function getReglamento(params: Record<string, any>): Promise<Record<string, any>> {
+  const c = await _contenido('reglamento');
+  const email = params.adminToken ? await _validarAdminToken(String(params.adminToken)) : null;
+  let wftda: any = null;
+  if (email) {
+    const { data: duenx } = await supabaseServicio.from('pivot_duenos').select('email').ilike('email', email).maybeSingle();
+    const cambio = duenx ? await _contenido('wftda_cambio') : null;
+    if (cambio?.valor && !cambio.valor.visto) wftda = { fecha: cambio.valor.fecha };
+  }
+  if (!c) return { exito: true, version: null, wftda };
+  if (String(params.version ?? '') === c.version) return { exito: true, version: c.version, igual: true, wftda };
+  return { exito: true, version: c.version, reglamento: c.valor, actualizado: c.actualizado_en, wftda };
+}
+
+// Solo el equipo de Pivot: leer el documento ahora o marcar como visto el
+// aviso de WFTDA.
+async function superReglamento(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(String(params.adminToken ?? ''));
+  if (!email) return { exito: false, error: 'Sesión de Pivot inválida.' };
+  const { data: duenx } = await supabaseServicio.from('pivot_duenos').select('email').ilike('email', email).maybeSingle();
+  if (!duenx) return { exito: false, error: 'Solo para el equipo de Pivot.' };
+  if (params.accion === 'visto') {
+    const cambio = await _contenido('wftda_cambio');
+    if (cambio?.valor) await _guardarContenido('wftda_cambio', { ...cambio.valor, visto: true });
+    return { exito: true };
+  }
+  const r = await _actualizarReglamento();
+  return r.error ? { exito: false, ...r } : { exito: true, ...r };
 }
 
 // ─── Coach (Victor, 2026-11-16) ─────────────────────────────────────────────
@@ -13423,6 +13531,7 @@ async function cronDiario(): Promise<Record<string, any>> {
     try { await _cronCorteEquipos(); } catch (e) { console.error('[equipos] corte:', e); }
   try { await _saludosFinDeAnio(); } catch (e) { console.error('[fin de año] saludos:', e); }
   try { await _recordarCierreAnual(); } catch (e) { console.error('[cierre] recordatorio:', e); }
+  try { await _cronReglamento(); } catch (e) { console.error('[reglamento] cron:', e); }
   // Avisos del equipo ya enviados o cancelados: se borran a los 30 días para
   // no ocupar la base (Victor, 2026-11-16). Los programados no se tocan.
   try {
@@ -14518,6 +14627,8 @@ async function _rutear(req: Request, paramsPre: Record<string, any>): Promise<Re
       case 'adminMiLigaDirectorio':           return json(await adminMiLigaDirectorio(params));
       case 'superLigas':                      return json(await superLigas(params));
       case 'esDuenxPivot':                    return json(await esDuenxPivot(params));
+      case 'getReglamento':                   return json(await getReglamento(params));
+      case 'superReglamento':                 return json(await superReglamento(params));
       case 'getMiCoach':                      return json(await getMiCoach(params));
       case 'adminCoaches':                    return json(await adminCoaches(params));
             case 'getCoach':                        return json(await getCoach(params));
