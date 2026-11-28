@@ -43,7 +43,7 @@
     // recarga. Como mucho 2 intentos por versión; si sigue vieja, se explica
     // cómo borrar la caché.
     (function () {
-      var esta = Number('182') || 0;
+      var esta = Number('183') || 0;
       if (!esta || !window.fetch) return;
       fetch('web_version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
         var nueva = Number(j && j.build) || 0;
@@ -71,6 +71,6 @@
       }
     })();
   </script>
-  <script src="flutter_bootstrap.js?v=182" async></script>
+  <script src="flutter_bootstrap.js?v=183" async></script>
 </body>
 </html>
